@@ -1,0 +1,129 @@
+{
+  "priceFiles": [
+    {
+      "priceFileId": 1,
+      "dateStart": "2025-01-01",
+      "published": true,
+      "bands": [
+        {
+          "coverTypeId": 1,
+          "lowerTO": 0,
+          "upperTO": 1000000,
+          "cwRate": 0.0055,
+          "cwMinPrem": 2500,
+          "tenMilRate": 0.0016,
+          "tenMilMinPrem": 1800,
+          "twentyMilRate": 0.0022,
+          "twentyMilMinPrem": 2200
+        },
+        {
+          "coverTypeId": 1,
+          "lowerTO": 1000001,
+          "upperTO": 2500000,
+          "cwRate": 0.0048,
+          "cwMinPrem": 3000,
+          "tenMilRate": 0.0014,
+          "tenMilMinPrem": 2000,
+          "twentyMilRate": 0.002,
+          "twentyMilMinPrem": 2400
+        },
+        {
+          "coverTypeId": 1,
+          "lowerTO": 2500001,
+          "upperTO": 5000000,
+          "cwRate": 0.0042,
+          "cwMinPrem": 3500,
+          "tenMilRate": 0.0012,
+          "tenMilMinPrem": 2200,
+          "twentyMilRate": 0.0018,
+          "twentyMilMinPrem": 2600
+        },
+        {
+          "coverTypeId": 2,
+          "lowerTO": 0,
+          "upperTO": 2000000,
+          "cwRate": 0.0065,
+          "cwMinPrem": 2800,
+          "tenMilRate": 0.0018,
+          "tenMilMinPrem": 1900,
+          "twentyMilRate": 0.0024,
+          "twentyMilMinPrem": 2300
+        },
+        {
+          "coverTypeId": 2,
+          "lowerTO": 2000001,
+          "upperTO": 5000000,
+          "cwRate": 0.0058,
+          "cwMinPrem": 3200,
+          "tenMilRate": 0.0016,
+          "tenMilMinPrem": 2100,
+          "twentyMilRate": 0.0022,
+          "twentyMilMinPrem": 2500
+        },
+        {
+          "coverTypeId": 3,
+          "lowerTO": 0,
+          "upperTO": 2500000,
+          "cwRate": 0.0075,
+          "cwMinPrem": 2200,
+          "tenMilRate": 0.002,
+          "tenMilMinPrem": 1700,
+          "twentyMilRate": 0.0026,
+          "twentyMilMinPrem": 2100
+        }
+      ]
+    }
+  ],
+  "stampDuty": [
+    {
+      "priceFileStampDutyId": 1,
+      "dateStart": "2025-01-01",
+      "rates": [
+        { "stateCode": "NSW", "rate": 0.09 },
+        { "stateCode": "VIC", "rate": 0.1 },
+        { "stateCode": "QLD", "rate": 0.09 },
+        { "stateCode": "SA", "rate": 0.11 },
+        { "stateCode": "WA", "rate": 0.1 },
+        { "stateCode": "TAS", "rate": 0.1 },
+        { "stateCode": "NT", "rate": 0.1 },
+        { "stateCode": "ACT", "rate": 0.0 }
+      ]
+    }
+  ],
+  "esl": [
+    {
+      "priceFileEslId": 1,
+      "dateStart": "2025-01-01",
+      "rates": [
+        { "stateCode": "NSW", "constructionRate": 0.23, "plantRate": 0.23 },
+        { "stateCode": "VIC", "constructionRate": 0.0, "plantRate": 0.0 },
+        { "stateCode": "QLD", "constructionRate": 0.0, "plantRate": 0.0 },
+        { "stateCode": "SA", "constructionRate": 0.0, "plantRate": 0.0 },
+        { "stateCode": "WA", "constructionRate": 0.0, "plantRate": 0.0 },
+        { "stateCode": "TAS", "constructionRate": 0.0, "plantRate": 0.0 },
+        { "stateCode": "NT", "constructionRate": 0.0, "plantRate": 0.0 },
+        { "stateCode": "ACT", "constructionRate": 0.0, "plantRate": 0.0 }
+      ]
+    }
+  ],
+  "terror": [
+    {
+      "priceFileTerrorId": 1,
+      "dateStart": "2025-01-01",
+      "tiers": [
+        { "tier": "A", "rate": 0.02, "postcodes": ["2000", "2010", "3000", "4000", "5000", "6000"] },
+        { "tier": "B", "rate": 0.015, "postcodes": ["2100", "2150", "3121", "4217"] },
+        { "tier": "C", "rate": 0.01, "postcodes": ["2481", "4551", "6530"] }
+      ]
+    }
+  ],
+  "plant": [
+    {
+      "priceFilePlantId": 1,
+      "dateStart": "2025-01-01",
+      "rate": 0.03,
+      "plantMinValue": 25000,
+      "plantMaxValue": 50000
+    }
+  ]
+}
