@@ -13,10 +13,10 @@ These stories describe **broker workflows** for UI/UX design. Client confirmatio
 
 | Persona | Description | In-app access |
 |---------|-------------|---------------|
-| **Broker** | Insurance broker — creates clients, quotes, binds policies, adjustments, emails documents | Clients, Policies, Reports |
-| **Admin** | Same login; **AR broker management** in-app (Phase 1). Price files, fees, templates, and other table configuration are **DB-only — no UI** at this stage | Admin (AR only) |
+| **Broker** | Insurance broker — creates clients, quotes, binds policies, adjustments, emails documents, **runs reports and exports CSV** | Clients, Policies, Reports |
+| **Admin** | Same login; **Settings** nav: AR broker management, **document templates** (versioned editor + preview), **fixed PDFs** (upload/delete). Price files, fees, and other rating reference data are **DB-only — no UI** | Clients, Policies, Reports; Settings (admin) |
 
-> **Staging assumption:** Price files and all other configuration tables are manually loaded/updated in the database. The app reads them at runtime; it does not provide screens to edit rates, fees, or reference data. See [CAR_INSURANCE_APP_SPEC.md §10.2](./CAR_INSURANCE_APP_SPEC.md#102-configuration-and-reference-data--no-admin-ui-at-this-stage).
+> **Configuration:** Price files and rating reference tables are manually loaded/updated in the database. Document templates and fixed PDFs are managed in **Settings** (see spec §6.13). See [CAR_INSURANCE_APP_SPEC.md §10.2](./CAR_INSURANCE_APP_SPEC.md#102-configuration-and-reference-data--no-admin-ui-at-this-stage).
 
 ---
 
@@ -64,6 +64,7 @@ flowchart TD
   S4[US-4 Resend PDFs]
   S5[US-5 Renewal]
   S6[US-6 Copy policy]
+  S9[US-9 Reports and CSV export]
   S1 --> S1a
   S1 --> S3
   S1 --> S4
@@ -361,22 +362,112 @@ All other policy fields remain frozen on the original Taken record.
 
 ---
 
-## US-8 — Admin: AR broker management only
+## US-9 — Run reports and export to CSV
+
+**As a** broker  
+**I want to** run operational reports in the app and export the results to CSV  
+**So that** I can review data on screen and use it in spreadsheets or share with others.
+
+### Reports available (side nav → **Reports**)
+
+| Report | Scope | Typical use |
+|--------|-------|-------------|
+| **Client report** | Selected client + date range | Base premium and broker fee summary for one client |
+| **CAR Policy report** | Date range; summary by status, drill-down to detail | Quote/policy activity |
+| **CAR Renewal report** | Reference date, status, policy action filters | Policies due for renewal |
+| **IRECON Reconciliation** | Date range | Financial reconciliation (admin-style ops; broker may run if permitted) |
+| **Expiring OBCAR** | Expiry date range | Renewal outreach list |
+
+> Client report requires a **selected client** (top bar or picker). Other reports are global.
+
+### Flow
+
+1. Broker opens **Reports** from side nav.
+2. Broker selects a report (hub or sub-link).
+3. Broker enters parameters (dates, filters, etc.).
+4. Broker clicks **Run report** → results appear in a **table in the UI**.
+5. Broker clicks **Export** → downloads **CSV** matching the visible result set (column headers included).
+
+### Acceptance criteria
+
+- [ ] **AC-9.1** Broker can access **Reports** from side nav (same level as Clients and Policies).
+- [ ] **AC-9.2** Each report has a parameter form and **Run report** action.
+- [ ] **AC-9.3** Results render in-app as a table before export (not export-only).
+- [ ] **AC-9.4** **Export** downloads **CSV** with the same columns as the on-screen table (UTF-8, sensible filename e.g. `car-policy-report-2026-07-01-2026-07-31.csv`).
+- [ ] **AC-9.5** Empty result set shows explicit empty state; Export disabled or exports headers-only with zero rows (consistent behaviour documented in UI).
+- [ ] **AC-9.6** CAR Policy report supports summary view → drill-down to detail → export **detail** rows for the selected status slice.
+- [ ] **AC-9.7** Client report: date from / to; columns Policy Type, Base Premium (Ex. GST), Broker Fee (Ex. GST); default period current calendar month.
+- [ ] **AC-9.8** Report run and export are **audit-logged** (user, report name, parameters, row count, export timestamp).
+
+### UI touchpoints
+
+- Side nav: **Reports**
+- `/reports` hub → `/reports/car-policies`, `/reports/car-renewals`, `/reports/client`, etc.
+- Each report page: parameters · results table · **Export CSV** button (toolbar above table)
+
+### Legacy parity
+
+Legacy admin reports often downloaded Excel directly with no on-screen table. Target: **UI first**, then CSV export (per [CAR_INSURANCE_APP_SPEC.md](./CAR_INSURANCE_APP_SPEC.md) §6.11).
+
+---
+
+## US-8 — Settings (admin)
+
+### US-8a — AR broker management
 
 **As an** admin  
 **I want to** search, view, edit, and delete AR (wholesale broker) records in the app  
 **So that** brokers can link clients to the correct authorised representative.
 
+#### Acceptance criteria
+
+- [ ] **AC-8a.1** Settings → AR Broker Management restricted to admin role.
+- [ ] **AC-8a.2** AR create/edit/delete audited (who, what, when).
+- [ ] **AC-8a.3** Brokers cannot access Settings section.
+
+### US-8b — Document templates (merge templates)
+
+**As an** admin  
+**I want to** edit CAR document templates in the app with preview and version control  
+**So that** Schedule, ROA, and Adjustment PDFs stay current without manual Word file upload to the server.
+
+**Route:** `/settings/document-templates`  
+**Seed:** import from [`car-pdf-templates/`](../car-pdf-templates/) (legacy `.doc` → structured templates, one-time).
+
+#### Acceptance criteria
+
+- [ ] **AC-8b.1** Admin sees all template slots: Schedule (Annual / Single / Owner Builder), ROA (Annual / Single / Owner Builder), Adjustment (single).
+- [ ] **AC-8b.2** Editor embeds **pdfme Designer** — text schemas for merge fields, image schema for logo; `basePdf` background (not production Word upload).
+- [ ] **AC-8b.3** **Preview** uses `@pdfme/generator` with sample policy data (same engine as production).
+- [ ] **AC-8b.4** Saving creates a new **version** (pdfme `Template` JSON); versions are immutable after publish.
+- [ ] **AC-8b.5** Exactly one **active published** version per slot; new policy PDF generation uses active version only.
+- [ ] **AC-8b.6** Version history visible; admin can publish a prior version (rollback).
+- [ ] **AC-8b.7** `PolicyDocument` records which template version generated each PDF.
+- [ ] **AC-8b.8** Template publish/edit audited.
+
+### US-8c — Fixed PDF attachments
+
+**As an** admin  
+**I want to** upload and delete static PDFs and assign them to cover types  
+**So that** additional documents (e.g. stamp duty exemption) are included in packs without server file drops.
+
+**Route:** `/settings/fixed-pdfs`
+
+#### Acceptance criteria
+
+- [ ] **AC-8c.1** Admin can upload PDF to library (stored in R2).
+- [ ] **AC-8c.2** Admin can **delete** a fixed PDF from the library (future packs only — existing policy `PolicyDocument` rows unchanged).
+- [ ] **AC-8c.3** Assign each PDF to cover type(s) and optional rules (e.g. state = NSW).
+- [ ] **AC-8c.4** Set display order per cover type.
+- [ ] **AC-8c.5** Upload/delete/reorder audited.
+
 ### Out of scope at this stage (no UI)
 
-Price files, fees, document templates, product settings, and other reference/configuration tables — **manual DB only** (see spec §10.2). No user stories for configuration screens until a later phase.
+Price files, fees, and generic reference/configuration tables (states, excess catalogue, etc.) — **manual DB only** (see spec §10.2).
 
-### Acceptance criteria
+### Shared Settings criteria
 
-- [ ] **AC-8.1** Admin side nav **Admin** → AR Broker Management restricted to admin role (or admin flag).
-- [ ] **AC-8.2** AR create/edit/delete audited (who, what, when).
-- [ ] **AC-8.3** Brokers cannot access Admin section.
-- [ ] **AC-8.4** No in-app UI for price files or other configuration tables in this phase.
+- [ ] **AC-8.4** No in-app UI for price files or rating reference tables in this phase.
 
 ---
 

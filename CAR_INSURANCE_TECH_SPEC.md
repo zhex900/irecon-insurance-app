@@ -104,10 +104,19 @@ lucide-react (icons)
 Server-only (not bundled to client):
 
 ```txt
-resend                # outbound email via Resend API
-@react-pdf/renderer   # or pdf-lib / puppeteer — evaluate in spike
+resend                      # outbound email via Resend API
+@pdfme/generator            # PDF generation (Worker / server)
+@pdfme/schemas              # text, image plugins for generate()
+@pdfme/common               # Template types
 # Supabase service role client
 # R2 S3-compatible SDK or Workers binding
+```
+
+Client-only (Settings admin — lazy-loaded route):
+
+```txt
+@pdfme/ui                   # Designer embed in /settings/document-templates
+@pdfme/schemas              # same plugins passed to Designer
 ```
 
 ---
@@ -185,19 +194,44 @@ supabase/
 - Add extension tables for rebuild needs:
 
 ```sql
--- Broker profile linked to Supabase auth.users
-create table broker_profile (
-  id uuid primary key references auth.users(id) on delete cascade,
-  ar_id int references ar(ar_id),
+-- App user profile (broker + admin); 1:1 with Supabase auth.users
+create table app_user (
+  user_id uuid primary key references auth.users(id) on delete cascade,
   full_name text not null,
+  email text,
+  role text not null,  -- broker | admin
+  ar_id int references ar(ar_id),
   created_at timestamptz default now()
 );
 
--- Policy document metadata (PDF in R2)
+-- Document template slot (Schedule/ROA/Adjustment × cover type)
+create table document_template (
+  document_template_id serial primary key,
+  document_type_code text not null,  -- CARSCHED, CARRATING, CARADJUST
+  cover_type_id int references cover_type(cover_type_id),
+  created_at timestamptz default now()
+);
+
+-- Document template version (pdfme JSON)
+create table document_template_version (
+  document_template_version_id serial primary key,
+  document_template_id int not null references document_template(document_template_id),
+  version_number int not null,
+  template_json jsonb not null,  -- pdfme Template: { basePdf, schemas }
+  is_active boolean default false,
+  published_at timestamptz,
+  published_by uuid references auth.users(id),
+  created_at timestamptz default now(),
+  created_by uuid references auth.users(id)
+);
+
+-- Policy document metadata (generated PDF in R2 — append-only)
 create table policy_document (
   policy_document_id serial primary key,
   policy_id int not null references policy(policy_id),
-  document_type text not null, -- 'quote', 'schedule', etc.
+  policy_car_adjustment_id int references policy_car_adjustment(policy_car_adjustment_id),
+  document_type_code text not null,  -- CARSCHED, CARRATING, CARADJUST, CARADDIT
+  document_template_version_id int references document_template_version(document_template_version_id),
   r2_key text not null,
   file_name text not null,
   mime_type text default 'application/pdf',
@@ -210,11 +244,11 @@ create table policy_document (
 
 | Role | Access |
 |------|--------|
+| `admin` | Settings, AR management, document templates; optional all-AR access |
 | `broker` | CRUD clients, quotes, PDFs for own AR scope |
-| `admin` | Reference data, price files, all brokers (optional v1) |
 
 - Supabase Auth handles sign-in, sessions, password reset.
-- `broker_profile` maps `auth.users.id` → business identity (`AR`, display name).
+- `app_user` maps `auth.users.id` → display name, role, and optional `ar_id`.
 - JWT claims or profile lookup used in server services for authorization.
 
 ### 4.3 Row Level Security (RLS)
@@ -361,7 +395,7 @@ Port legacy `CARCalculator2` logic to TypeScript:
 
 Transactional saves across:
 
-- `PolicyHeader`, `PolicyPeriod`, `Policy`
+- `PolicyPeriod`, `Policy`
 - `PolicyCAR`, `PolicyCARExcess`, `PolicyCARSubLimit`, `PolicyCARWording`, `PolicyFee`, `PolicyNote`
 
 **Policy state rules** (see [CAR_INSURANCE_APP_SPEC.md §6.9](./CAR_INSURANCE_APP_SPEC.md#69-policy-state-and-lifecycle)):
@@ -373,14 +407,22 @@ Transactional saves across:
 
 Use Postgres transactions (Supabase RPC or sequential with rollback).
 
-### 7.3 PDF Service
+### 7.3 PDF Service (pdfme)
 
-1. Load policy + premium snapshot (original Taken policy **+** latest Applied adjustment if any).
-2. Render template (React PDF or HTML→PDF).
-3. Upload to R2.
-4. Record metadata.
+**Library:** [pdfme](https://pdfme.com/) — see [CAR_INSURANCE_APP_SPEC.md §6.13.5](./CAR_INSURANCE_APP_SPEC.md#6135-implementation--pdfme).
 
-Legacy used Word mail-merge + Aspose; rebuild should use a maintainable server template approach.
+1. Resolve active `DocumentTemplateVersion.TemplateJson` for each required slot (Schedule / ROA / Adjustment by cover type).
+2. Build `inputs` from policy snapshot via `mapPolicyToPdfmeInputs()` (original Taken + latest Applied adjustment when applicable).
+3. `generate({ template, inputs, plugins: { text, image } })` → `Uint8Array`.
+4. Upload bytes to R2 (`quotes/{policyId}/{documentType}/{timestamp}.pdf`).
+5. Insert `PolicyDocument` row (type code, R2 key, `DocumentTemplateVersionId`, audit fields).
+6. Append matching **fixed PDFs** from `FixedPdf` library (`CARADDIT`) when cover-type / rule predicates match.
+
+**Preview (Settings):** same `generate()` call with fixture `inputs` — no separate render path.
+
+**Designer (Settings):** `@pdfme/ui` `Designer` mounted in React route; `onChangeTemplate` / `onSaveTemplate` persist JSON to `DocumentTemplateVersion`.
+
+Legacy used Word mail-merge + Aspose; rebuild uses pdfme JSON templates versioned in Postgres.
 
 ### 7.4 Email Service (Resend)
 
@@ -594,10 +636,12 @@ No dedicated Supabase skill is installed; rely on Supabase MCP + official docs f
 - Rate resolver from price files
 - Referral notes
 
-### Phase 5 — PDF Pipeline
-- Template + generation
+### Phase 5 — PDF Pipeline (pdfme)
+- Import legacy `.doc` seeds → `basePdf` + initial pdfme templates
+- Settings → Document Templates (Designer embed)
+- `pdf.service.ts` + `@pdfme/generator`
 - R2 upload + download route
-- Document metadata
+- `PolicyDocument` + `DocumentTemplateVersion` metadata
 
 ### Phase 6 — Email (Resend)
 - Resend domain verification and API key setup
@@ -620,7 +664,7 @@ No dedicated Supabase skill is installed; rely on Supabase MCP + official docs f
 | FR-CLIENT-* | `client.service.ts`, routes under `_app.clients.*` |
 | FR-POL-* / FR-CAR-* | `policy.service.ts`, quote wizard actions |
 | FR-PRICE-* | `pricing/car-calculator.ts`, server action recalc |
-| FR-DOC-* | `pdf.service.ts`, R2, `policy_document` table |
+| FR-DOC-* | `pdf.service.ts`, pdfme, R2, `PolicyDocument` table |
 | FR-DOC-04 | `email.service.ts`, Resend, `EmailLog` table |
 | FR-AUD-* | `created_by` UUID, `PolicyNote`, structured logs |
 | NFR-02 | Postgres transactions in policy save |

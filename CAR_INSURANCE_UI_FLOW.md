@@ -13,14 +13,14 @@ Companion to [CAR_INSURANCE_APP_SPEC.md](./CAR_INSURANCE_APP_SPEC.md). Use this 
 Layout: **side navigation** (primary modules) + **top bar** (global context) + **main content**.
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│  Top bar:  [App]   Acme Construction Pty Ltd  ▾        [User]    │  ← client name when selected
-├──────────┬──────────────────────────────────────────────────────┤
-│ Clients  │                                                      │
-│ Policies │              Main content                              │
-│ Reports  │                                                      │
-│ Admin    │                                                      │
-└──────────┴──────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ [App]  🔍 Search clients and policies…          Acme Construction Pty Ltd  [User] │
+├──────────┬───────────────────────────────────────────────────────────────────┤
+│ Clients  │                                                                   │
+│ Policies │                        Main content                               │
+│ Reports  │                                                                   │
+│ Settings │                                                                   │
+└──────────┴───────────────────────────────────────────────────────────────────┘
 ```
 
 ### 1.1 Side navigation (primary)
@@ -32,7 +32,7 @@ Four **peer** items — same level, no nesting under Home or a Reports parent in
 | **Clients** | `/clients` | Client **list** with inline filters (not a separate “search” step) |
 | **Policies** | `/policies` | Policy **list** with inline filters |
 | **Reports** | `/reports` | Report hub; individual reports open in main content |
-| **Admin** | `/admin` | Admin hub (Phase 1: AR Broker Management) |
+| **Settings** | `/settings` | Settings hub (AR brokers, document templates, fixed PDFs) |
 
 ```mermaid
 flowchart LR
@@ -40,7 +40,7 @@ flowchart LR
     Clients[Clients]
     Policies[Policies]
     Reports[Reports]
-    Admin[Admin]
+    Settings[Settings]
   end
 ```
 
@@ -52,16 +52,18 @@ flowchart LR
 - IRECON Reconciliation
 - Expiring OBCAR
 
-**Admin** — selecting Admin opens admin area:
+**Settings** — selecting Settings opens the settings area (admin only):
 
 - AR Broker Management
+- Document Templates (Schedule, ROA, Adjustment — versioned editor + preview)
+- Fixed PDFs (upload / delete static attachments)
 
 | Module | Phase 1 |
 |--------|---------|
 | Clients | Yes |
 | Policies | Yes |
 | Reports | Yes (see list above) |
-| Admin | Yes |
+| Settings | Yes |
 | Cancel Policies | **Out of scope** |
 
 ### 1.2 Top navigation (header)
@@ -71,7 +73,8 @@ Always visible above main content.
 | Element | Behaviour |
 |---------|-----------|
 | App / logo | Returns to default landing (`/clients`) |
-| **Client name** | Shown when a client is **selected** (active context). Links to that client’s detail page. |
+| **Smart search** | Global search clients + policies — see §1.3 |
+| **Client name** | Shown when a client is **selected** (active context). Links to client detail. Sits beside search (or right of search). |
 | Clear client | Optional `×` or “All clients” to clear context and remove name from top bar |
 | User menu | Sign out, profile (if applicable) |
 
@@ -80,14 +83,114 @@ Always visible above main content.
 - User opens a client from the **Clients** list → client becomes selected → top bar shows e.g. `Acme Construction Pty Ltd`
 - User navigates to Policies, Reports, or a policy while context is kept → top bar **still shows** the same client name
 - User clears context or picks **Clients** without a selection → top bar shows no client name (or placeholder “No client selected”)
+- Selecting a **client** from smart search also sets selected client and updates the name chip
 
 **Client-scoped actions** (legacy client sidebar) live on **client detail** and contextual toolbars — not as duplicate side nav entries:
 
 - Edit client · Client report · Apply CAR policy · View client’s policies (deep-link to `/policies?clientId=…`)
 
-### 1.3 Active nav state
+### 1.3 Smart search (top bar)
 
-- Side nav highlights **Clients**, **Policies**, **Reports**, or **Admin** according to current route.
+Single **omnibox** in the top nav: search **clients** and **policies** from anywhere in the app.
+
+**Interaction:**
+
+1. Broker focuses the search field (keyboard shortcut optional e.g. `/` or `⌘K`).
+2. Broker types a query (min 2 characters recommended).
+3. Dropdown shows **autocomplete matches** grouped by type.
+4. Broker selects a row → navigate to **client detail** or **policy view**; client selection also updates top-bar client context.
+
+**Dropdown layout:**
+
+```
+┌─ Clients ─────────────────────────────────────┐
+│  Acme Construction Pty Ltd     · Sydney      │
+│  Acme Builders Ltd             · Melbourne   │
+├─ Policies ────────────────────────────────────┤
+│  CAR-2024-00123  · Acme Construction · Taken │
+│  CAR-2024-00456  · Beta Corp        · Pending│
+└───────────────────────────────────────────────┘
+```
+
+| Match type | Search against (suggested) | Result action |
+|------------|---------------------------|---------------|
+| **Client** | Name, trading name | `/clients/:id` + set selected client |
+| **Policy** | Policy number, client name, site/invoice comment | `/policies/:id` + set policy’s client as selected |
+
+**Behaviour:**
+
+- Debounced request (e.g. 200–300 ms); show loading spinner in dropdown while fetching.
+- **No matches:** “No clients or policies found.”
+- **Recent items** (optional): last 5 clients/policies visited when field is focused and empty.
+- Search is **global** — not limited to the current client filter.
+- Does not replace **Clients** / **Policies** list pages (those keep full filters and tables); smart search is for **fast jump**.
+
+```mermaid
+flowchart LR
+  Q[Type in top search] --> D[Autocomplete dropdown]
+  D -->|Client row| CD[Client detail]
+  D -->|Policy row| PV[Policy view]
+  CD --> CTX[Top bar client name updated]
+  PV --> CTX
+```
+
+### 1.4 Field finder (CAR policy wizard & edit)
+
+When the broker is in the **CAR policy wizard** (new quote) or **editing a Pending policy** (same multi-step form), a **field search** control helps jump to any field without clicking through every step.
+
+**Placement:** Sticky sub-header below top bar (or top of wizard chrome):
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Find field…  e.g. turnover, stamp duty, excess              │
+└─────────────────────────────────────────────────────────────┘
+│  Step 2 of 7 · Risk details          [ < Back ]  [ Next > ] │
+```
+
+**Interaction:**
+
+1. Broker types a field label or keyword (e.g. `turnover`, `site address`, `section 1`).
+2. Autocomplete dropdown lists **only matching fields** across **all wizard steps**.
+3. Each result shows: **field label** · **step name** (e.g. “Annual turnover · Premium”).
+4. Broker selects a match → wizard **navigates to that step**, scrolls to the field, and **focuses** the input (highlight ring).
+
+**Example dropdown:**
+
+```
+┌─ Matching fields ─────────────────────────────┐
+│  Annual turnover          · Step 3 · Premium   │
+│  Turnover adjustment      · Step 5 · Declarations │
+│  Site address             · Step 1 · Insured    │
+└────────────────────────────────────────────────┘
+```
+
+**Rules:**
+
+- Match against display labels from [CAR_FORM_VALIDATION.md](./CAR_FORM_VALIDATION.md) (and section headings as secondary text).
+- Fuzzy / contains match is acceptable (`turn` → turnover).
+- **Pending edit only** — field finder available when the form is editable (new quote + Pending policy). Hidden for Taken / Not taken read-only views.
+- Does not change step validation: broker may still need to complete required fields on other steps before save.
+- Optional: after jump, briefly pulse the target field (accessibility: focus + `aria-describedby`).
+
+```mermaid
+flowchart LR
+  F[Type field name] --> M[Matched fields dropdown]
+  M -->|Select| J[Jump to step]
+  J --> S[Scroll and focus field]
+```
+
+**Applies to:**
+
+| Screen | Field finder |
+|--------|----------------|
+| Apply CAR policy wizard (`/clients/:id/policies/new`) | Yes |
+| Edit Pending policy (wizard mode on `/policies/:id`) | Yes |
+| View Taken / Not taken policy | No |
+| Adjustment wizard | No (only two inputs; field finder not needed) |
+
+### 1.5 Active nav state
+
+- Side nav highlights **Clients**, **Policies**, **Reports**, or **Settings** according to current route.
 - Client detail (`/clients/:id`) keeps **Clients** highlighted in the side nav.
 - Policy view (`/policies/:id`) keeps **Policies** highlighted.
 
@@ -108,6 +211,8 @@ flowchart TD
   clientDetail --> clientReport[Client report]
   policiesList[Policies list] --> policyView
   sideReports[Reports side nav] --> reportRun[Run report]
+  topSearch[Smart search] --> clientDetail
+  topSearch --> policyView
 ```
 
 ---
@@ -315,6 +420,8 @@ stateDiagram-v2
 
 **Exit:** Save → **View / edit CAR policy** (Pending).
 
+**Field finder:** §1.4 — use **Find field…** to jump to any form field across steps.
+
 ---
 
 ### 3.8 View / edit CAR policy
@@ -326,7 +433,7 @@ stateDiagram-v2
 
 | Status | Editable fields |
 |--------|-----------------|
-| Pending | All quote fields including inception/expiry |
+| Pending | All quote fields including inception/expiry — **multi-step wizard** with field finder (§1.4) |
 | Taken | Read-only policy; **Renew** (annual only) · **Copy** · **Adjust** (if not expired) |
 | Not taken | Read-only; terminal |
 
@@ -436,13 +543,22 @@ Read-only contact list for renewal outreach.
 
 ---
 
-### 3.11 Admin
+### 3.11 Settings
 
-**Route:** `/admin` — side nav → **Admin** (peer with Clients, Policies, Reports)
+**Route:** `/settings` — side nav → **Settings** (peer with Clients, Policies, Reports). **Admin only** — brokers do not see this nav item.
 
-**Phase 1 in-app admin:** **AR Broker Management** only (`/admin/ar-brokers`).
+**In-app settings (Phase 1):**
 
-**Not in app (manual DB):** price files, fees, reference data, product/document settings — see [CAR_INSURANCE_APP_SPEC.md §10.2](./CAR_INSURANCE_APP_SPEC.md#102-configuration-and-reference-data--no-admin-ui-at-this-stage).
+| Screen | Route | Summary |
+|--------|-------|---------|
+| Settings hub | `/settings` | Links to sub-sections below |
+| AR Broker Management | `/settings/ar-brokers` | Search, view, edit, delete AR records |
+| Document Templates | `/settings/document-templates` | Merge templates per slot; version history; preview |
+| Fixed PDFs | `/settings/fixed-pdfs` | Upload/delete static PDFs; assign to cover types + rules |
+
+**Still manual DB only:** price files, fees, generic reference data — see [CAR_INSURANCE_APP_SPEC.md §10.2](./CAR_INSURANCE_APP_SPEC.md#102-configuration-and-reference-data--no-admin-ui-at-this-stage).
+
+#### AR Broker Management
 
 | Action | Phase 1 |
 |--------|---------|
@@ -452,6 +568,43 @@ Read-only contact list for renewal outreach.
 | Delete | Yes |
 
 AR records drive client **AR Name** typeahead and client detail AR block.
+
+#### Document Templates
+
+**Route:** `/settings/document-templates`  
+**Spec:** [CAR_INSURANCE_APP_SPEC.md §6.13.2](./CAR_INSURANCE_APP_SPEC.md#6132-merge-templates-schedule-roa-adjustment)
+
+List template **slots** (Schedule × cover type, ROA × cover type, Adjustment). Each slot:
+
+1. **Editor** — embedded **pdfme Designer** (`@pdfme/ui`): text schemas = merge fields, image schema = logo; `basePdf` = static background from imported Word/PDF.
+2. **Preview** — `@pdfme/generator` with sample policy fixture (same as production).
+3. **Version history** — immutable pdfme `Template` JSON per version; one **active published** version per slot.
+4. **Publish** / **rollback** to prior version.
+
+Initial content imported from [`car-pdf-templates/`](../car-pdf-templates/) (one-time migration from legacy `.doc` seeds).
+
+```mermaid
+flowchart LR
+  HUB[Settings hub] --> AR[AR Brokers]
+  HUB --> TPL[Document Templates]
+  HUB --> FIX[Fixed PDFs]
+  TPL --> SLOT[Slot list]
+  SLOT --> EDIT[Editor + merge fields]
+  EDIT --> PREV[Preview]
+  PREV --> PUB[Publish version]
+```
+
+#### Fixed PDFs
+
+**Route:** `/settings/fixed-pdfs`  
+**Spec:** [CAR_INSURANCE_APP_SPEC.md §6.13.3](./CAR_INSURANCE_APP_SPEC.md#6133-fixed-pdf-attachments-caraddit)
+
+- **Upload** PDF → stored in R2; appears in library.
+- **Delete** from library (stops inclusion in **future** packs; does not remove PDFs already on policies).
+- Assign to **cover type(s)** and optional **rules** (e.g. NSW only).
+- Set **sort order** within additional-docs list per cover type.
+
+**Not the same as policy document list:** generated Schedule/ROA/Adjustment PDFs on a policy are **never deleted** (audit trail).
 
 ---
 
@@ -474,8 +627,10 @@ AR records drive client **AR Name** typeahead and client detail AR block.
 | 13 | CAR Renewal Report | `/reports/car-renewals` | Reports | Yes |
 | 14 | IRECON Reconciliation | `/reports/irecon-reconciliation` | Reports | Retained |
 | 15 | Expiring OBCAR | `/reports/obcar-expiring` | Reports | Retained |
-| 16 | Admin hub | `/admin` | Admin | Yes |
-| 17 | AR Broker Management | `/admin/ar-brokers` | Admin | Yes |
+| 16 | Settings hub | `/settings` | Settings | Yes (admin) |
+| 17 | AR Broker Management | `/settings/ar-brokers` | Settings | Yes (admin) |
+| 18 | Document Templates | `/settings/document-templates` | Settings | Yes (admin) |
+| 19 | Fixed PDFs | `/settings/fixed-pdfs` | Settings | Yes (admin) |
 | — | Cancel Policies | — | — | **Excluded** |
 
 \*Apply CAR is reached from client detail; side nav stays on **Clients** or follows client context.
@@ -505,6 +660,8 @@ Same **Policies list** screen (§3.6) with filters pre-applied. Top bar continue
 | Expired policy + Adjust clicked | Block with message: policy expired |
 | Report no rows | "No results" row (legacy parity) |
 | PDF generation failed | Toast + activity log; retry action |
+| Smart search no results | Empty dropdown message |
+| Field finder no match | “No fields match …” in dropdown |
 
 ---
 

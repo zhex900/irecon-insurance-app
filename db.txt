@@ -58,6 +58,7 @@ Table PolicyNumber {
 Table EmailLog {
   EmailLogId integer [primary key]
   ClientId int
+  PolicyId int
   From varchar
   To varchar
   Subject varchar
@@ -65,6 +66,16 @@ Table EmailLog {
   DateSent datetime
   CreatedWhen datetime
   CreatedBy varchar
+}
+
+Table User {
+  UserId varchar [primary key]
+  // Supabase migration: uuid PK references auth.users(id). App login users only (broker + admin).
+  FullName varchar
+  Email varchar
+  Role varchar
+  ARId int
+  CreatedWhen datetime
 }
 
 Table CARExcess {
@@ -219,14 +230,9 @@ Table PriceFileTerrorPostCode {
   Postcode varchar
   StateId int
 }
-Table PolicyHeader {
-  PolicyHeaderId integer [primary key]
-  ClientId int
-  TotalInvoicePremium decimal
-}
 Table PolicyPeriod {
   PolicyPeriodId integer [primary key]
-  PolicyHeaderId int
+  ClientId int
   DateStart datetime
   DateEnd datetime
   IsLatestPeriod bit
@@ -240,8 +246,14 @@ Table Policy {
   PolicyActionId int
   PolicyNumber varchar
   DateEffective datetime
-  //InvoiceComment varchar
-
+  InsurerCode varchar
+  RenewalOfPolicyId int
+  CopiedFromPolicyId int
+  InvoiceComment varchar
+  TotalInvoicePremium decimal
+  CreatedWhen datetime
+  CreatedBy varchar
+  UpdatedWhen datetime
 }
 Table PolicyAction {
   PolicyActionId integer [primary key]
@@ -287,6 +299,10 @@ Table PolicyCAR {
   PriceFileId int
   PriceFileStampDutyId int
   PriceFileESLId int
+  PriceFileTerrorId int
+  PriceFilePlantId int
+  AnnualCoverType varchar
+  // Annual cover only: Transfer | Contract Commencing. Drives InsuredContracts wording.
   PlantRate decimal
   ESLRate decimal
   ESLPlantRate decimal
@@ -357,6 +373,10 @@ Table PolicyCARAdjustment {
 }
 Ref: PolicyCAR.PriceFileStampDutyId > PriceFileStampDuty.PriceFileStampDutyId
 Ref: PolicyCAR.PriceFileESLId > PriceFileESL.PriceFileESLId
+Ref: PolicyCAR.PriceFileTerrorId > PriceFileTerror.PriceFileTerrorId
+Ref: PolicyCAR.PriceFilePlantId > PriceFilePlant.PriceFilePlantId
+Ref: Policy.RenewalOfPolicyId > Policy.PolicyId
+Ref: Policy.CopiedFromPolicyId > Policy.PolicyId
 Ref: PolicyCARAdjustment.PolicyId > Policy.PolicyId
 Ref: PolicyCARAdjustment.AdjustmentStatusId > AdjustmentStatus.AdjustmentStatusId
 
@@ -395,6 +415,7 @@ Table PolicyCARWording {
 Table PolicyFee {
   PolicyId int
   PolicyFeeId int
+  // Line id within policy fee block (not FK to Fee table).
   Name varchar
   SortOrder int
   Fee decimal
@@ -411,6 +432,83 @@ Table PolicyNoteType {
   PolicyNoteTypeId integer [primary key]
   Name varchar
 }
+
+Table ActivityLog {
+  ActivityLogId integer [primary key]
+  EntityType varchar
+  EntityId int
+  Action varchar
+  Payload text
+  CreatedWhen datetime
+  CreatedBy varchar
+}
+
+Table AppAsset {
+  AppAssetId integer [primary key]
+  AssetKey varchar
+  R2Key varchar
+  FileName varchar
+  MimeType varchar
+  UpdatedWhen datetime
+  UpdatedBy varchar
+  // e.g. AssetKey = orgLogo for pdfme image schema.
+}
+
+Table DocumentTemplate {
+  DocumentTemplateId integer [primary key]
+  DocumentTypeCode varchar
+  CoverTypeId int
+  // UNIQUE (DocumentTypeCode, CoverTypeId). CoverTypeId null for CARADJUST slot.
+}
+
+Table DocumentTemplateVersion {
+  DocumentTemplateVersionId integer [primary key]
+  DocumentTemplateId int
+  VersionNumber int
+  TemplateJson text
+  IsActive bit
+  PublishedWhen datetime
+  PublishedBy varchar
+  CreatedWhen datetime
+  CreatedBy varchar
+  // pdfme Template JSON. UNIQUE (DocumentTemplateId, VersionNumber).
+}
+
+Table PolicyDocument {
+  PolicyDocumentId integer [primary key]
+  PolicyId int
+  PolicyCARAdjustmentId int
+  DocumentTypeCode varchar
+  FileName varchar
+  R2Key varchar
+  DocumentTemplateVersionId int
+  FixedPdfId int
+  GeneratedWhen datetime
+  GeneratedBy varchar
+  // Append-only: generated policy PDFs are never deleted.
+}
+
+Table FixedPdf {
+  FixedPdfId integer [primary key]
+  FileName varchar
+  DisplayName varchar
+  R2Key varchar
+  CreatedWhen datetime
+  CreatedBy varchar
+  DeletedWhen datetime
+  DeletedBy varchar
+  // Library entry removed when DeletedWhen set; prior PolicyDocument rows unchanged.
+}
+
+Table FixedPdfAssignment {
+  FixedPdfAssignmentId integer [primary key]
+  FixedPdfId int
+  CoverTypeId int
+  StateId int
+  SortOrder int
+  // StateId null = all states (e.g. NSW-only rule when StateId = NSW).
+}
+
 Ref: PolicyCAR.PriceFileId > PriceFile.PriceFileId
 Ref: PolicyNote.PolicyNoteTypeId > PolicyNoteType.PolicyNoteTypeId
 Ref: PolicyNote.PolicyId > Policy.PolicyId
@@ -426,8 +524,7 @@ Ref: Policy.PolicyPeriodId > PolicyPeriod.PolicyPeriodId
 Ref: Policy.PolicyTypeId > PolicyType.PolicyTypeId
 Ref: Policy.StateId > State.StateId
 Ref: Policy.PolicyActionId > PolicyAction.PolicyActionId
-Ref: PolicyHeader.ClientId > Client.ClientId
-Ref: PolicyPeriod.PolicyHeaderId > PolicyHeader.PolicyHeaderId
+Ref: PolicyPeriod.ClientId > Client.ClientId
 
 Ref : Client.AccountManagerId > AccountManager.AccountManagerId
 
@@ -436,6 +533,28 @@ Ref: Client.ARId > AR.ARId
 Ref: Client.EntityTypeId > EntityType.EntityTypeId
 
 Ref : Client.ClientId > EmailLog.ClientId
+
+Ref: EmailLog.PolicyId > Policy.PolicyId
+
+Ref: User.ARId > AR.ARId
+
+Ref: DocumentTemplate.CoverTypeId > CoverType.CoverTypeId
+
+Ref: DocumentTemplateVersion.DocumentTemplateId > DocumentTemplate.DocumentTemplateId
+
+Ref: PolicyDocument.PolicyId > Policy.PolicyId
+
+Ref: PolicyDocument.PolicyCARAdjustmentId > PolicyCARAdjustment.PolicyCARAdjustmentId
+
+Ref: PolicyDocument.DocumentTemplateVersionId > DocumentTemplateVersion.DocumentTemplateVersionId
+
+Ref: PolicyDocument.FixedPdfId > FixedPdf.FixedPdfId
+
+Ref: FixedPdfAssignment.FixedPdfId > FixedPdf.FixedPdfId
+
+Ref: FixedPdfAssignment.CoverTypeId > CoverType.CoverTypeId
+
+Ref: FixedPdfAssignment.StateId > State.StateId
 
 Ref: PolicyNumber.PolicyTypeId - PolicyType.PolicyTypeId
 
@@ -523,6 +642,21 @@ Records PolicyNoteType (PolicyNoteTypeId, Name) {
   1, 'System'
   2, 'Referral'
   3, 'Message'
+}
+
+Records DocumentTemplate (DocumentTemplateId, DocumentTypeCode, CoverTypeId) {
+  1, 'CARSCHED', 1
+  2, 'CARSCHED', 2
+  3, 'CARSCHED', 3
+  4, 'CARRATING', 1
+  5, 'CARRATING', 2
+  6, 'CARRATING', 3
+  7, 'CARADJUST', 0
+}
+// DocumentTemplateId 7: CoverTypeId null in Postgres (0 placeholder). Publish pdfme TemplateJson via Settings after import.
+
+Records AppAsset (AppAssetId, AssetKey, FileName, MimeType) {
+  1, 'orgLogo', '', 'image/png'
 }
 
 // CARWording seed: see car_wording.csv → supabase/seeds/car_wording.sql (6 rows)
