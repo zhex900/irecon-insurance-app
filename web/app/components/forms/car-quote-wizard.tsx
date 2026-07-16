@@ -6,14 +6,14 @@ import { Button } from "~/components/ui/button";
 import {
   ClaimsWordingStep,
   PremiumSummaryPanel,
-  PricingConfirmationStep,
+  PricingDeclarationConfirmedStep,
   ReviewStep,
   RiskDetailsStep,
   Section1Step,
   Section2ExcessesStep,
 } from "~/components/forms/car-quote-sections";
 import {
-  CAR_STATUS,
+  POLICY_STATUS,
   carQuoteSchema,
   wizardStepFields,
   wizardSteps,
@@ -73,7 +73,7 @@ export function CarQuoteWizard({
   const referralReasons =
     fetcher.data?.referralReasons ?? quote.car.referralReasons ?? [];
   const notes = fetcher.data?.notes ?? quote.notes;
-  const canChangeStatus = quote.carStatusId === CAR_STATUS.Pending && !readOnly;
+  const canChangeStatus = quote.policyStatusId === POLICY_STATUS.Pending && !readOnly;
 
   useEffect(() => {
     if (draftFetcher.data?.ok && draftFetcher.data.savedAt) {
@@ -189,7 +189,7 @@ export function CarQuoteWizard({
               />
             ) : null}
             {step === 5 ? (
-              <PricingConfirmationStep
+              <PricingDeclarationConfirmedStep
                 premium={premium}
                 referralReasons={referralReasons}
                 reference={reference}
@@ -289,11 +289,11 @@ export function CarQuoteWizard({
 export function quoteToFormValues(quote: Quote): CarQuoteFormValues {
   return {
     clientId: quote.clientId,
-    carStatusId: quote.carStatusId,
+    policyStatusId: quote.policyStatusId,
     insurerCode: quote.insurerCode,
     insuredName: quote.car.insuredName,
     coverTypeId: quote.car.coverTypeId,
-    policyActionId: quote.policyActionId,
+    businessTypeId: quote.businessTypeId,
     policyNumber: quote.policyNumber,
     siteAddress: quote.car.siteAddress,
     estimatedTurnover: quote.car.estimatedTurnover,
@@ -306,18 +306,18 @@ export function quoteToFormValues(quote: Quote): CarQuoteFormValues {
     maximumMaintenancePeriod: quote.car.maximumMaintenancePeriod,
     dateStart: quote.dateStart,
     dateEnd: quote.dateEnd,
-    holdCurrentContractWorks: quote.car.holdCurrentContractWorks,
+    hasExistingContractWorksCover: quote.car.hasExistingContractWorksCover,
     currentInsurer: quote.car.currentInsurer,
-    section1Value: quote.car.section1Value,
+    contractWorksSumInsured: quote.car.contractWorksSumInsured,
     displayHomes: quote.car.displayHomes,
     existingStructure: quote.car.existingStructure,
-    section1DisplayHomes: quote.car.displayHomes,
-    section1ExistingStructure: quote.car.existingStructure,
+    contractWorksDisplayHomesPremium: quote.car.displayHomes,
+    contractWorksExistingStructurePremium: quote.car.existingStructure,
     plantEquipment: quote.car.plantEquipment,
-    section2Value: quote.car.section2Value,
-    numberOfClaim: quote.car.numberOfClaim,
+    liabilityLimitBand: quote.car.liabilityLimitBand,
+    claimsCountLast3Years: quote.car.claimsCountLast3Years,
     anyClaimsExceed20k: quote.car.anyClaimsExceed20k,
-    confirmation: quote.car.confirmation,
+    declarationConfirmed: quote.car.declarationConfirmed,
     subLimits: quote.car.subLimits,
     excesses: quote.car.excesses,
     excludedContracts1: quote.car.excludedContracts1,

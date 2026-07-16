@@ -2,7 +2,7 @@
 
 Broker-only CAR insurance UI prototype built from [CAR_INSURANCE_TECH_SPEC.md](../CAR_INSURANCE_TECH_SPEC.md).
 
-Clients and quotes persist via **JSON Server** to `json-server/db.json` on disk. Reference data, car wording, and price files remain static JSON.
+Clients and quotes persist via **JSON Server** to `json-server/db.json` on disk. Reference data, car wording, and prices remain static JSON.
 
 ## Stack
 
@@ -43,7 +43,7 @@ npm run db:reset
 | `app/data/clients.json` | Seed clients for `npm run db:reset` |
 | `app/data/quotes.json` | Seed quotes for `npm run db:reset` |
 | `app/data/car-wording.json` | Additional wording options (read-only) |
-| `app/data/price-files.json` | Pricing rate tables (read-only) |
+| `app/data/prices.json` | Pricing rate tables (read-only) |
 
 ## Routes
 

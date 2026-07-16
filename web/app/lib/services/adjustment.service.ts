@@ -1,6 +1,6 @@
 import type { CarAdjustmentRecord, PolicyNote, Quote } from "~/lib/db/types";
 import type { CarAdjustmentInput } from "~/lib/zod/policy-adjustment";
-import { CAR_STATUS } from "~/lib/zod/policy-car";
+import { POLICY_STATUS } from "~/lib/zod/policy-car";
 import {
   calculateCarAdjustment,
   validateAdjustmentFinish,
@@ -18,7 +18,7 @@ export function calculateAdjustmentForQuote(
   quote: Quote,
   input: CarAdjustmentInput,
 ) {
-  if (quote.carStatusId !== CAR_STATUS.Taken) {
+  if (quote.policyStatusId !== POLICY_STATUS.Taken) {
     throw new AdjustmentError(
       "You can only adjust a policy where the status is taken.",
     );
@@ -61,31 +61,31 @@ export async function submitPolicyAdjustment(
     stampDutyExempt: input.stampDutyExempt === "yes",
     adjustedDate: new Date().toISOString(),
     breakdown,
-    adjustedSection1TrueBasePremium:
+    adjustedContractWorksBasePremium:
       breakdown.adjustment.section1.trueBasePremium,
-    adjustedSection1TerrorismPremium:
+    adjustedContractWorksTerrorismPremium:
       breakdown.adjustment.section1.terrorismPremium,
     adjustedSection1Esl: breakdown.adjustment.section1.esl,
     adjustedSection1Gst: breakdown.adjustment.section1.gst,
     adjustedSection1Sd: breakdown.adjustment.section1.sd,
-    adjustedSection1TotalPremium: breakdown.adjustment.section1.totalPremium,
-    adjustedSection2TrueBasePremium:
+    adjustedContractWorksTotalPremium: breakdown.adjustment.section1.totalPremium,
+    adjustedLiabilityBasePremium:
       breakdown.adjustment.section2.trueBasePremium,
     adjustedSection2Esl: breakdown.adjustment.section2.esl,
     adjustedSection2Gst: breakdown.adjustment.section2.gst,
     adjustedSection2Sd: breakdown.adjustment.section2.sd,
-    adjustedSection2TotalPremium: breakdown.adjustment.section2.totalPremium,
-    totalSection1TrueBasePremium: breakdown.delta.section1.trueBasePremium,
-    totalSection1TerrorismPremium: breakdown.delta.section1.terrorismPremium,
+    adjustedLiabilityTotalPremium: breakdown.adjustment.section2.totalPremium,
+    totalContractWorksBasePremium: breakdown.delta.section1.trueBasePremium,
+    totalContractWorksTerrorismPremium: breakdown.delta.section1.terrorismPremium,
     totalSection1Esl: breakdown.delta.section1.esl,
     totalSection1Gst: breakdown.delta.section1.gst,
     totalSection1Sd: breakdown.delta.section1.sd,
-    totalSection1TotalPremium: breakdown.delta.section1.totalPremium,
-    totalSection2TrueBasePremium: breakdown.delta.section2.trueBasePremium,
+    totalContractWorksTotalPremium: breakdown.delta.section1.totalPremium,
+    totalLiabilityBasePremium: breakdown.delta.section2.trueBasePremium,
     totalSection2Esl: breakdown.delta.section2.esl,
     totalSection2Gst: breakdown.delta.section2.gst,
     totalSection2Sd: breakdown.delta.section2.sd,
-    totalSection2TotalPremium: breakdown.delta.section2.totalPremium,
+    totalLiabilityTotalPremium: breakdown.delta.section2.totalPremium,
     adjustedTotalPremium: breakdown.delta.total.totalPremium,
   };
 

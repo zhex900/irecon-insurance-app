@@ -27,7 +27,7 @@ Source: legacy wholesale/broker CAR product in `legacy-app/`.
 | Adjustment 25% cap | `0.25` | Max base refund per section on adjustment |
 | Adjustment 75% floor | `0.75` | Min retained premium on adjustment finish |
 
-Plant min/max dollar thresholds (`PlantMinValue`, `PlantMaxValue`) come from DB (`CAR_PlantRate_Get`), typically ~$25k free band / $50k cap.
+Plant min/max dollar thresholds (`PlantValueMin`, `PlantValueMax`) come from DB (`CAR_PlantRate_Get`), typically ~$25k free band / $50k cap.
 
 ---
 
@@ -36,25 +36,27 @@ Plant min/max dollar thresholds (`PlantMinValue`, `PlantMaxValue`) come from DB 
 Resolved once per calculation from certificate date, state, postcode, cover type, and turnover.
 
 ```
-CAR_PriceFile_Get(CoverType, Turnover, Date)
-  → CWRate, CWMinPrem
-  → TenMilLiability, TenMilMinPrem
-  → TwentyMilLiability, TwentyMilMinPrem
+CAR_Price_Get(CoverType, Turnover, Date)
+  → ContractWorksRate, ContractWorksMinPremium
+  → Liability10mRate, Liability10mMinPremium
+  → Liability20mRate, Liability20mMinPremium
 
 CAR_StampDuty_Get(State, Date)     → SDRate
-CAR_ESL_Get(State, Date)           → ESLRate (construction), ESLPlantRate (loaded but see §10)
+CAR_ESL_Get(State, Date)           → ESLRate (construction), PlantEslRate (loaded but see §10)
 CAR_TerrorismRate_Get(Postcode, State, Date)  [if Date ≥ 2021-01-01]
   → TerrorismRate, TerrorismTier
-CAR_PlantRate_Get(Date)            → PlantPremiumRate, PlantMinValue, PlantMaxValue
+CAR_PlantRate_Get(Date)            → PlantPremiumRate, PlantValueMin, PlantValueMax
 ```
 
 ### Section 2 liability rate (`GetLiabilityRate`)
 
-| `Section2Value` | Rate | Min premium |
+| `LiabilityLimitBand` | Rate | Min premium |
 |-----------------|------|-------------|
-| `m10` (1) — $10M | `TenMilLiability` | `TenMilMinPrem` |
-| `m20` (2) — $20M | `TwentyMilLiability` | `TwentyMilMinPrem` |
-| `NotInsured` (3) | `0` | `0` |
+| `1` (`m10`) — $10M | `Liability10mRate` | `Liability10mMinPremium` |
+| `2` (`m20`) — $20M | `Liability20mRate` | `Liability20mMinPremium` |
+| `3` (`NotInsured`) | `0` | `0` |
+
+Persisted as `PolicyCAR.LiabilityLimitBand` **int** with check `IN (1, 2, 3)`.
 
 ---
 
@@ -62,8 +64,8 @@ CAR_PlantRate_Get(Date)            → PlantPremiumRate, PlantMinValue, PlantMax
 
 Let:
 - `T` = `CertificateTurnover` (estimated turnover)
-- `r₁` = `CWRate`
-- `m₁` = `CWMinPrem`
+- `r₁` = `ContractWorksRate`
+- `m₁` = `ContractWorksMinPremium`
 - `τ` = `TerrorismRate`
 - `e` = `ESLRate`
 - `g` = `GSTRate` (= 0.10)
@@ -72,86 +74,86 @@ Let:
 ### 3.1 Base premium
 
 ```
-Section1BeforeBasePremium = r₁ × T
-Section1TrueBasePremium   = max(Section1BeforeBasePremium, m₁)
+ContractWorksCalculatedBasePremium = r₁ × T
+ContractWorksBasePremium   = max(ContractWorksCalculatedBasePremium, m₁)
 ```
 
 ### 3.2 Terrorism (contract works base only)
 
 ```
-Section1TerrorismPremium = Section1TrueBasePremium × τ
+ContractWorksTerrorismPremium = ContractWorksBasePremium × τ
 ```
 
-### 3.3 Plant & equipment (`GetSection1PlantEquipment`)
+### 3.3 Plant & equipment (`GetContractWorksPlantPremium`)
 
-Let `P` = plant equipment value, `pr` = `PlantPremiumRate`, `pMin` = `PlantMinValue`, `pMax` = `PlantMaxValue`, `CW` = `Section1ContractWorksValue`.
+Let `P` = plant equipment value, `pr` = `PlantPremiumRate`, `pMin` = `PlantValueMin`, `pMax` = `PlantValueMax`, `CW` = `Section1ContractWorksValue`.
 
 **If certificate date ≥ 2023-01-01:**
 ```
-Section1PlantEquipment = pr × P
+ContractWorksPlantPremium = pr × P
 ```
 
 **Else if date < 2021-01-01 OR CW ≤ 2,500,000** (banded — first $25k free):
 ```
 if P > pMin:
-  if P > pMax:  Section1PlantEquipment = pr × (pMax − pMin)
-  else:         Section1PlantEquipment = pr × (P − pMin)
+  if P > pMax:  ContractWorksPlantPremium = pr × (pMax − pMin)
+  else:         ContractWorksPlantPremium = pr × (P − pMin)
 else:
-  Section1PlantEquipment = 0
+  ContractWorksPlantPremium = 0
 ```
 
 **Else** (post-terror, CW > 2.5M):
 ```
-if P ≤ 0:       Section1PlantEquipment = 0
-elif P > pMax:  Section1PlantEquipment = pr × pMax
-else:           Section1PlantEquipment = pr × P
+if P ≤ 0:       ContractWorksPlantPremium = 0
+elif P > pMax:  ContractWorksPlantPremium = pr × pMax
+else:           ContractWorksPlantPremium = pr × P
 ```
 
 ### 3.4 Plant terrorism & ESL
 
 ```
-Section1PlantTerrorismPremium = (Section1PlantEquipment > 0) ? Section1PlantEquipment × τ : 0
-Section1PlantESL              = (Section1PlantEquipment > 0) ? (Section1PlantEquipment + Section1PlantTerrorismPremium) × e : 0
-Section1ESL                   = (Section1TrueBasePremium + Section1TerrorismPremium) × e
+ContractWorksPlantTerrorismPremium = (ContractWorksPlantPremium > 0) ? ContractWorksPlantPremium × τ : 0
+ContractWorksPlantESL              = (ContractWorksPlantPremium > 0) ? (ContractWorksPlantPremium + ContractWorksPlantTerrorismPremium) × e : 0
+ContractWorksESL                   = (ContractWorksBasePremium + ContractWorksTerrorismPremium) × e
 ```
 
 ### 3.5 GST
 
 ```
-Section1GST = (Section1TrueBasePremium
-            + Section1TerrorismPremium
-            + Section1PlantEquipment
-            + Section1PlantTerrorismPremium
-            + Section1PlantESL
-            + Section1ESL) × g
+ContractWorksGST = (ContractWorksBasePremium
+            + ContractWorksTerrorismPremium
+            + ContractWorksPlantPremium
+            + ContractWorksPlantTerrorismPremium
+            + ContractWorksPlantESL
+            + ContractWorksESL) × g
 ```
 
 ### 3.6 Stamp duty
 
 ```
-Section1SD = (Section1TrueBasePremium
-           + Section1TerrorismPremium
-           + Section1PlantEquipment
-           + Section1PlantTerrorismPremium
-           + Section1PlantESL
-           + Section1ESL
-           + Section1GST) × s₁
+ContractWorksStampDuty = (ContractWorksBasePremium
+           + ContractWorksTerrorismPremium
+           + ContractWorksPlantPremium
+           + ContractWorksPlantTerrorismPremium
+           + ContractWorksPlantESL
+           + ContractWorksESL
+           + ContractWorksGST) × s₁
 ```
 
 ### 3.7 Section 1 total
 
 ```
-Section1TotalPremium = Section1TrueBasePremium
-                     + Section1TerrorismPremium
-                     + Section1PlantEquipment
-                     + Section1PlantTerrorismPremium
-                     + Section1PlantESL
-                     + Section1ESL
-                     + Section1GST
-                     + Section1SD
+ContractWorksTotalPremium = ContractWorksBasePremium
+                     + ContractWorksTerrorismPremium
+                     + ContractWorksPlantPremium
+                     + ContractWorksPlantTerrorismPremium
+                     + ContractWorksPlantESL
+                     + ContractWorksESL
+                     + ContractWorksGST
+                     + ContractWorksStampDuty
 ```
 
-**Not calculated server-side:** `Section1DisplayHomes`, `Section1ExistingStructure` — manual premium lines only (client JS).
+**Not calculated server-side:** `ContractWorksDisplayHomesPremium`, `ContractWorksExistingStructurePremium` — manual premium lines only (client JS).
 
 ---
 
@@ -160,12 +162,12 @@ Section1TotalPremium = Section1TrueBasePremium
 Let `r₂` = liability rate, `m₂` = liability min premium, `s₂` = `SDRate`.
 
 ```
-Section2BeforeBasePremium = r₂ × T
-Section2TrueBasePremium   = max(Section2BeforeBasePremium, m₂)
-Section2ESL               = 0
-Section2GST               = (Section2TrueBasePremium + Section2ESL) × g
-Section2SD                = (Section2TrueBasePremium + Section2ESL + Section2GST) × s₂
-Section2TotalPremium      = Section2TrueBasePremium + Section2ESL + Section2GST + Section2SD
+LiabilityCalculatedBasePremium = r₂ × T
+LiabilityBasePremium   = max(LiabilityCalculatedBasePremium, m₂)
+LiabilityESL               = 0
+LiabilityGST               = (LiabilityBasePremium + LiabilityESL) × g
+LiabilityStampDuty                = (LiabilityBasePremium + LiabilityESL + LiabilityGST) × s₂
+LiabilityTotalPremium      = LiabilityBasePremium + LiabilityESL + LiabilityGST + LiabilityStampDuty
 ```
 
 Section 2 has **no terrorism levy** in any code path.
@@ -176,10 +178,12 @@ Section 2 has **no terrorism levy** in any code path.
 
 ```
 OriginalCombinedBrokerFee = BrokerFeeTotal + BrokerFeeGstTotal
-OriginalTotalPremium      = Section1TotalPremium + Section2TotalPremium + OriginalCombinedBrokerFee
+OriginalTotalPremium      = ContractWorksTotalPremium + LiabilityTotalPremium + OriginalCombinedBrokerFee
 ```
 
 (`CARNewPolicy.aspx.cs` `CalculateTotal` adds broker fee to combined display total.)
+
+Rebuild: combined fee is **derived** from `PolicyFee` lines (`sum(Fee) + sum(FeeGst)`); there is no `OriginalCombinedFee` column. Bind-time total is only `PolicyCAR.OriginalTotalPremium` (not duplicated on `Policy`).
 
 ---
 
@@ -190,8 +194,8 @@ Used when broker manually edits premium fields on the pricing step. Logic in `CA
 ### Additional Section 1 variables
 
 ```
-ES          = Section1ExistingStructure      (manual premium input)
-DH          = Section1DisplayHomes         (manual premium input)
+ES          = ContractWorksExistingStructurePremium      (manual premium input)
+DH          = ContractWorksDisplayHomesPremium         (manual premium input)
 ES_τ        = τ × ES
 DH_τ        = τ × DH
 ```
@@ -199,49 +203,49 @@ DH_τ        = τ × DH
 `Section1Terror` in JS = terrorism on **contract works base only**. The displayed terrorism field combines all three:
 
 ```
-txtSection1TerrorismPremium = Section1Terror + ES_τ + DH_τ
+txtContractWorksTerrorismPremium = Section1Terror + ES_τ + DH_τ
 ```
 
-### ESL (recalculated unless `DoNotCalculate` is true)
+### ESL (recalculated unless `ManualTaxOverride` is true)
 
 ```
-Section1ESL = (Section1Base + Section1Terror + ES_τ + ES + DH + DH_τ) × ESLRate
-Section2ESL = 0
+ContractWorksESL = (Section1Base + Section1Terror + ES_τ + ES + DH + DH_τ) × ESLRate
+LiabilityESL = 0
 ```
 
 ### GST (always recalculated)
 
 ```
-Section1GST = (Section1Base + Section1Terror + ES_τ + ES + DH + DH_τ
-             + Section1Plant + Section1PlantTerror + Section1ESLPlant + Section1ESL) × GSTRate
+ContractWorksGST = (Section1Base + Section1Terror + ES_τ + ES + DH + DH_τ
+             + Section1Plant + Section1PlantTerror + ContractWorksESLPlant + ContractWorksESL) × GSTRate
 
-Section2GST = (Section2Base + Section2ESL) × GSTRate
+LiabilityGST = (Section2Base + LiabilityESL) × GSTRate
 ```
 
-### Stamp duty (recalculated unless `DoNotCalculate`)
+### Stamp duty (recalculated unless `ManualTaxOverride`)
 
 ```
-Section1SD = (all Section1 taxable components + Section1GST) × SDRateSection1
-Section2SD = (Section2Base + Section2ESL + Section2GST) × SDRateSection2
+ContractWorksStampDuty = (all Section1 taxable components + ContractWorksGST) × ContractWorksStampDutyRate
+LiabilityStampDuty = (Section2Base + LiabilityESL + LiabilityGST) × LiabilityStampDutyRate
 ```
 
 ### Section totals
 
 ```
 Section1Total = Section1Base + Section1Terror + ES_τ + ES + DH + DH_τ
-              + Section1Plant + Section1PlantTerror + Section1ESLPlant
-              + Section1ESL + Section1GST + Section1SD
+              + Section1Plant + Section1PlantTerror + ContractWorksESLPlant
+              + ContractWorksESL + ContractWorksGST + ContractWorksStampDuty
 
-Section2Total = Section2Base + Section2ESL + Section2GST + Section2SD
+Section2Total = Section2Base + LiabilityESL + LiabilityGST + LiabilityStampDuty
 
 CombinedTotal = Section1Total + Section2Total + BrokerFee
 ```
 
 ### Manual override rules
 
-- Editing base on blur: floor to `hidSection1MinPrem` / `hidSection2MinPrem`.
-- Editing ESL/SD/GST directly sets `DoNotCalculate = true` permanently for the session — ESL/SD stop auto-recalculating.
-- `hidSection1Rate = Section1Base / EstimatedTurnover` back-derived on manual base edit.
+- Editing base on blur: floor to `hidContractWorksMinPremium` / `hidLiabilityMinPremium`.
+- Editing ESL/SD/GST directly sets `ManualTaxOverride = true` permanently for the session — ESL/SD stop auto-recalculating.
+- `hidContractWorksAppliedRate = Section1Base / EstimatedTurnover` back-derived on manual base edit.
 
 ---
 
@@ -259,7 +263,7 @@ Inputs:
 
 ### 7.1 Original row (reconstructed)
 
-From stored `Section1TrueBasePremium`, `Section2TrueBasePremium`, `Section1TerrorismPremium`:
+From stored `ContractWorksBasePremium`, `LiabilityBasePremium`, `ContractWorksTerrorismPremium`:
 
 ```
 S1_ESL = (S1_Base + S1_Terror) × e
@@ -353,14 +357,14 @@ flowchart TD
 When a policy is saved, effective rates are derived from final premium amounts and stored for future adjustments:
 
 ```
-Section1Rate  = TrueBase₁ / Turnover
-Section2Rate  = TrueBase₂ / Turnover
-TerrorismRate = Section1TerrorismPremium / Section1TrueBasePremium
-PlantRate     = Section1PlantEquipment / PlantValue
-ESLRate       = Section1ESL / (TrueBase₁ + TerrorismPremium)
-ESLPlantRate  = Section1PlantESL / (Plant + PlantTerrorism)
-SDRateSection1 = Section1SD / (all S1 taxable + GST)
-SDRateSection2 = Section2SD / (S2Base + ESL + GST)
+ContractWorksAppliedRate  = TrueBase₁ / Turnover
+LiabilityAppliedRate  = TrueBase₂ / Turnover
+TerrorismRate = ContractWorksTerrorismPremium / ContractWorksBasePremium
+PlantRate     = ContractWorksPlantPremium / PlantValue
+ESLRate       = ContractWorksESL / (TrueBase₁ + TerrorismPremium)
+PlantEslRate  = ContractWorksPlantESL / (Plant + PlantTerrorism)
+ContractWorksStampDutyRate = ContractWorksStampDuty / (all S1 taxable + GST)
+LiabilityStampDutyRate = LiabilityStampDuty / (S2Base + ESL + GST)
 ```
 
 ---
@@ -384,7 +388,7 @@ SDRateSection2 = Section2SD / (S2Base + ESL + GST)
 ## 11. Referral Triggers (`CARCalculator.GetReferralReasons`)
 
 - Plant equipment > $50,000
-- `CWRate` missing or zero
+- `ContractWorksRate` missing or zero
 - Liability selected but rate = 0
 - Stamp duty rate not found (`CAR_StampDutyId == 0`)
 - ESL rate not found (`CAR_ESLId == 0`)
@@ -394,8 +398,8 @@ SDRateSection2 = Section2SD / (S2Base + ESL + GST)
 
 ## 12. Implementation Notes
 
-1. **`ESLPlantRate`** is loaded from DB but plant ESL uses **`ESLRate`** (construction rate) in `CARCalculator2.cs` L291.
-2. **`PlantMaxValue` assignment bug** at L341: `PlantMinValue` is assigned twice from `PlantMaxValue` column — may affect plant banding.
+1. **`PlantEslRate`** is loaded from DB but plant ESL uses **`ESLRate`** (construction rate) in `CARCalculator2.cs` L291.
+2. **`PlantValueMax` assignment bug** at L341: `PlantValueMin` is assigned twice from `PlantValueMax` column — may affect plant banding.
 3. **Terrorism field semantics:** server stores terror on CW base only; JS merges ES/DH terror into the displayed terrorism field, so stored `TerrorismRate` can diverge after manual edits.
 4. **Adjustment original row** may not equal the policy's true original premium when plant / ES / DH premiums exist on the certificate.
 5. **75% minimum premium** text appears on new quote and view screens but is **not enforced** outside the adjustment wizard.
@@ -407,8 +411,8 @@ SDRateSection2 = Section2SD / (S2Base + ESL + GST)
 | Variable | Meaning |
 |----------|---------|
 | `T` / `Turnover` | Estimated annual turnover |
-| `r₁` / `CWRate` | Contract works rate (per dollar of turnover) |
-| `m₁` / `CWMinPrem` | Contract works minimum premium |
+| `r₁` / `ContractWorksRate` | Contract works rate (per dollar of turnover) |
+| `m₁` / `ContractWorksMinPremium` | Contract works minimum premium |
 | `r₂` | Section 2 liability rate |
 | `m₂` | Section 2 minimum premium |
 | `τ` / `TerrorismRate` | Terrorism levy rate |

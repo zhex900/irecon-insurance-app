@@ -32,7 +32,7 @@ Four **peer** items — same level, no nesting under Home or a Reports parent in
 | **Clients** | `/clients` | Client **list** with inline filters (not a separate “search” step) |
 | **Policies** | `/policies` | Policy **list** with inline filters |
 | **Reports** | `/reports` | Report hub; individual reports open in main content |
-| **Settings** | `/settings` | Settings hub (AR brokers, document templates, fixed PDFs) |
+| **Settings** | `/settings` | Settings hub (AR brokers, document templates, library documents) |
 
 ```mermaid
 flowchart LR
@@ -54,9 +54,9 @@ flowchart LR
 
 **Settings** — selecting Settings opens the settings area (admin only):
 
-- AR Broker Management
+- Authorised Representative broker Management
 - Document Templates (Schedule, ROA, Adjustment — versioned editor + preview)
-- Fixed PDFs (upload / delete static attachments)
+- Library documents (upload / delete static attachments)
 
 | Module | Phase 1 |
 |--------|---------|
@@ -338,7 +338,7 @@ flowchart TD
 **Route:** `/clients/:clientId/report`  
 **Legacy:** `ClientReport.aspx`
 
-1. Parameters: **Date from**, **Date to** (default: current calendar month).
+1. Parameters: **Date from**, **Date to** (default: current calendar month). Filters **Taken** policies by **`TakenAt`** (legacy “date approved” — same column; no `DateApproved`).
 2. **Run report** → table on page.
 3. **Export** → CSV/XLSX.
 
@@ -515,7 +515,7 @@ flowchart TD
 ```
 
 Summary columns: Status · Number of policies · Total base premium  
-Detail columns: Client name · AR name · Date quoted · Base premium
+Detail columns: Client name · AuthorisedRepresentative name · Date quoted · Base premium
 
 #### CAR Renewal Report
 
@@ -523,7 +523,7 @@ Detail columns: Client name · AR name · Date quoted · Base premium
 **Legacy:** `CARRenewal.aspx`
 
 Parameters: Reference date · Status checkboxes · Policy action (New / Renewal)  
-Columns: Status · Type · Client · Expiry · AR · AR email · Due next days
+Columns: Status · Type · Client · Expiry · AuthorisedRepresentative · AuthorisedRepresentative email · Due next days
 
 #### IRECON Reconciliation Report
 
@@ -552,13 +552,13 @@ Read-only contact list for renewal outreach.
 | Screen | Route | Summary |
 |--------|-------|---------|
 | Settings hub | `/settings` | Links to sub-sections below |
-| AR Broker Management | `/settings/ar-brokers` | Search, view, edit, delete AR records |
+| Authorised Representative broker Management | `/settings/ar-brokers` | Search, view, edit, delete AR records |
 | Document Templates | `/settings/document-templates` | Merge templates per slot; version history; preview |
-| Fixed PDFs | `/settings/fixed-pdfs` | Upload/delete static PDFs; assign to cover types + rules |
+| Library documents | `/settings/library-documents` | Upload/delete static PDFs; assign to cover types + rules |
 
-**Still manual DB only:** price files, fees, generic reference data — see [CAR_INSURANCE_APP_SPEC.md §10.2](./CAR_INSURANCE_APP_SPEC.md#102-configuration-and-reference-data--no-admin-ui-at-this-stage).
+**Still manual DB only:** prices, fees, generic reference data — see [CAR_INSURANCE_APP_SPEC.md §10.2](./CAR_INSURANCE_APP_SPEC.md#102-configuration-and-reference-data--no-admin-ui-at-this-stage).
 
-#### AR Broker Management
+#### Authorised Representative broker Management
 
 | Action | Phase 1 |
 |--------|---------|
@@ -587,17 +587,17 @@ Initial content imported from [`car-pdf-templates/`](../car-pdf-templates/) (one
 flowchart LR
   HUB[Settings hub] --> AR[AR Brokers]
   HUB --> TPL[Document Templates]
-  HUB --> FIX[Fixed PDFs]
+  HUB --> FIX[Library documents]
   TPL --> SLOT[Slot list]
   SLOT --> EDIT[Editor + merge fields]
   EDIT --> PREV[Preview]
   PREV --> PUB[Publish version]
 ```
 
-#### Fixed PDFs
+#### Library documents
 
-**Route:** `/settings/fixed-pdfs`  
-**Spec:** [CAR_INSURANCE_APP_SPEC.md §6.13.3](./CAR_INSURANCE_APP_SPEC.md#6133-fixed-pdf-attachments-caraddit)
+**Route:** `/settings/library-documents`  
+**Spec:** [CAR_INSURANCE_APP_SPEC.md §6.13.3](./CAR_INSURANCE_APP_SPEC.md#6133-library-document-attachments-caraddit)
 
 - **Upload** PDF → stored in R2; appears in library.
 - **Delete** from library (stops inclusion in **future** packs; does not remove PDFs already on policies).
@@ -628,9 +628,9 @@ flowchart LR
 | 14 | IRECON Reconciliation | `/reports/irecon-reconciliation` | Reports | Retained |
 | 15 | Expiring OBCAR | `/reports/obcar-expiring` | Reports | Retained |
 | 16 | Settings hub | `/settings` | Settings | Yes (admin) |
-| 17 | AR Broker Management | `/settings/ar-brokers` | Settings | Yes (admin) |
+| 17 | Authorised Representative broker Management | `/settings/ar-brokers` | Settings | Yes (admin) |
 | 18 | Document Templates | `/settings/document-templates` | Settings | Yes (admin) |
-| 19 | Fixed PDFs | `/settings/fixed-pdfs` | Settings | Yes (admin) |
+| 19 | Library documents | `/settings/library-documents` | Settings | Yes (admin) |
 | — | Cancel Policies | — | — | **Excluded** |
 
 \*Apply CAR is reached from client detail; side nav stays on **Clients** or follows client context.

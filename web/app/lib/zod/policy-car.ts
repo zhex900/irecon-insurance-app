@@ -29,8 +29,8 @@ const excessesSchema = z.object({
   excessSection2F: z.string().min(1),
 });
 
-/** CAR status IDs from reference data */
-export const CAR_STATUS = {
+/** Policy status IDs from reference data (Pending / Taken / Not taken) */
+export const POLICY_STATUS = {
   Pending: 1,
   Taken: 2,
   NotTaken: 3,
@@ -38,7 +38,7 @@ export const CAR_STATUS = {
 
 const baseFields = {
   clientId: z.coerce.number(),
-  carStatusId: z.coerce
+  policyStatusId: z.coerce
     .number()
     .int()
     .min(1, "'Status' is required")
@@ -46,7 +46,7 @@ const baseFields = {
   insurerCode: z.string().min(1, "Insurer is required"),
   insuredName: z.string().min(1, "Insured name is required"),
   coverTypeId: z.coerce.number().min(1, "Type of cover is required"),
-  policyActionId: z.coerce.number().min(1, "Policy category is required"),
+  businessTypeId: z.coerce.number().min(1, "Business type is required"),
   policyNumber: z.string().optional(),
   siteAddress: z.string().min(1, "Site address is required"),
   estimatedTurnover: z.coerce
@@ -63,18 +63,18 @@ const baseFields = {
   maximumMaintenancePeriod: z.coerce.number().int().positive(),
   dateStart: z.string().min(1, "Policy start date is required"),
   dateEnd: z.string().min(1, "Policy end date is required"),
-  holdCurrentContractWorks: z.coerce.boolean(),
+  hasExistingContractWorksCover: z.coerce.boolean(),
   currentInsurer: z.string().optional(),
-  section1Value: z.coerce.number().min(0),
+  contractWorksSumInsured: z.coerce.number().min(0),
   displayHomes: z.coerce.number().min(0),
   existingStructure: z.coerce.number().min(0),
   section1DisplayHomes: z.coerce.number().min(0).default(0),
   section1ExistingStructure: z.coerce.number().min(0).default(0),
   plantEquipment: z.coerce.number().min(0),
-  section2Value: z.coerce.number().min(1),
-  numberOfClaim: z.coerce.number().int().min(0),
+  liabilityLimitBand: z.coerce.number().min(1),
+  claimsCountLast3Years: z.coerce.number().int().min(0),
   anyClaimsExceed20k: z.coerce.boolean(),
-  confirmation: z.coerce.boolean(),
+  declarationConfirmed: z.coerce.boolean(),
   subLimits: subLimitsSchema,
   excesses: excessesSchema,
   excludedContracts1: z.string().optional(),
@@ -87,21 +87,21 @@ const baseFields = {
 };
 
 type PolicyRuleFields = {
-  policyActionId?: number;
+  businessTypeId?: number;
   policyNumber?: string;
-  holdCurrentContractWorks?: boolean;
+  hasExistingContractWorksCover?: boolean;
   currentInsurer?: string;
 };
 
 function applyPolicyRules(data: PolicyRuleFields, ctx: z.RefinementCtx) {
-  if (data.policyActionId === 2 && !data.policyNumber?.trim()) {
+  if (data.businessTypeId === 2 && !data.policyNumber?.trim()) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: "Policy number is required for renewal",
       path: ["policyNumber"],
     });
   }
-  if (data.holdCurrentContractWorks && !data.currentInsurer?.trim()) {
+  if (data.hasExistingContractWorksCover && !data.currentInsurer?.trim()) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: "Current insurer is required",
@@ -112,11 +112,11 @@ function applyPolicyRules(data: PolicyRuleFields, ctx: z.RefinementCtx) {
 
 const draftFields = {
   clientId: z.coerce.number(),
-  carStatusId: z.coerce.number().optional(),
+  policyStatusId: z.coerce.number().optional(),
   insurerCode: z.string().optional(),
   insuredName: z.string().optional(),
   coverTypeId: z.coerce.number().optional(),
-  policyActionId: z.coerce.number().optional(),
+  businessTypeId: z.coerce.number().optional(),
   policyNumber: z.string().optional(),
   siteAddress: z.string().optional(),
   estimatedTurnover: z.coerce.number().min(0).optional(),
@@ -129,18 +129,18 @@ const draftFields = {
   maximumMaintenancePeriod: z.coerce.number().int().min(0).optional(),
   dateStart: z.string().optional(),
   dateEnd: z.string().optional(),
-  holdCurrentContractWorks: z.coerce.boolean().optional(),
+  hasExistingContractWorksCover: z.coerce.boolean().optional(),
   currentInsurer: z.string().optional(),
-  section1Value: z.coerce.number().min(0).optional(),
+  contractWorksSumInsured: z.coerce.number().min(0).optional(),
   displayHomes: z.coerce.number().min(0).optional(),
   existingStructure: z.coerce.number().min(0).optional(),
   section1DisplayHomes: z.coerce.number().min(0).optional(),
   section1ExistingStructure: z.coerce.number().min(0).optional(),
   plantEquipment: z.coerce.number().min(0).optional(),
-  section2Value: z.coerce.number().optional(),
-  numberOfClaim: z.coerce.number().int().min(0).optional(),
+  liabilityLimitBand: z.coerce.number().optional(),
+  claimsCountLast3Years: z.coerce.number().int().min(0).optional(),
   anyClaimsExceed20k: z.coerce.boolean().optional(),
-  confirmation: z.coerce.boolean().optional(),
+  declarationConfirmed: z.coerce.boolean().optional(),
   subLimits: subLimitsSchema.partial().optional(),
   excesses: excessesSchema.partial().optional(),
   excludedContracts1: z.string().optional(),
@@ -164,21 +164,21 @@ export const carQuotePricingSchema = z
     postcode: z.string().regex(/^\d{4}$/),
     stateId: z.coerce.number().min(1),
     dateStart: z.string().min(1),
-    section1Value: z.coerce.number().min(0),
+    contractWorksSumInsured: z.coerce.number().min(0),
     displayHomes: z.coerce.number().min(0),
     existingStructure: z.coerce.number().min(0),
     plantEquipment: z.coerce.number().min(0),
-    section2Value: z.coerce.number().min(1),
-    numberOfClaim: z.coerce.number().int().min(0),
+    liabilityLimitBand: z.coerce.number().min(1),
+    claimsCountLast3Years: z.coerce.number().int().min(0),
     anyClaimsExceed20k: z.coerce.boolean(),
-    holdCurrentContractWorks: z.coerce.boolean(),
+    hasExistingContractWorksCover: z.coerce.boolean(),
   })
   .passthrough();
 
 export const carQuoteSchema = z
   .object({
     ...baseFields,
-    confirmation: z.coerce.boolean().refine((value) => value === true, {
+    declarationConfirmed: z.coerce.boolean().refine((value) => value === true, {
       message: "Duty of disclosure confirmation is required",
     }),
   })
@@ -192,7 +192,7 @@ export const wizardSteps = [
   "Section 2 & Excesses",
   "Claims & Wording",
   "Review",
-  "Pricing Confirmation",
+    "Pricing Confirmation",
 ] as const;
 
 export const wizardStepFields: Record<number, (keyof CarQuoteFormValues)[]> = {
@@ -200,7 +200,7 @@ export const wizardStepFields: Record<number, (keyof CarQuoteFormValues)[]> = {
     "insurerCode",
     "insuredName",
     "coverTypeId",
-    "policyActionId",
+    "businessTypeId",
     "policyNumber",
     "siteAddress",
     "estimatedTurnover",
@@ -213,24 +213,24 @@ export const wizardStepFields: Record<number, (keyof CarQuoteFormValues)[]> = {
     "maximumMaintenancePeriod",
     "dateStart",
     "dateEnd",
-    "holdCurrentContractWorks",
+    "hasExistingContractWorksCover",
     "currentInsurer",
   ],
   1: [
-    "section1Value",
+    "contractWorksSumInsured",
     "displayHomes",
     "existingStructure",
     "plantEquipment",
     "subLimits",
   ],
-  2: ["section2Value", "excesses"],
+  2: ["liabilityLimitBand", "excesses"],
   3: [
-    "numberOfClaim",
+    "claimsCountLast3Years",
     "anyClaimsExceed20k",
     "excludedContracts1",
     "excludedContracts2",
     "excludedContracts3",
-    "confirmation",
+    "declarationConfirmed",
     "selectedWordingIds",
     "customWordingEnabled",
     "customWordingSubject",
@@ -244,12 +244,12 @@ export const pricingFields = [
   "postcode",
   "stateId",
   "dateStart",
-  "section1Value",
+  "contractWorksSumInsured",
   "displayHomes",
   "existingStructure",
   "plantEquipment",
-  "section2Value",
-  "numberOfClaim",
+  "liabilityLimitBand",
+  "claimsCountLast3Years",
   "anyClaimsExceed20k",
-  "holdCurrentContractWorks",
+  "hasExistingContractWorksCover",
 ] as const satisfies readonly (keyof CarQuoteFormValues)[];

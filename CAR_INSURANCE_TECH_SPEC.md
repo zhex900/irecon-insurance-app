@@ -33,14 +33,14 @@ flowchart TB
 
 ### 1.2 Architectural Principles
 
-| Principle | Decision |
-|-----------|----------|
-| Server-first data access | Loaders, actions, and server modules own reads/writes. No client-side Supabase calls for business data. |
-| Minimize APIs | Prefer React Router loaders/actions over standalone REST endpoints. Add explicit API routes only for webhooks, PDF streaming edge cases, or third-party integrations. |
-| Type safety end-to-end | TypeScript everywhere; Zod at boundaries; generated DB types from Supabase schema. |
-| Business logic on server | Pricing, referral rules, policy persistence, and PDF generation run server-side only. |
-| Broker-only auth | Supabase Auth for brokers; clients are DB records only. |
-| Immutable quote artifacts | Generated PDFs stored in R2; metadata in Postgres. |
+| Principle                 | Decision                                                                                                                                                              |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Server-first data access  | Loaders, actions, and server modules own reads/writes. No client-side Supabase calls for business data.                                                               |
+| Minimize APIs             | Prefer React Router loaders/actions over standalone REST endpoints. Add explicit API routes only for webhooks, PDF streaming edge cases, or third-party integrations. |
+| Type safety end-to-end    | TypeScript everywhere; Zod at boundaries; generated DB types from Supabase schema.                                                                                    |
+| Business logic on server  | Pricing, referral rules, policy persistence, and PDF generation run server-side only.                                                                                 |
+| Broker-only auth          | Supabase Auth for brokers; clients are DB records only.                                                                                                               |
+| Immutable quote artifacts | Generated PDFs stored in R2; metadata in Postgres.                                                                                                                    |
 
 ### 1.3 Request Flow (Server-First)
 
@@ -54,7 +54,7 @@ sequenceDiagram
 
   UI->>RR: Submit quote form action
   RR->>SVC: validate with Zod
-  SVC->>DB: load price files and rates
+  SVC->>DB: load prices and rates
   SVC->>SVC: calculate premium
   SVC->>DB: transactional save policy tables
   SVC->>SVC: render PDF
@@ -69,20 +69,20 @@ sequenceDiagram
 
 ### 2.1 Core Framework
 
-| Layer | Choice | Version / Notes |
-|-------|--------|-----------------|
-| Framework | React Router (Framework mode) | File-based routes, loaders, actions, SSR/streaming |
-| UI library | React | v19 |
-| Language | TypeScript | Strict mode (`strict: true`) |
-| Validation | Zod | Shared schemas for forms, actions, and services |
-| Forms | React Hook Form | **Recommended — see §6** |
-| Styling | Tailwind CSS | Latest stable |
-| Components | [shadcn/ui](https://ui.shadcn.com/) | Source-owned components via CLI |
-| Database | Supabase Postgres | Schema from `db.txt` |
-| Auth | Supabase Auth | Email/password or SSO for brokers |
-| Object storage | Cloudflare R2 | Quote PDFs and templates |
-| Email | [Resend](https://resend.com/) | Transactional email (quote delivery, notifications) |
-| Hosting | Cloudflare Workers | React Router Cloudflare adapter |
+| Layer          | Choice                              | Version / Notes                                     |
+| -------------- | ----------------------------------- | --------------------------------------------------- |
+| Framework      | React Router (Framework mode)       | File-based routes, loaders, actions, SSR/streaming  |
+| UI library     | React                               | v19                                                 |
+| Language       | TypeScript                          | Strict mode (`strict: true`)                        |
+| Validation     | Zod                                 | Shared schemas for forms, actions, and services     |
+| Forms          | React Hook Form                     | **Recommended — see §6**                            |
+| Styling        | Tailwind CSS                        | Latest stable                                       |
+| Components     | [shadcn/ui](https://ui.shadcn.com/) | Source-owned components via CLI                     |
+| Database       | Supabase Postgres                   | Schema from `db.txt`                                |
+| Auth           | Supabase Auth                       | Email/password or SSO for brokers                   |
+| Object storage | Cloudflare R2                       | Quote PDFs and templates                            |
+| Email          | [Resend](https://resend.com/)       | Transactional email (quote delivery, notifications) |
+| Hosting        | Cloudflare Workers                  | React Router Cloudflare adapter                     |
 
 ### 2.2 Key Libraries
 
@@ -242,10 +242,10 @@ create table policy_document (
 
 ### 4.2 Auth and Roles
 
-| Role | Access |
-|------|--------|
-| `admin` | Settings, AR management, document templates; optional all-AR access |
-| `broker` | CRUD clients, quotes, PDFs for own AR scope |
+| Role     | Access                                                              |
+| -------- | ------------------------------------------------------------------- |
+| `admin`  | Settings, AuthorisedRepresentative management, document templates; optional all-AR access |
+| `broker` | CRUD clients, quotes, PDFs for own AuthorisedRepresentative scope                         |
 
 - Supabase Auth handles sign-in, sessions, password reset.
 - `app_user` maps `auth.users.id` → display name, role, and optional `ar_id`.
@@ -275,7 +275,7 @@ export async function action({ request, context }) {
 ### 4.5 Migrations and Types
 
 1. SQL migrations in `supabase/migrations/`.
-2. Seed reference data from `db.txt` records (PolicyType, State, CARStatus, etc.).
+2. Seed reference data from `db.txt` records (PolicyType, State, PolicyStatus, etc.).
 3. Generate types: `supabase gen types typescript --project-id <id> > app/lib/db/types.ts`.
 
 ---
@@ -284,13 +284,13 @@ export async function action({ request, context }) {
 
 ### 5.1 Deployment Model
 
-| Component | Service |
-|-----------|---------|
-| App runtime | Cloudflare Workers (React Router Cloudflare preset) |
-| Static assets | Workers Assets / built client bundle |
-| PDF storage | R2 bucket `car-quote-pdfs` |
-| Secrets | Workers secrets (Supabase keys, R2 credentials) |
-| DNS / TLS | Cloudflare zone |
+| Component     | Service                                             |
+| ------------- | --------------------------------------------------- |
+| App runtime   | Cloudflare Workers (React Router Cloudflare preset) |
+| Static assets | Workers Assets / built client bundle                |
+| PDF storage   | R2 bucket `car-quote-pdfs`                          |
+| Secrets       | Workers secrets (Supabase keys, R2 credentials)     |
+| DNS / TLS     | Cloudflare zone                                     |
 
 ### 5.2 Wrangler Bindings
 
@@ -328,11 +328,11 @@ quotes/{policyId}/{documentType}/{timestamp}.pdf
 
 ### 5.4 Environments
 
-| Env | Purpose |
-|-----|---------|
-| `dev` | Local Wrangler + Supabase local or dev project |
-| `staging` | Pre-prod validation |
-| `production` | Live broker use |
+| Env          | Purpose                                        |
+| ------------ | ---------------------------------------------- |
+| `dev`        | Local Wrangler + Supabase local or dev project |
+| `staging`    | Pre-prod validation                            |
+| `production` | Live broker use                                |
 
 ---
 
@@ -342,14 +342,14 @@ quotes/{policyId}/{documentType}/{timestamp}.pdf
 
 This is a form-heavy broker app (multi-step CAR quote, client create/edit, excess/sub-limit sections, conditional fields). React Hook Form is the right default.
 
-| Concern | Without RHF | With RHF |
-|---------|-------------|----------|
-| 50+ fields across wizard steps | Manual state object, verbose | `useForm` + field registration |
-| Validation | Custom error mapping | `@hookform/resolvers/zod` |
-| Performance | Re-render whole form on each keystroke | Uncontrolled fields, minimal re-renders |
-| Dirty / touched tracking | Manual | Built-in `formState` |
-| Section-level save | Custom | `trigger(['section1'])` partial validation |
-| shadcn integration | Awkward | `Controller` + `Field` components |
+| Concern                        | Without RHF                            | With RHF                                   |
+| ------------------------------ | -------------------------------------- | ------------------------------------------ |
+| 50+ fields across wizard steps | Manual state object, verbose           | `useForm` + field registration             |
+| Validation                     | Custom error mapping                   | `@hookform/resolvers/zod`                  |
+| Performance                    | Re-render whole form on each keystroke | Uncontrolled fields, minimal re-renders    |
+| Dirty / touched tracking       | Manual                                 | Built-in `formState`                       |
+| Section-level save             | Custom                                 | `trigger(['section1'])` partial validation |
+| shadcn integration             | Awkward                                | `Controller` + `Field` components          |
 
 ### 6.1 Form Architecture
 
@@ -385,7 +385,7 @@ const form = useForm<CarQuoteFormValues>({
 Port legacy `CARCalculator2` logic to TypeScript:
 
 - Inputs: cover type, turnover, section values, liability, state, postcode, plant, dates.
-- Rate resolution from `PriceFile*`, `Fee*`, `CARExcess` tables by effective date.
+- Rate resolution from `Price*`, `Fee*`, `CARExcess` tables by effective date.
 - Outputs: all `PolicyCAR` premium fields + `PolicyFee` rows.
 - Referral evaluation → `PolicyNote` (type Referral).
 
@@ -395,8 +395,8 @@ Port legacy `CARCalculator2` logic to TypeScript:
 
 Transactional saves across:
 
-- `PolicyPeriod`, `Policy`
-- `PolicyCAR`, `PolicyCARExcess`, `PolicyCARSubLimit`, `PolicyCARWording`, `PolicyFee`, `PolicyNote`
+- `Policy`, `PolicyCAR`
+- `PolicyCAR`, `PolicyCARExcess`, `PolicyFee`, `PolicyNote`
 
 **Policy state rules** (see [CAR_INSURANCE_APP_SPEC.md §6.9](./CAR_INSURANCE_APP_SPEC.md#69-policy-state-and-lifecycle)):
 
@@ -416,7 +416,7 @@ Use Postgres transactions (Supabase RPC or sequential with rollback).
 3. `generate({ template, inputs, plugins: { text, image } })` → `Uint8Array`.
 4. Upload bytes to R2 (`quotes/{policyId}/{documentType}/{timestamp}.pdf`).
 5. Insert `PolicyDocument` row (type code, R2 key, `DocumentTemplateVersionId`, audit fields).
-6. Append matching **fixed PDFs** from `FixedPdf` library (`CARADDIT`) when cover-type / rule predicates match.
+6. Append matching **library documents** from `LibraryDocument` (`CARADDIT`) when cover-type / rule predicates match.
 
 **Preview (Settings):** same `generate()` call with fixture `inputs` — no separate render path.
 
@@ -430,16 +430,16 @@ Outbound email is handled server-side via [Resend](https://resend.com/). No clie
 
 **Use cases (v1):**
 
-| Email | Trigger | Attachment |
-|-------|---------|------------|
-| Quote to client/recipient | Broker action on quote view | Quote PDF from R2 |
-| Referral notification | Referral rule triggered on save | Optional |
-| Status change notice | CAR status updated (Taken / Not taken) | Optional |
+| Email                     | Trigger                                | Attachment        |
+| ------------------------- | -------------------------------------- | ----------------- |
+| Quote to client/recipient | Broker action on quote view            | Quote PDF from R2 |
+| Referral notification     | Referral rule triggered on save        | Optional          |
+| Status change notice      | CAR status updated (Taken / Not taken) | Optional          |
 
 **Flow:**
 
 1. Broker submits send-email form (recipient, subject, optional message) on quote view.
-2. Server action validates with Zod and checks broker auth + AR scope.
+2. Server action validates with Zod and checks broker auth + AuthorisedRepresentative scope.
 3. `email.service.ts` fetches PDF bytes from R2 (if attaching).
 4. Resend API sends email from verified domain (e.g. `quotes@yourdomain.com.au`).
 5. Server inserts `EmailLog` row (`ClientId`, `From`, `To`, `Subject`, `Content`, `DateSent`, audit fields).
@@ -489,12 +489,12 @@ export async function sendQuoteEmail({
 
 **Resend configuration:**
 
-| Setting | Value |
-|---------|-------|
-| `RESEND_API_KEY` | Workers secret |
-| `RESEND_FROM_ADDRESS` | Verified sender on Resend domain |
-| Domain DNS | SPF, DKIM, DMARC via Resend dashboard |
-| Webhook (optional) | `POST /api/webhooks/resend` for delivery/bounce events |
+| Setting               | Value                                                  |
+| --------------------- | ------------------------------------------------------ |
+| `RESEND_API_KEY`      | Workers secret                                         |
+| `RESEND_FROM_ADDRESS` | Verified sender on Resend domain                       |
+| Domain DNS            | SPF, DKIM, DMARC via Resend dashboard                  |
+| Webhook (optional)    | `POST /api/webhooks/resend` for delivery/bounce events |
 
 **Logging:** all sends map to `EmailLog` per **FR-DOC-04**. Display email history on client detail view (legacy parity with `ClientDetails` email log).
 
@@ -504,12 +504,12 @@ export async function sendQuoteEmail({
 
 Explicit routes only where needed:
 
-| Route | Purpose |
-|-------|---------|
-| `GET /quotes/:id/pdf` | Stream/download quote PDF |
+| Route                         | Purpose                                               |
+| ----------------------------- | ----------------------------------------------------- |
+| `GET /quotes/:id/pdf`         | Stream/download quote PDF                             |
 | `POST /quotes/:id/send-email` | Send quote email via Resend (server action preferred) |
-| `GET /api/health` | Health check |
-| `POST /api/webhooks/resend` | Optional Resend delivery/bounce webhook |
+| `GET /api/health`             | Health check                                          |
+| `POST /api/webhooks/resend`   | Optional Resend delivery/bounce webhook               |
 
 Everything else: loaders + actions.
 
@@ -525,10 +525,10 @@ Everything else: loaders + actions.
 
 ### 8.2 Layout Responsive Rules
 
-| Breakpoint | Layout |
-|------------|--------|
-| `< md` (mobile) | Collapsible sidebar (Sheet), single-column forms, sticky step footer |
-| `md–lg` (tablet) | Sidebar visible, two-column form grids where appropriate |
+| Breakpoint       | Layout                                                                   |
+| ---------------- | ------------------------------------------------------------------------ |
+| `< md` (mobile)  | Collapsible sidebar (Sheet), single-column forms, sticky step footer     |
+| `md–lg` (tablet) | Sidebar visible, two-column form grids where appropriate                 |
 | `≥ lg` (desktop) | Full sidebar + content, quote review split pane (form / premium summary) |
 
 ### 8.3 Form UX (Responsive)
@@ -549,16 +549,16 @@ Everything else: loaders + actions.
 
 ## 9) Security
 
-| Area | Approach |
-|------|----------|
-| Authentication | Supabase Auth session cookies via `@supabase/ssr` |
-| Authorization | Server checks broker role + AR scope on every action |
-| RLS | Defense in depth on Postgres |
-| Secrets | Workers secrets only; never in client bundle |
-| PDF access | Auth-gated download; no public R2 URLs |
-| Email | Resend API key in Workers secrets only; verified sending domain |
-| Input validation | Zod on server (authoritative) + client (UX) |
-| Audit | `created_by` from `auth.users.id`, timestamps on writes |
+| Area             | Approach                                                        |
+| ---------------- | --------------------------------------------------------------- |
+| Authentication   | Supabase Auth session cookies via `@supabase/ssr`               |
+| Authorization    | Server checks broker role + AuthorisedRepresentative scope on every action            |
+| RLS              | Defense in depth on Postgres                                    |
+| Secrets          | Workers secrets only; never in client bundle                    |
+| PDF access       | Auth-gated download; no public R2 URLs                          |
+| Email            | Resend API key in Workers secrets only; verified sending domain |
+| Input validation | Zod on server (authoritative) + client (UX)                     |
+| Audit            | `created_by` from `auth.users.id`, timestamps on writes         |
 
 ---
 
@@ -591,24 +591,24 @@ wrangler dev
 
 ### 11.2 Recommended Cursor MCP Servers
 
-| MCP | Use For | Status |
-|-----|---------|--------|
-| **shadcn** (`plugin-shadcn-shadcn`) | Add/search components, presets, component docs | Available |
-| **Cloudflare Docs** (`plugin-cloudflare-cloudflare-docs`) | Workers, R2, bindings documentation | Available |
-| **Cloudflare Bindings** (`plugin-cloudflare-cloudflare-bindings`) | R2 bucket setup, Workers config | Available |
-| **Cloudflare Observability** | Production log investigation | Available |
-| **Supabase MCP** | Migrations, auth, SQL, typegen | **Install separately** — not in current workspace; add from [Supabase MCP docs](https://supabase.com/docs/guides/getting-started/mcp) |
+| MCP                                                               | Use For                                        | Status                                                                                                                                |
+| ----------------------------------------------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| **shadcn** (`plugin-shadcn-shadcn`)                               | Add/search components, presets, component docs | Available                                                                                                                             |
+| **Cloudflare Docs** (`plugin-cloudflare-cloudflare-docs`)         | Workers, R2, bindings documentation            | Available                                                                                                                             |
+| **Cloudflare Bindings** (`plugin-cloudflare-cloudflare-bindings`) | R2 bucket setup, Workers config                | Available                                                                                                                             |
+| **Cloudflare Observability**                                      | Production log investigation                   | Available                                                                                                                             |
+| **Supabase MCP**                                                  | Migrations, auth, SQL, typegen                 | **Install separately** — not in current workspace; add from [Supabase MCP docs](https://supabase.com/docs/guides/getting-started/mcp) |
 
 > **Note:** Neon Postgres MCP is available in this workspace but targets Neon, not Supabase. Use it only if you pivot DB provider; otherwise prefer Supabase CLI + Supabase MCP.
 
 ### 11.3 Recommended Cursor Skills
 
-| Skill | Path | Use For |
-|-------|------|---------|
-| **shadcn** | `~/.cursor/plugins/cache/cursor-public/shadcn/.../skills/shadcn/SKILL.md` | Component setup, form patterns, styling rules |
-| **wrangler** | `~/.claude/skills/wrangler/SKILL.md` | Deploy, R2 bindings, secrets |
-| **cloudflare** | `~/.claude/skills/cloudflare/SKILL.md` | Workers architecture |
-| **workers-best-practices** | `~/.claude/skills/workers-best-practices/SKILL.md` | Production Worker patterns |
+| Skill                      | Path                                                                      | Use For                                       |
+| -------------------------- | ------------------------------------------------------------------------- | --------------------------------------------- |
+| **shadcn**                 | `~/.cursor/plugins/cache/cursor-public/shadcn/.../skills/shadcn/SKILL.md` | Component setup, form patterns, styling rules |
+| **wrangler**               | `~/.claude/skills/wrangler/SKILL.md`                                      | Deploy, R2 bindings, secrets                  |
+| **cloudflare**             | `~/.claude/skills/cloudflare/SKILL.md`                                    | Workers architecture                          |
+| **workers-best-practices** | `~/.claude/skills/workers-best-practices/SKILL.md`                        | Production Worker patterns                    |
 
 No dedicated Supabase skill is installed; rely on Supabase MCP + official docs for auth/RLS/migrations.
 
@@ -617,26 +617,31 @@ No dedicated Supabase skill is installed; rely on Supabase MCP + official docs f
 ## 12) Implementation Phases
 
 ### Phase 1 — Foundation
+
 - React Router + Cloudflare Workers scaffold
 - Supabase schema migration from `db.txt`
 - Auth (login/logout, broker profile)
 - shadcn layout shell (sidebar, responsive nav)
 
 ### Phase 2 — Client Management
+
 - Client search/create/view
 - Reference data loaders (EntityType, AR, AccountManager)
 
 ### Phase 3 — CAR Quote Form
+
 - Multi-step wizard with RHF + Zod
 - Draft save action
 - Premium recalculation fetcher
 
 ### Phase 4 — Pricing Engine
+
 - Port `CARCalculator2` to TypeScript
-- Rate resolver from price files
+- Rate resolver from prices
 - Referral notes
 
 ### Phase 5 — PDF Pipeline (pdfme)
+
 - Import legacy `.doc` seeds → `basePdf` + initial pdfme templates
 - Settings → Document Templates (Designer embed)
 - `pdf.service.ts` + `@pdfme/generator`
@@ -644,12 +649,14 @@ No dedicated Supabase skill is installed; rely on Supabase MCP + official docs f
 - `PolicyDocument` + `DocumentTemplateVersion` metadata
 
 ### Phase 6 — Email (Resend)
+
 - Resend domain verification and API key setup
 - `email.service.ts` + quote email template
 - Send-email action on quote view with PDF attachment
 - `EmailLog` persistence and client email history UI
 
 ### Phase 7 — Hardening
+
 - RLS policies
 - E2E tests for quote flow
 - Staging deploy
@@ -658,39 +665,39 @@ No dedicated Supabase skill is installed; rely on Supabase MCP + official docs f
 
 ## 13) Technical Requirements Traceability
 
-| Product Req | Technical Implementation |
-|-------------|-------------------------|
-| FR-AUTH-* | Supabase Auth + `requireBroker()` guard |
-| FR-CLIENT-* | `client.service.ts`, routes under `_app.clients.*` |
-| FR-POL-* / FR-CAR-* | `policy.service.ts`, quote wizard actions |
-| FR-PRICE-* | `pricing/car-calculator.ts`, server action recalc |
-| FR-DOC-* | `pdf.service.ts`, pdfme, R2, `PolicyDocument` table |
-| FR-DOC-04 | `email.service.ts`, Resend, `EmailLog` table |
-| FR-AUD-* | `created_by` UUID, `PolicyNote`, structured logs |
-| NFR-02 | Postgres transactions in policy save |
-| NFR-03 | RLS + server-side auth checks |
-| BC-03 | No payment modules or routes |
+| Product Req         | Technical Implementation                            |
+| ------------------- | --------------------------------------------------- |
+| FR-AUTH-\*          | Supabase Auth + `requireBroker()` guard             |
+| FR-CLIENT-\*        | `client.service.ts`, routes under `_app.clients.*`  |
+| FR-POL-_ / FR-CAR-_ | `policy.service.ts`, quote wizard actions           |
+| FR-PRICE-\*         | `pricing/car-calculator.ts`, server action recalc   |
+| FR-DOC-\*           | `pdf.service.ts`, pdfme, R2, `PolicyDocument` table |
+| FR-DOC-04           | `email.service.ts`, Resend, `EmailLog` table        |
+| FR-AUD-\*           | `created_by` UUID, `PolicyNote`, structured logs    |
+| NFR-02              | Postgres transactions in policy save                |
+| NFR-03              | RLS + server-side auth checks                       |
+| BC-03               | No payment modules or routes                        |
 
 ---
 
 ## 14) Open Technical Decisions (Spikes)
 
-| Decision | Options | Recommendation |
-|----------|---------|----------------|
-| PDF engine | `@react-pdf/renderer`, `pdf-lib`, HTML→PDF (Playwright in Worker) | Spike with `@react-pdf/renderer` first (fits React stack) |
-| Autosave | Step save only vs debounced autosave | Step save for v1 |
-| Admin price file / configuration UI | In-app vs manual DB only | **Manual DB only** at this stage (no configuration UI); AR management UI in-app per Phase 1 |
-| Email outbound | Resend, SendGrid, Postmark | **Resend** — simple API, good Worker compatibility |
+| Decision                            | Options                                                           | Recommendation                                                                              |
+| ----------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| PDF engine                          | `@react-pdf/renderer`, `pdf-lib`, HTML→PDF (Playwright in Worker) | Spike with `@react-pdf/renderer` first (fits React stack)                                   |
+| Autosave                            | Step save only vs debounced autosave                              | Step save for v1                                                                            |
+| Admin price file / configuration UI | In-app vs manual DB only                                          | **Manual DB only** at this stage (no configuration UI); AuthorisedRepresentative management UI in-app per Phase 1 |
+| Email outbound                      | Resend, SendGrid, Postmark                                        | **Resend** — simple API, good Worker compatibility                                          |
 
 ---
 
 ## 15) Glossary (Technical)
 
-| Term | Meaning |
-|------|---------|
-| Loader | React Router server function that supplies route data |
-| Action | React Router server function that handles mutations |
-| RLS | Supabase Row Level Security |
-| R2 | Cloudflare object storage (S3-compatible) |
+| Term         | Meaning                                               |
+| ------------ | ----------------------------------------------------- |
+| Loader       | React Router server function that supplies route data |
+| Action       | React Router server function that handles mutations   |
+| RLS          | Supabase Row Level Security                           |
+| R2           | Cloudflare object storage (S3-compatible)             |
 | Service role | Supabase admin key for trusted server-only operations |
-| Resend | Transactional email API used for quote delivery |
+| Resend       | Transactional email API used for quote delivery       |

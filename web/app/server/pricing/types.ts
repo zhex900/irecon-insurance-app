@@ -1,6 +1,6 @@
-export type Section2Value = 1 | 2 | 3;
+export type LiabilityLimitBand = 1 | 2 | 3;
 
-export type PriceFileBand = {
+export type PriceBand = {
   coverTypeId: number;
   lowerTO: number;
   upperTO: number | null;
@@ -12,8 +12,8 @@ export type PriceFileBand = {
   twentyMilMinPrem: number;
 };
 
-export type ResolvedPriceFile = {
-  priceFileId: number;
+export type ResolvedPrice = {
+  priceId: number;
   coverTypeId: number;
   lowerTurnover: number;
   upperTurnover: number | null;
@@ -27,13 +27,13 @@ export type ResolvedPriceFile = {
 };
 
 export type ResolvedStampDuty = {
-  priceFileStampDutyId: number;
+  priceStampDutyId: number;
   rate: number;
   dateApplied: string;
 };
 
 export type ResolvedEsl = {
-  priceFileEslId: number;
+  priceEslId: number;
   constructionRate: number;
   plantRate: number;
   dateApplied: string;
@@ -45,7 +45,7 @@ export type ResolvedTerror = {
 };
 
 export type ResolvedPlant = {
-  priceFilePlantId: number;
+  pricePlantId: number;
   rate: number;
   plantMinValue: number;
   plantMaxValue: number;
@@ -53,20 +53,20 @@ export type ResolvedPlant = {
 };
 
 export type RatingSnapshot = {
-  priceFileId: number;
+  priceId: number;
   stampDutyId: number;
   eslId: number;
   plantRate: number;
   eslRate: number;
-  eslPlantRate: number;
-  sdRateSection1: number;
-  sdRateSection2: number;
-  section1Rate: number;
-  section2Rate: number;
-  section1MinPrem: number;
-  section2MinPrem: number;
-  plantMinPrem: number;
-  plantMaxPrem: number;
+  plantEslRate: number;
+  contractWorksStampDutyRate: number;
+  liabilityStampDutyRate: number;
+  contractWorksAppliedRate: number;
+  liabilityAppliedRate: number;
+  contractWorksMinPremium: number;
+  liabilityMinPremium: number;
+  plantValueMin: number;
+  plantValueMax: number;
   terrorismRate: number;
   terrorismTier: string;
   isTerrorismRateExist: boolean;

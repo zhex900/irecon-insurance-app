@@ -1,5 +1,5 @@
-Table AR {
-  ARId integer [primary key]
+Table AuthorisedRepresentative {
+  AuthorisedRepresentativeId integer [primary key]
   FullName varchar
   CompanyName varchar
   ARNumber varchar
@@ -21,6 +21,7 @@ Table AccountManager {
   FullName varchar
   EmailAddress varchar
   ARNumber varchar
+  // Authorised Representative number for this AM (PDF merge AccountManagerARNumber). Not the same as Client→AuthorisedRepresentative.ARNumber.
   Mobile varchar
   CreatedWhen datetime
   CreatedBy varchar
@@ -32,7 +33,7 @@ Table Client {
   TradingName varchar
   EntityTypeId integer
   AccountManagerId integer
-  ARId integer
+  AuthorisedRepresentativeId integer
   CreatedWhen datetime
   CreatedBy varchar
 }
@@ -46,7 +47,7 @@ Table PolicyType {
 }
 
 Table PolicyNumber {
-  PolicyTypeId int
+  PolicyTypeId int [primary key]
   Min int
   Max int
   CurrentNumber int
@@ -59,13 +60,22 @@ Table EmailLog {
   EmailLogId integer [primary key]
   ClientId int
   PolicyId int
-  From varchar
-  To varchar
+  FromAddress varchar
+  ToAddress varchar
   Subject varchar
   Content varchar
   DateSent datetime
   CreatedWhen datetime
   CreatedBy varchar
+}
+
+Table EmailLogDocument {
+  EmailLogId int
+  PolicyDocumentId int
+  // Which PolicyDocument rows were attached to this send.
+  indexes {
+    (EmailLogId, PolicyDocumentId) [pk]
+  }
 }
 
 Table User {
@@ -74,20 +84,21 @@ Table User {
   FullName varchar
   Email varchar
   Role varchar
-  ARId int
+  AuthorisedRepresentativeId int
   CreatedWhen datetime
 }
 
 Table CARExcess {
   CARExcessId integer [primary key]
-  Section int
+  CoverSection int
+  // CoverSection: 1 = contract works, 2 = liability (schedule “Section 1 / 2”; schema uses domain names elsewhere).
   ContractValueMin decimal
   ContractValueMax decimal
-  LiabilityMil int
+  LiabilityLimitMillions int
   Name varchar
   DisplayOrder int
   Excess varchar
-  Heading bit
+  IsGroupHeading bit
   Trailer varchar
   AdditionalNotes bit
 }
@@ -117,8 +128,8 @@ Table CARWording {
   Content varchar  
 }
 
-Table Fee {
-  FeeId integer [primary key]
+Table BrokerFeeSchedule {
+  BrokerFeeScheduleId integer [primary key]
   PolicyTypeId int
   DateStart datetime
   Published bit
@@ -126,14 +137,19 @@ Table Fee {
   CreatedWhen datetime
   CreatedBy varchar
 }
-Table FeeName {
-  FeeId int
+Table BrokerFeeScheduleLine {
+  BrokerFeeScheduleId int
+  SortOrder int
   Name varchar
-  SortOrder int  
+  // Lines within a BrokerFeeSchedule version.
+  indexes {
+    (BrokerFeeScheduleId, SortOrder) [pk]
+  }
 }
 
-Table PriceFile {
-  PriceFileId integer [primary key]
+Table Price {
+  PriceId integer [primary key]
+  // Versioned rate-card header (formerly PriceFile). Child tables: PriceCAR, PriceESL, PriceStampDuty, PricePlant, PriceTerrorism.
   PolicyTypeId int
   DateStart datetime
   Published bit
@@ -142,17 +158,21 @@ Table PriceFile {
   CreatedBy varchar
 }
 
-Table PriceFileCAR {
-  PriceFileId int
+Table PriceCAR {
+  PriceId int
   CoverTypeId int
-  LowerTO decimal
-  UpperTO decimal
-  CWRate decimal
-  CWMinPrem decimal
-  TenMilRate decimal
-  TenMilMinPrem decimal
-  TwentyMilRate decimal
-  TwentyMilMinPrem decimal  
+  TurnoverMin decimal
+  TurnoverMax decimal
+  ContractWorksRate decimal
+  ContractWorksMinPremium decimal
+  Liability10mRate decimal
+  Liability10mMinPremium decimal
+  Liability20mRate decimal
+  Liability20mMinPremium decimal
+  // Turnover band per cover type.
+  indexes {
+    (PriceId, CoverTypeId, TurnoverMin) [pk]
+  }
 }
 
 Table CoverType {
@@ -160,8 +180,8 @@ Table CoverType {
   Name varchar
 }
 
-Table PriceFileESL {
-  PriceFileESLId integer [primary key]
+Table PriceESL {
+  PriceESLId integer [primary key]
   PolicyTypeId int
   DateStart datetime
   Published bit
@@ -170,9 +190,9 @@ Table PriceFileESL {
   CreatedBy varchar  
 }
 
-Table PriceFileESLRate {
-  PriceFileESLRateId integer [primary key]
-  PriceFileESLId int
+Table PriceESLRate {
+  PriceESLRateId integer [primary key]
+  PriceESLId int
   StateId int
   ConstructionRate decimal
   PlantRate decimal
@@ -184,8 +204,8 @@ Table State {
   Name varchar
 }
 
-Table PriceFilePlant {
-  PriceFilePlantId integer [primary key]
+Table PricePlant {
+  PricePlantId integer [primary key]
   PolicyTypeId int
   Rate decimal
   DateStart datetime
@@ -195,8 +215,8 @@ Table PriceFilePlant {
   CreatedBy varchar 
 }
 
-Table PriceFileStampDuty {
-  PriceFileStampDutyId integer [primary key]
+Table PriceStampDuty {
+  PriceStampDutyId integer [primary key]
   PolicyTypeId int
   DateStart datetime
   Published bit
@@ -204,14 +224,14 @@ Table PriceFileStampDuty {
   CreatedWhen datetime
   CreatedBy varchar 
 }
-Table PriceFileStampDutyRate {
-  PriceFileStampDutyRateId integer [primary key]
-  PriceFileStampDutyId int
+Table PriceStampDutyRate {
+  PriceStampDutyRateId integer [primary key]
+  PriceStampDutyId int
   StateId int
   Rate decimal
 }
-Table PriceFileTerror {
-  PriceFileTerrorId integer [primary key]
+Table PriceTerrorism {
+  PriceTerrorismId integer [primary key]
   PolicyTypeId int
   DateStart datetime
   Published bit
@@ -219,50 +239,55 @@ Table PriceFileTerror {
   CreatedWhen datetime
   CreatedBy varchar 
 }
-Table PriceFileTerrorRate {
-  PriceFileTerrorRateId integer [primary key]
-  PriceFileTerrorId int
+Table PriceTerrorismRate {
+  PriceTerrorismRateId integer [primary key]
+  PriceTerrorismId int
   Tier varchar
   Rate decimal
 }
-Table PriceFileTerrorPostCode {
-  PriceFileTerrorRateId int
+Table PriceTerrorismPostCode {
+  PriceTerrorismRateId int
   Postcode varchar
   StateId int
-}
-Table PolicyPeriod {
-  PolicyPeriodId integer [primary key]
-  ClientId int
-  DateStart datetime
-  DateEnd datetime
-  IsLatestPeriod bit
+  indexes {
+    (PriceTerrorismRateId, Postcode) [pk]
+  }
 }
 Table Policy {
   PolicyId integer [primary key]
-  PolicyPeriodId int
+  ClientId int
   PolicyTypeId int
+  PolicyStatusId int
+  // Product-agnostic lifecycle (Pending / Taken / Not taken). On Policy for list/filter without joining product tables.
   Postcode varchar
   StateId int
-  PolicyActionId int
+  BusinessTypeId int
+  // New vs Renewal (lookup BusinessType). Renamed from draft PolicyActionId.
   PolicyNumber varchar
-  DateEffective datetime
+  DateStart datetime
+  DateEnd datetime
+  // DateStart = inception; DateEnd = expiry (inclusive). Expired when today > DateEnd.
   InsurerCode varchar
   RenewalOfPolicyId int
   CopiedFromPolicyId int
-  InvoiceComment varchar
-  TotalInvoicePremium decimal
+  TakenAt datetime
+  TakenBy varchar
+  // Set when PolicyStatusId becomes Taken. Also the report/dashboard "date approved" / commit date — do not add a separate DateApproved column.
+  // Filter approved-in-period: PolicyStatusId = Taken AND TakenAt in range. PolicyCAR premium fields immutable thereafter.
   CreatedWhen datetime
   CreatedBy varchar
   UpdatedWhen datetime
 }
-Table PolicyAction {
-  PolicyActionId integer [primary key]
+Table BusinessType {
+  BusinessTypeId integer [primary key]
   Code varchar
   Name varchar
+  // New business vs Renewal. Renamed from draft PolicyAction.
 }
 Table PolicyCAR {
-  PolicyId int
-  CARStatusId int
+  PolicyId int [primary key]
+  // 1:1 with Policy. Do not merge into Policy — keeps product-specific columns off the shared spine (future PolicyHCP etc.).
+  // Status + TakenAt/TakenBy live on Policy (list filters / commit audit).
   CoverTypeId int
   SiteAddress varchar
   InsuredName varchar
@@ -272,61 +297,73 @@ Table PolicyCAR {
   GeographicalScopes varchar
   PlantEquipment decimal
   ExistingStructure decimal
-  NumberOfClaim int
+  ClaimsCountLast3Years int
   AnyClaimsExceed20k bit
-  Confirmation bit
-  Section1Value decimal
-  Section2Value decimal
-  Section1BeforeBasePremium decimal
-  Section1TrueBasePremium decimal
-  Section1ExistingStructure decimal
-  Section1PlantEquipment decimal
-  Section1PlantESL decimal
-  Section1ESL decimal
-  Section1GST decimal
-  Section1SD decimal
-  Section1TotalPremium decimal
-  Section2BeforeBasePremium decimal
-  Section2TrueBasePremium decimal
-  Section2ESL decimal
-  Section2GST decimal
-  Section2SD decimal
-  Section2TotalPremium decimal
-  OriginalCombinedFee decimal
+  DeclarationConfirmed bit
+  ContractWorksSumInsured decimal
+  // Contract works sum insured (money).
+  LiabilityLimitBand int
+  // Liability limit band: 1 = $10M, 2 = $20M, 3 = Not insured. CHECK (LiabilityLimitBand IN (1, 2, 3)).
+  ContractWorksCalculatedBasePremium decimal
+  ContractWorksBasePremium decimal
+  ContractWorksExistingStructurePremium decimal
+  ContractWorksPlantPremium decimal
+  ContractWorksPlantESL decimal
+  ContractWorksESL decimal
+  ContractWorksGST decimal
+  ContractWorksStampDuty decimal
+  ContractWorksTotalPremium decimal
+  LiabilityCalculatedBasePremium decimal
+  LiabilityBasePremium decimal
+  LiabilityESL decimal
+  LiabilityGST decimal
+  LiabilityStampDuty decimal
+  LiabilityTotalPremium decimal
   OriginalTotalPremium decimal
-  Section1Rate decimal
-  Section2Rate decimal
-  PriceFileId int
-  PriceFileStampDutyId int
-  PriceFileESLId int
-  PriceFileTerrorId int
-  PriceFilePlantId int
-  AnnualCoverType varchar
-  // Annual cover only: Transfer | Contract Commencing. Drives InsuredContracts wording.
+  // Bind-time CAR premium snapshot (ContractWorksTotal + LiabilityTotal + sum(PolicyFee)). Sole stored total.
+  // Effective after adjustment = this + latest Applied DeltaTotalPremium (never overwrite this column).
+  ContractWorksAppliedRate decimal
+  LiabilityAppliedRate decimal
+  PriceId int
+  PriceStampDutyId int
+  PriceESLId int
+  PriceTerrorismId int
+  PricePlantId int
+  AnnualCoverTypeId int
+  // FK → AnnualCoverType. Null when CoverType is not Annual.
   PlantRate decimal
   ESLRate decimal
-  ESLPlantRate decimal
-  SDRateSection1 decimal
-  SDRateSection2 decimal
-  Section1MinPrem decimal
-  Section2MinPrem decimal
-  PlantMinPrem decimal
-  PlantMaxPrem decimal
+  PlantEslRate decimal
+  ContractWorksStampDutyRate decimal
+  LiabilityStampDutyRate decimal
+  ContractWorksMinPremium decimal
+  LiabilityMinPremium decimal
+  PlantValueMin decimal
+  PlantValueMax decimal
   TerrorismRate decimal
-  Section1TerrorismPremium decimal
-  Section1PlantTerrorismPremium decimal
-  DoNotCalculate bit
-  HoldCurrentContractWorks bit
+  ContractWorksTerrorismPremium decimal
+  ContractWorksPlantTerrorismPremium decimal
+  ManualTaxOverride bit
+  HasExistingContractWorksCover bit
   CurrentInsurer varchar
   MaximumConstructionPeriod int
   MaximumMaintenancePeriod int
   DisplayHomes decimal
-  Section1DisplayHomes decimal
-  TakenAt datetime
-  TakenBy varchar
-  // Premium snapshot frozen when CARStatusId becomes Taken (immutable thereafter).
-  // End-of-term changes are stored only in PolicyCARAdjustment child records.
+  ContractWorksDisplayHomesPremium decimal
+  SubLimits text
+  // jsonb in Postgres. Snapshot of sub-limit text values at save (removalOfDebris, transit, etc.).
+  // Defaults pre-filled from CARSubLimit catalogue; frozen with policy on Taken.
+  Wordings text
+  // jsonb array in Postgres: [{ "subject": "…", "content": "…" }, …].
+  // Snapshot of selected + custom additional wording at save; catalogue is CARWording.
+  // End-of-term changes after Taken are stored only in PolicyCARAdjustment child records.
 }
+Table AnnualCoverType {
+  AnnualCoverTypeId integer [primary key]
+  Code varchar
+  Name varchar
+}
+
 Table AdjustmentStatus {
   AdjustmentStatusId integer [primary key]
   Name varchar
@@ -335,98 +372,74 @@ Table PolicyCARAdjustment {
   PolicyCARAdjustmentId integer [primary key]
   PolicyId int
   AdjustmentSequence int
-  AdjustmentReference varchar
+  // Display label derived in app: A-{AdjustmentSequence} (e.g. A-1, A-2). Not stored.
   AdjustmentStatusId int
   AdjustedTurnover decimal
   StampDutyExempt bit
-  AdjustedSection1TrueBasePremium decimal
-  AdjustedSection1TerrorismPremium decimal
-  AdjustedSection1ESL decimal
-  AdjustedSection1GST decimal
-  AdjustedSection1SD decimal
-  AdjustedSection1TotalPremium decimal
-  AdjustedSection2TrueBasePremium decimal
-  AdjustedSection2ESL decimal
-  AdjustedSection2GST decimal
-  AdjustedSection2SD decimal
-  AdjustedSection2TotalPremium decimal
-  AdjustedCombinedFee decimal
-  AdjustedTotalPremium decimal
-  DeltaSection1TrueBasePremium decimal
-  DeltaSection1TerrorismPremium decimal
-  DeltaSection1ESL decimal
-  DeltaSection1GST decimal
-  DeltaSection1SD decimal
-  DeltaSection1TotalPremium decimal
-  DeltaSection2TrueBasePremium decimal
-  DeltaSection2ESL decimal
-  DeltaSection2GST decimal
-  DeltaSection2SD decimal
-  DeltaSection2TotalPremium decimal
+  // Inputs only above. Absolute adjusted premiums = PolicyCAR originals + Delta* (computed in app).
+  DeltaContractWorksBasePremium decimal
+  DeltaContractWorksTerrorismPremium decimal
+  DeltaContractWorksESL decimal
+  DeltaContractWorksGST decimal
+  DeltaContractWorksStampDuty decimal
+  DeltaContractWorksTotalPremium decimal
+  DeltaLiabilityBasePremium decimal
+  DeltaLiabilityESL decimal
+  DeltaLiabilityGST decimal
+  DeltaLiabilityStampDuty decimal
+  DeltaLiabilityTotalPremium decimal
   DeltaTotalPremium decimal
   CreatedWhen datetime
   CreatedBy varchar
   AppliedWhen datetime
   AppliedBy varchar
-  // One-to-many per policy. UNIQUE (PolicyId, AdjustmentSequence).
+  // One-to-many per policy.
+  // UNIQUE (PolicyId, AdjustmentSequence) — enforce in Postgres migration.
+  // Partial UNIQUE (PolicyId) WHERE AdjustmentStatusId = Draft (at most one Draft).
   // Effective premium = PolicyCAR.OriginalTotalPremium + latest Applied row DeltaTotalPremium.
 }
-Ref: PolicyCAR.PriceFileStampDutyId > PriceFileStampDuty.PriceFileStampDutyId
-Ref: PolicyCAR.PriceFileESLId > PriceFileESL.PriceFileESLId
-Ref: PolicyCAR.PriceFileTerrorId > PriceFileTerror.PriceFileTerrorId
-Ref: PolicyCAR.PriceFilePlantId > PriceFilePlant.PriceFilePlantId
+Ref: PolicyCAR.PriceStampDutyId > PriceStampDuty.PriceStampDutyId
+Ref: PolicyCAR.PriceESLId > PriceESL.PriceESLId
+Ref: PolicyCAR.PriceTerrorismId > PriceTerrorism.PriceTerrorismId
+Ref: PolicyCAR.PricePlantId > PricePlant.PricePlantId
 Ref: Policy.RenewalOfPolicyId > Policy.PolicyId
 Ref: Policy.CopiedFromPolicyId > Policy.PolicyId
 Ref: PolicyCARAdjustment.PolicyId > Policy.PolicyId
 Ref: PolicyCARAdjustment.AdjustmentStatusId > AdjustmentStatus.AdjustmentStatusId
 
-Table CARStatus {
-  CARStatusId integer [primary key]
+Table PolicyStatus {
+  PolicyStatusId integer [primary key]
   Name varchar
 }
 Table PolicyCARExcess {
   PolicyId int
   CARExcessId int
   Excess varchar
-}
-Table PolicyCARSubLimit {
-  PolicyId int
-  RemovalOfDebris varchar
-  ExpeditingExpenses varchar
-  ProfessionalFees varchar
-  MitigationExpenses varchar
-  SearchAndLocateCosts varchar
-  PlantHireCharges varchar
-  ClaimsPreparationCosts varchar
-  GovernmentCosts varchar
-  InflationProtection varchar
-  EmployeesProperty varchar
-  MaterialsInOffSiteStorage varchar
-  Transit varchar
-  ExcludedContracts1 varchar
-  ExcludedContracts2 varchar
-  ExcludedContracts3 varchar
-}
-Table PolicyCARWording {
-  PolicyId int
-  Subject varchar
-  Content varchar
+  // Excess text may override catalogue default.
+  indexes {
+    (PolicyId, CARExcessId) [pk]
+  }
 }
 Table PolicyFee {
   PolicyId int
-  PolicyFeeId int
-  // Line id within policy fee block (not FK to Fee table).
+  LineNumber int
+  // LineNumber = line number within this policy fee list (1, 2, …) — NOT an FK to BrokerFeeSchedule. Combined fee = sum(Fee) + sum(FeeGst).
   Name varchar
   SortOrder int
   Fee decimal
-  FeeGst  decimal  
+  FeeGst  decimal
+  indexes {
+    (PolicyId, LineNumber) [pk]
+  }
 }
 Table PolicyNote {
+  PolicyNoteId integer [primary key]
   PolicyId int
   PolicyNoteTypeId int
   Description varchar
   CreatedWhen datetime
   CreatedBy varchar
+  // Broker-facing notes (referral, message, etc.). Not merged with ActivityLog — different audience/purpose.
 }
 Table PolicyNoteType {
   PolicyNoteTypeId integer [primary key]
@@ -441,24 +454,23 @@ Table ActivityLog {
   Payload text
   CreatedWhen datetime
   CreatedBy varchar
+  // System audit trail (FR-AUD-04). Keep separate from PolicyNote (broker notes / typed policy events).
 }
 
-Table AppAsset {
-  AppAssetId integer [primary key]
-  AssetKey varchar
-  R2Key varchar
-  FileName varchar
-  MimeType varchar
+Table AppSetting {
+  SettingKey varchar [primary key]
+  SettingValue text
   UpdatedWhen datetime
   UpdatedBy varchar
-  // e.g. AssetKey = orgLogo for pdfme image schema.
+  // Key/value app config (Settings). SettingValue is JSON in Postgres (jsonb).
+  // e.g. SettingKey = orgLogo → {"r2Key":"...","fileName":"logo.png","mimeType":"image/png"}
 }
 
 Table DocumentTemplate {
   DocumentTemplateId integer [primary key]
   DocumentTypeCode varchar
   CoverTypeId int
-  // UNIQUE (DocumentTypeCode, CoverTypeId). CoverTypeId null for CARADJUST slot.
+  // UNIQUE (DocumentTypeCode, CoverTypeId) — enforce in Postgres (NULL CoverTypeId for CARADJUST; use NULLS NOT DISTINCT or sentinel).
 }
 
 Table DocumentTemplateVersion {
@@ -471,7 +483,9 @@ Table DocumentTemplateVersion {
   PublishedBy varchar
   CreatedWhen datetime
   CreatedBy varchar
-  // pdfme Template JSON. UNIQUE (DocumentTemplateId, VersionNumber).
+  // pdfme Template JSON (jsonb in Postgres).
+  // UNIQUE (DocumentTemplateId, VersionNumber).
+  // Partial UNIQUE (DocumentTemplateId) WHERE IsActive = true (at most one active version).
 }
 
 Table PolicyDocument {
@@ -482,14 +496,15 @@ Table PolicyDocument {
   FileName varchar
   R2Key varchar
   DocumentTemplateVersionId int
-  FixedPdfId int
+  LibraryDocumentId int
+  // Set when this PolicyDocument was copied from a library PDF (CARADDIT); null for merge-generated docs.
   GeneratedWhen datetime
   GeneratedBy varchar
   // Append-only: generated policy PDFs are never deleted.
 }
 
-Table FixedPdf {
-  FixedPdfId integer [primary key]
+Table LibraryDocument {
+  LibraryDocumentId integer [primary key]
   FileName varchar
   DisplayName varchar
   R2Key varchar
@@ -497,38 +512,36 @@ Table FixedPdf {
   CreatedBy varchar
   DeletedWhen datetime
   DeletedBy varchar
-  // Library entry removed when DeletedWhen set; prior PolicyDocument rows unchanged.
+  // Shared static PDF library (Settings). Soft-delete via DeletedWhen; prior PolicyDocument rows unchanged.
 }
 
-Table FixedPdfAssignment {
-  FixedPdfAssignmentId integer [primary key]
-  FixedPdfId int
+Table LibraryDocumentAssignment {
+  LibraryDocumentAssignmentId integer [primary key]
+  LibraryDocumentId int
   CoverTypeId int
   StateId int
   SortOrder int
-  // StateId null = all states (e.g. NSW-only rule when StateId = NSW).
+  // Which packs get this library PDF. StateId null = all states.
 }
 
-Ref: PolicyCAR.PriceFileId > PriceFile.PriceFileId
+Ref: PolicyCAR.PriceId > Price.PriceId
 Ref: PolicyNote.PolicyNoteTypeId > PolicyNoteType.PolicyNoteTypeId
 Ref: PolicyNote.PolicyId > Policy.PolicyId
 Ref: PolicyFee.PolicyId > Policy.PolicyId
-Ref: PolicyCARWording.PolicyId > Policy.PolicyId
-Ref: PolicyCARSubLimit.PolicyId > Policy.PolicyId
 Ref: PolicyCARExcess.PolicyId > Policy.PolicyId
 Ref: PolicyCARExcess.CARExcessId > CARExcess.CARExcessId
 Ref: PolicyCAR.CoverTypeId > CoverType.CoverTypeId
 Ref: PolicyCAR.PolicyId > Policy.PolicyId
-Ref: PolicyCAR.CARStatusId > CARStatus.CARStatusId
-Ref: Policy.PolicyPeriodId > PolicyPeriod.PolicyPeriodId
+Ref: PolicyCAR.AnnualCoverTypeId > AnnualCoverType.AnnualCoverTypeId
+Ref: Policy.PolicyStatusId > PolicyStatus.PolicyStatusId
+Ref: Policy.ClientId > Client.ClientId
 Ref: Policy.PolicyTypeId > PolicyType.PolicyTypeId
 Ref: Policy.StateId > State.StateId
-Ref: Policy.PolicyActionId > PolicyAction.PolicyActionId
-Ref: PolicyPeriod.ClientId > Client.ClientId
+Ref: Policy.BusinessTypeId > BusinessType.BusinessTypeId
 
 Ref : Client.AccountManagerId > AccountManager.AccountManagerId
 
-Ref: Client.ARId > AR.ARId
+Ref: Client.AuthorisedRepresentativeId > AuthorisedRepresentative.AuthorisedRepresentativeId
 
 Ref: Client.EntityTypeId > EntityType.EntityTypeId
 
@@ -536,7 +549,11 @@ Ref : Client.ClientId > EmailLog.ClientId
 
 Ref: EmailLog.PolicyId > Policy.PolicyId
 
-Ref: User.ARId > AR.ARId
+Ref: EmailLogDocument.EmailLogId > EmailLog.EmailLogId
+
+Ref: EmailLogDocument.PolicyDocumentId > PolicyDocument.PolicyDocumentId
+
+Ref: User.AuthorisedRepresentativeId > AuthorisedRepresentative.AuthorisedRepresentativeId
 
 Ref: DocumentTemplate.CoverTypeId > CoverType.CoverTypeId
 
@@ -548,47 +565,47 @@ Ref: PolicyDocument.PolicyCARAdjustmentId > PolicyCARAdjustment.PolicyCARAdjustm
 
 Ref: PolicyDocument.DocumentTemplateVersionId > DocumentTemplateVersion.DocumentTemplateVersionId
 
-Ref: PolicyDocument.FixedPdfId > FixedPdf.FixedPdfId
+Ref: PolicyDocument.LibraryDocumentId > LibraryDocument.LibraryDocumentId
 
-Ref: FixedPdfAssignment.FixedPdfId > FixedPdf.FixedPdfId
+Ref: LibraryDocumentAssignment.LibraryDocumentId > LibraryDocument.LibraryDocumentId
 
-Ref: FixedPdfAssignment.CoverTypeId > CoverType.CoverTypeId
+Ref: LibraryDocumentAssignment.CoverTypeId > CoverType.CoverTypeId
 
-Ref: FixedPdfAssignment.StateId > State.StateId
+Ref: LibraryDocumentAssignment.StateId > State.StateId
 
 Ref: PolicyNumber.PolicyTypeId - PolicyType.PolicyTypeId
 
-Ref: Fee.PolicyTypeId > PolicyType.PolicyTypeId
+Ref: BrokerFeeSchedule.PolicyTypeId > PolicyType.PolicyTypeId
 
-Ref: PriceFile.PolicyTypeId > PolicyType.PolicyTypeId
+Ref: Price.PolicyTypeId > PolicyType.PolicyTypeId
 
-Ref: Fee.FeeId < FeeName.FeeId
+Ref: BrokerFeeSchedule.BrokerFeeScheduleId < BrokerFeeScheduleLine.BrokerFeeScheduleId
 
-Ref: PriceFile.PriceFileId - PriceFileCAR.PriceFileId
+Ref: Price.PriceId - PriceCAR.PriceId
 
-Ref: PriceFileCAR.CoverTypeId > CoverType.CoverTypeId
+Ref: PriceCAR.CoverTypeId > CoverType.CoverTypeId
 
-Ref: PriceFileESL.PolicyTypeId > PolicyType.PolicyTypeId
+Ref: PriceESL.PolicyTypeId > PolicyType.PolicyTypeId
 
-Ref: PriceFileESL.PriceFileESLId < PriceFileESLRate.PriceFileESLId
+Ref: PriceESL.PriceESLId < PriceESLRate.PriceESLId
 
-Ref: PriceFileESLRate.StateId > State.StateId
+Ref: PriceESLRate.StateId > State.StateId
 
-Ref: PriceFilePlant.PolicyTypeId > PolicyType.PolicyTypeId
+Ref: PricePlant.PolicyTypeId > PolicyType.PolicyTypeId
 
-Ref: PriceFileStampDuty.PolicyTypeId > PolicyType.PolicyTypeId
+Ref: PriceStampDuty.PolicyTypeId > PolicyType.PolicyTypeId
 
-Ref: PriceFileStampDuty.PriceFileStampDutyId < PriceFileStampDutyRate.PriceFileStampDutyId
+Ref: PriceStampDuty.PriceStampDutyId < PriceStampDutyRate.PriceStampDutyId
 
-Ref: PriceFileStampDutyRate.StateId > State.StateId
+Ref: PriceStampDutyRate.StateId > State.StateId
 
-Ref: PriceFileTerror.PolicyTypeId > PolicyType.PolicyTypeId
+Ref: PriceTerrorism.PolicyTypeId > PolicyType.PolicyTypeId
 
-Ref: PriceFileTerrorRate.PriceFileTerrorId > PriceFileTerror.PriceFileTerrorId
+Ref: PriceTerrorismRate.PriceTerrorismId > PriceTerrorism.PriceTerrorismId
 
-Ref: PriceFileTerrorRate.PriceFileTerrorRateId < PriceFileTerrorPostCode.PriceFileTerrorRateId
+Ref: PriceTerrorismRate.PriceTerrorismRateId < PriceTerrorismPostCode.PriceTerrorismRateId
 
-Ref: PriceFileTerrorPostCode.StateId > State.StateId
+Ref: PriceTerrorismPostCode.StateId > State.StateId
 
 Records PolicyType (PolicyTypeId, Code, Name) {
   1, 'CAR', 'Construction All Risk'
@@ -596,7 +613,7 @@ Records PolicyType (PolicyTypeId, Code, Name) {
 Records PolicyNumber (PolicyTypeId, Min, Max, CurrentNumber, PolicyFormat) {
   1, 0, 1000000000, 1, 'ATCCW{0:D4}'
 }
-Records CARExcess (CARExcessId, Section, ContractValueMin, ContractValueMax, Name, DisplayOrder, Excess, Heading, Trailer, LiabilityMil, AdditionalNotes) {
+Records CARExcess (CARExcessId, CoverSection, ContractValueMin, ContractValueMax, Name, DisplayOrder, Excess, IsGroupHeading, Trailer, LiabilityLimitMillions, AdditionalNotes) {
   1, 1, 0, 0, 'Named Insured Plant & Equipment', 1, '$2,500', 0, 'each and every loss', 0, 0
   2, 1, 0, 0, 'Contract Value up to $2,000,000', 2, '', 1, '', 0, 0
   3, 1, 0, 2000000, 'Minor Perils', 3, '$1,000', 0, 'each and every loss', 0, 0
@@ -613,23 +630,27 @@ Records CARExcess (CARExcessId, Section, ContractValueMin, ContractValueMax, Nam
   14, 2, 2000001, 5000000, '$10m Limit of Liability', 14, '$2,500', 0, 'each and every Occurrence', 10, 0
   15, 2, 2000001, 5000000, '$20m Limit of Liability', 15, '$2,500', 0, 'each and every Occurrence', 20, 0
 }
-Records Fee (FeeId, PolicyTypeId, DateStart, Published, DatePublished, CreatedWhen, CreatedBy) {
+Records BrokerFeeSchedule (BrokerFeeScheduleId, PolicyTypeId, DateStart, Published, DatePublished, CreatedWhen, CreatedBy) {
   1, 1, '2025-01-01', 1, '2025-01-01', '2025-01-01', 'Migration'
 }
-Records FeeName (FeeId, Name, SortOrder) {
-  1, 'Insurer Admin', 1
-  1, 'IAA Admin Fee', 2
+Records BrokerFeeScheduleLine (BrokerFeeScheduleId, SortOrder, Name) {
+  1, 1, 'Insurer Admin'
+  1, 2, 'IAA Admin Fee'
 }
 Records CoverType (CoverTypeId, Name) {
   1, 'Annual'
   2, 'Single'
   3, 'Owner Builder'
 }
-Records PolicyAction (PolicyActionId, Code, Name)  {
+Records AnnualCoverType (AnnualCoverTypeId, Code, Name) {
+  1, 'Transfer', 'Transfer'
+  2, 'ContractCommencing', 'Contract Commencing'
+}
+Records BusinessType (BusinessTypeId, Code, Name)  {
   1, 'NEW', 'New'
   2, 'RWL', 'Renewal'
 }
-Records CARStatus (CARStatusId, Name) {
+Records PolicyStatus (PolicyStatusId, Name) {
   1, 'Pending'
   2, 'Taken'
   3, 'Not taken'
@@ -651,12 +672,12 @@ Records DocumentTemplate (DocumentTemplateId, DocumentTypeCode, CoverTypeId) {
   4, 'CARRATING', 1
   5, 'CARRATING', 2
   6, 'CARRATING', 3
-  7, 'CARADJUST', 0
+  7, 'CARADJUST', null
 }
-// DocumentTemplateId 7: CoverTypeId null in Postgres (0 placeholder). Publish pdfme TemplateJson via Settings after import.
+// DocumentTemplateId 7: CoverTypeId null (adjustment slot is cover-type-agnostic). Publish pdfme TemplateJson via Settings after import.
 
-Records AppAsset (AppAssetId, AssetKey, FileName, MimeType) {
-  1, 'orgLogo', '', 'image/png'
+Records AppSetting (SettingKey, SettingValue) {
+  'orgLogo', '{"r2Key":"","fileName":"","mimeType":"image/png"}'
 }
 
 // CARWording seed: see car_wording.csv → supabase/seeds/car_wording.sql (6 rows)

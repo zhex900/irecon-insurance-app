@@ -17,7 +17,7 @@ const brokerSession: BrokerSession = {
   id: "broker-demo",
   fullName: "Demo Broker",
   email: "broker@demo.local",
-  arId: 1,
+  authorisedRepresentativeId: 1,
 };
 
 export function getBrokerSession() {
@@ -61,14 +61,14 @@ export async function getClient(clientId: number) {
 }
 
 export async function createClient(
-  input: Omit<Client, "clientId" | "createdWhen" | "createdBy" | "arId">,
+  input: Omit<Client, "clientId" | "createdWhen" | "createdBy" | "authorisedRepresentativeId">,
 ) {
   const clients = await jsonServerRequest<DbClient[]>("/clients");
   const nextClientId = Math.max(0, ...clients.map((client) => client.clientId)) + 1;
   const client: DbClient = {
     id: nextClientId,
     clientId: nextClientId,
-    arId: brokerSession.arId,
+    authorisedRepresentativeId: brokerSession.authorisedRepresentativeId,
     createdWhen: new Date().toISOString(),
     createdBy: brokerSession.email,
     ...input,
@@ -96,7 +96,7 @@ export async function listPolicySummaries(search?: string): Promise<PolicySummar
       policyNumber: quote.policyNumber,
       insuredName: quote.car.insuredName,
       clientName: clientById.get(quote.clientId) ?? "",
-      carStatusId: quote.carStatusId,
+      policyStatusId: quote.policyStatusId,
       isDraft: quote.isDraft,
       createdWhen: quote.createdWhen,
     }))
@@ -181,8 +181,8 @@ export async function createQuoteDraft(clientId: number, partial: Partial<Quote>
     policyId,
     clientId,
     policyNumber,
-    policyActionId: 1,
-    carStatusId: 1,
+    businessTypeId: 1,
+    policyStatusId: 1,
     postcode: "",
     stateId: 2,
     dateEffective: today.toISOString().slice(0, 10),
@@ -203,17 +203,17 @@ export async function createQuoteDraft(clientId: number, partial: Partial<Quote>
       plantEquipment: 0,
       existingStructure: 0,
       displayHomes: 0,
-      numberOfClaim: 0,
+      claimsCountLast3Years: 0,
       anyClaimsExceed20k: false,
-      confirmation: false,
-      section1Value: 0,
-      section2Value: 1,
-      holdCurrentContractWorks: false,
+      declarationConfirmed: false,
+      contractWorksSumInsured: 0,
+      liabilityLimitBand: 1,
+      hasExistingContractWorksCover: false,
       currentInsurer: "",
       maximumConstructionPeriod: 18,
       maximumMaintenancePeriod: 12,
-      section1ExistingStructure: 0,
-      section1DisplayHomes: 0,
+      contractWorksExistingStructurePremium: 0,
+      contractWorksDisplayHomesPremium: 0,
       subLimits: { ...ref.defaultSubLimits.annual },
       excesses: {
         ...ref.defaultExcesses,
@@ -244,7 +244,7 @@ export async function getDashboardStats() {
   return {
     clients: clients.length,
     quotes: quotes.length,
-    pending: quotes.filter((quote) => quote.carStatusId === 1).length,
-    taken: quotes.filter((quote) => quote.carStatusId === 2).length,
+    pending: quotes.filter((quote) => quote.policyStatusId === 1).length,
+    taken: quotes.filter((quote) => quote.policyStatusId === 2).length,
   };
 }

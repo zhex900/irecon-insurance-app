@@ -3,14 +3,14 @@ import type { PremiumBreakdown } from "~/lib/db/types";
 import {
   resolveEsl,
   resolvePlantRate,
-  resolvePriceFile,
+  resolvePrice,
   resolveStampDuty,
   resolveTerrorism,
 } from "~/server/pricing/rate-resolver";
 import type {
   CarCalculatorResult,
   RatingSnapshot,
-  Section2Value,
+  LiabilityLimitBand,
 } from "~/server/pricing/types";
 
 const GST_RATE = 0.1;
@@ -24,7 +24,7 @@ export function calculateCarPremium(
   brokerFeeTotal: number,
 ): CarCalculatorResult {
   const certificateDate = input.dateStart;
-  const priceFile = resolvePriceFile(
+  const price = resolvePrice(
     input.coverTypeId,
     input.estimatedTurnover,
     certificateDate,
@@ -37,145 +37,145 @@ export function calculateCarPremium(
       ? resolveTerrorism(input.postcode, stateCode, certificateDate)
       : null;
 
-  const cwRate = priceFile?.cwRate ?? null;
-  const cwMinPrem = priceFile?.cwMinPrem ?? 0;
+  const cwRate = price?.cwRate ?? null;
+  const cwMinPrem = price?.cwMinPrem ?? 0;
   const liability = getLiabilityValues(
-    input.section2Value as Section2Value,
-    priceFile,
+    input.liabilityLimitBand as LiabilityLimitBand,
+    price,
   );
   const sdRate = stampDuty?.rate ?? 0;
   const eslRate = esl?.constructionRate ?? 0;
-  const eslPlantRate = esl?.plantRate ?? 0;
+  const plantEslRate = esl?.plantRate ?? 0;
   const terrorismRate = terrorism?.rate ?? 0;
   const isTerrorismRateExist = terrorism != null;
 
-  const section1BeforeBasePremium =
+  const contractWorksCalculatedBasePremium =
     cwRate != null ? cwRate * input.estimatedTurnover : 0;
-  const section1TrueBasePremium = Math.max(
-    section1BeforeBasePremium,
+  const contractWorksBasePremium = Math.max(
+    contractWorksCalculatedBasePremium,
     cwMinPrem,
   );
-  const section1DisplayHomes = input.displayHomes;
-  const section1ExistingStructure = input.existingStructure;
-  const section1BaseTerrorismPremium = section1TrueBasePremium * terrorismRate;
-  const section1DisplayHomesTerror = section1DisplayHomes * terrorismRate;
-  const section1ExistingStructureTerror =
-    section1ExistingStructure * terrorismRate;
-  const section1TerrorismPremium =
+  const contractWorksDisplayHomesPremium = input.displayHomes;
+  const contractWorksExistingStructurePremium = input.existingStructure;
+  const section1BaseTerrorismPremium = contractWorksBasePremium * terrorismRate;
+  const contractWorksDisplayHomesPremiumTerror = contractWorksDisplayHomesPremium * terrorismRate;
+  const contractWorksExistingStructurePremiumTerror =
+    contractWorksExistingStructurePremium * terrorismRate;
+  const contractWorksTerrorismPremium =
     section1BaseTerrorismPremium +
-    section1DisplayHomesTerror +
-    section1ExistingStructureTerror;
-  const section1PlantEquipment = getSection1PlantEquipment({
+    contractWorksDisplayHomesPremiumTerror +
+    contractWorksExistingStructurePremiumTerror;
+  const contractWorksPlantPremium = getContractWorksPlantPremium({
     certificateDate,
     plantEquipment: input.plantEquipment,
-    section1ContractWorksValue: input.section1Value,
+    section1ContractWorksValue: input.contractWorksSumInsured,
     plantRate,
   });
-  const section1PlantTerrorismPremium =
-    section1PlantEquipment > 0 ? section1PlantEquipment * terrorismRate : 0;
-  const section1PlantEsl =
-    section1PlantEquipment > 0
-      ? (section1PlantEquipment + section1PlantTerrorismPremium) * eslPlantRate
+  const contractWorksPlantTerrorismPremium =
+    contractWorksPlantPremium > 0 ? contractWorksPlantPremium * terrorismRate : 0;
+  const contractWorksPlantESL =
+    contractWorksPlantPremium > 0
+      ? (contractWorksPlantPremium + contractWorksPlantTerrorismPremium) * plantEslRate
       : 0;
-  const section1Esl =
-    (section1TrueBasePremium +
+  const contractWorksESL =
+    (contractWorksBasePremium +
       section1BaseTerrorismPremium +
-      section1ExistingStructureTerror +
-      section1ExistingStructure +
-      section1DisplayHomes +
-      section1DisplayHomesTerror) *
+      contractWorksExistingStructurePremiumTerror +
+      contractWorksExistingStructurePremium +
+      contractWorksDisplayHomesPremium +
+      contractWorksDisplayHomesPremiumTerror) *
     eslRate;
-  const section1Gst =
-    (section1TrueBasePremium +
+  const contractWorksGST =
+    (contractWorksBasePremium +
       section1BaseTerrorismPremium +
-      section1ExistingStructureTerror +
-      section1ExistingStructure +
-      section1DisplayHomes +
-      section1DisplayHomesTerror +
-      section1PlantEquipment +
-      section1PlantTerrorismPremium +
-      section1PlantEsl +
-      section1Esl) *
+      contractWorksExistingStructurePremiumTerror +
+      contractWorksExistingStructurePremium +
+      contractWorksDisplayHomesPremium +
+      contractWorksDisplayHomesPremiumTerror +
+      contractWorksPlantPremium +
+      contractWorksPlantTerrorismPremium +
+      contractWorksPlantESL +
+      contractWorksESL) *
     GST_RATE;
-  const section1Sd =
-    (section1TrueBasePremium +
+  const contractWorksStampDuty =
+    (contractWorksBasePremium +
       section1BaseTerrorismPremium +
-      section1ExistingStructureTerror +
-      section1ExistingStructure +
-      section1DisplayHomes +
-      section1DisplayHomesTerror +
-      section1PlantEquipment +
-      section1PlantTerrorismPremium +
-      section1PlantEsl +
-      section1Esl +
-      section1Gst) *
+      contractWorksExistingStructurePremiumTerror +
+      contractWorksExistingStructurePremium +
+      contractWorksDisplayHomesPremium +
+      contractWorksDisplayHomesPremiumTerror +
+      contractWorksPlantPremium +
+      contractWorksPlantTerrorismPremium +
+      contractWorksPlantESL +
+      contractWorksESL +
+      contractWorksGST) *
     sdRate;
-  const section1TotalPremium =
-    section1TrueBasePremium +
+  const contractWorksTotalPremium =
+    contractWorksBasePremium +
     section1BaseTerrorismPremium +
-    section1ExistingStructureTerror +
-    section1ExistingStructure +
-    section1DisplayHomes +
-    section1DisplayHomesTerror +
-    section1PlantEquipment +
-    section1PlantTerrorismPremium +
-    section1PlantEsl +
-    section1Esl +
-    section1Gst +
-    section1Sd;
+    contractWorksExistingStructurePremiumTerror +
+    contractWorksExistingStructurePremium +
+    contractWorksDisplayHomesPremium +
+    contractWorksDisplayHomesPremiumTerror +
+    contractWorksPlantPremium +
+    contractWorksPlantTerrorismPremium +
+    contractWorksPlantESL +
+    contractWorksESL +
+    contractWorksGST +
+    contractWorksStampDuty;
 
-  const section2BeforeBasePremium = liability.rate * input.estimatedTurnover;
-  const section2TrueBasePremium = Math.max(
-    section2BeforeBasePremium,
+  const liabilityCalculatedBasePremium = liability.rate * input.estimatedTurnover;
+  const liabilityBasePremium = Math.max(
+    liabilityCalculatedBasePremium,
     liability.minPrem,
   );
-  const section2Esl = 0;
-  const section2Gst = (section2TrueBasePremium + section2Esl) * GST_RATE;
-  const section2Sd =
-    (section2TrueBasePremium + section2Esl + section2Gst) * sdRate;
-  const section2TotalPremium =
-    section2TrueBasePremium + section2Esl + section2Gst + section2Sd;
+  const liabilityESL = 0;
+  const liabilityGST = (liabilityBasePremium + liabilityESL) * GST_RATE;
+  const liabilityStampDuty =
+    (liabilityBasePremium + liabilityESL + liabilityGST) * sdRate;
+  const liabilityTotalPremium =
+    liabilityBasePremium + liabilityESL + liabilityGST + liabilityStampDuty;
 
   const premium: PremiumBreakdown = {
-    section1BeforeBasePremium: round(section1BeforeBasePremium),
-    section1TrueBasePremium: round(section1TrueBasePremium),
-    section1PlantEquipment: round(section1PlantEquipment),
-    section1PlantEsl: round(section1PlantEsl),
-    section1Esl: round(section1Esl),
-    section1Gst: round(section1Gst),
-    section1Sd: round(section1Sd),
-    section1TerrorismPremium: round(section1TerrorismPremium),
-    section1PlantTerrorismPremium: round(section1PlantTerrorismPremium),
-    section1DisplayHomes: round(section1DisplayHomes),
-    section1ExistingStructure: round(section1ExistingStructure),
-    section1TotalPremium: round(section1TotalPremium),
-    section2BeforeBasePremium: round(section2BeforeBasePremium),
-    section2TrueBasePremium: round(section2TrueBasePremium),
-    section2Esl: round(section2Esl),
-    section2Gst: round(section2Gst),
-    section2Sd: round(section2Sd),
-    section2TotalPremium: round(section2TotalPremium),
+    contractWorksCalculatedBasePremium: round(contractWorksCalculatedBasePremium),
+    contractWorksBasePremium: round(contractWorksBasePremium),
+    contractWorksPlantPremium: round(contractWorksPlantPremium),
+    contractWorksPlantESL: round(contractWorksPlantESL),
+    contractWorksESL: round(contractWorksESL),
+    contractWorksGST: round(contractWorksGST),
+    contractWorksStampDuty: round(contractWorksStampDuty),
+    contractWorksTerrorismPremium: round(contractWorksTerrorismPremium),
+    contractWorksPlantTerrorismPremium: round(contractWorksPlantTerrorismPremium),
+    contractWorksDisplayHomesPremium: round(contractWorksDisplayHomesPremium),
+    contractWorksExistingStructurePremium: round(contractWorksExistingStructurePremium),
+    contractWorksTotalPremium: round(contractWorksTotalPremium),
+    liabilityCalculatedBasePremium: round(liabilityCalculatedBasePremium),
+    liabilityBasePremium: round(liabilityBasePremium),
+    liabilityESL: round(liabilityESL),
+    liabilityGST: round(liabilityGST),
+    liabilityStampDuty: round(liabilityStampDuty),
+    liabilityTotalPremium: round(liabilityTotalPremium),
     combinedBrokerFee: round(brokerFeeTotal),
     originalTotalPremium: round(
-      section1TotalPremium + section2TotalPremium + brokerFeeTotal,
+      contractWorksTotalPremium + liabilityTotalPremium + brokerFeeTotal,
     ),
   };
 
   const rating: RatingSnapshot = {
-    priceFileId: priceFile?.priceFileId ?? 0,
-    stampDutyId: stampDuty?.priceFileStampDutyId ?? 0,
-    eslId: esl?.priceFileEslId ?? 0,
+    priceId: price?.priceId ?? 0,
+    stampDutyId: stampDuty?.priceStampDutyId ?? 0,
+    eslId: esl?.priceEslId ?? 0,
     plantRate: plantRate?.rate ?? 0,
     eslRate,
-    eslPlantRate,
-    sdRateSection1: sdRate,
-    sdRateSection2: sdRate,
-    section1Rate: cwRate ?? 0,
-    section2Rate: liability.rate,
-    section1MinPrem: cwMinPrem,
-    section2MinPrem: liability.minPrem,
-    plantMinPrem: plantRate?.plantMinValue ?? 0,
-    plantMaxPrem: plantRate?.plantMaxValue ?? 0,
+    plantEslRate,
+    contractWorksStampDutyRate: sdRate,
+    liabilityStampDutyRate: sdRate,
+    contractWorksAppliedRate: cwRate ?? 0,
+    liabilityAppliedRate: liability.rate,
+    contractWorksMinPremium: cwMinPrem,
+    liabilityMinPremium: liability.minPrem,
+    plantValueMin: plantRate?.plantMinValue ?? 0,
+    plantValueMax: plantRate?.plantMaxValue ?? 0,
     terrorismRate,
     terrorismTier: terrorism?.tier ?? "",
     isTerrorismRateExist,
@@ -187,20 +187,20 @@ export function calculateCarPremium(
 }
 
 function getLiabilityValues(
-  section2Value: Section2Value,
-  priceFile: ReturnType<typeof resolvePriceFile>,
+  liabilityLimitBand: LiabilityLimitBand,
+  price: ReturnType<typeof resolvePrice>,
 ) {
-  switch (section2Value) {
+  switch (liabilityLimitBand) {
     case 1:
       return {
-        rate: priceFile?.tenMilRate ?? 0,
-        minPrem: priceFile?.tenMilMinPrem ?? 0,
+        rate: price?.tenMilRate ?? 0,
+        minPrem: price?.tenMilMinPrem ?? 0,
         label: "$10 Million",
       };
     case 2:
       return {
-        rate: priceFile?.twentyMilRate ?? 0,
-        minPrem: priceFile?.twentyMilMinPrem ?? 0,
+        rate: price?.twentyMilRate ?? 0,
+        minPrem: price?.twentyMilMinPrem ?? 0,
         label: "$20 Million",
       };
     default:
@@ -208,7 +208,7 @@ function getLiabilityValues(
   }
 }
 
-function getSection1PlantEquipment({
+function getContractWorksPlantPremium({
   certificateDate,
   plantEquipment,
   section1ContractWorksValue,
@@ -261,15 +261,15 @@ function buildReferralReasons(
       `Existing Structure has a value of ${input.existingStructure}`,
     );
   }
-  if (input.numberOfClaim >= 3) {
+  if (input.claimsCountLast3Years >= 3) {
     reasons.push(
-      `Number of claim last 3 years is entered with value ${input.numberOfClaim}`,
+      `Number of claim last 3 years is entered with value ${input.claimsCountLast3Years}`,
     );
   }
   if (input.anyClaimsExceed20k) {
     reasons.push("Any claims exceeded $20,000 in value is stated as yes");
   }
-  if (!input.holdCurrentContractWorks) {
+  if (!input.hasExistingContractWorksCover) {
     reasons.push("Do not hold a current Contract Works/Liability policy");
   }
   if (input.plantEquipment > 50000) {
@@ -277,10 +277,10 @@ function buildReferralReasons(
       "Named Insureds Construction Plant & Equipment is over 50,000",
     );
   }
-  if (rating.section1Rate === 0) {
+  if (rating.contractWorksAppliedRate === 0) {
     reasons.push("Unable to find Contract Works rate");
   }
-  if (input.section2Value !== 3 && rating.section2Rate === 0) {
+  if (input.liabilityLimitBand !== 3 && rating.liabilityAppliedRate === 0) {
     reasons.push(`Unable to find Liability rate for ${liabilityLabel}`);
   }
   if (rating.stampDutyId === 0) {

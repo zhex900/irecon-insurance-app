@@ -17,7 +17,7 @@ The list below uses the exact legacy `ErrorMessage` text (bullet format). Rules 
 - Insurer is required
 - Insured Name is required
 - Type of Cover is required
-- Policy Category is required
+- Policy Category is required *(legacy label; rebuild: **Business type**)*
 - Policy Number is required. *(Renewal only — see conditional rules)*
 - Estimated Turnover/Project Value is required
 - Estimated Turnover/Project Value must be in currency
@@ -147,7 +147,7 @@ These validators only apply when specific other fields are set:
 
 ## Referral reasons (informational — does not block)
 
-Shown on **Step 2 — Pricing Confirmation** when `CARPolicy.IsReferred()` or `CARCalculator.IsReferred()` is true. These are **not** included in the “Cannot continue” validation summary; the broker can still finish the wizard.
+Shown on **Step 2 — Pricing DeclarationConfirmed** when `CARPolicy.IsReferred()` or `CARCalculator.IsReferred()` is true. These are **not** included in the “Cannot continue” validation summary; the broker can still finish the wizard.
 
 From `CARPolicy.GetReferralReasons()` and `CARCalculator2.GetReferralReasons()`:
 
@@ -170,8 +170,8 @@ From `CARPolicy.GetReferralReasons()` and `CARCalculator2.GetReferralReasons()`:
 | Legacy rule | New app (`policy-car.ts`) |
 |-------------|---------------------------|
 | All required-field messages above | Mostly covered by Zod `carQuoteSchema` on final save |
-| Renewal → Policy Number | `policyActionId === 2` → `policyNumber` required |
-| Yes on current policy → Current Insurer | `holdCurrentContractWorks` → `currentInsurer` required |
+| Renewal → Policy Number | `businessTypeId === 2` → `policyNumber` required |
+| Yes on current policy → Current Insurer | `hasExistingContractWorksCover` → `currentInsurer` required |
 | Currency / integer format checks | Zod `coerce.number()` (differs from ASP.NET currency parsing) |
 | Site Address optional | **Stricter in new app** — `siteAddress` required |
 | Disclosure must be Yes | **Stricter in new app** — `confirmation` must be `true` |
@@ -188,7 +188,7 @@ If every applicable rule failed at once, the broker would see:
 - Insurer is required
 - Insured Name is required
 - Type of Cover is required
-- Policy Category is required
+- Policy Category is required *(legacy label; rebuild: **Business type**)*
 - Policy Number is required.
 - Estimated Turnover/Project Value is required
 - Estimated Turnover/Project Value must be in currency

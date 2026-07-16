@@ -13,7 +13,7 @@ import {
 } from "~/lib/zod/policy-adjustment";
 import { formatCurrency } from "~/lib/utils";
 
-const steps = ["Policy Information", "Pricing Confirmation"] as const;
+const steps = ["Policy Information", "Pricing DeclarationConfirmed"] as const;
 
 type ActionData = {
   breakdown?: AdjustmentBreakdown;
@@ -158,7 +158,7 @@ export function AdjustmentPricingTables({ breakdown }: { breakdown: AdjustmentBr
     <div className="flex flex-col gap-6">
       <Card>
         <CardHeader>
-          <CardTitle>Pricing Confirmation</CardTitle>
+          <CardTitle>Pricing DeclarationConfirmed</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-6">
           <p className="text-sm text-slate-600">

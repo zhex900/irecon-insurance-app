@@ -10,7 +10,7 @@ This document defines the target-state specification for rebuilding the broker-f
 
 - The app is broker-only.
 - End clients do not have accounts, login, or direct UI access.
-- Phase 1 modules: **Client**, **CAR Policy**, **Settings** (AR broker management + **document template & fixed PDF configuration**) only.
+- Phase 1 modules: **Client**, **CAR Policy**, **Settings** (AR broker management + **document template & library document configuration**) only.
 - No payment collection workflow is included.
 - **UX / screen flows:** [CAR_INSURANCE_UI_FLOW.md](./CAR_INSURANCE_UI_FLOW.md) — use for wireframes and user experience design.
 
@@ -18,39 +18,39 @@ This document defines the target-state specification for rebuilding the broker-f
 
 **Deliverables:**
 
-| Area | In scope |
-|------|----------|
-| System development | Greenfield web app; UAT + Production environments |
-| Data migration | Clients with policies incepted within last **15 months**; IRECON flags which records to migrate |
-| UAT | Vendor unit testing; IRECON user acceptance |
+| Area               | In scope                                                                                        |
+| ------------------ | ----------------------------------------------------------------------------------------------- |
+| System development | Greenfield web app; UAT + Production environments                                               |
+| Data migration     | Clients with policies incepted within last **15 months**; IRECON flags which records to migrate |
+| UAT                | Vendor unit testing; IRECON user acceptance                                                     |
 
 **Functional tasks (like-for-like with modernised UI):**
 
-| Task | Summary |
-|------|---------|
-| Add client | Renamed Entity Name → **Name**; AR Name typeahead with company/practice shown; search AR by first/last name only |
-| Client page | Client details; extended AR display; CAR policy counts (Pending / Taken / Not taken) linking to policy lists |
-| Edit client | Add-client fields only; **no delete client** |
-| Client report | Per-client true base premium + broker fee summary for date range |
-| Search policy | From client menu and main menu; **removed:** status, policy type, sub agent, generic policies |
-| Search client | Name, Trading Name, Account Manager, AR Company (filters AR Name), AR Name |
-| Apply CAR policy | Full CAR wizard; **new** annual-only "Type of cover" (Transfer / Contract Commencing) drives insured contracts text |
-| View / edit CAR policy | Inception and expiry at top; editable until Taken or Not taken |
-| Adjustment | End-of-term adjustment wizard (unchanged from legacy behaviour) |
-| CAR Policy Report | Summary by status + detail drill-down |
-| CAR Renewal Report | Renewal due list |
-| AR Broker Management | Search, view, edit, **delete** AR (Wholesale Broker in legacy EBS) |
+| Task                   | Summary                                                                                                             |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Add client             | Renamed Entity Name → **Name**; AR Name typeahead with company/practice shown; search AuthorisedRepresentative by first/last name only    |
+| Client page            | Client details; extended AR display; CAR policy counts (Pending / Taken / Not taken) linking to policy lists        |
+| Edit client            | Add-client fields only; **no delete client**                                                                        |
+| Client report          | Per-client true base premium + broker fee summary for date range                                                    |
+| Search policy          | From client menu and main menu; **removed:** status, policy type, sub agent, generic policies                       |
+| Search client          | Name, Trading Name, Account Manager, AR Company (filters AR Name), AR Name                                          |
+| Apply CAR policy       | Full CAR wizard; **new** annual-only "Type of cover" (Transfer / Contract Commencing) drives insured contracts text |
+| View / edit CAR policy | Inception and expiry at top; editable until Taken or Not taken                                                      |
+| Adjustment             | End-of-term adjustment wizard (unchanged from legacy behaviour)                                                     |
+| CAR Policy Report      | Summary by status + detail drill-down                                                                               |
+| CAR Renewal Report     | Renewal due list                                                                                                    |
+| Authorised Representative broker Management   | Search, view, edit, **delete** AuthorisedRepresentative (Wholesale Broker in legacy EBS)                                                  |
 
 **Rebuild enhancements (beyond legacy manual upload):**
 
-| Enhancement | Summary |
-|-------------|---------|
-| Document templates in Settings | CAR merge templates (Schedule, ROA, Adjustment) managed in-app — not manual Word file upload to server |
-| Fixed PDF attachments in Settings | Additional static PDFs (`CARADDIT`) uploaded, assigned, and removable via Settings |
-| Template versioning | In-app template editor with preview and version history; policy PDF generation uses the **active published** version |
-| PDF engine | **[pdfme](https://pdfme.com/)** — Designer UI in Settings, `@pdfme/generator` for preview and production PDFs |
+| Enhancement                       | Summary                                                                                                              |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Document templates in Settings    | CAR merge templates (Schedule, ROA, Adjustment) managed in-app — not manual Word file upload to server               |
+| Library document attachments in Settings | Additional static PDFs (`CARADDIT`) uploaded, assigned, and removable via Settings                                   |
+| Template versioning               | In-app template editor with preview and version history; policy PDF generation uses the **active published** version |
+| PDF engine                        | **[pdfme](https://pdfme.com/)** — Designer UI in Settings, `@pdfme/generator` for preview and production PDFs        |
 
-Seed content for initial migration lives in [`car-pdf-templates/`](./car-pdf-templates/) (legacy Word `.doc` files and sample fixed PDFs).
+Seed content for initial migration lives in [`car-pdf-templates/`](./car-pdf-templates/) (legacy Word `.doc` files and sample library documents).
 
 **Explicit exclusions (Phase 1 contract):**
 
@@ -67,7 +67,7 @@ The rebuilt app replaces a legacy ASP.NET Web Forms system and must preserve cor
 
 - maintain client records,
 - create new CAR quotes,
-- calculate premium from configured price files/rates,
+- calculate premium from configured prices/rates,
 - save quote/policy records,
 - generate quote PDF output for broker distribution.
 
@@ -75,14 +75,14 @@ The rebuilt app replaces a legacy ASP.NET Web Forms system and must preserve cor
 
 - **Broker User**: logs in, searches clients, manages client records, creates/edits CAR policies, runs client report and policy search.
 - **Client (Insured)**: data entity only; no system login.
-- **Admin User**: AR broker management and **document template / fixed PDF configuration** in-app; operational reports. Price files and other rating reference data remain DB-only (no admin UI at this stage).
+- **Admin User**: Authorised Representative broker management and **document template / library document configuration** in-app; operational reports. Prices and other rating reference data remain DB-only (no admin UI at this stage).
 
 ### 3) Business Constraints
 
 - **BC-01**: Only CAR policy type is supported in Phase 1 (`PolicyType.Code='CAR'`).
 - **BC-02**: No direct-to-consumer workflow.
 - **BC-03**: No payment initiation or gateway integration (premium funding / card payments out of scope per contract).
-- **BC-04**: Premium calculation must be reproducible from saved rating inputs and versioned price files.
+- **BC-04**: Premium calculation must be reproducible from saved rating inputs and versioned prices.
 - **BC-05**: PDF document packs are mandatory at each lifecycle stage that requires broker distribution (draft quote, Taken commit, applied adjustment).
 - **BC-06**: Every material policy action must be attributable to a user in the audit trail.
 - **BC-07**: Clients cannot be deleted in Phase 1.
@@ -143,16 +143,16 @@ The rebuilt app replaces a legacy ASP.NET Web Forms system and must preserve cor
 
 ##### 6.2.5 Data model
 
-- **FR-CLIENT-13**: Client records persist in `Client` with references to `EntityType`, `AR`, and `AccountManager` per `db.txt`.
+- **FR-CLIENT-13**: Client records persist in `Client` with references to `EntityType`, `AuthorisedRepresentative`, and `AccountManager` per `db.txt`.
 
 #### 6.3 Quote / Policy Creation
 
-- **FR-POL-01**: Broker can start a new policy transaction under a client (`PolicyPeriod` + `Policy`).
+- **FR-POL-01**: Broker can start a new policy transaction under a client (`Policy` + `PolicyCAR`).
 - **FR-POL-02**: Policy number generation uses `PolicyNumber` ranges and format.
-- **FR-POL-03**: Policy captures base data: action (`PolicyAction`), type (`PolicyType`), risk postcode/state, effective date, and policy number.
+- **FR-POL-03**: Policy captures base data: business type (`BusinessType` — New / Renewal), product type (`PolicyType`), risk postcode/state, effective date, and policy number.
 - **FR-POL-04**: CAR-specific quote data persists in `PolicyCAR`.
 - **FR-POL-05**: App supports CAR status values: **Pending** (draft), **Taken**, and **Not taken** (see §6.9 Policy State and Lifecycle).
-- **FR-POL-06**: App stores policy notes via `PolicyNote` and `PolicyNoteType` for system/referral/message events.
+- **FR-POL-06**: App stores policy notes via `PolicyNote` (`PolicyNoteId` PK) and `PolicyNoteType` for system/referral/message events.
 - **FR-POL-07**: When status transitions to **Taken**, the policy is **committed and immutable** — core policy and `PolicyCAR` premium fields must not be updated in the database thereafter.
 - **FR-POL-08**: **Pending** policies may be edited, recalculated, and saved until committed as Taken or closed as Not taken.
 - **FR-POL-09**: **Not taken** policies are terminal and cannot be edited or adjusted.
@@ -171,26 +171,26 @@ The rebuilt app replaces a legacy ASP.NET Web Forms system and must preserve cor
 #### 6.4 CAR Form and Coverage Data
 
 - **FR-CAR-01**: Broker can enter CAR fields including cover type, insured/site details, turnover, activities, contracts, claim history, and declarations.
-- **FR-CAR-02**: Broker can capture section values and all calculation output fields required for traceability in `PolicyCAR`.
+- **FR-CAR-02**: Broker can capture section values and all calculation output fields required for traceability in `PolicyCAR`. `LiabilityLimitBand` is liability band `1` \| `2` \| `3` ($10M / $20M / not insured), not a money amount.
 - **FR-CAR-03**: Broker can capture excess options in `PolicyCARExcess` referencing `CARExcess`.
-- **FR-CAR-04**: Broker can capture sub-limits in `PolicyCARSubLimit`.
-- **FR-CAR-05**: Broker can store policy wording snapshot in `PolicyCARWording`.
-- **FR-CAR-06** (Phase 1): When cover type is **Annual**, show **Type of cover** with values **Transfer** and **Contract Commencing**; selection updates the **Insured contracts** text (wording TBC from business — Lesley).
+- **FR-CAR-04**: Broker can capture sub-limits in `PolicyCAR.SubLimits` (JSON snapshot; defaults from `CARSubLimit`).
+- **FR-CAR-05**: Broker can store additional wording snapshot in `PolicyCAR.Wordings` (JSON array of `{subject, content}`; options from `CARWording` catalogue + optional custom).
+- **FR-CAR-06** (Phase 1): When cover type is **Annual**, show **Type of cover** from `AnnualCoverType` (**Transfer** / **Contract Commencing**); selection updates the **Insured contracts** text (wording TBC from business — Lesley).
 
 #### 6.5 Pricing and Rating
 
 - **FR-PRICE-01**: Premium calculation is triggered from quote form input and rerunnable on demand.
 - **FR-PRICE-02**: Pricing uses active/versioned source tables by policy type and effective date:
-  - `PriceFile` + `PriceFileCAR`
-  - `PriceFileESL` + `PriceFileESLRate`
-  - `PriceFileStampDuty` + `PriceFileStampDutyRate`
-  - `PriceFilePlant`
-  - `PriceFileTerror` + `PriceFileTerrorRate` + `PriceFileTerrorPostCode`
-  - `Fee` + `FeeName`
+  - `Price` + `PriceCAR`
+  - `PriceESL` + `PriceESLRate`
+  - `PriceStampDuty` + `PriceStampDutyRate`
+  - `PricePlant`
+  - `PriceTerrorism` + `PriceTerrorismRate` + `PriceTerrorismPostCode`
+  - `BrokerFeeSchedule` + `BrokerFeeScheduleLine`
 - **FR-PRICE-03**: Pricing logic computes and stores section-level components (base premium, ESL, GST, stamp duty, terrorism, plant, totals).
-- **FR-PRICE-04**: System stores selected pricing source IDs/rates in `PolicyCAR` (e.g., `PriceFileId`, `PriceFileESLId`, `PriceFileStampDutyId`, rates/minimums).
-- **FR-PRICE-05**: Combined fees are persisted in `PolicyFee` with GST components.
-- **FR-PRICE-06**: Invoice premium (premium + fees) is maintained in `Policy.TotalInvoicePremium`.
+- **FR-PRICE-04**: System stores selected pricing source IDs/rates in `PolicyCAR` (e.g., `PriceId`, `PriceESLId`, `PriceStampDutyId`, rates/minimums).
+- **FR-PRICE-05**: Fee line items are persisted in `PolicyFee` (`Fee`, `FeeGst`) — **sole source of truth** for fees. Combined fee is always derived as `sum(Fee) + sum(FeeGst)` (legacy stored this as `OriginalCombinedBrokerFee`; rebuild has no snapshot column).
+- **FR-PRICE-06**: Bind-time premium total (S1 + S2 + fees) is stored only on `PolicyCAR.OriginalTotalPremium`. Not duplicated on `Policy`. List/invoice screens that need a total join `PolicyCAR`. Effective premium after adjustment = `OriginalTotalPremium` + latest Applied `DeltaTotalPremium` (never overwrite the bind snapshot).
 
 #### 6.6 Adjustment Support
 
@@ -198,11 +198,11 @@ End-of-term adjustments apply only to **Taken** policies that have **not expired
 
 - **FR-ADJ-01**: Broker can create an adjustment record for a Taken, non-expired policy. Each adjustment is a child record (e.g. policy `A`, adjustments `A-1`, `A-2`) linked to the immutable original policy.
 - **FR-ADJ-02**: Each adjustment record has its own lifecycle state: **Draft** or **Applied** (committed). Draft adjustments may be edited or discarded; applied adjustments are immutable.
-- **FR-ADJ-03**: An adjustment record captures adjusted turnover, stamp duty exempt flag, section-level premium recalculations, delta totals, and audit metadata (`CreatedWhen`, `CreatedBy`, `AppliedWhen`, `AppliedBy`).
+- **FR-ADJ-03**: An adjustment record captures adjusted turnover, stamp duty exempt flag, section-level **premium deltas**, and audit metadata (`CreatedWhen`, `CreatedBy`, `AppliedWhen`, `AppliedBy`). Absolute adjusted premiums are derived as original `PolicyCAR` values + deltas (not stored separately).
 - **FR-ADJ-04**: When an adjustment is **Applied**, the system does not overwrite the original policy. The **effective policy premium** for display, documents, and broker UI is: **original Taken policy premium + latest Applied adjustment delta**.
 - **FR-ADJ-05**: Multiple adjustments may be created and applied before the policy expires. There is no limit on the number of applied adjustments prior to expiry.
 - **FR-ADJ-06**: **Not taken** policies cannot be adjusted.
-- **FR-ADJ-07**: **Expired** policies cannot receive new adjustments or have draft adjustments applied. A policy is **expired** when today's date is **after** the policy end date (`PolicyPeriod` / `dateEnd`).
+- **FR-ADJ-07**: **Expired** policies cannot receive new adjustments or have draft adjustments applied. A policy is **expired** when today's date is **after** the policy end date (`Policy.DateEnd`).
 - **FR-ADJ-08**: Documents (e.g. adjustment ROA, schedule) and broker-facing policy views must be generated from the **composite view**: original immutable policy **plus** the **latest Applied** adjustment (if any).
 - **FR-ADJ-09**: Adjustment finish validation includes business rules from legacy (e.g. 75% minimum retained premium, 25% base refund cap per section) — see [CAR_PRICING_FORMULAS.md](./CAR_PRICING_FORMULAS.md) and [CAR_SAVE_VALIDATION.md](./CAR_SAVE_VALIDATION.md).
 
@@ -210,11 +210,11 @@ End-of-term adjustments apply only to **Taken** policies that have **not expired
 
 ##### 6.9.1 Status values
 
-| Status ID | Name | Alias / meaning |
-|-----------|------|-----------------|
-| 1 | Pending | **Draft** — quote in progress; editable |
-| 2 | Taken | **Committed** — policy bound; original record immutable |
-| 3 | Not taken | **Declined / lapsed** — terminal; no further changes |
+| Status ID | Name      | Alias / meaning                                         |
+| --------- | --------- | ------------------------------------------------------- |
+| 1         | Pending   | **Draft** — quote in progress; editable                 |
+| 2         | Taken     | **Committed** — policy bound; original record immutable |
+| 3         | Not taken | **Declined / lapsed** — terminal; no further changes    |
 
 **Pending ≡ draft.** While Pending, the broker may save drafts, recalculate premium, and edit all quote fields.
 
@@ -248,12 +248,12 @@ Adjustments are **append-only child records**, not in-place mutations on `Policy
 
 **Example:**
 
-| Record | Type | State | Role |
-|--------|------|-------|------|
-| `A` | Original policy | Taken (immutable) | Source of truth for original premium and rating inputs |
-| `A-1` | Adjustment | Applied | First end-of-term adjustment |
-| `A-2` | Adjustment | Applied | Second end-of-term adjustment |
-| `A-3` | Adjustment | Draft | In-progress adjustment (not yet in effective premium) |
+| Record | Type            | State             | Role                                                   |
+| ------ | --------------- | ----------------- | ------------------------------------------------------ |
+| `A`    | Original policy | Taken (immutable) | Source of truth for original premium and rating inputs |
+| `A-1`  | Adjustment      | Applied           | First end-of-term adjustment                           |
+| `A-2`  | Adjustment      | Applied           | Second end-of-term adjustment                          |
+| `A-3`  | Adjustment      | Draft             | In-progress adjustment (not yet in effective premium)  |
 
 **Effective premium for display and documents:**
 
@@ -269,12 +269,12 @@ effectivePremium = policyA.premium + latestAppliedAdjustment.deltaPremium
 
 ##### 6.9.6 Adjustment eligibility matrix
 
-| Policy status | Expired? | Edit original policy | Create adjustment | Apply adjustment |
-|---------------|----------|----------------------|-------------------|------------------|
-| Pending (draft) | — | Yes | No | No |
-| Taken | No | **No** | Yes | Yes |
-| Taken | Yes | **No** | No | No |
-| Not taken | — | No | No | No |
+| Policy status   | Expired? | Edit original policy | Create adjustment | Apply adjustment |
+| --------------- | -------- | -------------------- | ----------------- | ---------------- |
+| Pending (draft) | —        | Yes                  | No                | No               |
+| Taken           | No       | **No**               | Yes               | Yes              |
+| Taken           | Yes      | **No**               | No                | No               |
+| Not taken       | —        | No                   | No                | No               |
 
 ##### 6.9.7 Lifecycle diagram (target model)
 
@@ -299,7 +299,7 @@ stateDiagram-v2
 - **Original policy**: `Policy`, `PolicyCAR`, related child tables — written once at Taken commit; thereafter read-only.
 - **Adjustments**: separate table (extend `PolicyCARAdjustment` or equivalent) with:
   - `PolicyId` (FK to original policy)
-  - `AdjustmentSequence` or `AdjustmentReference` (e.g. `A-1`, `A-2`)
+  - `AdjustmentSequence` (display as `A-{n}` in UI, e.g. `A-1`, `A-2`)
   - `AdjustmentStatus`: `Draft` | `Applied`
   - Premium delta fields and adjustment inputs (turnover, stamp duty exempt)
   - `AppliedDate` / audit fields
@@ -308,42 +308,42 @@ stateDiagram-v2
 
 ##### 6.9.9 Legacy vs target adjustment behavior
 
-| Aspect | Legacy (`CARAdjust.aspx`) | Target (rebuild) |
-|--------|---------------------------|------------------|
-| Storage | Updates `PolicyCAR` + single `PolicyCARAdjustment` row | Original policy immutable; unlimited adjustment child records |
-| Status after adjust | Taken + `Adjusted` flag | Taken unchanged; adjustment has Draft/Applied |
-| Effective premium | Overwrites display fields on policy | Original + latest Applied adjustment |
-| Multiple adjustments | Effectively one adjustment flow | Unlimited before expiry |
-| Expiry check | Not explicit in legacy UI | Required — no adjustment if expired |
+| Aspect               | Legacy (`CARAdjust.aspx`)                              | Target (rebuild)                                              |
+| -------------------- | ------------------------------------------------------ | ------------------------------------------------------------- |
+| Storage              | Updates `PolicyCAR` + single `PolicyCARAdjustment` row | Original policy immutable; unlimited adjustment child records |
+| Status after adjust  | Taken + `Adjusted` flag                                | Taken unchanged; adjustment has Draft/Applied                 |
+| Effective premium    | Overwrites display fields on policy                    | Original + latest Applied adjustment                          |
+| Multiple adjustments | Effectively one adjustment flow                        | Unlimited before expiry                                       |
+| Expiry check         | Not explicit in legacy UI                              | Required — no adjustment if expired                           |
 
 #### 6.7 Policy PDF Documents
 
 **Generated policy PDFs** are produced from **in-app document templates** (see §6.13) merged with policy data, rendered to PDF, and stored in **Cloudflare R2**. Metadata for each generated file is stored in **`PolicyDocument`** (Postgres). Generated policy documents are **never deleted** — each generation appends a new R2 object and a new `PolicyDocument` row (audit trail).
 
-**Legacy:** Word templates (`.doc`) were manually uploaded to the server; fixed PDFs were manually uploaded; generation used Word mail-merge (`GetMergeFields()` in `CARPolicy.cs`). **Rebuild:** templates are authored and versioned in Settings; fixed PDFs are uploaded via Settings (see §6.13).
+**Legacy:** Word templates (`.doc`) were manually uploaded to the server; library documents were manually uploaded; generation used Word mail-merge (`GetMergeFields()` in `CARPolicy.cs`). **Rebuild:** templates are authored and versioned in Settings; library documents are uploaded via Settings (see §6.13).
 
 ##### 6.7.1 CAR document catalog
 
-| Type code | Document title | Output filename pattern | Template slot | Cover-type variant |
-|-----------|----------------|-------------------------|---------------|-------------------|
-| `CARSCHED` | CAR Schedule | `CAR_Schedule_{policyNumber}_{amendmentNumber}_{yyyyMMdd HHmmss}.pdf` | `Schedule` | Annual \| Single \| Owner Builder |
-| `CARRATING` | CAR Rating / ROA (Record of Advice) | `Car_Premium&ROA_{policyNumber}_{amendmentNumber}_{yyyyMMdd HHmmss}.pdf` | `Rating` | Annual \| Single \| Owner Builder |
-| `CARADJUST` | CAR Adjustment | `CAR_Adjustment_{policyNumber}_{amendmentNumber}_{yyyyMMdd HHmmss}.pdf` | `Adjustment` | Single (not cover-type split) |
-| `CARADDIT` | Additional attachments | Original configured filename (e.g. `ATC Stamp duty Exemption.pdf`) | Fixed PDF library (§6.13.3) | Per cover type + optional rules |
+| Type code   | Document title                      | Output filename pattern                                                  | Template slot               | Cover-type variant                |
+| ----------- | ----------------------------------- | ------------------------------------------------------------------------ | --------------------------- | --------------------------------- |
+| `CARSCHED`  | CAR Schedule                        | `CAR_Schedule_{policyNumber}_{amendmentNumber}_{yyyyMMdd HHmmss}.pdf`    | `Schedule`                  | Annual \| Single \| Owner Builder |
+| `CARRATING` | CAR Rating / ROA (Record of Advice) | `Car_Premium&ROA_{policyNumber}_{amendmentNumber}_{yyyyMMdd HHmmss}.pdf` | `Rating`                    | Annual \| Single \| Owner Builder |
+| `CARADJUST` | CAR Adjustment                      | `CAR_Adjustment_{policyNumber}_{amendmentNumber}_{yyyyMMdd HHmmss}.pdf`  | `Adjustment`                | Single (not cover-type split)     |
+| `CARADDIT`  | Additional attachments              | Original configured filename (e.g. `ATC Stamp duty Exemption.pdf`)       | `LibraryDocument` (§6.13.3) | Per cover type + optional rules   |
 
 **Seed templates** (import reference — not runtime Word upload): [`car-pdf-templates/`](./car-pdf-templates/)
 
-| Slot | Cover | Legacy seed file (examples) |
-|------|-------|----------------------------|
-| Schedule | Annual | `CAR_iAnyware Schedule (Annual) [from 01.26].doc` |
-| Schedule | Single | `CAR_iAnyware Schedule (Single) [from 01.26].doc` |
-| Schedule | Owner Builder | `CAR_iAnyware Schedule (Owner Builder) [from 06.25] - v2.doc` |
-| Rating / ROA | Annual | `CAR_Quotation & Record of Answers (Annual) [from 01.26].doc` |
-| Rating / ROA | Single | `CAR_Quotation & Record of Answers (Single) [from 01.26].doc` |
+| Slot         | Cover         | Legacy seed file (examples)                                               |
+| ------------ | ------------- | ------------------------------------------------------------------------- |
+| Schedule     | Annual        | `CAR_iAnyware Schedule (Annual) [from 01.26].doc`                         |
+| Schedule     | Single        | `CAR_iAnyware Schedule (Single) [from 01.26].doc`                         |
+| Schedule     | Owner Builder | `CAR_iAnyware Schedule (Owner Builder) [from 06.25] - v2.doc`             |
+| Rating / ROA | Annual        | `CAR_Quotation & Record of Answers (Annual) [from 01.26].doc`             |
+| Rating / ROA | Single        | `CAR_Quotation & Record of Answers (Single) [from 01.26].doc`             |
 | Rating / ROA | Owner Builder | `CAR_Quotation & Record of Answers (Owner Builder) [from 06.25] - v2.doc` |
-| Adjustment | All | `CAR_Adjustment.doc` / `Adjustment.doc` |
+| Adjustment   | All           | `CAR_Adjustment.doc` / `Adjustment.doc`                                   |
 
-**Fixed PDF seed examples:** `POLICY COMPARISON JUNE 2024.pdf`, `IA Annual CAR TPL Wording (eff Jan 2026) - Sample.pdf`
+**Library document seed examples:** `POLICY COMPARISON JUNE 2024.pdf`, `IA Annual CAR TPL Wording (eff Jan 2026) - Sample.pdf`
 
 **Attachment rules (retained from legacy):**
 
@@ -353,13 +353,13 @@ stateDiagram-v2
 
 ##### 6.7.2 Document generation triggers — target (rebuild)
 
-| Event | Required PDFs | Data source for merge |
-|-------|---------------|----------------------|
-| **First save** (Pending/draft created) | Schedule (`CARSCHED`) + applicable additional docs (`CARADDIT`) | Current draft policy snapshot |
-| **Pending/draft save** (subsequent) | Regenerate Schedule + additional docs when premium or material fields change (configurable: always vs on-demand) | Latest draft snapshot |
-| **Taken commit** | Full pack: Schedule + Rating/ROA (`CARRATING`) + additional docs | Immutable Taken policy snapshot |
-| **Adjustment — Draft saved** | Optional preview: Adjustment doc marked as draft/watermarked (recommended) | Original policy + draft adjustment |
-| **Adjustment — Applied** | Adjustment (`CARADJUST`) + updated Schedule + Rating/ROA reflecting **effective** premium | Original policy + latest applied adjustment |
+| Event                                  | Required PDFs                                                                                                    | Data source for merge                       |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| **First save** (Pending/draft created) | Schedule (`CARSCHED`) + applicable additional docs (`CARADDIT`)                                                  | Current draft policy snapshot               |
+| **Pending/draft save** (subsequent)    | Regenerate Schedule + additional docs when premium or material fields change (configurable: always vs on-demand) | Latest draft snapshot                       |
+| **Taken commit**                       | Full pack: Schedule + Rating/ROA (`CARRATING`) + additional docs                                                 | Immutable Taken policy snapshot             |
+| **Adjustment — Draft saved**           | Optional preview: Adjustment doc marked as draft/watermarked (recommended)                                       | Original policy + draft adjustment          |
+| **Adjustment — Applied**               | Adjustment (`CARADJUST`) + updated Schedule + Rating/ROA reflecting **effective** premium                        | Original policy + latest applied adjustment |
 
 **Target improvements over legacy:**
 
@@ -372,73 +372,73 @@ stateDiagram-v2
 
 - **FR-DOC-01**: Broker can view and download all policy-linked PDFs from the policy detail screen.
 - **FR-DOC-02**: Document content reflects the correct lifecycle snapshot (draft vs Taken vs effective-with-adjustment).
-- **FR-DOC-03**: Broker can email selected documents to the client; send is logged in `EmailLog`.
+- **FR-DOC-03**: Broker can email selected documents to the client; send is logged in `EmailLog` with `EmailLogDocument` rows linking each attached `PolicyDocument`.
 - **FR-DOC-04**: Document generation failures are logged and surfaced to the broker (no silent failure).
-- **FR-DOC-05**: `PolicyDocument` records: `PolicyId`, optional `PolicyCARAdjustmentId`, type code, filename, R2 storage key, `GeneratedWhen`, `GeneratedBy`, and optional `DocumentTemplateVersionId` / `FixedPdfId` (which config version produced the file).
+- **FR-DOC-05**: `PolicyDocument` records: `PolicyId`, optional `PolicyCARAdjustmentId`, type code, filename, R2 storage key, `GeneratedWhen`, `GeneratedBy`, and optional `DocumentTemplateVersionId` / `LibraryDocumentId` (which config version produced the file).
 - **FR-DOC-06**: Generated policy PDFs and their `PolicyDocument` rows are **append-only** — never deleted from R2 or the database.
 - **FR-DOC-07**: PDF generation uses the **active published** template version for each slot at generation time; the version id is stored on `PolicyDocument` for traceability.
 
-#### 6.13 Document template & fixed PDF configuration (Settings)
+#### 6.13 Document template & library document configuration (Settings)
 
 Admin-managed document configuration replaces legacy manual server upload of Word files and static PDFs. **Brokers do not edit templates** — only admins via **Settings**.
 
 ##### 6.13.1 Settings navigation
 
-| Route | Screen | Access |
-|-------|--------|--------|
-| `/settings` | Settings hub | Admin |
-| `/settings/ar-brokers` | AR Broker Management | Admin |
-| `/settings/document-templates` | Merge templates (Schedule, ROA, Adjustment) | Admin |
-| `/settings/fixed-pdfs` | Fixed PDF attachments (`CARADDIT`) | Admin |
+| Route                          | Screen                                      | Access |
+| ------------------------------ | ------------------------------------------- | ------ |
+| `/settings`                    | Settings hub                                | Admin  |
+| `/settings/ar-brokers`         | Authorised Representative broker Management                        | Admin  |
+| `/settings/document-templates` | Merge templates (Schedule, ROA, Adjustment) | Admin  |
+| `/settings/library-documents`         | Library document attachments (`CARADDIT`)          | Admin  |
 
 ##### 6.13.2 Merge templates (Schedule, ROA, Adjustment)
 
 Legacy Word `.doc` templates are **imported once** (from `car-pdf-templates/`) into structured **in-app templates** — not uploaded as Word files for ongoing generation.
 
-| Requirement | Detail |
-|-------------|--------|
-| **FR-TPL-01** | Admin can open each template **slot** (type × cover type where applicable): Schedule Annual / Single / Owner Builder, ROA Annual / Single / Owner Builder, Adjustment (single). |
-| **FR-TPL-02** | Template editor embeds **pdfme Designer** (`@pdfme/ui`) per slot — drag/drop **text** (merge fields) and **image** (logo) schemas on a `basePdf` background. Not a raw Word file upload for production use. |
-| **FR-TPL-03** | Text schema field names match the **CAR merge-field catalogue** (policy number, client name, premiums, dates, sections, etc.). Admin can add/reposition fields; optional sidebar picker for field names. |
-| **FR-TPL-04** | **Preview** uses `@pdfme/generator` with **sample policy data** (fixture `inputs` object) — same engine as production. |
+| Requirement   | Detail                                                                                                                                                                                                              |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **FR-TPL-01** | Admin can open each template **slot** (type × cover type where applicable): Schedule Annual / Single / Owner Builder, ROA Annual / Single / Owner Builder, Adjustment (single).                                     |
+| **FR-TPL-02** | Template editor embeds **pdfme Designer** (`@pdfme/ui`) per slot — drag/drop **text** (merge fields) and **image** (logo) schemas on a `basePdf` background. Not a raw Word file upload for production use.         |
+| **FR-TPL-03** | Text schema field names match the **CAR merge-field catalogue** (policy number, client name, premiums, dates, sections, etc.). Admin can add/reposition fields; optional sidebar picker for field names.            |
+| **FR-TPL-04** | **Preview** uses `@pdfme/generator` with **sample policy data** (fixture `inputs` object) — same engine as production.                                                                                              |
 | **FR-TPL-05** | **Version control:** each save creates a new **template version**; versions are immutable once published. Admin can view version history, diff (optional v1.1), and **publish** one version as **active** per slot. |
-| **FR-TPL-06** | Only the **active published** version is used for new policy PDF generation. Prior published versions remain for audit and for tracing which version generated an existing `PolicyDocument`. |
-| **FR-TPL-07** | **Rollback:** admin can publish a previous version to make it active again (creates a new publish event; does not mutate old versions). |
-| **FR-TPL-08** | Initial import: convert seed `.doc` files in `car-pdf-templates/` → PDF **`basePdf`** (static background), then place pdfme text/image schemas in Designer for v1 templates. |
-| **FR-TPL-09** | Template create/edit/publish actions are **audit-logged** (user, timestamp, slot, version id). |
+| **FR-TPL-06** | Only the **active published** version is used for new policy PDF generation. Prior published versions remain for audit and for tracing which version generated an existing `PolicyDocument`.                        |
+| **FR-TPL-07** | **Rollback:** admin can publish a previous version to make it active again (creates a new publish event; does not mutate old versions).                                                                             |
+| **FR-TPL-08** | Initial import: convert seed `.doc` files in `car-pdf-templates/` → PDF **`basePdf`** (static background), then place pdfme text/image schemas in Designer for v1 templates.                                        |
+| **FR-TPL-09** | Template create/edit/publish actions are **audit-logged** (user, timestamp, slot, version id).                                                                                                                      |
 
 **Version model (conceptual):**
 
-| Entity | Role |
-|--------|------|
-| `DocumentTemplate` | Slot identity: `DocumentTypeCode` + `CoverTypeId` (nullable for Adjustment) |
+| Entity                    | Role                                                                                                                   |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `DocumentTemplate`        | Slot identity: `DocumentTypeCode` + `CoverTypeId` (nullable for Adjustment)                                            |
 | `DocumentTemplateVersion` | Immutable **pdfme `Template` JSON** (`basePdf` + `schemas`); `VersionNumber`, `PublishedAt`, `PublishedBy`, `IsActive` |
-| R2 | `basePdf` assets and org logo; optional archived source `.doc` for reference only |
+| R2                        | `basePdf` assets and org logo; optional archived source `.doc` for reference only                                      |
 
-##### 6.13.3 Fixed PDF attachments (`CARADDIT`)
+##### 6.13.3 Library document attachments (`CARADDIT`)
 
 Static PDFs bundled with generated packs (stamp duty exemption, wording samples, policy comparison sheets, etc.).
 
-| Requirement | Detail |
-|-------------|--------|
-| **FR-FIX-01** | Admin can **upload** PDF files via Settings (stored in R2). |
-| **FR-FIX-02** | Admin can **delete** a fixed PDF from the active library (removes from future packs; does not delete already-generated `PolicyDocument` copies on policies). |
-| **FR-FIX-03** | Admin assigns each fixed PDF to one or more **cover types** (Annual / Single / Owner Builder) and optional **rules** (e.g. state = NSW). |
-| **FR-FIX-04** | Admin can set **display order** within the additional-docs list per cover type. |
-| **FR-FIX-05** | Upload/delete/reorder/assignment changes are **audit-logged**. |
+| Requirement   | Detail                                                                                                                                                             |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **FR-FIX-01** | Admin can **upload** PDF files via Settings (stored in R2).                                                                                                        |
+| **FR-FIX-02** | Admin can **delete** a library document from the active library (removes from future packs; does not delete already-generated `PolicyDocument` copies on policies).       |
+| **FR-FIX-03** | Admin assigns each library document to one or more **cover types** (Annual / Single / Owner Builder) and optional **rules** (e.g. state = NSW).                           |
+| **FR-FIX-04** | Admin can set **display order** within the additional-docs list per cover type.                                                                                    |
+| **FR-FIX-05** | Upload/delete/reorder/assignment changes are **audit-logged**.                                                                                                     |
 | **FR-FIX-06** | Replacing a file: upload new PDF (new record) and retire/delete the old library entry — already-issued policy packs retain their historical `PolicyDocument` rows. |
 
 **Distinction — two PDF lifecycles:**
 
-| PDF kind | Managed in | Deletable? | Purpose |
-|----------|------------|------------|---------|
-| **Generated policy PDF** | Policy detail document list | **No** — append-only audit trail | Schedule, ROA, Adjustment outputs per policy event |
-| **Fixed PDF (library)** | Settings → Fixed PDFs | **Yes** — admin removes from config | Static attachments merged into future packs |
+| PDF kind                 | Managed in                  | Deletable?                          | Purpose                                            |
+| ------------------------ | --------------------------- | ----------------------------------- | -------------------------------------------------- |
+| **Generated policy PDF** | Policy detail document list | **No** — append-only audit trail    | Schedule, ROA, Adjustment outputs per policy event |
+| **Library document**  | Settings → Library documents       | **Yes** — admin removes from config | Static attachments merged into future packs        |
 
 ##### 6.13.4 Functional requirements summary
 
-- **FR-CFG-DOC-01**: All CAR document generation reads **active** merge templates and fixed PDF config from the database — not from filesystem paths or manual server upload.
-- **FR-CFG-DOC-02**: Brokers cannot access template or fixed-PDF Settings screens.
+- **FR-CFG-DOC-01**: All CAR document generation reads **active** merge templates and library document config from the database — not from filesystem paths or manual server upload.
+- **FR-CFG-DOC-02**: Brokers cannot access template or library-document Settings screens.
 - **FR-CFG-DOC-03**: Missing or unpublished template for a required slot blocks generation with a clear admin-facing error message.
 
 ##### 6.13.5 Implementation — pdfme
@@ -447,12 +447,12 @@ Static PDFs bundled with generated packs (stamp duty exemption, wording samples,
 
 **Packages:**
 
-| Package | Use |
-|---------|-----|
-| `@pdfme/ui` | **Designer** embedded in Settings → Document Templates |
-| `@pdfme/generator` | Production PDF generation (server / Worker) |
-| `@pdfme/schemas` | Built-in schema plugins: `text`, `image` (logo), tables as needed |
-| `@pdfme/common` | Shared `Template` type |
+| Package            | Use                                                               |
+| ------------------ | ----------------------------------------------------------------- |
+| `@pdfme/ui`        | **Designer** embedded in Settings → Document Templates            |
+| `@pdfme/generator` | Production PDF generation (server / Worker)                       |
+| `@pdfme/schemas`   | Built-in schema plugins: `text`, `image` (logo), tables as needed |
+| `@pdfme/common`    | Shared `Template` type                                            |
 
 **Template shape (stored in `DocumentTemplateVersion.TemplateJson`):**
 
@@ -465,23 +465,23 @@ Static PDFs bundled with generated packs (stamp duty exemption, wording samples,
 
 **Schema conventions:**
 
-| Schema type | Purpose |
-|-------------|---------|
-| `text` | Merge field — `name` matches CAR merge-field key; value supplied in `inputs` at generation |
-| `image` | Logo or static image — `name` e.g. `orgLogo`; `inputs` supplies R2 URL or data URI |
+| Schema type | Purpose                                                                                    |
+| ----------- | ------------------------------------------------------------------------------------------ |
+| `text`      | Merge field — `name` matches CAR merge-field key; value supplied in `inputs` at generation |
+| `image`     | Logo or static image — `name` e.g. `orgLogo`; `inputs` supplies R2 URL or data URI         |
 
 **Settings UI (simple):**
 
 1. Slot list → open Designer in a full-width panel.
 2. Toolbar: **Preview** (generate with fixture data), **Save draft version**, **Publish**.
-3. Optional: upload/replace **logo** (stored in R2; bound to `orgLogo` image schema).
+3. Optional: upload/replace **logo** via **`AppSetting`** key `orgLogo` (R2 metadata in `SettingValue` JSON; bound to pdfme `orgLogo` image schema).
 4. Layout changes are infrequent — most edits are repositioning merge fields or updating `basePdf` when wording changes.
 
 **Generation flow (`pdf.service.ts`):**
 
 ```ts
-import { generate } from '@pdfme/generator';
-import { text, image } from '@pdfme/schemas';
+import { generate } from "@pdfme/generator";
+import { text, image } from "@pdfme/schemas";
 
 const pdfBytes = await generate({
   template: activeVersion.templateJson,
@@ -498,7 +498,7 @@ const pdfBytes = await generate({
 3. Open pdfme Designer; place text schemas over dynamic areas; add image schema for logo.
 4. Save as v1; publish.
 
-**Fixed PDFs (`CARADDIT`):** Not pdfme templates — separate Settings → Fixed PDFs library (upload/delete). App appends these files to the generated pack when rules match.
+**Library documents (`CARADDIT`):** Not pdfme templates — separate Settings → Library documents (upload/delete). App appends these files to the generated pack when rules match.
 
 **Why pdfme:** Single library for WYSIWYG editor + renderer; JSON templates map directly to versioned DB rows; no custom merge-field editor or HTML→PDF pipeline to maintain.
 
@@ -508,26 +508,26 @@ Legacy relies primarily on `PolicyNote` (informational/referral/message notes) p
 
 ##### 6.8.1 Events to log (target)
 
-| Action | Minimum audit fields |
-|--------|---------------------|
-| Policy created / draft saved | user, timestamp, policy id, client id |
-| Premium recalculated | user, timestamp, policy id, price file ids used |
-| Status change (Pending → Taken / Not taken) | user, timestamp, old status, new status |
-| Taken commit (immutability lock) | user, timestamp, `TakenAt`/`TakenBy` |
-| Adjustment draft created / updated / discarded | user, timestamp, adjustment id, sequence |
-| Adjustment applied | user, timestamp, adjustment id, delta totals |
-| PDF pack generated | user, timestamp, policy id, document types produced, template version ids |
-| Template published / fixed PDF uploaded or deleted | user, timestamp, slot or file id, action |
-| Document emailed | user, timestamp, recipients (via `EmailLog`) |
-| Report run / export | user, timestamp, report name, parameters |
+| Action                                             | Minimum audit fields                                                      |
+| -------------------------------------------------- | ------------------------------------------------------------------------- |
+| Policy created / draft saved                       | user, timestamp, policy id, client id                                     |
+| Premium recalculated                               | user, timestamp, policy id, price table ids used                          |
+| Status change (Pending → Taken / Not taken)        | user, timestamp, old status, new status                                   |
+| Taken commit (immutability lock)                   | user, timestamp, `TakenAt`/`TakenBy`                                      |
+| Adjustment draft created / updated / discarded     | user, timestamp, adjustment id, sequence                                  |
+| Adjustment applied                                 | user, timestamp, adjustment id, delta totals                              |
+| PDF pack generated                                 | user, timestamp, policy id, document types produced, template version ids |
+| Template published / library document uploaded or deleted | user, timestamp, slot or file id, action                                  |
+| Document emailed                                   | user, timestamp, recipients (via `EmailLog`)                              |
+| Report run / export                                | user, timestamp, report name, parameters                                  |
 
 ##### 6.8.2 Functional requirements
 
 - **FR-AUD-01**: Entities that carry creation metadata store `CreatedWhen` and `CreatedBy`.
 - **FR-AUD-02**: System preserves full calculation trace by saving pricing inputs and outputs in policy tables.
-- **FR-AUD-03**: Status changes, referrals, and broker notes are captured in `PolicyNote` / `PolicyNoteType`.
-- **FR-AUD-04**: **New:** append-only **activity log** (or extended `PolicyNote` with typed actions) records user-attributed actions from §6.8.1; visible on policy detail and client detail.
-- **FR-AUD-05**: Applied adjustments and Taken commits are immutable; audit log entries are never deleted.
+- **FR-AUD-03**: Status changes, referrals, and broker notes are captured in `PolicyNote` / `PolicyNoteType` (broker-facing typed notes).
+- **FR-AUD-04**: Append-only **`ActivityLog`** records user-attributed system actions from §6.8.1; visible on policy detail and client detail. **Keep separate from `PolicyNote`** (do not merge for v1 — notes vs audit).
+- **FR-AUD-05**: Applied adjustments and Taken commits are immutable; audit log entries are never deleted. `TakenAt` / `TakenBy` live on `Policy` (with `PolicyStatusId`).
 
 #### 6.10 Client Dashboard (Broker Fee Summary)
 
@@ -537,24 +537,26 @@ Per-client summary table aggregated over a selectable date range. Legacy: `Clien
 
 Default period: **current calendar month** (legacy defaulted to **previous** month).
 
-| Column | Description |
-|--------|-------------|
-| Policy Type | Product/class code (e.g. `CAR`, `UNKNOWN` when unmapped) |
-| Base Premium (Ex. GST) | Sum of base premium ex-GST for policies in period |
-| Broker Fee (Ex. GST) | Sum of broker fees ex-GST for policies in period |
+Date range filters on **`Policy.TakenAt`** (commit / “date approved”). There is no separate `DateApproved` column — Taken is the approved transaction.
+
+| Column                 | Description                                              |
+| ---------------------- | -------------------------------------------------------- |
+| Policy Type            | Product/class code (e.g. `CAR`, `UNKNOWN` when unmapped) |
+| Base Premium (Ex. GST) | Sum of base premium ex-GST for policies in period        |
+| Broker Fee (Ex. GST)   | Sum of broker fees ex-GST for policies in period         |
 
 Example row:
 
 | Policy Type | Base Premium (Ex. GST) | Broker Fee (Ex. GST) |
-|-------------|------------------------|----------------------|
-| UNKNOWN | $8,032.64 | $260.00 |
+| ----------- | ---------------------- | -------------------- |
+| UNKNOWN     | $8,032.64              | $260.00              |
 
 ##### 6.10.2 Requirements
 
 - **FR-CDASH-01**: Client detail view includes a dashboard section with date-from / date-to filters.
 - **FR-CDASH-02**: Table shows one row per policy type with summed base premium and broker fee (ex-GST).
 - **FR-CDASH-03**: **Export** button downloads CSV/XLSX matching the on-screen table (legacy showed UI only; Excel export was commented out).
-- **FR-CDASH-04**: Only policies for the selected client and approved/taken transactions in the date range are included (match `ClientBrokerFee_Report` semantics).
+- **FR-CDASH-04**: Only policies for the selected client with **`PolicyStatusId = Taken`** and **`TakenAt` in the date range** are included (legacy “approved/taken” / `ClientBrokerFee_Report` semantics). Do not add a `DateApproved` column — use `TakenAt`.
 
 #### 6.11 Reports and Dashboards
 
@@ -562,14 +564,14 @@ Legacy admin/broker reports export directly to Excel (Aspose.Cells) with **no on
 
 ##### 6.11.1 Report inventory
 
-| Report | Phase 1 SOW | Legacy page | Target UI |
-|--------|-------------|-------------|-----------|
-| Client Report | **Yes** | `Broker/ClientReport.aspx` | Table + export (§6.10) |
-| CAR Policy Report | **Yes** | `Admin/CARPolicyReport.aspx` | Table + export |
-| CAR Renewal Report | **Yes** | `Admin/CARRenewal.aspx` | Table + export |
-| IRECON Reconciliation Report | No (retained) | `Admin/ReconciliationReportIrecon.aspx` | Table + export |
-| Expiring OBCAR Report | No (retained) | `Admin/OBCARExpiringReport.aspx` | Table + export |
-| ~~Cancel Policies~~ | **Excluded** | `Admin/CancelPolicies.aspx` | Not built |
+| Report                       | Phase 1 SOW   | Legacy page                             | Target UI              |
+| ---------------------------- | ------------- | --------------------------------------- | ---------------------- |
+| Client Report                | **Yes**       | `Broker/ClientReport.aspx`              | Table + export (§6.10) |
+| CAR Policy Report            | **Yes**       | `Admin/CARPolicyReport.aspx`            | Table + export         |
+| CAR Renewal Report           | **Yes**       | `Admin/CARRenewal.aspx`                 | Table + export         |
+| IRECON Reconciliation Report | No (retained) | `Admin/ReconciliationReportIrecon.aspx` | Table + export         |
+| Expiring OBCAR Report        | No (retained) | `Admin/OBCARExpiringReport.aspx`        | Table + export         |
+| ~~Cancel Policies~~          | **Excluded**  | `Admin/CancelPolicies.aspx`             | Not built              |
 
 > **Note:** Legacy menu item **"CAR Renewal Report"** (`CARPolicyRenewal.aspx`) incorrectly runs IRECON reconciliation code. Rebuild implements **one** CAR Renewal Report (`CARRenewal.aspx` behaviour).
 
@@ -584,7 +586,7 @@ Legacy admin/broker reports export directly to Excel (Aspose.Cells) with **no on
 1. **IAA Report** — summary with totals and sub-agent rollups.
 2. **Policy Details Report** — line-level detail; OBCAR policies expand MD/PL/option sub-rows (not applicable to CAR-only rows).
 
-**Key columns (IAA Report):** Policy Number, Date Approved, Client Name, Site Address, Base Premium, Base Premium GST, Stamp Duty, Broker Fee, Broker Fee GST, Invoice Total, Credit Card Surcharge, Grand Total, Total Premium (excl. broker fee & GST), IRECON Income & GST, IAA Margin, IA Admin Fee, IA Margin & Cert Fee GST, IA Total, Net to IRECON Less Margin, Sub Agent, Sub Agent Income/GST/Total, Payment Type.
+**Key columns (IAA Report):** Policy Number, Date Approved (`Policy.TakenAt` — no separate `DateApproved` column), Client Name, Site Address, Base Premium, Base Premium GST, Stamp Duty, Broker Fee, Broker Fee GST, Invoice Total, Credit Card Surcharge, Grand Total, Total Premium (excl. broker fee & GST), IRECON Income & GST, IAA Margin, IA Admin Fee, IA Margin & Cert Fee GST, IA Total, Net to IRECON Less Margin, Sub Agent, Sub Agent Income/GST/Total, Payment Type.
 
 **Target scope:** Include CAR (`ClassCode = CAR`) transactions; full multi-product parity optional for admin role.
 
@@ -610,14 +612,14 @@ Same as §6.10 Client Dashboard — per-client premium and broker fee by policy 
 
 **Step 1 — Summary by status category (`CARSearchStatus`):**
 
-| CARSearchStatus | Meaning |
-|-----------------|---------|
-| Taken - New | Taken policies, new business |
-| Not taken | Declined quotes |
-| Pending | Draft quotes |
-| Taken Renewal | Taken renewal policies |
-| Not Taken Renewal | Declined renewals |
-| Pending Renewal | Draft renewals |
+| CARSearchStatus   | Meaning                      |
+| ----------------- | ---------------------------- |
+| Taken - New       | Taken policies, new business |
+| Not taken         | Declined quotes              |
+| Pending           | Draft quotes                 |
+| Taken Renewal     | Taken renewal policies       |
+| Not Taken Renewal | Declined renewals            |
+| Pending Renewal   | Draft renewals               |
 
 Columns: Status (link), Number of Policies, Total Base Premium Combined.
 
@@ -627,9 +629,9 @@ Columns: Status (link), Number of Policies, Total Base Premium Combined.
 
 **Purpose:** Policies due for renewal relative to a reference date. Data: `PolicyCAR_Report_Renewal`.
 
-**Parameters:** Reference date (legacy default: today), CAR status checkboxes (Taken / Not Taken / Pending), policy action checkboxes (New / Renewal).
+**Parameters:** Reference date (legacy default: today), status checkboxes (Taken / Not Taken / Pending), business type checkboxes (New / Renewal).
 
-**Columns:** Status, Type (policy action), Client Name, Expiry Date, AR, AR Email, Due Next Days.
+**Columns:** Status, Business type (New / Renewal), Client Name, Expiry Date, AR, AR Email, Due Next Days.
 
 ##### 6.11.7 Report functional requirements
 
@@ -639,17 +641,17 @@ Columns: Status (link), Number of Policies, Total Base Premium Combined.
 - **FR-RPT-04**: Report execution is audit-logged (user, parameters, row count).
 - **FR-RPT-05**: Empty results show explicit "no results" state (legacy pattern).
 
-#### 6.12 AR Broker Management (Settings — Phase 1)
+#### 6.12 Authorised Representative broker Management (Settings — Phase 1)
 
 Legacy EBS name: **Wholesale Broker**. Phase 1 admin module per contract.
 
-- **FR-AR-01**: Admin can **search** AR broker records.
+- **FR-AR-01**: Admin can **search** Authorised Representative broker records.
 - **FR-AR-02**: Admin can **view** AR detail (company, contact, number, email, etc.).
 - **FR-AR-03**: Admin can **edit** AR records.
 - **FR-AR-04**: Admin can **delete** AR records.
 - **FR-AR-05**: AR data powers client **AR Name** typeahead and client detail AR block.
 
-> **See also:** §6.13 Document template & fixed PDF configuration (same Settings area).
+> **See also:** §6.13 Document template & library document configuration (same Settings area).
 
 #### 6.14 Data Migration (Phase 1)
 
@@ -671,12 +673,13 @@ Per contract migration protocol:
 
 ### 8) Data Model Mapping Summary
 
-- **User and org context**: `User` (app login profile), `AR`, `AccountManager`, `Client`, `EntityType`
-- **Policy backbone**: `PolicyPeriod`, `Policy`, `PolicyType`, `PolicyAction`, `PolicyNumber` — `PolicyPeriod.ClientId` links to client; renewal/copy grouping via `Policy.RenewalOfPolicyId` / `CopiedFromPolicyId`
-- **CAR domain**: `PolicyCAR`, `CARStatus`, `PolicyCARExcess`, `CARExcess`, `PolicyCARSubLimit`, `PolicyCARWording`, `PolicyCARAdjustment` (one-to-many adjustments per policy; Draft/Applied status)
-- **Rating and fees**: `PriceFile*`, `CoverType`, `State`, `Fee`, `FeeName`, `PolicyFee`
-- **Documents**: `PolicyDocument` — generated PDF metadata (R2 key, append-only); `DocumentTemplate`, `DocumentTemplateVersion` — merge templates with version control; `FixedPdf` — static attachment library (upload/delete in Settings)
-- **Operational records**: `PolicyNote`, `PolicyNoteType`, `EmailLog`, activity/audit log
+- **User and org context**: `User` (app login profile), `AuthorisedRepresentative`, `AccountManager`, `Client`, `EntityType`
+- **Policy backbone**: `Policy` (includes `PolicyStatusId` for list filters), `PolicyStatus`, `PolicyType`, `BusinessType`, `PolicyNumber`, `AnnualCoverType` — `Policy.ClientId` links to client; inception/expiry on `Policy.DateStart` / `DateEnd`; renewal/copy grouping via `RenewalOfPolicyId` / `CopiedFromPolicyId`. Product detail stays on `PolicyCAR` (do not merge — future products get their own detail table).
+- **CAR domain**: `PolicyCAR` (includes `SubLimits` and `Wordings` jsonb), `PolicyCARExcess`, `CARExcess`, `CARSubLimit` / `CARWording` (catalogues), `PolicyCARAdjustment` (inputs + deltas only; Draft/Applied)
+- **Rating and fees**: `Price*`, `CoverType`, `State`, `BrokerFeeSchedule`, `BrokerFeeScheduleLine`, `PolicyFee`
+- **Documents**: `PolicyDocument` — generated PDF metadata (R2 key, append-only); `DocumentTemplate`, `DocumentTemplateVersion` — merge templates with version control; `LibraryDocument` — static attachment library (upload/delete in Settings)
+- **App config**: `AppSetting` — key/value Settings config (e.g. `orgLogo` for pdfme)
+- **Operational records**: `PolicyNote`, `PolicyNoteType`, `EmailLog`, `EmailLogDocument`, `ActivityLog`
 
 ### 9) Out of Scope (Phase 1)
 
@@ -699,7 +702,7 @@ Per **Phase 1 Scope of Works IRECON** contract exclusions:
 
 - Existing `db.txt` schema is the approved target data contract.
 - Legacy pricing behavior is used as functional baseline unless business rules are explicitly revised.
-- **Generated** policy PDFs are stored in R2 with append-only `PolicyDocument` metadata. **Merge templates** and **fixed PDF library** are configured in Settings (§6.13), seeded initially from [`car-pdf-templates/`](./car-pdf-templates/).
+- **Generated** policy PDFs are stored in R2 with append-only `PolicyDocument` metadata. **Merge templates** and **`LibraryDocument`** (static attachments) are configured in Settings (§6.13), seeded initially from [`car-pdf-templates/`](./car-pdf-templates/).
 - Screen layout and navigation follow [CAR_INSURANCE_UI_FLOW.md](./CAR_INSURANCE_UI_FLOW.md).
 - Broker workflows follow [CAR_INSURANCE_USER_STORIES.md](./CAR_INSURANCE_USER_STORIES.md).
 
@@ -707,22 +710,22 @@ Per **Phase 1 Scope of Works IRECON** contract exclusions:
 
 The following are **not** maintained through the web app. Values are **manually inserted or updated directly in database tables** (SQL, migration scripts, or DBA/ops process):
 
-| Data | Example tables | App behaviour |
-|------|----------------|---------------|
-| **Price files** | `PriceFile`, `PriceFileCAR`, `PriceFileESL`, `PriceFileESLRate`, `PriceFileStampDuty`, `PriceFileStampDutyRate`, `PriceFilePlant`, `PriceFileTerror`, `PriceFileTerrorRate`, `PriceFileTerrorPostCode` | App **reads** active price files for rating; no create/edit UI |
-| **Fees** | `Fee`, `FeeName`, `PolicyFee` defaults | Read-only at runtime |
-| **Reference / lookup data** | `CARStatus`, `CoverType`, `State`, `CARExcess`, `EntityType`, `PolicyType`, `PolicyAction`, `AdjustmentStatus`, `PolicyNoteType`, etc. | Seeded in DB; no in-app admin screens |
-| **Policy number ranges** | `PolicyNumber` | DB-managed |
-| **AR records** | `AR` | In-app UI: **Settings → AR Broker Management** (§6.12) |
-| **Document merge templates** | `DocumentTemplate`, `DocumentTemplateVersion` | In-app UI: **Settings → Document Templates** (§6.13.2) — versioned, with preview |
-| **Fixed PDF attachments** | `FixedPdf` (+ cover-type / rule assignments) | In-app UI: **Settings → Fixed PDFs** (§6.13.3) — upload and delete |
+| Data                         | Example tables                                                                                                                                                                                         | App behaviour                                                                    |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
+| **Prices**              | `Price`, `PriceCAR`, `PriceESL`, `PriceESLRate`, `PriceStampDuty`, `PriceStampDutyRate`, `PricePlant`, `PriceTerrorism`, `PriceTerrorismRate`, `PriceTerrorismPostCode` | App **reads** active prices for rating; no create/edit UI                   |
+| **Fees**                     | `BrokerFeeSchedule`, `BrokerFeeScheduleLine`, `PolicyFee` defaults                                                                                                                                                                 | Read-only at runtime                                                             |
+| **Reference / lookup data**  | `PolicyStatus`, `CoverType`, `AnnualCoverType`, `State`, `CARExcess`, `EntityType`, `PolicyType`, `BusinessType`, `AdjustmentStatus`, `PolicyNoteType`, etc.                                                                 | Seeded in DB; no in-app admin screens                                            |
+| **Policy number ranges**     | `PolicyNumber`                                                                                                                                                                                         | DB-managed                                                                       |
+| **AR records**               | `AuthorisedRepresentative`                                                                                                                                                                                                   | In-app UI: **Settings → Authorised Representative broker Management** (§6.12)                           |
+| **Document merge templates** | `DocumentTemplate`, `DocumentTemplateVersion`                                                                                                                                                          | In-app UI: **Settings → Document Templates** (§6.13.2) — versioned, with preview |
+| **App settings**             | `AppSetting`                                                                                                                                                                                           | Key/value config (e.g. `orgLogo`); Settings UI or seed — not price-file admin    |
 
 **Implications:**
 
 - **ASM-CFG-01**: Premium calculation depends on correct DB seeding before UAT/production use.
 - **ASM-CFG-02**: Changing rates, fees, or reference data requires a database change — not a broker or admin screen action.
 - **ASM-CFG-03**: No price-file versioning UI, fee editor, or generic reference-data CRUD in this phase.
-- **ASM-CFG-04**: Document templates and fixed PDFs **do** have admin Settings UI; legacy `ProductSetting` key/value table is **superseded** by `DocumentTemplate*` and `FixedPdf`.
+- **ASM-CFG-04**: Document templates and library documents **do** have admin Settings UI; legacy `ProductSetting` key/value table is **superseded** by `DocumentTemplate*` and `LibraryDocument`.
 - **ASM-CFG-05**: Admins must publish an active template version per required slot before brokers can generate complete document packs.
 
 #### 10.3 Migration
@@ -734,20 +737,21 @@ The following are **not** maintained through the web app. Values are **manually 
 - **CAR**: Construction All Risk insurance policy.
 - **Broker**: Intermediary selling insurance to clients on behalf of insurer.
 - **Pending (draft)**: Quote in progress; fully editable until committed.
-- **Taken**: Committed policy; original database record is immutable.
+- **Taken**: Committed policy; original database record is immutable. `Policy.TakenAt` is the commit timestamp and the report/dashboard **“date approved”** (no separate `DateApproved` column).
 - **Not taken**: Declined quote; terminal state.
 - **Expired policy**: Today's date is after the policy end date; no new adjustments allowed.
 - **Adjustment**: Separate child record linked to a Taken policy; stores end-of-term premium delta. May be Draft or Applied.
 - **Effective premium**: Original Taken policy premium plus the delta from the latest Applied adjustment.
-- **Policy Action**: Transaction type (e.g., New, Renewal).
-- **Price File**: Versioned rate configuration used to calculate premium.
+- **Business type** (`BusinessType`): New business vs Renewal (`NEW` / `RWL`). Renamed from draft `PolicyAction`.
+- **Price** (`Price`, `PriceCAR`, `PriceESL`, …): Versioned rate tables used to calculate premium (formerly `PriceFile*`).
 - **ESL**: Emergency Services Levy.
 - **SD**: Stamp Duty.
 - **ROA**: Record of Advice — premium breakdown document (`CARRATING`).
 - **PolicyDocument**: Stored PDF metadata for **generated** policy outputs (append-only); links to R2 and optional template version.
 - **DocumentTemplate / DocumentTemplateVersion**: Admin-managed merge template slots with version history and active published version.
-- **FixedPdf**: Admin-managed static PDF library for `CARADDIT` attachments; upload/delete in Settings.
-- **AR (Authorised Representative)**: Wholesale broker entity linked to clients; managed under **Settings** → AR Broker Management.
+- **LibraryDocument**: Admin-managed static PDF library for `CARADDIT` attachments; upload/delete in Settings.
+- **AppSetting**: Key/value app config (e.g. org logo for pdfme); replaces a dedicated asset table.
+- **AR (Authorised Representative)**: Wholesale broker entity linked to clients; managed under **Settings** → Authorised Representative broker Management.
 
 ---
 
@@ -773,7 +777,7 @@ For CAR, the broker flow is:
 
 - **Presentation layer**: ASP.NET Web Forms pages and user controls.
 - **Business layer**: BLL policy classes and calculator classes (e.g., CAR calculators, policy lifecycle methods).
-- **Data layer**: SQL provider classes and stored procedures for price files, rates, and persistence.
+- **Data layer**: SQL provider classes and stored procedures for prices, rates, and persistence.
 - **Document layer**: server-side template merge and PDF conversion pipeline.
 
 ### 3) Legacy CAR Pricing Behavior (High-Level)
@@ -788,17 +792,17 @@ For CAR, the broker flow is:
 
 **Implementation:** `InsuranceDemo.BLL/Products/CAR/CARPolicy.cs`
 
-| Trigger | Documents generated |
-|---------|---------------------|
-| First policy save (`_isNew`) | `CARSCHED` (Schedule), `CARADDIT` (config-driven additional PDFs by cover type) |
-| Manual "Generate ROA" button | `CARRATING` |
-| Manual "Generate Schedule" button | `CARSCHED` (new file) |
-| Manual "Generate Adjustment Doc" (only if `Adjusted = true`) | `CARADJUST` |
-| Adjustment wizard finish (`CARAdjust.aspx`) | **No PDF** — saves adjustment data only |
+| Trigger                                                      | Documents generated                                                             |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------- |
+| First policy save (`_isNew`)                                 | `CARSCHED` (Schedule), `CARADDIT` (config-driven additional PDFs by cover type) |
+| Manual "Generate ROA" button                                 | `CARRATING`                                                                     |
+| Manual "Generate Schedule" button                            | `CARSCHED` (new file)                                                           |
+| Manual "Generate Adjustment Doc" (only if `Adjusted = true`) | `CARADJUST`                                                                     |
+| Adjustment wizard finish (`CARAdjust.aspx`)                  | **No PDF** — saves adjustment data only                                         |
 
-Templates are resolved from **Settings → Document Templates** (`DocumentTemplate` + active `DocumentTemplateVersion` storing **pdfme JSON**). Generation uses `@pdfme/generator`. Fixed attachments from **Settings → Fixed PDFs** (`FixedPdf`). Legacy used `ProductSetting` keys and Word mail-merge.
+Templates are resolved from **Settings → Document Templates** (`DocumentTemplate` + active `DocumentTemplateVersion` storing **pdfme JSON**). Generation uses `@pdfme/generator`. Static attachments from **Settings → Library documents** (`LibraryDocument`). Legacy used `ProductSetting` keys and Word mail-merge.
 
-**Document storage:** `PolicyDocument` links R2 key and type code to `PolicyId`. Generated files are never deleted. Template config and fixed PDF library are separate from policy document history.
+**Document storage:** `PolicyDocument` links R2 key and type code to `PolicyId`. Generated files are never deleted. Template config and `LibraryDocument` are separate from policy document history.
 
 ### 5) Legacy Audit Trail
 
@@ -808,14 +812,14 @@ Templates are resolved from **Settings → Document Templates** (`DocumentTempla
 
 ### 6) Legacy Reports Summary
 
-| Report | Location | UI table | Excel export | Phase 1 rebuild |
-|--------|----------|----------|--------------|-----------------|
-| IRECON Reconciliation | `ReconciliationReportIrecon.aspx` | No | Yes (direct download) | Retained |
-| Expiring OBCAR | `OBCARExpiringReport.aspx` | No | Yes | Retained |
-| Client Report | `ClientReport.aspx` | Yes | No (commented out) | **Yes** + export |
-| CAR Policy Report | `CARPolicyReport.aspx` | Yes (3-step) | Yes (detail step) | **Yes** |
-| CAR Renewal | `CARRenewal.aspx` | No | Yes | **Yes** |
-| Cancel Policies | `CancelPolicies.aspx` | Yes | No | **Excluded** |
+| Report                | Location                          | UI table     | Excel export          | Phase 1 rebuild  |
+| --------------------- | --------------------------------- | ------------ | --------------------- | ---------------- |
+| IRECON Reconciliation | `ReconciliationReportIrecon.aspx` | No           | Yes (direct download) | Retained         |
+| Expiring OBCAR        | `OBCARExpiringReport.aspx`        | No           | Yes                   | Retained         |
+| Client Report         | `ClientReport.aspx`               | Yes          | No (commented out)    | **Yes** + export |
+| CAR Policy Report     | `CARPolicyReport.aspx`            | Yes (3-step) | Yes (detail step)     | **Yes**          |
+| CAR Renewal           | `CARRenewal.aspx`                 | No           | Yes                   | **Yes**          |
+| Cancel Policies       | `CancelPolicies.aspx`             | Yes          | No                    | **Excluded**     |
 
 Admin navigation (`AdminLeftNav.ascx`) also lists **CAR Renewal Report** (`CARPolicyRenewal.aspx`) — see §6.11.1 note on implementation bug.
 
@@ -849,6 +853,6 @@ flowchart TD
 - **Improve:** auto-generate full PDF packs on Taken commit and adjustment Applied (remove manual-only dependency).
 - **Improve:** reports render in UI first with export button (legacy is export-first for most admin reports).
 - **Improve:** structured audit/activity log beyond unstructured policy notes.
-- **Improve:** document templates and fixed PDFs configurable in Settings with version control and preview (replaces manual Word/PDF server upload).
+- **Improve:** document templates and library documents configurable in Settings with version control and preview (replaces manual Word/PDF server upload).
 - Add client dashboard with export (legacy client report lacked export).
 - Remove payment and direct client portal concerns from scope.

@@ -1,15 +1,15 @@
-import priceFilesData from "~/data/price-files.json";
+import pricesData from "~/data/prices.json";
 import type {
   ResolvedEsl,
   ResolvedPlant,
-  ResolvedPriceFile,
+  ResolvedPrice,
   ResolvedStampDuty,
   ResolvedTerror,
 } from "~/server/pricing/types";
 
-type PriceFilesData = {
-  priceFiles: Array<{
-    priceFileId: number;
+type PricesData = {
+  prices: Array<{
+    priceId: number;
     dateStart: string;
     published: boolean;
     bands: Array<{
@@ -25,22 +25,22 @@ type PriceFilesData = {
     }>;
   }>;
   stampDuty: Array<{
-    priceFileStampDutyId: number;
+    priceStampDutyId: number;
     dateStart: string;
     rates: Array<{ stateCode: string; rate: number }>;
   }>;
   esl: Array<{
-    priceFileEslId: number;
+    priceEslId: number;
     dateStart: string;
     rates: Array<{ stateCode: string; constructionRate: number; plantRate: number }>;
   }>;
   terror: Array<{
-    priceFileTerrorId: number;
+    priceTerrorismId: number;
     dateStart: string;
     tiers: Array<{ tier: string; rate: number; postcodes: string[] }>;
   }>;
   plant: Array<{
-    priceFilePlantId: number;
+    pricePlantId: number;
     dateStart: string;
     rate: number;
     plantMinValue: number;
@@ -48,7 +48,7 @@ type PriceFilesData = {
   }>;
 };
 
-const data = priceFilesData as PriceFilesData;
+const data = pricesData as PricesData;
 
 function pickLatest<T extends { dateStart: string; published?: boolean }>(
   items: T[],
@@ -61,12 +61,12 @@ function pickLatest<T extends { dateStart: string; published?: boolean }>(
   );
 }
 
-export function resolvePriceFile(
+export function resolvePrice(
   coverTypeId: number,
   turnover: number,
   date: string,
-): ResolvedPriceFile | null {
-  const file = pickLatest(data.priceFiles, date);
+): ResolvedPrice | null {
+  const file = pickLatest(data.prices, date);
   if (!file) return null;
 
   const band = file.bands.find(
@@ -78,7 +78,7 @@ export function resolvePriceFile(
   if (!band) return null;
 
   return {
-    priceFileId: file.priceFileId,
+    priceId: file.priceId,
     coverTypeId: band.coverTypeId,
     lowerTurnover: band.lowerTO,
     upperTurnover: band.upperTO,
@@ -101,7 +101,7 @@ export function resolveStampDuty(
   const rate = file.rates.find((item) => item.stateCode === stateCode);
   if (!rate) return null;
   return {
-    priceFileStampDutyId: file.priceFileStampDutyId,
+    priceStampDutyId: file.priceStampDutyId,
     rate: rate.rate,
     dateApplied: file.dateStart,
   };
@@ -113,7 +113,7 @@ export function resolveEsl(stateCode: string, date: string): ResolvedEsl | null 
   const rate = file.rates.find((item) => item.stateCode === stateCode);
   if (!rate) return null;
   return {
-    priceFileEslId: file.priceFileEslId,
+    priceEslId: file.priceEslId,
     constructionRate: rate.constructionRate,
     plantRate: rate.plantRate,
     dateApplied: file.dateStart,
@@ -141,7 +141,7 @@ export function resolvePlantRate(date: string): ResolvedPlant | null {
   const file = pickLatest(data.plant, date);
   if (!file) return null;
   return {
-    priceFilePlantId: file.priceFilePlantId,
+    pricePlantId: file.pricePlantId,
     rate: file.rate,
     plantMinValue: file.plantMinValue,
     plantMaxValue: file.plantMaxValue,

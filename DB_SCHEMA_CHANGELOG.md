@@ -1,241 +1,204 @@
 # Database Schema Changelog
 
-Canonical schema: [`db.txt`](./db.txt).
+**Canonical schema:** [`db.txt`](./db.txt)  
+**Baseline (initial draft):** [`db.txt.original`](./db.txt.original)
 
-This is a **greenfield implementation** — there is no production database and **no data migration** from the legacy ASP.NET system. Schema changes are applied directly to `db.txt` and implemented fresh in the new app (e.g. Supabase migrations generated from this file).
-
-[`db.txt.original`](./db.txt.original) is kept only as a **historical reference** to the initial schema draft (legacy-shaped adjustment model). It is not a migration source.
+This is a **greenfield** rebuild — no production migration from legacy ASP.NET. `db.txt.original` is the first schema draft (legacy-shaped hierarchy and adjustment model). This document is the **diff: original → current**, with reasons.
 
 ---
 
-## 2026-07-15 (c) — Remove `PolicyHeader` (flatten policy hierarchy)
+## Naming clarity (aligned with legacy `script.sql` meaning)
 
-### Summary
+Schedule **Section 1 / Section 2** remain labels on PDFs and broker UI. Schema columns use domain names instead.
 
-Removed **`PolicyHeader`**. Policy grouping for renewals and copies stays on **`Policy.RenewalOfPolicyId`** / **`CopiedFromPolicyId`**; adjustments stay on **`PolicyCARAdjustment`**. `PolicyHeader` was redundant for Phase 1 CAR — it was not used in the web prototype and was not the canonical key for the grouped policies UI.
+| Area | Old (draft / legacy jargon) | Current |
+|------|----------------------------|---------|
+| AR entity | `AR` | **`AuthorisedRepresentative`** |
+| Fee catalogue | `Fee` / `FeeName` | **`BrokerFeeSchedule`** / **`BrokerFeeScheduleLine`** |
+| Policy fee line | `PolicyFeeId` / `FeeLineId` | **`LineNumber`** (1, 2, … within policy; **not** a surrogate PK / not FK to schedule) |
+| Contract works cover | `Section1*` | **`ContractWorks*`** (e.g. `ContractWorksBasePremium`, `ContractWorksSumInsured`) |
+| Liability cover | `Section2*` | **`Liability*`** (e.g. `LiabilityBasePremium`, `LiabilityLimitBand`) |
+| Liability band | `Section2Value` (decimal-looking) | **`LiabilityLimitBand`** int `1`/$10M, `2`/$20M, `3`/not insured |
+| Base before/after min | `*BeforeBasePremium` / `*TrueBasePremium` | **`*CalculatedBasePremium`** / **`*BasePremium`** |
+| Plant thresholds | `PlantMinPrem` / `PlantMaxPrem` | **`PlantValueMin`** / **`PlantValueMax`** |
+| Tax lock flag | `DoNotCalculate` | **`ManualTaxOverride`** |
+| Existing CW cover | `HoldCurrentContractWorks` | **`HasExistingContractWorksCover`** |
+| Claims question | `NumberOfClaim` | **`ClaimsCountLast3Years`** |
+| Declaration | `Confirmation` | **`DeclarationConfirmed`** |
+| Price tables | `PriceFile*` | **`Price*`** (e.g. `Price`, `PriceESL`, `PriceCAR`, `PriceTerrorism*`; FKs `PriceId`, `PriceESLId`, …) — dropped legacy “file” |
+| Excess catalogue | `Heading`, `LiabilityMil`, `Section` | **`IsGroupHeading`**, **`LiabilityLimitMillions`**, **`CoverSection`** |
+| Status / business | `CARStatus`, `PolicyAction` | **`PolicyStatus`**, **`BusinessType`** (earlier) |
+| Static PDFs | `FixedPdf` | **`LibraryDocument`** (earlier) |
 
-### Removed
+**`LineNumber`:** On `PolicyFee`, composite PK `(PolicyId, LineNumber)`. Values are `1`, `2`, `3`… within that policy’s fee list — not a global surrogate key and not an FK to `BrokerFeeSchedule`.
+
+PDF/UI may still say “Section 1 / Section 2”; columns map as Contract Works / Liability.
+
+---
+
+## Summary
+
+| | Original | Current |
+|--|----------|---------|
+| Tables | 37 | 44 |
+| Policy hierarchy | `Client` → `PolicyHeader` → `PolicyPeriod` → `Policy` → `PolicyCAR` | `Client` → `Policy` → `PolicyCAR` |
+| Adjustments | One row + absolute mirrors; `Adjusted` bit + `TotalSection*` on `PolicyCAR` | Many children; **deltas** only; Draft/Applied |
+| Fees total | `OriginalCombinedFee` snapshot | Derived from `PolicyFee` lines |
+| Invoice total on spine | `PolicyHeader.TotalInvoicePremium` | Dropped — use `PolicyCAR.OriginalTotalPremium` |
+| Documents / settings | Not modeled | Templates, `LibraryDocument`, `PolicyDocument`, `AppSetting`, `User` |
+
+---
+
+## 1. Tables removed
 
 | Table | Reason |
 |-------|--------|
-| `PolicyHeader` | Grouping intent covered by `Policy` FKs; thin wrapper (only `ClientId` + `TotalInvoicePremium`) |
-
-### `PolicyPeriod` — changed
-
-| Column | Change |
-|--------|--------|
-| `ClientId` | **Added** — client ownership (was on `PolicyHeader`) |
-| `PolicyHeaderId` | **Removed** |
-
-### `Policy` — changed
-
-| Column | Change |
-|--------|--------|
-| `TotalInvoicePremium` | **Added** — invoice total per policy transaction (was on `PolicyHeader`; FR-PRICE-06) |
-
-### Create flow (replaces FR-POL-01)
-
-1. Insert **`PolicyPeriod`** (`ClientId`, `DateStart`, `DateEnd`, `IsLatestPeriod`).
-2. Insert **`Policy`** + **`PolicyCAR`** (+ fees, etc.) linked to that period.
-
-Renewal: new `PolicyPeriod` + new `Policy` with `RenewalOfPolicyId` → predecessor (optional: same `ClientId` only — no shared header row).
-
-### Related documentation
-
-- [CAR_INSURANCE_APP_SPEC.md §6.3, §6.5](./CAR_INSURANCE_APP_SPEC.md)
-- [CAR_INSURANCE_USER_STORIES.md](./CAR_INSURANCE_USER_STORIES.md) — policy grouping (renewals / adjustments / copies)
+| **`PolicyHeader`** | Thin wrapper (`ClientId` + `TotalInvoicePremium`). Client link and dates belong on `Policy`. |
+| **`PolicyPeriod`** | Extra layer for Phase 1 CAR (one term per transaction). `DateStart` / `DateEnd` moved onto `Policy`. |
+| **`PolicyCARSubLimit`** | 1:1 text bag → `PolicyCAR.SubLimits` jsonb snapshot. Catalogue **`CARSubLimit`** kept. |
+| **`PolicyCARWording`** | Child rows → `PolicyCAR.Wordings` jsonb array. Catalogue **`CARWording`** kept. |
 
 ---
 
-## 2026-07-15 (b) — Documents, policy links, audit (spec gap closure)
+## 2. Tables added
 
-### Summary
-
-Closed schema gaps against [CAR_INSURANCE_APP_SPEC.md](./CAR_INSURANCE_APP_SPEC.md) §6.7, §6.13, §6.8, and user stories US-5 / US-6: **pdfme document templates**, **generated PDF metadata**, **fixed PDF library**, **renewal/copy policy links**, **activity audit**, and **auth profile**.
-
-### `Policy` — added columns
-
-| Column | Purpose |
-|--------|---------|
-| `InsurerCode` | CAR wizard insurer selection (FR form validation) |
-| `RenewalOfPolicyId` | FK → prior policy; renewal family grouping (US-5) |
-| `CopiedFromPolicyId` | FK → source policy; copy traceability (US-6) |
-| `InvoiceComment` | Retained reports / legacy parity (Expiring OBCAR) |
-| `CreatedWhen`, `CreatedBy` | Policy audit; CAR Policy Report “Date Quoted” |
-| `UpdatedWhen` | Policies list “last updated” on Pending saves |
-
-### `PolicyCAR` — added columns
-
-| Column | Purpose |
-|--------|---------|
-| `AnnualCoverType` | `Transfer` \| `Contract Commencing` when cover type is Annual (FR-CAR-06) |
-| `PriceFileTerrorId` | FK → active terror price file at rating time (traceability) |
-| `PriceFilePlantId` | FK → active plant price file at rating time (traceability) |
-
-### `EmailLog` — added column
-
-| Column | Purpose |
-|--------|---------|
-| `PolicyId` | Optional FK — which policy documents were emailed (FR-DOC-03) |
-
-### New tables
-
-| Table | Purpose |
-|-------|---------|
-| `User` | App login identity (broker + admin); 1:1 with Supabase `auth.users` |
-| `ActivityLog` | Append-only structured audit (FR-AUD-04) |
-| `AppAsset` | Org-wide assets (e.g. `orgLogo` R2 key for pdfme) |
-| `DocumentTemplate` | Template slot: `DocumentTypeCode` + `CoverTypeId` |
-| `DocumentTemplateVersion` | Immutable pdfme `TemplateJson`; version + `IsActive` |
-| `PolicyDocument` | Generated PDF metadata (R2 key, append-only) |
-| `FixedPdf` | Static attachment library (Settings upload/delete) |
-| `FixedPdfAssignment` | Fixed PDF × cover type × optional state rule + sort order |
-
-### Seed data added
-
-| Records | Rows |
-|---------|------|
-| `DocumentTemplate` | 7 slots — CARSCHED / CARRATING × 3 cover types + CARADJUST |
-| `AppAsset` | `orgLogo` placeholder |
-
-Template versions (`DocumentTemplateVersion`) and fixed PDF rows are created via Settings UI or onboarding import from [`car-pdf-templates/`](./car-pdf-templates/).
-
-### Constraints (implement in Supabase migration)
-
-```sql
-UNIQUE (DocumentTypeCode, CoverTypeId) ON document_template;
-UNIQUE (DocumentTemplateId, VersionNumber) ON document_template_version;
--- At most one IsActive per DocumentTemplateId (partial unique index WHERE is_active).
-UNIQUE (PolicyId, AdjustmentSequence) ON policy_car_adjustment;
--- PolicyDocument + generated R2 objects: no DELETE (append-only).
--- PolicyCAR immutable when CARStatusId = Taken (app service or trigger).
-```
-
-### Postgres notes
-
-- `TemplateJson` → `jsonb` in migration (not `text`).
-- `User.UserId` → `uuid` PK referencing `auth.users(id)`. Postgres table name `app_user` recommended (avoids reserved word / confusion with `auth.users`).
-- `CreatedBy` / `PublishedBy` / `GeneratedBy` → `uuid` referencing `auth.users(id)` where applicable.
-- `DocumentTemplate` seed row 7 (`CARADJUST`): `CoverTypeId` stored as `NULL` in SQL (seed uses `0` placeholder in `db.txt`).
-
-### Related documentation
-
-- [CAR_INSURANCE_APP_SPEC.md §6.7, §6.13, §6.8](./CAR_INSURANCE_APP_SPEC.md)
-- [CAR_INSURANCE_TECH_SPEC.md §4.1, §7.3](./CAR_INSURANCE_TECH_SPEC.md)
+| Table | Reason |
+|-------|--------|
+| **`User`** | App login profile (`auth.users` uuid); broker/admin + optional `AuthorisedRepresentativeId` scope. |
+| **`ActivityLog`** | Structured system audit (FR-AUD-04). Kept **separate** from `PolicyNote` (broker notes). |
+| **`AdjustmentStatus`** | Lookup: Draft / Applied. |
+| **`AnnualCoverType`** | Transfer / Contract Commencing when cover type is Annual (FR-CAR-06). |
+| **`AppSetting`** | Key/value Settings (e.g. org logo JSON) — replaces ad-hoc assets. |
+| **`DocumentTemplate`** | PDF slot identity (`DocumentTypeCode` × `CoverTypeId`). |
+| **`DocumentTemplateVersion`** | Versioned pdfme template JSON; one active per slot. |
+| **`PolicyDocument`** | Append-only metadata for generated PDFs in R2. |
+| **`LibraryDocument`** / **`LibraryDocumentAssignment`** | Shared static PDF library + cover/state rules (`CARADDIT`). Not the same as `PolicyDocument` (per-policy issued copies). Renamed from draft `FixedPdf` / `FixedPdfAssignment`. |
+| **`EmailLogDocument`** | Junction: which `PolicyDocument`s were attached to an email send. |
 
 ---
 
-## 2026-07-15 — Immutable Taken policy + one-to-many adjustments
+## 3. Hierarchy & `Policy`
 
-### Summary
-
-Defined end-of-term adjustment storage so the **original Taken policy is immutable** and each adjustment is an **append-only child record** with **Draft** or **Applied** status. Supports unlimited applied adjustments before policy expiry.
-
-**Reason:** An earlier draft of `db.txt` mirrored legacy ASP.NET behavior: a single `PolicyCARAdjustment` row per policy (no primary key) and adjustment deltas stored on `PolicyCAR` (`Adjusted`, `TotalSection*`, `TotalTotalPremium`). That shape is unsuitable for a clean rebuild because it cannot support:
-
-- freezing the original premium snapshot after Taken commit,
-- multiple adjustments per policy (e.g. A-1, A-2),
-- draft adjustments that do not affect effective premium,
-- computing effective premium as **original + latest Applied delta**,
-- a clear audit trail for documents and compliance.
-
-The target design is documented in [CAR_INSURANCE_APP_SPEC.md §6.9](./CAR_INSURANCE_APP_SPEC.md#69-policy-state-and-lifecycle).
-
----
-
-### `PolicyCAR` — columns not in target schema
-
-These existed in `db.txt.original` (legacy-shaped draft) and are **omitted** from the greenfield schema:
-
-| Column | Reason omitted |
-|--------|----------------|
-| `Adjusted` | Replaced by per-adjustment `AdjustmentStatusId` on child rows |
-| `TotalSection1TrueBasePremium` | Delta belongs on `PolicyCARAdjustment`, not on frozen policy |
-| `TotalSection1ESL` | Same |
-| `TotalSection1GST` | Same |
-| `TotalSection1SD` | Same |
-| `TotalSection1TotalPremium` | Same |
-| `TotalSection2TrueBasePremium` | Same |
-| `TotalSection2ESL` | Same |
-| `TotalSection2GST` | Same |
-| `TotalSection2SD` | Same |
-| `TotalSection2TotalPremium` | Same |
-| `TotalTotalPremium` | Same |
-| `TotalSection1TerrorismPremium` | Adjustment delta field; lives on adjustment table |
-
-### `PolicyCAR` — added columns
-
-| Column | Purpose |
-|--------|---------|
-| `TakenAt` | Timestamp when status became Taken; marks immutable snapshot |
-| `TakenBy` | Broker/user who committed the policy |
-
-### New table: `AdjustmentStatus`
-
-| AdjustmentStatusId | Name |
-|--------------------|------|
-| 1 | Draft |
-| 2 | Applied |
-
-Draft adjustments are editable and excluded from effective premium. Applied adjustments are immutable and participate in effective premium calculation.
-
-### `PolicyCARAdjustment` — target shape (one-to-many)
-
-**Key columns**
-
-| Column | Purpose |
-|--------|---------|
-| `PolicyCARAdjustmentId` | Primary key; enables multiple rows per policy |
-| `AdjustmentSequence` | Order within policy (1, 2, 3 …); unique with `PolicyId` |
-| `AdjustmentReference` | Optional display label (e.g. `A-1`, `A-2`) |
-| `AdjustmentStatusId` | FK → `AdjustmentStatus` (Draft / Applied) |
-| `DeltaSection1TrueBasePremium` … `DeltaTotalPremium` | Premium **delta** vs original Taken snapshot |
-| `CreatedWhen`, `CreatedBy` | Audit when adjustment draft was started |
-| `AppliedWhen`, `AppliedBy` | Set when status transitions to Applied; null while Draft |
-
-**Omitted vs `db.txt.original`**
-
-| Column | Reason |
-|--------|--------|
-| `AdjustedDate` | Replaced by `CreatedWhen` + `AppliedWhen` |
-| `AdjustedSection1BeforeBasePremium` | Not used in end-of-term adjustment calc |
-| `AdjustedSection1PlantEquipment` | Plant excluded from adjustment model |
-| `AdjustedSection1PlantESL` | Same |
-| `AdjustedSection2BeforeBasePremium` | Not used in adjustment calc |
-
-**Retained**
-
-- `AdjustedTurnover`, `StampDutyExempt`
-- `AdjustedSection*` / `AdjustedTotalPremium` — full recalculated premium at adjusted turnover
-- `AdjustedCombinedFee`
-
-**Constraints (implement in fresh schema)**
-
-- `UNIQUE (PolicyId, AdjustmentSequence)`
-- At most one **Draft** adjustment per policy (recommended business rule)
-- Effective premium: `PolicyCAR.OriginalTotalPremium + latest Applied.DeltaTotalPremium`
-- Immutability: application service (or DB trigger) blocks UPDATE on `PolicyCAR` when `CARStatusId = Taken`
-
----
-
-### References added
+### Original
 
 ```
-Ref: PolicyCARAdjustment.AdjustmentStatusId > AdjustmentStatus.AdjustmentStatusId
+Client → PolicyHeader → PolicyPeriod → Policy → PolicyCAR
 ```
 
+### Current
+
+```
+Client → Policy → PolicyCAR (1:1)
+```
+
+| Change | Reason |
+|--------|--------|
+| Drop header / period | Phase 1 does not need multi-period nesting; fewer joins for lists. |
+| `Policy.ClientId` | Direct client ownership (was via header). |
+| `Policy.DateStart` / `DateEnd` | Inception / expiry (from period). Expired = today > `DateEnd`. |
+| Drop `DateEffective` | Redundant with `DateStart` for CAR. |
+| Drop spine `TotalInvoicePremium` | Product money lives on `PolicyCAR.OriginalTotalPremium`; lists join 1:1 `PolicyCAR`. |
+| `Policy.PolicyStatusId` | List/filter without joining product tables. Generic lifecycle (renamed from draft `CARStatusId`). |
+| `Policy.TakenAt` / `TakenBy` | Commit audit next to status. Also report **“date approved”** — no `DateApproved` column. |
+| `BusinessTypeId` | New vs Renewal (lookup `BusinessType`; renamed from draft `PolicyActionId`). |
+| `InsurerCode` | Underwriter code on transaction. |
+| `CreatedWhen` / `CreatedBy` / `UpdatedWhen` | Audit on spine. |
+
+Keep **`Policy` ≠ `PolicyCAR`**: shared spine vs CAR product columns (future products e.g. HCP).
+
 ---
 
-### Greenfield implementation
+## 4. `PolicyCAR`
 
-1. Generate initial database from current `db.txt` only — no backfill from legacy.
-2. Seed reference data (`CARStatus`, `AdjustmentStatus`, `PolicyType`, etc.) as defined in `db.txt` Records sections.
-3. New policies start on the target model from day one; `TakenAt` / `TakenBy` set on first Taken commit.
+| Change | Reason |
+|--------|--------|
+| **Move** status onto `Policy` as **`PolicyStatusId`** | Single SoT; was draft `CARStatus` / `CARStatusId` — renamed so spine is product-agnostic (Pending / Taken / Not taken). |
+| **Drop** `OriginalCombinedFee` | Fees SoT = `PolicyFee`; combined = `sum(Fee)+sum(FeeGst)`. |
+| **Drop** `Adjusted` + all `TotalSection*` / `TotalTotalPremium` | Legacy in-place adjustment mirrors; superseded by child adjustments + deltas. |
+| **Drop** `TotalContractWorksTerrorismPremium` | Derive from stored terror components when needed. |
+| **Add** `SubLimits` (jsonb) | Replaces `PolicyCARSubLimit`. |
+| **Add** `Wordings` (jsonb array) | Replaces `PolicyCARWording`. |
+| **Add** `AnnualCoverTypeId` | Replaces free-text annual “type of cover”. |
+| **Add** `PriceTerrorismId` / `PricePlantId` | Pricing source FKs (FR-PRICE-04) — were incomplete on original. |
+| **`LiabilityLimitBand`**: `decimal` → **`int`** | Liability band `1`/$10M, `2`/$20M, `3`/not insured — not money. |
+| **`OriginalTotalPremium`** kept | Bind-time total (S1 + S2 + fees). Effective after adj = this + latest Applied `DeltaTotalPremium`. |
 
 ---
 
-### Related documentation
+## 5. `PolicyCARAdjustment`
 
-- [CAR_INSURANCE_APP_SPEC.md §6.6, §6.9](./CAR_INSURANCE_APP_SPEC.md) — functional requirements
-- [CAR_SAVE_VALIDATION.md §5](./CAR_SAVE_VALIDATION.md) — lifecycle and validation matrix
-- [CAR_PRICING_FORMULAS.md §7](./CAR_PRICING_FORMULAS.md) — adjustment premium formulas
+| Original | Current | Reason |
+|----------|---------|--------|
+| Implicit 1:1 (`PolicyId` only) | Surrogate `PolicyCARAdjustmentId` + `AdjustmentSequence` | Multiple adjustments per policy (A-1, A-2, …). |
+| Absolute `AdjustedSection*` / `AdjustedTotalPremium` | **`Delta*`** columns only | Absolutes = `PolicyCAR` originals + deltas; no dual write. |
+| `AdjustedDate` | `CreatedWhen` / `CreatedBy` / `AppliedWhen` / `AppliedBy` | Draft vs Applied audit. |
+| No status | `AdjustmentStatusId` (Draft / Applied) | Draft editable; Applied immutable; at most one Draft. |
+| — | Drop absolute fee mirror | Fees not re-snapshotted on turnover adjustment. |
+
+**Effective premium:** `PolicyCAR.OriginalTotalPremium` + latest **Applied** `DeltaTotalPremium`.
+
+Display label `A-{n}` is derived in app (not stored).
+
+---
+
+## 6. Fees, notes, email
+
+| Change | Reason |
+|--------|--------|
+| **`PolicyFee`** unchanged shape; composite PK `(PolicyId, LineNumber)` | Line items = fee SoT. |
+| No combined-fee column on `PolicyCAR` | Avoid denorm drift. |
+| **`PolicyNote.PolicyNoteId`** PK | Multiple notes per policy (FR-POL-06). |
+| Keep **`PolicyNote`** + **`ActivityLog`** | Broker typed notes vs system audit — do not merge for v1. |
+| **`EmailLog`**: `From`/`To` → `FromAddress`/`ToAddress`; add `PolicyId` | Reserved words + policy-scoped sends. |
+| **`EmailLogDocument`** | FR-DOC-03 attachments. |
+
+---
+
+## 7. Constraints & types (current)
+
+Declared for first Postgres migration (DBML `indexes { (…) [pk] }` for composites):
+
+| Object | Constraint |
+|--------|------------|
+| `PolicyNote` | PK `PolicyNoteId` |
+| `EmailLogDocument` | PK `(EmailLogId, PolicyDocumentId)` |
+| `PolicyCARExcess` | PK `(PolicyId, CARExcessId)` |
+| `PolicyFee` | PK `(PolicyId, LineNumber)` |
+| `BrokerFeeScheduleLine` | PK `(BrokerFeeScheduleId, SortOrder)` |
+| `PriceCAR` | PK `(PriceId, CoverTypeId, TurnoverMin)` |
+| `PriceTerrorismPostCode` | PK `(PriceTerrorismRateId, Postcode)` |
+| `PolicyCARAdjustment` | `UNIQUE (PolicyId, AdjustmentSequence)`; partial unique one Draft per policy |
+| `DocumentTemplate` | `UNIQUE (DocumentTypeCode, CoverTypeId)` (`CoverTypeId` null for CARADJUST) |
+| `DocumentTemplateVersion` | `UNIQUE (DocumentTemplateId, VersionNumber)`; partial unique one `IsActive` |
+| `PolicyCAR.LiabilityLimitBand` | `CHECK IN (1, 2, 3)` |
+
+---
+
+## 8. Unchanged (intentionally)
+
+Reference / pricing catalogues largely same as original: `AuthorisedRepresentative`, `AccountManager`, `Client`, `EntityType`, `State`, `CoverType`, `PolicyStatus` (was `CARStatus`), `CARExcess`, `CARSubLimit`, `CARWording`, `BrokerFeeSchedule`/`BrokerFeeScheduleLine`, `Price*` tree, `PolicyType` / `PolicyNumber` / **`BusinessType`** (was `PolicyAction`), `PolicyFee` columns, `PolicyCARExcess`.
+
+`AccountManager.ARNumber` **kept** — legacy PDF merge `AccountManagerARNumber` (not the same as `AR.ARNumber`).
+
+---
+
+## 9. Explicit non-goals / deferred
+
+| Item | Notes |
+|------|--------|
+| Merge `Policy` + `PolicyCAR` | No — multi-product spine. |
+| Merge `PolicyNote` + `ActivityLog` | No for v1. |
+| `DateApproved` column | Use `Policy.TakenAt`. |
+| `TerrorismTier` on `PolicyCAR` | Optional; rate + terror price FK already stored. |
+| Soft-delete `AuthorisedRepresentative` | Optional later. |
+| Mutable `EffectivePremium` on `Policy` | No — compute from original + latest Applied delta. |
+
+---
+
+## 10. Related docs
+
+- [CAR_INSURANCE_APP_SPEC.md](./CAR_INSURANCE_APP_SPEC.md) — FRs  
+- [CAR_PRICING_FORMULAS.md](./CAR_PRICING_FORMULAS.md) — bind + adjustment math  
+- [CAR_INSURANCE_TECH_SPEC.md](./CAR_INSURANCE_TECH_SPEC.md) — implementation  
+
+When changing schema further, update **`db.txt`** and add a short section here under “Current vs previous” (or append a dated note), keeping this file as the original→current map.

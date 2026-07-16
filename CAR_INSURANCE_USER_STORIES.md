@@ -14,9 +14,9 @@ These stories describe **broker workflows** for UI/UX design. Client confirmatio
 | Persona | Description | In-app access |
 |---------|-------------|---------------|
 | **Broker** | Insurance broker — creates clients, quotes, binds policies, adjustments, emails documents, **runs reports and exports CSV** | Clients, Policies, Reports |
-| **Admin** | Same login; **Settings** nav: AR broker management, **document templates** (versioned editor + preview), **fixed PDFs** (upload/delete). Price files, fees, and other rating reference data are **DB-only — no UI** | Clients, Policies, Reports; Settings (admin) |
+| **Admin** | Same login; **Settings** nav: Authorised Representative broker management, **document templates** (versioned editor + preview), **library documents** (upload/delete). Prices, fees, and other rating reference data are **DB-only — no UI** | Clients, Policies, Reports; Settings (admin) |
 
-> **Configuration:** Price files and rating reference tables are manually loaded/updated in the database. Document templates and fixed PDFs are managed in **Settings** (see spec §6.13). See [CAR_INSURANCE_APP_SPEC.md §10.2](./CAR_INSURANCE_APP_SPEC.md#102-configuration-and-reference-data--no-admin-ui-at-this-stage).
+> **Configuration:** Prices and rating reference tables are manually loaded/updated in the database. Document templates and library documents are managed in **Settings** (see spec §6.13). See [CAR_INSURANCE_APP_SPEC.md §10.2](./CAR_INSURANCE_APP_SPEC.md#102-configuration-and-reference-data--no-admin-ui-at-this-stage).
 
 ---
 
@@ -43,7 +43,7 @@ Brokers need to see how **adjustments** and **renewals** relate to a bound polic
 | Child type | Parent | Label pattern | Shown when |
 |------------|--------|---------------|------------|
 | Adjustment | Taken policy | `{policy#}-adjustment-{n}` | Draft or Applied |
-| Renewal | Prior annual policy | Same policy number or `{policy#}-{year}` | `PolicyAction = Renewal`; linked to predecessor |
+| Renewal | Prior annual policy | Same policy number or `{policy#}-{year}` | `BusinessType = Renewal`; linked to predecessor |
 
 **Not grouped:** policies created via **Copy policy** — always a flat root row with its own policy number.
 
@@ -104,7 +104,7 @@ flowchart TD
 - [ ] **AC-1.6** Broker can locate draft via **Clients** → client detail → grouped policies **or** **Policies** list with status = Pending.
 - [ ] **AC-1.7** Changing status to **Taken** runs validation gates; on success policy becomes read-only except adjustments.
 - [ ] **AC-1.8** Taken commit generates bound-policy PDF pack and allows email to client.
-- [ ] **AC-1.9** Taken commit logs `TakenAt` / `TakenBy` in audit trail.
+- [ ] **AC-1.9** Taken commit sets `Policy.TakenAt` / `Policy.TakenBy` and logs the event in the audit trail.
 
 ### UI touchpoints
 
@@ -285,7 +285,7 @@ All other policy fields remain frozen on the original Taken record.
 2. Broker clicks **Renew**.
 3. System creates **new Pending policy**:
    - Copies data from source policy
-   - `PolicyAction = Renewal`
+   - `BusinessType = Renewal`
    - **Inception / expiry shifted +1 year** (or next period from source expiry)
    - Linked to source policy (renewal group)
 4. Broker reviews/edits draft (same as US-1).
@@ -331,7 +331,7 @@ All other policy fields remain frozen on the original Taken record.
 
 - [ ] **AC-6.1** Copied policy is always **Pending** on creation.
 - [ ] **AC-6.2** Copy gets **new** policy number; optional link `CopiedFromPolicyId` for traceability.
-- [ ] **AC-6.3** Copy is **not** a renewal (`PolicyAction = New` unless broker changes it).
+- [ ] **AC-6.3** Copy is **not** a renewal (`BusinessType = New` unless broker changes it).
 - [ ] **AC-6.4** Copied policy appears as a **standalone root row** in the policy list — **not** nested under the source policy in the grouped tree.
 - [ ] **AC-6.5** Copy action audited.
 
@@ -374,7 +374,7 @@ All other policy fields remain frozen on the original Taken record.
 |--------|-------|-------------|
 | **Client report** | Selected client + date range | Base premium and broker fee summary for one client |
 | **CAR Policy report** | Date range; summary by status, drill-down to detail | Quote/policy activity |
-| **CAR Renewal report** | Reference date, status, policy action filters | Policies due for renewal |
+| **CAR Renewal report** | Reference date, status, business type filters | Policies due for renewal |
 | **IRECON Reconciliation** | Date range | Financial reconciliation (admin-style ops; broker may run if permitted) |
 | **Expiring OBCAR** | Expiry date range | Renewal outreach list |
 
@@ -413,16 +413,16 @@ Legacy admin reports often downloaded Excel directly with no on-screen table. Ta
 
 ## US-8 — Settings (admin)
 
-### US-8a — AR broker management
+### US-8a — Authorised Representative broker management
 
 **As an** admin  
-**I want to** search, view, edit, and delete AR (wholesale broker) records in the app  
+**I want to** search, view, edit, and delete AuthorisedRepresentative (wholesale broker) records in the app  
 **So that** brokers can link clients to the correct authorised representative.
 
 #### Acceptance criteria
 
-- [ ] **AC-8a.1** Settings → AR Broker Management restricted to admin role.
-- [ ] **AC-8a.2** AR create/edit/delete audited (who, what, when).
+- [ ] **AC-8a.1** Settings → Authorised Representative broker Management restricted to admin role.
+- [ ] **AC-8a.2** AuthorisedRepresentative create/edit/delete audited (who, what, when).
 - [ ] **AC-8a.3** Brokers cannot access Settings section.
 
 ### US-8b — Document templates (merge templates)
@@ -445,29 +445,29 @@ Legacy admin reports often downloaded Excel directly with no on-screen table. Ta
 - [ ] **AC-8b.7** `PolicyDocument` records which template version generated each PDF.
 - [ ] **AC-8b.8** Template publish/edit audited.
 
-### US-8c — Fixed PDF attachments
+### US-8c — Library document attachments
 
 **As an** admin  
 **I want to** upload and delete static PDFs and assign them to cover types  
 **So that** additional documents (e.g. stamp duty exemption) are included in packs without server file drops.
 
-**Route:** `/settings/fixed-pdfs`
+**Route:** `/settings/library-documents`
 
 #### Acceptance criteria
 
 - [ ] **AC-8c.1** Admin can upload PDF to library (stored in R2).
-- [ ] **AC-8c.2** Admin can **delete** a fixed PDF from the library (future packs only — existing policy `PolicyDocument` rows unchanged).
+- [ ] **AC-8c.2** Admin can **delete** a library document from the library (future packs only — existing policy `PolicyDocument` rows unchanged).
 - [ ] **AC-8c.3** Assign each PDF to cover type(s) and optional rules (e.g. state = NSW).
 - [ ] **AC-8c.4** Set display order per cover type.
 - [ ] **AC-8c.5** Upload/delete/reorder audited.
 
 ### Out of scope at this stage (no UI)
 
-Price files, fees, and generic reference/configuration tables (states, excess catalogue, etc.) — **manual DB only** (see spec §10.2).
+Prices, fees, and generic reference/configuration tables (states, excess catalogue, etc.) — **manual DB only** (see spec §10.2).
 
 ### Shared Settings criteria
 
-- [ ] **AC-8.4** No in-app UI for price files or rating reference tables in this phase.
+- [ ] **AC-8.4** No in-app UI for prices or rating reference tables in this phase.
 
 ---
 

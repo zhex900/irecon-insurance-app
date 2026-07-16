@@ -8,7 +8,7 @@ import {
   calculateAdjustmentForQuote,
   submitPolicyAdjustment,
 } from "~/lib/services/adjustment.service";
-import { CAR_STATUS } from "~/lib/zod/policy-car";
+import { POLICY_STATUS } from "~/lib/zod/policy-car";
 import { carAdjustmentInputSchema } from "~/lib/zod/policy-adjustment";
 import { getClient, getQuote, getReferenceData } from "~/lib/services/store";
 import type { Route } from "./+types/quotes.$policyId.adjust";
@@ -22,7 +22,7 @@ export async function loader({ params }: Route.LoaderArgs) {
   const quote = await getQuote(policyId);
   if (!quote) throw new Response("Quote not found", { status: 404 });
 
-  if (quote.carStatusId !== CAR_STATUS.Taken) {
+  if (quote.policyStatusId !== POLICY_STATUS.Taken) {
     throw new Response("You can only adjust a policy where the status is taken.", {
       status: 400,
     });
@@ -86,8 +86,8 @@ export async function action({ request, params }: Route.ActionArgs) {
 }
 
 export default function QuoteAdjustRoute({ loaderData }: Route.ComponentProps) {
-  const status = loaderData.reference.carStatuses.find(
-    (item) => item.carStatusId === loaderData.quote.carStatusId,
+  const status = loaderData.reference.policyStatuses.find(
+    (item) => item.policyStatusId === loaderData.quote.policyStatusId,
   );
 
   return (

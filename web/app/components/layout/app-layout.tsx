@@ -2,7 +2,7 @@ import * as React from "react";
 import { NavLink, Outlet, Form } from "react-router";
 import { PolicySidebar } from "~/components/layout/policy-sidebar";
 import { cn } from "~/lib/utils";
-import type { BrokerSession, CarStatus, PolicySummary } from "~/lib/db/types";
+import type { BrokerSession, PolicyStatus, PolicySummary } from "~/lib/db/types";
 
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: "dashboard" },
@@ -12,11 +12,11 @@ const navItems = [
 export function AppLayout({
   broker,
   policies,
-  carStatuses,
+  policyStatuses,
 }: {
   broker: BrokerSession;
   policies: PolicySummary[];
-  carStatuses: CarStatus[];
+  policyStatuses: PolicyStatus[];
 }) {
   return (
     <div className="min-h-screen bg-slate-50">
@@ -49,7 +49,7 @@ export function AppLayout({
                 </NavLink>
               ))}
             </nav>
-            <PolicySidebar policies={policies} carStatuses={carStatuses} />
+            <PolicySidebar policies={policies} policyStatuses={policyStatuses} />
             <Form method="post" action="/logout" className="mt-auto">
               <button
                 type="submit"

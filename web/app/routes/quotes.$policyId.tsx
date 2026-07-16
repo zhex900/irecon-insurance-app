@@ -7,7 +7,7 @@ import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { carQuoteDraftSchema, carQuotePricingSchema, carQuoteSchema } from "~/lib/zod/policy-car";
 import type { CarQuoteFormValues } from "~/lib/zod/policy-car";
-import { CAR_STATUS } from "~/lib/zod/policy-car";
+import { POLICY_STATUS } from "~/lib/zod/policy-car";
 import {
   applyPremiumCalculation,
   isTerminalStatus,
@@ -95,12 +95,12 @@ export async function action({ request, params }: Route.ActionArgs) {
 
 export default function QuoteDetailRoute({ loaderData }: Route.ComponentProps) {
   const [searchParams] = useSearchParams();
-  const status = loaderData.reference.carStatuses.find(
-    (item) => item.carStatusId === loaderData.quote.carStatusId,
+  const status = loaderData.reference.policyStatuses.find(
+    (item) => item.policyStatusId === loaderData.quote.policyStatusId,
   );
-  const readOnly = isTerminalStatus(loaderData.quote.carStatusId);
+  const readOnly = isTerminalStatus(loaderData.quote.policyStatusId);
   const canAdjust =
-    loaderData.quote.carStatusId === CAR_STATUS.Taken &&
+    loaderData.quote.policyStatusId === POLICY_STATUS.Taken &&
     !loaderData.quote.car.adjusted &&
     Boolean(loaderData.quote.car.premium);
 

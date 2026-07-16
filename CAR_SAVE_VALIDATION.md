@@ -21,7 +21,7 @@ This document covers validation that runs when a broker **saves**, **finishes**,
 
 ### Wizard Finish (Step 2 → persist policy)
 
-**Trigger:** Finish button on Pricing Confirmation step.
+**Trigger:** Finish button on Pricing DeclarationConfirmed step.
 
 **Validation before save:**
 
@@ -85,8 +85,8 @@ Unable to set status to taken. {reasons}
 
 | Condition | Message |
 |-----------|---------|
-| `ExistingStructures > 0` AND `Section1ExistingStructure == 0` | Existing Structures has value however there are no premiums. |
-| `PlantEquipment > 25000` AND `Section1PlantEquipment == 0` | Plant and equipment has value however there are no premiums. |
+| `ExistingStructures > 0` AND `ContractWorksExistingStructurePremium == 0` | Existing Structures has value however there are no premiums. |
+| `PlantEquipment > 25000` AND `ContractWorksPlantPremium == 0` | Plant and equipment has value however there are no premiums. |
 
 **Business logic (from code comments):**
 
@@ -97,8 +97,8 @@ Unable to set status to taken. {reasons}
 
 | Form input (Step 1 / read-only on view) | Premium line (editable on view) |
 |----------------------------------------|----------------------------------|
-| `ExistingStructures` | `Section1ExistingStructure` |
-| `PlantEquipment` | `Section1PlantEquipment` |
+| `ExistingStructures` | `ContractWorksExistingStructurePremium` |
+| `PlantEquipment` | `ContractWorksPlantPremium` |
 
 Pending policies may have declared existing structures with zero premium; **Taken** cannot.
 
@@ -332,7 +332,7 @@ stateDiagram-v2
 | Effective premium = original + latest Applied | **Not yet** — target model |
 | Legacy-style single adjustment wizard | Partial — `/quotes/:policyId/adjust` |
 | Adjustment 75% return cap | Partial — `validateAdjustmentFinish()` |
-| `Section1ExistingStructure` / display homes premium lines | Partial — mapped from Section 1 values |
+| `ContractWorksExistingStructurePremium` / display homes premium lines | Partial — mapped from Section 1 values |
 | BLL policy number generation | Mock — auto `ATCCW####` |
 | Referral notes on save | Partial — `buildReferralNotes()` on calculate/save |
 

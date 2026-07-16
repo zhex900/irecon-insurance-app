@@ -1,7 +1,7 @@
 import type { Quote, PremiumBreakdown } from "~/lib/db/types";
 import type { CarQuoteFormValues } from "~/lib/zod/policy-car";
 import type { z } from "zod";
-import { CAR_STATUS, type carQuoteDraftSchema } from "~/lib/zod/policy-car";
+import { POLICY_STATUS, type carQuoteDraftSchema } from "~/lib/zod/policy-car";
 import {
   buildReferralNotes,
   calculatePremiumForQuote,
@@ -17,25 +17,25 @@ export class PolicySaveError extends Error {
   }
 }
 
-export function isTerminalStatus(carStatusId: number) {
-  return carStatusId === CAR_STATUS.Taken || carStatusId === CAR_STATUS.NotTaken;
+export function isTerminalStatus(policyStatusId: number) {
+  return policyStatusId === POLICY_STATUS.Taken || policyStatusId === POLICY_STATUS.NotTaken;
 }
 
 export function getTakenStatusErrors(
   values: Pick<CarQuoteFormValues, "existingStructure" | "plantEquipment">,
   premium: Pick<
     PremiumBreakdown,
-    "section1ExistingStructure" | "section1PlantEquipment"
+    "contractWorksExistingStructurePremium" | "contractWorksPlantPremium"
   >,
 ): string[] {
   const errors: string[] = [];
   if (
     values.existingStructure > 0 &&
-    premium.section1ExistingStructure === 0
+    premium.contractWorksExistingStructurePremium === 0
   ) {
     errors.push("Existing Structures has value however there are no premiums.");
   }
-  if (values.plantEquipment > 25000 && premium.section1PlantEquipment === 0) {
+  if (values.plantEquipment > 25000 && premium.contractWorksPlantPremium === 0) {
     errors.push("Plant and equipment has value however there are no premiums.");
   }
   return errors;
@@ -44,13 +44,13 @@ export function getTakenStatusErrors(
 export async function saveQuoteDraft(policyId: number, values: DraftValues) {
   const existing = await getQuote(policyId);
   if (!existing) throw new Error("Quote not found");
-  if (isTerminalStatus(existing.carStatusId)) {
+  if (isTerminalStatus(existing.policyStatusId)) {
     throw new PolicySaveError("This policy status cannot be changed.");
   }
   // Drafts stay Pending — status changes only on full save
   const quote = applyFormValues(
     existing,
-    { ...values, carStatusId: CAR_STATUS.Pending },
+    { ...values, policyStatusId: POLICY_STATUS.Pending },
     { draft: true },
   );
   return saveQuote({ ...quote, isDraft: true });
@@ -62,15 +62,15 @@ export async function upsertQuoteFromForm(
 ) {
   const existing = await getQuote(policyId);
   if (!existing) throw new Error("Quote not found");
-  if (isTerminalStatus(existing.carStatusId)) {
+  if (isTerminalStatus(existing.policyStatusId)) {
     throw new PolicySaveError("This policy status cannot be changed.");
   }
 
   const { premium, rating, referralReasons } = calculatePremiumForQuote(values);
 
   if (
-    existing.carStatusId !== CAR_STATUS.Taken &&
-    values.carStatusId === CAR_STATUS.Taken
+    existing.policyStatusId !== POLICY_STATUS.Taken &&
+    values.policyStatusId === POLICY_STATUS.Taken
   ) {
     const takenErrors = getTakenStatusErrors(values, premium);
     if (takenErrors.length > 0) {
@@ -125,10 +125,10 @@ function applyFormValues(
 ): Quote {
   return {
     ...existing,
-    policyActionId: values.policyActionId ?? existing.policyActionId,
-    carStatusId: values.carStatusId ?? existing.carStatusId,
+    businessTypeId: values.businessTypeId ?? existing.businessTypeId,
+    policyStatusId: values.policyStatusId ?? existing.policyStatusId,
     policyNumber:
-      values.policyActionId === 2 && values.policyNumber
+      values.businessTypeId === 2 && values.policyNumber
         ? values.policyNumber
         : existing.policyNumber,
     postcode: values.postcode ?? existing.postcode,
@@ -156,18 +156,18 @@ function applyFormValues(
       existingStructure:
         values.existingStructure ?? existing.car.existingStructure,
       displayHomes: values.displayHomes ?? existing.car.displayHomes,
-      section1ExistingStructure:
+      contractWorksExistingStructurePremium:
         values.existingStructure ?? existing.car.existingStructure,
-      section1DisplayHomes: values.displayHomes ?? existing.car.displayHomes,
-      numberOfClaim: values.numberOfClaim ?? existing.car.numberOfClaim,
+      contractWorksDisplayHomesPremium: values.displayHomes ?? existing.car.displayHomes,
+      claimsCountLast3Years: values.claimsCountLast3Years ?? existing.car.claimsCountLast3Years,
       anyClaimsExceed20k:
         values.anyClaimsExceed20k ?? existing.car.anyClaimsExceed20k,
-      confirmation: values.confirmation ?? existing.car.confirmation,
-      section1Value: values.section1Value ?? existing.car.section1Value,
-      section2Value: values.section2Value ?? existing.car.section2Value,
-      holdCurrentContractWorks:
-        values.holdCurrentContractWorks ??
-        existing.car.holdCurrentContractWorks,
+      declarationConfirmed: values.declarationConfirmed ?? existing.car.declarationConfirmed,
+      contractWorksSumInsured: values.contractWorksSumInsured ?? existing.car.contractWorksSumInsured,
+      liabilityLimitBand: values.liabilityLimitBand ?? existing.car.liabilityLimitBand,
+      hasExistingContractWorksCover:
+        values.hasExistingContractWorksCover ??
+        existing.car.hasExistingContractWorksCover,
       currentInsurer: values.currentInsurer ?? existing.car.currentInsurer,
       maximumConstructionPeriod:
         values.maximumConstructionPeriod ??

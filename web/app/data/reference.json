@@ -21,16 +21,16 @@
     { "entityTypeId": 5, "name": "Trust" },
     { "entityTypeId": 6, "name": "Co/Owner Builder" }
   ],
-  "policyActions": [
-    { "policyActionId": 1, "code": "NEW", "name": "New" },
-    { "policyActionId": 2, "code": "RWL", "name": "Renewal" }
+  "businessTypes": [
+    { "businessTypeId": 1, "code": "NEW", "name": "New" },
+    { "businessTypeId": 2, "code": "RWL", "name": "Renewal" }
   ],
-  "carStatuses": [
-    { "carStatusId": 1, "name": "Pending" },
-    { "carStatusId": 2, "name": "Taken" },
-    { "carStatusId": 3, "name": "Not taken" }
+  "policyStatuses": [
+    { "policyStatusId": 1, "name": "Pending" },
+    { "policyStatusId": 2, "name": "Taken" },
+    { "policyStatusId": 3, "name": "Not taken" }
   ],
-  "section2Values": [
+  "liabilityLimitBands": [
     { "id": 1, "name": "$10 Million" },
     { "id": 2, "name": "$20 Million" },
     { "id": 3, "name": "Not Insured" }

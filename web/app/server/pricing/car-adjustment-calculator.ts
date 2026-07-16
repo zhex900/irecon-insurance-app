@@ -21,37 +21,37 @@ export function calculateCarAdjustment({
   rating: RatingSnapshot;
 }): AdjustmentBreakdown {
   const originalSection1 = buildSectionRow({
-    base: premium.section1TrueBasePremium,
-    terror: premium.section1TerrorismPremium,
+    base: premium.contractWorksBasePremium,
+    terror: premium.contractWorksTerrorismPremium,
     eslRate: rating.eslRate,
-    sdRate: rating.sdRateSection1,
+    sdRate: rating.contractWorksStampDutyRate,
     stampDutyExempt: false,
     isSection2: false,
   });
 
   const originalSection2 = buildSectionRow({
-    base: premium.section2TrueBasePremium,
+    base: premium.liabilityBasePremium,
     terror: 0,
     eslRate: rating.eslRate,
-    sdRate: rating.sdRateSection2,
+    sdRate: rating.liabilityStampDutyRate,
     stampDutyExempt,
     isSection2: true,
   });
 
   const adjustedSection1Base = Math.max(
-    adjustmentTurnover * rating.section1Rate,
-    rating.section1MinPrem,
+    adjustmentTurnover * rating.contractWorksAppliedRate,
+    rating.contractWorksMinPremium,
   );
   const adjustedSection2Base = Math.max(
-    adjustmentTurnover * rating.section2Rate,
-    rating.section2MinPrem,
+    adjustmentTurnover * rating.liabilityAppliedRate,
+    rating.liabilityMinPremium,
   );
 
   const adjustmentSection1 = buildSectionRow({
     base: adjustedSection1Base,
     terror: adjustedSection1Base * rating.terrorismRate,
     eslRate: rating.eslRate,
-    sdRate: rating.sdRateSection1,
+    sdRate: rating.contractWorksStampDutyRate,
     stampDutyExempt: false,
     isSection2: false,
   });
@@ -60,7 +60,7 @@ export function calculateCarAdjustment({
     base: adjustedSection2Base,
     terror: 0,
     eslRate: rating.eslRate,
-    sdRate: rating.sdRateSection2,
+    sdRate: rating.liabilityStampDutyRate,
     stampDutyExempt,
     isSection2: true,
   });
@@ -78,7 +78,7 @@ export function calculateCarAdjustment({
     base: deltaSection1Base,
     terror: deltaSection1Base * rating.terrorismRate,
     eslRate: rating.eslRate,
-    sdRate: rating.sdRateSection1,
+    sdRate: rating.contractWorksStampDutyRate,
     stampDutyExempt: false,
     isSection2: false,
   });
@@ -87,7 +87,7 @@ export function calculateCarAdjustment({
     base: deltaSection2Base,
     terror: 0,
     eslRate: rating.eslRate,
-    sdRate: rating.sdRateSection2,
+    sdRate: rating.liabilityStampDutyRate,
     stampDutyExempt,
     isSection2: true,
   });

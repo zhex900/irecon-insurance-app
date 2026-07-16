@@ -13,7 +13,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   return {
     broker: getBrokerSession(),
     policies: await listPolicySummaries(),
-    carStatuses: reference.carStatuses,
+    policyStatuses: reference.policyStatuses,
   };
 }
 
@@ -22,7 +22,7 @@ export default function AppLayoutRoute({ loaderData }: Route.ComponentProps) {
     <AppLayout
       broker={loaderData.broker}
       policies={loaderData.policies}
-      carStatuses={loaderData.carStatuses}
+      policyStatuses={loaderData.policyStatuses}
     />
   );
 }

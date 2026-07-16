@@ -14,14 +14,14 @@ export type EntityType = {
   name: string;
 };
 
-export type PolicyAction = {
-  policyActionId: number;
+export type BusinessType = {
+  businessTypeId: number;
   code: string;
   name: string;
 };
 
-export type CarStatus = {
-  carStatusId: number;
+export type PolicyStatus = {
+  policyStatusId: number;
   name: string;
 };
 
@@ -43,49 +43,49 @@ export type Client = {
   tradingName: string;
   entityTypeId: number;
   accountManagerId: number;
-  arId: number;
+  authorisedRepresentativeId: number;
   createdWhen: string;
   createdBy: string;
 };
 
 export type PremiumBreakdown = {
-  section1BeforeBasePremium: number;
-  section1TrueBasePremium: number;
-  section1PlantEquipment: number;
-  section1PlantEsl: number;
-  section1Esl: number;
-  section1Gst: number;
-  section1Sd: number;
-  section1TerrorismPremium: number;
-  section1PlantTerrorismPremium: number;
-  section1DisplayHomes: number;
-  section1ExistingStructure: number;
-  section1TotalPremium: number;
-  section2BeforeBasePremium: number;
-  section2TrueBasePremium: number;
-  section2Esl: number;
-  section2Gst: number;
-  section2Sd: number;
-  section2TotalPremium: number;
+  contractWorksCalculatedBasePremium: number;
+  contractWorksBasePremium: number;
+  contractWorksPlantPremium: number;
+  contractWorksPlantESL: number;
+  contractWorksESL: number;
+  contractWorksGST: number;
+  contractWorksStampDuty: number;
+  contractWorksTerrorismPremium: number;
+  contractWorksPlantTerrorismPremium: number;
+  contractWorksDisplayHomesPremium: number;
+  contractWorksExistingStructurePremium: number;
+  contractWorksTotalPremium: number;
+  liabilityCalculatedBasePremium: number;
+  liabilityBasePremium: number;
+  liabilityESL: number;
+  liabilityGST: number;
+  liabilityStampDuty: number;
+  liabilityTotalPremium: number;
   combinedBrokerFee: number;
   originalTotalPremium: number;
 };
 
 export type RatingSnapshot = {
-  priceFileId: number;
+  priceId: number;
   stampDutyId: number;
   eslId: number;
   plantRate: number;
   eslRate: number;
-  eslPlantRate: number;
-  sdRateSection1: number;
-  sdRateSection2: number;
-  section1Rate: number;
-  section2Rate: number;
-  section1MinPrem: number;
-  section2MinPrem: number;
-  plantMinPrem: number;
-  plantMaxPrem: number;
+  plantEslRate: number;
+  contractWorksStampDutyRate: number;
+  liabilityStampDutyRate: number;
+  contractWorksAppliedRate: number;
+  liabilityAppliedRate: number;
+  contractWorksMinPremium: number;
+  liabilityMinPremium: number;
+  plantValueMin: number;
+  plantValueMax: number;
   terrorismRate: number;
   terrorismTier: string;
   isTerrorismRateExist: boolean;
@@ -134,7 +134,7 @@ export type PolicySummary = {
   policyNumber: string;
   insuredName: string;
   clientName: string;
-  carStatusId: number;
+  policyStatusId: number;
   isDraft?: boolean;
 };
 
@@ -173,28 +173,28 @@ export type CarAdjustmentRecord = {
   stampDutyExempt: boolean;
   adjustedDate: string;
   breakdown: AdjustmentBreakdown;
-  adjustedSection1TrueBasePremium: number;
-  adjustedSection1TerrorismPremium: number;
+  adjustedContractWorksBasePremium: number;
+  adjustedContractWorksTerrorismPremium: number;
   adjustedSection1Esl: number;
   adjustedSection1Gst: number;
   adjustedSection1Sd: number;
-  adjustedSection1TotalPremium: number;
-  adjustedSection2TrueBasePremium: number;
+  adjustedContractWorksTotalPremium: number;
+  adjustedLiabilityBasePremium: number;
   adjustedSection2Esl: number;
   adjustedSection2Gst: number;
   adjustedSection2Sd: number;
-  adjustedSection2TotalPremium: number;
-  totalSection1TrueBasePremium: number;
-  totalSection1TerrorismPremium: number;
+  adjustedLiabilityTotalPremium: number;
+  totalContractWorksBasePremium: number;
+  totalContractWorksTerrorismPremium: number;
   totalSection1Esl: number;
   totalSection1Gst: number;
   totalSection1Sd: number;
-  totalSection1TotalPremium: number;
-  totalSection2TrueBasePremium: number;
+  totalContractWorksTotalPremium: number;
+  totalLiabilityBasePremium: number;
   totalSection2Esl: number;
   totalSection2Gst: number;
   totalSection2Sd: number;
-  totalSection2TotalPremium: number;
+  totalLiabilityTotalPremium: number;
   adjustedTotalPremium: number;
 };
 
@@ -202,8 +202,8 @@ export type Quote = {
   policyId: number;
   clientId: number;
   policyNumber: string;
-  policyActionId: number;
-  carStatusId: number;
+  businessTypeId: number;
+  policyStatusId: number;
   postcode: string;
   stateId: number;
   dateEffective: string;
@@ -225,17 +225,17 @@ export type Quote = {
     plantEquipment: number;
     existingStructure: number;
     displayHomes: number;
-    numberOfClaim: number;
+    claimsCountLast3Years: number;
     anyClaimsExceed20k: boolean;
-    confirmation: boolean;
-    section1Value: number;
-    section2Value: number;
-    holdCurrentContractWorks: boolean;
+    declarationConfirmed: boolean;
+    contractWorksSumInsured: number;
+    liabilityLimitBand: number;
+    hasExistingContractWorksCover: boolean;
     currentInsurer: string;
     maximumConstructionPeriod: number;
     maximumMaintenancePeriod: number;
-    section1ExistingStructure: number;
-    section1DisplayHomes: number;
+    contractWorksExistingStructurePremium: number;
+    contractWorksDisplayHomesPremium: number;
     subLimits: CarSubLimits;
     excesses: CarExcesses;
     excludedContracts1: string;
@@ -256,16 +256,16 @@ export type BrokerSession = {
   id: string;
   fullName: string;
   email: string;
-  arId: number;
+  authorisedRepresentativeId: number;
 };
 
 export type ReferenceData = {
   states: State[];
   coverTypes: CoverType[];
   entityTypes: EntityType[];
-  policyActions: PolicyAction[];
-  carStatuses: CarStatus[];
-  section2Values: { id: number; name: string }[];
+  businessTypes: BusinessType[];
+  policyStatuses: PolicyStatus[];
+  liabilityLimitBands: { id: number; name: string }[];
   insurers: { code: string; name: string }[];
   accountManagers: AccountManager[];
   feeNames: { name: string; sortOrder: number; fee: number; feeGst: number }[];

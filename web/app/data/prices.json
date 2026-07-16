@@ -1,7 +1,7 @@
 {
-  "priceFiles": [
+  "prices": [
     {
-      "priceFileId": 1,
+      "priceId": 1,
       "dateStart": "2025-01-01",
       "published": true,
       "bands": [
@@ -76,7 +76,7 @@
   ],
   "stampDuty": [
     {
-      "priceFileStampDutyId": 1,
+      "priceStampDutyId": 1,
       "dateStart": "2025-01-01",
       "rates": [
         { "stateCode": "NSW", "rate": 0.09 },
@@ -92,7 +92,7 @@
   ],
   "esl": [
     {
-      "priceFileEslId": 1,
+      "priceEslId": 1,
       "dateStart": "2025-01-01",
       "rates": [
         { "stateCode": "NSW", "constructionRate": 0.23, "plantRate": 0.23 },
@@ -108,7 +108,7 @@
   ],
   "terror": [
     {
-      "priceFileTerrorId": 1,
+      "priceTerrorismId": 1,
       "dateStart": "2025-01-01",
       "tiers": [
         { "tier": "A", "rate": 0.02, "postcodes": ["2000", "2010", "3000", "4000", "5000", "6000"] },
@@ -119,7 +119,7 @@
   ],
   "plant": [
     {
-      "priceFilePlantId": 1,
+      "pricePlantId": 1,
       "dateStart": "2025-01-01",
       "rate": 0.03,
       "plantMinValue": 25000,

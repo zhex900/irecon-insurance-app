@@ -78,8 +78,8 @@ export default function ClientDetailRoute({ loaderData }: Route.ComponentProps) 
             ) : (
               <div className="flex flex-col gap-3">
                 {loaderData.quotes.map((quote) => {
-                  const status = loaderData.reference.carStatuses.find(
-                    (item) => item.carStatusId === quote.carStatusId,
+                  const status = loaderData.reference.policyStatuses.find(
+                    (item) => item.policyStatusId === quote.policyStatusId,
                   );
                   return (
                     <Link

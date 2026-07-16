@@ -2,15 +2,15 @@ import { useMemo, useState } from "react";
 import { NavLink } from "react-router";
 import { Badge } from "~/components/ui/badge";
 import { Input } from "~/components/ui/input";
-import type { CarStatus, PolicySummary } from "~/lib/db/types";
+import type { PolicyStatus, PolicySummary } from "~/lib/db/types";
 import { cn } from "~/lib/utils";
 
 export function PolicySidebar({
   policies,
-  carStatuses,
+  policyStatuses,
 }: {
   policies: PolicySummary[];
-  carStatuses: CarStatus[];
+  policyStatuses: PolicyStatus[];
 }) {
   const [search, setSearch] = useState("");
 
@@ -50,7 +50,7 @@ export function PolicySidebar({
               key={policy.policyId}
               policy={policy}
               statusName={
-                carStatuses.find((status) => status.carStatusId === policy.carStatusId)
+                policyStatuses.find((status) => status.policyStatusId === policy.policyStatusId)
                   ?.name ?? "Unknown"
               }
             />

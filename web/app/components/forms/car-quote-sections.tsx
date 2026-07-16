@@ -30,8 +30,8 @@ export function PremiumSummaryPanel({
           <p className="text-slate-500">Calculating premium…</p>
         ) : premium ? (
           <>
-            <Row label="Section 1 total" value={premium.section1TotalPremium} />
-            <Row label="Section 2 total" value={premium.section2TotalPremium} />
+            <Row label="Section 1 total" value={premium.contractWorksTotalPremium} />
+            <Row label="Section 2 total" value={premium.liabilityTotalPremium} />
             <Row label="Broker fees" value={premium.combinedBrokerFee} />
             <div className="border-t border-slate-200 pt-3 font-semibold">
               <Row
@@ -91,9 +91,9 @@ export function RiskDetailsStep({ reference }: { reference: ReferenceData }) {
   } = useFormContext<CarQuoteFormValues>();
 
   const coverTypeId = Number(watch("coverTypeId"));
-  const policyActionId = Number(watch("policyActionId"));
-  const holdCurrent = watch("holdCurrentContractWorks");
-  const isRenewal = policyActionId === 2;
+  const businessTypeId = Number(watch("businessTypeId"));
+  const holdCurrent = watch("hasExistingContractWorksCover");
+  const isRenewal = businessTypeId === 2;
   const showCurrentInsurer =
     holdCurrent === true || String(holdCurrent) === "true";
 
@@ -137,13 +137,13 @@ export function RiskDetailsStep({ reference }: { reference: ReferenceData }) {
           ))}
         </Select>
         <Select
-          label="Policy Category"
-          error={errors.policyActionId?.message}
-          {...register("policyActionId")}
+          label="Business type"
+          error={errors.businessTypeId?.message}
+          {...register("businessTypeId")}
         >
           <option value="">Please select...</option>
-          {reference.policyActions.map((item) => (
-            <option key={item.policyActionId} value={item.policyActionId}>
+          {reference.businessTypes.map((item) => (
+            <option key={item.businessTypeId} value={item.businessTypeId}>
               {item.name}
             </option>
           ))}
@@ -236,8 +236,8 @@ export function RiskDetailsStep({ reference }: { reference: ReferenceData }) {
         />
         <Select
           label="Do you hold a current Contract Works/Liability policy?"
-          error={errors.holdCurrentContractWorks?.message}
-          {...register("holdCurrentContractWorks")}
+          error={errors.hasExistingContractWorksCover?.message}
+          {...register("hasExistingContractWorksCover")}
         >
           <option value="false">No</option>
           <option value="true">Yes</option>
@@ -268,8 +268,8 @@ export function Section1Step() {
             label="Section 1 Contract Works"
             type="number"
             step="0.01"
-            error={errors.section1Value?.message}
-            {...register("section1Value")}
+            error={errors.contractWorksSumInsured?.message}
+            {...register("contractWorksSumInsured")}
           />
           <FieldInput
             label="Display Homes"
@@ -342,11 +342,11 @@ export function Section2ExcessesStep({
       <Section title="Section 2 - Legal Liability">
         <Select
           label="Limit of Liability"
-          error={errors.section2Value?.message}
-          {...register("section2Value")}
+          error={errors.liabilityLimitBand?.message}
+          {...register("liabilityLimitBand")}
         >
           <option value="">Please select...</option>
-          {reference.section2Values.map((item) => (
+          {reference.liabilityLimitBands.map((item) => (
             <option key={item.id} value={item.id}>
               {item.name}
             </option>
@@ -409,8 +409,8 @@ export function ClaimsWordingStep({
           <FieldInput
             label="Number of claims last 3 years"
             type="number"
-            error={errors.numberOfClaim?.message}
-            {...register("numberOfClaim")}
+            error={errors.claimsCountLast3Years?.message}
+            {...register("claimsCountLast3Years")}
           />
           <Select
             label="Have any claims exceeded $20,000?"
@@ -445,8 +445,8 @@ export function ClaimsWordingStep({
       <Section title="General Disclosure">
         <Select
           label="Confirm duty of disclosure responses received"
-          error={errors.confirmation?.message}
-          {...register("confirmation")}
+          error={errors.declarationConfirmed?.message}
+          {...register("declarationConfirmed")}
         >
           <option value="false">No</option>
           <option value="true">Yes</option>
@@ -529,8 +529,8 @@ export function ReviewStep({
   const state = reference.states.find(
     (s) => s.stateId === values.stateId,
   )?.code;
-  const section2 = reference.section2Values.find(
-    (s) => s.id === values.section2Value,
+  const section2 = reference.liabilityLimitBands.find(
+    (s) => s.id === values.liabilityLimitBand,
   )?.name;
 
   return (
@@ -554,16 +554,16 @@ export function ReviewStep({
           />
           <ReviewField
             label="Section 1 value"
-            value={formatCurrency(values.section1Value)}
+            value={formatCurrency(values.contractWorksSumInsured)}
           />
           <ReviewField label="Section 2 limit" value={section2} />
           <ReviewField
             label="Claims (3 years)"
-            value={String(values.numberOfClaim)}
+            value={String(values.claimsCountLast3Years)}
           />
           <ReviewField
             label="Disclosure confirmed"
-            value={values.confirmation ? "Yes" : "No"}
+            value={values.declarationConfirmed ? "Yes" : "No"}
           />
         </dl>
       </Section>
@@ -571,8 +571,8 @@ export function ReviewStep({
       {premium ? (
         <Section title="Calculated Premium">
           <div className="flex flex-col gap-2 text-sm">
-            <Row label="Section 1 total" value={premium.section1TotalPremium} />
-            <Row label="Section 2 total" value={premium.section2TotalPremium} />
+            <Row label="Section 1 total" value={premium.contractWorksTotalPremium} />
+            <Row label="Section 2 total" value={premium.liabilityTotalPremium} />
             <Row
               label="Total premium"
               value={premium.originalTotalPremium}
@@ -596,7 +596,7 @@ export function ReviewStep({
   );
 }
 
-export function PricingConfirmationStep({
+export function PricingDeclarationConfirmedStep({
   premium,
   referralReasons,
   reference,
@@ -664,22 +664,22 @@ export function PricingConfirmationStep({
                 Change status from Pending to Taken or Not taken when saving.
               </p>
               <div className="flex flex-col gap-2">
-                {reference.carStatuses.map((status) => (
+                {reference.policyStatuses.map((status) => (
                   <label
-                    key={status.carStatusId}
+                    key={status.policyStatusId}
                     className="flex items-center gap-2 text-sm text-slate-800"
                   >
                     <input
                       type="radio"
-                      value={status.carStatusId}
-                      {...register("carStatusId", { valueAsNumber: true })}
+                      value={status.policyStatusId}
+                      {...register("policyStatusId", { valueAsNumber: true })}
                     />
                     {status.name}
                   </label>
                 ))}
               </div>
-              {errors.carStatusId?.message ? (
-                <p className="text-sm text-red-600">{errors.carStatusId.message}</p>
+              {errors.policyStatusId?.message ? (
+                <p className="text-sm text-red-600">{errors.policyStatusId.message}</p>
               ) : null}
             </fieldset>
           ) : (
@@ -707,68 +707,68 @@ export function PricingConfirmationStep({
             <tbody className="divide-y divide-slate-100">
               <PremiumRow
                 label="Base Premium"
-                s1={premium.section1BeforeBasePremium}
-                s2={premium.section2BeforeBasePremium}
+                s1={premium.contractWorksCalculatedBasePremium}
+                s2={premium.liabilityCalculatedBasePremium}
               />
               <PremiumRow
                 label="True Base Premium"
-                s1={premium.section1TrueBasePremium}
-                s2={premium.section2TrueBasePremium}
+                s1={premium.contractWorksBasePremium}
+                s2={premium.liabilityBasePremium}
                 combined={
-                  premium.section1TrueBasePremium +
-                  premium.section2TrueBasePremium +
-                  premium.section1TerrorismPremium +
-                  premium.section1PlantEquipment +
-                  premium.section1PlantTerrorismPremium +
-                  (premium.section1DisplayHomes ?? 0) +
-                  (premium.section1ExistingStructure ?? 0)
+                  premium.contractWorksBasePremium +
+                  premium.liabilityBasePremium +
+                  premium.contractWorksTerrorismPremium +
+                  premium.contractWorksPlantPremium +
+                  premium.contractWorksPlantTerrorismPremium +
+                  (premium.contractWorksDisplayHomesPremium ?? 0) +
+                  (premium.contractWorksExistingStructurePremium ?? 0)
                 }
               />
               <PremiumRow
                 label="Terrorism Levy"
-                s1={premium.section1TerrorismPremium}
+                s1={premium.contractWorksTerrorismPremium}
               />
               <PremiumRow
                 label="Display Homes"
-                s1={premium.section1DisplayHomes ?? 0}
+                s1={premium.contractWorksDisplayHomesPremium ?? 0}
               />
               <PremiumRow
                 label="Existing Structure"
-                s1={premium.section1ExistingStructure ?? 0}
+                s1={premium.contractWorksExistingStructurePremium ?? 0}
               />
               <PremiumRow
                 label="Plant and Equipment Over $25k"
-                s1={premium.section1PlantEquipment}
+                s1={premium.contractWorksPlantPremium}
               />
               <PremiumRow
                 label="Terrorism Levy Plant and Equipment"
-                s1={premium.section1PlantTerrorismPremium}
+                s1={premium.contractWorksPlantTerrorismPremium}
               />
               <PremiumRow
                 label="ESL Plant and Equipment"
-                s1={premium.section1PlantEsl}
+                s1={premium.contractWorksPlantESL}
               />
               <PremiumRow
                 label="ESL"
-                s1={premium.section1Esl}
-                s2={premium.section2Esl}
+                s1={premium.contractWorksESL}
+                s2={premium.liabilityESL}
                 combined={
-                  premium.section1Esl +
-                  premium.section2Esl +
-                  premium.section1PlantEsl
+                  premium.contractWorksESL +
+                  premium.liabilityESL +
+                  premium.contractWorksPlantESL
                 }
               />
               <PremiumRow
                 label="GST"
-                s1={premium.section1Gst}
-                s2={premium.section2Gst}
-                combined={premium.section1Gst + premium.section2Gst}
+                s1={premium.contractWorksGST}
+                s2={premium.liabilityGST}
+                combined={premium.contractWorksGST + premium.liabilityGST}
               />
               <PremiumRow
                 label="Stamp Duty"
-                s1={premium.section1Sd}
-                s2={premium.section2Sd}
-                combined={premium.section1Sd + premium.section2Sd}
+                s1={premium.contractWorksStampDuty}
+                s2={premium.liabilityStampDuty}
+                combined={premium.contractWorksStampDuty + premium.liabilityStampDuty}
               />
               {reference.feeNames.map((fee) => (
                 <tr key={fee.name}>
@@ -781,8 +781,8 @@ export function PricingConfirmationStep({
               ))}
               <PremiumRow
                 label="Total Premium"
-                s1={premium.section1TotalPremium}
-                s2={premium.section2TotalPremium}
+                s1={premium.contractWorksTotalPremium}
+                s2={premium.liabilityTotalPremium}
                 combined={premium.originalTotalPremium}
                 strong
               />
