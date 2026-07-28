@@ -1,0 +1,34 @@
+[
+  {
+    "fullName": "Demo Broker",
+    "email": "broker@demo.local",
+    "role": "broker",
+    "authorisedRepresentativeId": 1,
+    "disabled": false,
+    "password": "password123"
+  },
+  {
+    "fullName": "Admin User",
+    "email": "admin@demo.local",
+    "role": "admin",
+    "authorisedRepresentativeId": null,
+    "disabled": false,
+    "password": "password123"
+  },
+  {
+    "fullName": "Taylor Brooks",
+    "email": "taylor@brooksinsure.example",
+    "role": "broker",
+    "authorisedRepresentativeId": 2,
+    "disabled": false,
+    "password": "password123"
+  },
+  {
+    "fullName": "Jake He",
+    "email": "zhex900@gmail.com",
+    "role": "admin",
+    "authorisedRepresentativeId": null,
+    "disabled": false,
+    "password": "password123"
+  }
+]

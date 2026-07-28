@@ -1,0 +1,41 @@
+[
+  {
+    "clientId": 1,
+    "name": "BuildRight Constructions Pty Ltd",
+    "tradingName": "BuildRight",
+    "abn": "51824753556",
+    "phone": "02 9000 1001",
+    "email": "accounts@buildright.example",
+    "accountManagerId": 1,
+    "clientSourceId": 1,
+    "authorisedRepresentativeId": 1,
+    "createdWhen": "2025-06-01T10:00:00.000Z",
+    "createdBy": "broker.demo"
+  },
+  {
+    "clientId": 2,
+    "name": "Northern Earthworks Pty Ltd",
+    "tradingName": "Northern Earthworks",
+    "abn": "53004085616",
+    "phone": "07 3000 2002",
+    "email": "info@northernearth.example",
+    "accountManagerId": 2,
+    "clientSourceId": 3,
+    "authorisedRepresentativeId": 2,
+    "createdWhen": "2025-06-15T10:00:00.000Z",
+    "createdBy": "broker.demo"
+  },
+  {
+    "clientId": 3,
+    "name": "Jake He Trading",
+    "tradingName": "JH Projects",
+    "abn": "",
+    "phone": "0400 000 003",
+    "email": "jake@jhprojects.example",
+    "accountManagerId": 1,
+    "clientSourceId": 16,
+    "authorisedRepresentativeId": 1,
+    "createdWhen": "2025-07-01T10:00:00.000Z",
+    "createdBy": "broker.demo"
+  }
+]

@@ -1,0 +1,83 @@
+import { useFormContext } from "react-hook-form";
+import { FieldInput } from "~/components/ui/form-controls";
+import { type CarPolicyFormValues } from "~/lib/zod/policy-car";
+import {
+  groupExcessFieldsByBand,
+  resolveContractValueBand,
+  visibleExcessFields,
+} from "~/lib/excesses";
+import { ExcessField, Section } from "./section-shared";
+
+export function ExcessesStep() {
+  const { register, watch } = useFormContext<CarPolicyFormValues>();
+  const contractWorksSumInsured = watch("contractWorksSumInsured");
+  const liabilityLimitBand = watch("liabilityLimitBand");
+  const visibility = { contractWorksSumInsured, liabilityLimitBand };
+
+  const contractWorksBands = groupExcessFieldsByBand(
+    visibleExcessFields({ ...visibility, group: "contractWorks" }),
+  );
+  const legalLiabilityBands = groupExcessFieldsByBand(
+    visibleExcessFields({ ...visibility, group: "legalLiability" }),
+  );
+  const contractValueBand = resolveContractValueBand(contractWorksSumInsured);
+
+  return (
+    <div className="flex flex-col gap-8">
+      <Section title="Section 1 – Contract Works Excesses">
+        <div className="flex flex-col gap-6">
+          <ExcessBandGroups bands={contractWorksBands} />
+          {!contractValueBand ? (
+            <p className="text-sm text-muted-foreground">
+              Enter Contract Works sum insured in Limits of Liability to show
+              Minor / Major Perils excesses for the matching contract value
+              band.
+            </p>
+          ) : null}
+          <FieldInput
+            label="Excess Additional Notes"
+            {...register("excesses.excessAdditionalNotes")}
+          />
+        </div>
+      </Section>
+
+      <Section title="Section 2 – Legal Liability Excesses">
+        <div className="flex flex-col gap-6">
+          <ExcessBandGroups bands={legalLiabilityBands} />
+          {!contractValueBand ? (
+            <p className="text-sm text-muted-foreground">
+              Enter Contract Works sum insured and Limit of Liability to show
+              the matching legal liability excess.
+            </p>
+          ) : null}
+        </div>
+      </Section>
+    </div>
+  );
+}
+
+function ExcessBandGroups({
+  bands,
+}: {
+  bands: ReturnType<typeof groupExcessFieldsByBand>;
+}) {
+  return (
+    <div className="flex flex-col gap-6">
+      {bands.map((group) => (
+        <div
+          key={group.band ?? group.fields[0]?.key}
+          className="flex flex-col gap-3"
+        >
+          {group.band ? (
+            <p className="text-sm font-medium text-foreground">{group.band}</p>
+          ) : null}
+          <div className="grid gap-4 md:grid-cols-2">
+            {group.fields.map((field) => (
+              <ExcessField key={field.key} field={field} />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}

@@ -1,0 +1,34 @@
+# Build / deps / secrets
+build
+.wrangler
+.react-router
+.tmp
+coverage
+test-results
+playwright-report
+blob-report
+node_modules
+package-lock.json
+
+# Generated / archive / vendor-ish
+_archive
+supabase
+drizzle
+public
+*.min.js
+*.min.css
+
+# Large / binary-adjacent
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.ico
+*.woff
+*.woff2
+*.ttf
+*.eot
+pnpm-lock.yaml
+yarn.lock

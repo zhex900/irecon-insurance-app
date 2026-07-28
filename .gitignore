@@ -17,6 +17,9 @@ logs/
 .wrangler/
 .react-router/
 /build/
+.vscode/
+supabase/.temp/
+supabase/.branches/
 
 # Word lock files
 ~$*
@@ -30,3 +33,6 @@ playwright/.cache/
 
 # Local MSSQL credentials (live under _archive/mssql/)
 _archive/mssql/.env.mssql
+
+# Nested git checkout under archive (not part of this repo)
+_archive/legacy-app/

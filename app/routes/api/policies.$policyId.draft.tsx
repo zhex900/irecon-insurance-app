@@ -1,0 +1,68 @@
+import { carPolicyDraftSchema } from "~/lib/zod/policy-car";
+import { POLICY_STATUS } from "~/lib/zod/policy-car";
+import { mergeDraftIntoPolicy } from "~/lib/services/policy/draft-merge";
+import {
+  deletePolicyDraft,
+  getPolicy,
+  savePolicy,
+} from "~/lib/services/policy/data.service";
+import type { Route } from "./+types/policies.$policyId.draft";
+
+/** Browser draft-save / discard endpoint (Postgres via Drizzle). */
+export async function action({ request, params }: Route.ActionArgs) {
+  const policyId = Number(params.policyId);
+
+  if (request.method === "DELETE") {
+    try {
+      await deletePolicyDraft(policyId);
+      return Response.json({ ok: true });
+    } catch (error) {
+      return Response.json(
+        {
+          ok: false,
+          formError:
+            error instanceof Error ? error.message : "Could not discard policy",
+        },
+        { status: 400 },
+      );
+    }
+  }
+
+  if (request.method !== "PUT" && request.method !== "POST") {
+    return Response.json(
+      { ok: false, formError: "Method not allowed" },
+      { status: 405 },
+    );
+  }
+
+  const body = (await request.json()) as unknown;
+  const parsed = carPolicyDraftSchema.safeParse(body);
+  if (!parsed.success) {
+    return Response.json({
+      ok: false,
+      errors: parsed.error.flatten().fieldErrors,
+      formError: "Draft could not be saved. Check the form and try again.",
+    });
+  }
+
+  const existing = await getPolicy(policyId);
+  if (!existing) {
+    return Response.json(
+      { ok: false, formError: "Policy not found" },
+      { status: 404 },
+    );
+  }
+  if (
+    existing.policyStatusId === POLICY_STATUS.Taken ||
+    existing.policyStatusId === POLICY_STATUS.NotTaken
+  ) {
+    return Response.json({
+      ok: false,
+      formError: "This policy status cannot be changed.",
+    });
+  }
+
+  const merged = mergeDraftIntoPolicy(existing, parsed.data);
+  await savePolicy(merged);
+  return Response.json({ ok: true, savedAt: new Date().toISOString() });
+}

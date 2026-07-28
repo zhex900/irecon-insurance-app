@@ -1,0 +1,97 @@
+{
+  "generatedAt": "2026-07-20T10:35:22.970Z",
+  "style": "Word layout preserved via LibreOffice PDF basePdf",
+  "slots": [
+    {
+      "key": "schedule-annual",
+      "documentTypeCode": "CARSCHED",
+      "coverTypeId": 1,
+      "sourceFile": "CAR_iAnyware Schedule (Annual) [from 01.26].doc",
+      "fieldCount": 47,
+      "schemaCount": 48,
+      "pages": 2,
+      "file": "schedule-annual.json",
+      "basePdfFile": "base-pdfs/schedule-annual.pdf"
+    },
+    {
+      "key": "schedule-single",
+      "documentTypeCode": "CARSCHED",
+      "coverTypeId": 2,
+      "sourceFile": "CAR_iAnyware Schedule (Single) [from 01.26].doc",
+      "fieldCount": 45,
+      "schemaCount": 47,
+      "pages": 2,
+      "file": "schedule-single.json",
+      "basePdfFile": "base-pdfs/schedule-single.pdf"
+    },
+    {
+      "key": "schedule-owner-builder",
+      "documentTypeCode": "CARSCHED",
+      "coverTypeId": 3,
+      "sourceFile": "CAR_iAnyware Schedule (Owner Builder) [from 06.25] - v2.doc",
+      "fieldCount": 37,
+      "schemaCount": 39,
+      "pages": 2,
+      "file": "schedule-owner-builder.json",
+      "basePdfFile": "base-pdfs/schedule-owner-builder.pdf"
+    },
+    {
+      "key": "rating-annual",
+      "documentTypeCode": "CARRATING",
+      "coverTypeId": 1,
+      "sourceFile": "CAR_Quotation & Record of Answers (Annual) [from 01.26].doc",
+      "fieldCount": 76,
+      "schemaCount": 74,
+      "pages": 3,
+      "file": "rating-annual.json",
+      "basePdfFile": "base-pdfs/rating-annual.pdf"
+    },
+    {
+      "key": "rating-single",
+      "documentTypeCode": "CARRATING",
+      "coverTypeId": 2,
+      "sourceFile": "CAR_Quotation & Record of Answers (Single) [from 01.26].doc",
+      "fieldCount": 74,
+      "schemaCount": 75,
+      "pages": 3,
+      "file": "rating-single.json",
+      "basePdfFile": "base-pdfs/rating-single.pdf"
+    },
+    {
+      "key": "rating-owner-builder",
+      "documentTypeCode": "CARRATING",
+      "coverTypeId": 3,
+      "sourceFile": "CAR_Quotation & Record of Answers (Owner Builder) [from 06.25] - v2.doc",
+      "fieldCount": 66,
+      "schemaCount": 68,
+      "pages": 2,
+      "file": "rating-owner-builder.json",
+      "basePdfFile": "base-pdfs/rating-owner-builder.pdf"
+    },
+    {
+      "key": "adjustment",
+      "documentTypeCode": "CARADJUST",
+      "coverTypeId": null,
+      "sourceFile": "CAR_Adjustment.doc",
+      "fieldCount": 57,
+      "schemaCount": 63,
+      "pages": 1,
+      "file": "adjustment.json",
+      "basePdfFile": "base-pdfs/adjustment.pdf"
+    }
+  ],
+  "libraryDocuments": [
+    {
+      "name": "ATC Stamp duty Exemption.pdf",
+      "path": "/library-documents/ATC%20Stamp%20duty%20Exemption.pdf"
+    },
+    {
+      "name": "POLICY COMPARISON JUNE 2024.pdf",
+      "path": "/library-documents/POLICY%20COMPARISON%20JUNE%202024.pdf"
+    },
+    {
+      "name": "IA Annual CAR TPL Wording (eff Jan 2026) - Sample.pdf",
+      "path": "/library-documents/IA%20Annual%20CAR%20TPL%20Wording%20(eff%20Jan%202026)%20-%20Sample.pdf"
+    }
+  ]
+}

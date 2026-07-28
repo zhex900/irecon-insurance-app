@@ -1,0 +1,11 @@
+---
+description: Prefer ReUI registry for UI — search MCP, install with shadcn, adapt by reuse
+globs: ["**/*.tsx", "**/*.ts"]
+alwaysApply: false
+---
+
+# ReUI
+
+When building or changing UI in this project, follow the **reui** agent skill (`.cursor/skills/reui/`) and use the **reui** MCP (`https://mcp.reui.io`).
+
+Workflow: **search** → **install** (`npx shadcn@latest add @reui/...`) → **read API** (`get_component`) → **adapt by reuse** (real data + theme tokens). Do not hand-roll what ReUI already ships.

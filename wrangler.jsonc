@@ -1,0 +1,32 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "insurance-app-staging",
+  "compatibility_date": "2026-07-20",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "./workers/app.ts",
+  "observability": {
+    "enabled": true,
+  },
+  "placement": {
+    "mode": "smart",
+  },
+  "vars": {
+    "SUPABASE_URL": "https://tjnsygunohylofihoksl.supabase.co",
+  },
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "1861601674b24d2ab8870dcb0c7a68ed",
+    },
+  ],
+  "r2_buckets": [
+    {
+      "binding": "AVATARS",
+      "bucket_name": "insurance-app-avatars",
+    },
+    {
+      "binding": "LIBRARY_DOCUMENTS",
+      "bucket_name": "insurance-app-library-documents",
+    },
+  ],
+}

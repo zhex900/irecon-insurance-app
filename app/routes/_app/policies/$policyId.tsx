@@ -1,0 +1,434 @@
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  redirect,
+  Link,
+  useActionData,
+  useNavigation,
+  useSearchParams,
+  useSubmit,
+  type ShouldRevalidateFunctionArgs,
+} from "react-router";
+import {
+  CircleAlertIcon,
+  CircleCheckIcon,
+  CopyIcon,
+  SlidersHorizontalIcon,
+  Trash2Icon,
+} from "lucide-react";
+import { CarPolicyWizard } from "~/components/policies/wizard/car-policy-wizard";
+import {
+  allowWizardLeave,
+  clearWizardStepState,
+} from "~/components/policies/wizard/step-memory";
+import { DeletePoliciesDialog } from "~/components/policies/delete-policies-dialog";
+import { Button } from "~/components/ui/button";
+import { LoadingButton } from "~/components/ui/loading-button";
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "~/components/ui/tooltip";
+import { withSuccessToast } from "~/hooks/use-success-toast";
+import {
+  carPolicyDraftSchema,
+  carPolicyPricingSchema,
+  carPolicySchema,
+  isTerminalStatus,
+  POLICY_STATUS,
+  type CarPolicyFormValues,
+} from "~/lib/zod/policy-car";
+import { requireAuth } from "~/lib/auth/session.server";
+import { writeAuditLog } from "~/lib/services/audit/service";
+import {
+  addPolicyNote,
+  applyPremiumCalculation,
+  clonePolicy,
+  PolicySaveError,
+  savePolicyDraft,
+  upsertPolicyFromForm,
+} from "~/lib/services/policy/orchestration.service";
+import { deletePolicies, getPolicy } from "~/lib/services/policy/data.service";
+import { getAuthorisedRepresentative } from "~/lib/services/authorised-representatives/service";
+import {
+  getCarWording,
+  getReferenceData,
+} from "~/lib/services/reference.service";
+import { getClient } from "~/lib/services/clients/service";
+import { listEmailTemplates } from "~/lib/services/email/templates";
+import type { Route } from "./+types/$policyId";
+
+export function meta({ loaderData }: Route.MetaArgs) {
+  return [{ title: `${loaderData.policy.policyNumber} | BrokerSure` }];
+}
+
+export async function loader({ params }: Route.LoaderArgs) {
+  const policyId = Number(params.policyId);
+  const policy = await getPolicy(policyId);
+  if (!policy) throw new Response("Policy not found", { status: 404 });
+  const client = await getClient(policy.clientId);
+  if (!client) throw new Response("Client not found", { status: 404 });
+  const [broker, emailTemplates] = await Promise.all([
+    getAuthorisedRepresentative(client.authorisedRepresentativeId),
+    listEmailTemplates(),
+  ]);
+
+  return {
+    policy,
+    client,
+    broker,
+    emailTemplates,
+    reference: getReferenceData(),
+    carWording: await getCarWording(),
+  };
+}
+
+function parsePayload(raw: string): unknown {
+  return JSON.parse(raw) as unknown;
+}
+
+export async function action({ request, params }: Route.ActionArgs) {
+  const actor = await requireAuth(request);
+  const policyId = Number(params.policyId);
+  const formData = await request.formData();
+  const intent = String(formData.get("intent") ?? "save");
+
+  if (intent === "clone") {
+    const source = await getPolicy(policyId);
+    if (!source || !isTerminalStatus(source.policyStatusId)) {
+      throw new Response("Only taken or not taken policies can be cloned.", {
+        status: 400,
+      });
+    }
+    const cloned = await clonePolicy(policyId);
+    await writeAuditLog({
+      actor,
+      action: "policy.clone",
+      entityType: "policy",
+      entityId: cloned.policyId,
+      summary: `Cloned policy ${source.policyNumber} → ${cloned.policyNumber}`,
+      metadata: {
+        sourcePolicyId: policyId,
+        sourcePolicyNumber: source.policyNumber,
+        policyNumber: cloned.policyNumber,
+      },
+      request,
+    });
+    return redirect(
+      withSuccessToast(
+        `/policies/${cloned.policyId}?cloned=1`,
+        `Policy ${cloned.policyNumber} created`,
+      ),
+    );
+  }
+
+  if (intent === "delete") {
+    try {
+      const [deleted] = await deletePolicies([policyId]);
+      await writeAuditLog({
+        actor,
+        action: "policy.delete",
+        entityType: "policy",
+        entityId: policyId,
+        summary: `Deleted policy ${deleted.policyNumber}`,
+        metadata: {
+          clientId: deleted.clientId,
+          policyNumber: deleted.policyNumber,
+        },
+        request,
+      });
+      return redirect(
+        withSuccessToast(
+          `/clients/${deleted.clientId}`,
+          `Policy ${deleted.policyNumber} deleted`,
+        ),
+      );
+    } catch (error) {
+      return {
+        formError:
+          error instanceof Error ? error.message : "Could not delete policy.",
+      };
+    }
+  }
+
+  if (intent === "add-note") {
+    const description = String(formData.get("description") ?? "");
+    try {
+      const policy = await addPolicyNote(policyId, description);
+      await writeAuditLog({
+        actor,
+        action: "policy.note_add",
+        entityType: "policy",
+        entityId: policyId,
+        summary: `Added note on ${policy.policyNumber}`,
+        metadata: { policyNumber: policy.policyNumber },
+        request,
+      });
+      return {
+        ok: true as const,
+        notes: policy.notes,
+        message: `Note saved on ${policy.policyNumber}`,
+      };
+    } catch (error) {
+      return {
+        formError:
+          error instanceof PolicySaveError
+            ? error.message
+            : error instanceof Error
+              ? error.message
+              : "Could not add note.",
+      };
+    }
+  }
+
+  const payload = parsePayload(String(formData.get("payload") ?? "{}"));
+
+  if (intent === "draft") {
+    const parsed = carPolicyDraftSchema.safeParse(payload);
+    if (!parsed.success) {
+      return { errors: parsed.error.flatten().fieldErrors };
+    }
+    try {
+      await savePolicyDraft(policyId, parsed.data);
+    } catch (error) {
+      if (error instanceof PolicySaveError) {
+        return { formError: error.message };
+      }
+      throw error;
+    }
+    return {
+      ok: true as const,
+      savedAt: new Date().toISOString(),
+      draft: true as const,
+    };
+  }
+
+  if (intent === "recalculate" || intent === "calculate") {
+    const parsed = carPolicyPricingSchema.safeParse(payload);
+    if (!parsed.success) {
+      return { errors: parsed.error.flatten().fieldErrors };
+    }
+    const policy = await applyPremiumCalculation(
+      policyId,
+      parsed.data as CarPolicyFormValues,
+    );
+    return {
+      premium: policy.car.premium,
+      referralReasons: policy.car.referralReasons,
+      rating: policy.car.rating,
+      notes: policy.notes,
+    };
+  }
+
+  const parsed = carPolicySchema.safeParse(payload);
+  if (!parsed.success) {
+    return { errors: parsed.error.flatten().fieldErrors };
+  }
+
+  const before = await getPolicy(policyId);
+  try {
+    await upsertPolicyFromForm(policyId, parsed.data);
+  } catch (error) {
+    if (error instanceof PolicySaveError) {
+      return { formError: error.message };
+    }
+    throw error;
+  }
+
+  if (
+    before != null &&
+    Number(before.policyStatusId) !== Number(parsed.data.policyStatusId)
+  ) {
+    await writeAuditLog({
+      actor,
+      action: "policy.status_change",
+      entityType: "policy",
+      entityId: policyId,
+      summary: `Changed status on ${before?.policyNumber ?? policyId}: ${before?.policyStatusId} → ${parsed.data.policyStatusId}`,
+      metadata: {
+        fromStatusId: before?.policyStatusId,
+        toStatusId: parsed.data.policyStatusId,
+        policyNumber: before?.policyNumber,
+      },
+      request,
+    });
+    return redirect(
+      withSuccessToast(
+        `/policies/${policyId}`,
+        `Policy ${before?.policyNumber ?? policyId} status saved`,
+      ),
+    );
+  }
+
+  await writeAuditLog({
+    actor,
+    action: "policy.save",
+    entityType: "policy",
+    entityId: policyId,
+    summary: `Saved policy ${before?.policyNumber ?? policyId}`,
+    metadata: { policyNumber: before?.policyNumber },
+    request,
+  });
+
+  return redirect(
+    withSuccessToast(
+      `/policies/${policyId}`,
+      `Policy ${before?.policyNumber ?? policyId} saved`,
+    ),
+  );
+}
+
+export function shouldRevalidate({
+  formData,
+  actionResult,
+  defaultShouldRevalidate,
+}: ShouldRevalidateFunctionArgs) {
+  if (formData?.get("intent") === "draft") return false;
+  if (
+    actionResult &&
+    typeof actionResult === "object" &&
+    "draft" in actionResult &&
+    actionResult.draft
+  ) {
+    return false;
+  }
+  return defaultShouldRevalidate;
+}
+
+export default function PolicyDetailRoute({
+  loaderData,
+}: Route.ComponentProps) {
+  const [searchParams] = useSearchParams();
+  const submit = useSubmit();
+  const navigation = useNavigation();
+  const actionData = useActionData<typeof action>();
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const readOnly = isTerminalStatus(loaderData.policy.policyStatusId);
+  const canAdjust =
+    loaderData.policy.policyStatusId === POLICY_STATUS.Taken &&
+    Boolean(loaderData.policy.car.premium);
+  const canClone = readOnly;
+  const canDelete = !readOnly;
+  const isCloning =
+    navigation.state !== "idle" &&
+    navigation.formData?.get("intent") === "clone";
+  const isDeleting =
+    navigation.state !== "idle" &&
+    navigation.formData?.get("intent") === "delete";
+  const wasCloned = searchParams.get("cloned") === "1";
+  const isNew = searchParams.get("new") === "1";
+  const clearedCloneForPolicyId = useRef<number | null>(null);
+  const deleteError =
+    actionData && "formError" in actionData ? actionData.formError : null;
+
+  useEffect(() => {
+    if (!wasCloned) return;
+    if (clearedCloneForPolicyId.current === loaderData.policy.policyId) return;
+    clearWizardStepState(loaderData.policy.policyId);
+    clearedCloneForPolicyId.current = loaderData.policy.policyId;
+  }, [wasCloned, loaderData.policy.policyId]);
+
+  const headerActions: ReactNode =
+    canAdjust || canClone || canDelete ? (
+      <div className="flex items-center gap-2">
+        {canDelete ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="text-destructive hover:text-destructive"
+            onClick={() => setDeleteOpen(true)}
+          >
+            <Trash2Icon data-icon="inline-start" />
+            Delete
+          </Button>
+        ) : null}
+        {canAdjust ? (
+          <Link to={`/policies/${loaderData.policy.policyId}/adjust`}>
+            <Button size="sm">
+              <SlidersHorizontalIcon data-icon="inline-start" />
+              {loaderData.policy.car.adjusted ? "Re-adjust" : "Adjust"}
+            </Button>
+          </Link>
+        ) : null}
+        {canClone ? (
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <LoadingButton
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  loading={isCloning}
+                  loadingLabel="Cloning…"
+                  onClick={() => {
+                    submit({ intent: "clone" }, { method: "post" });
+                  }}
+                />
+              }
+            >
+              <CopyIcon data-icon="inline-start" />
+              Clone
+            </TooltipTrigger>
+            <TooltipContent>Clone policy</TooltipContent>
+          </Tooltip>
+        ) : null}
+      </div>
+    ) : null;
+
+  return (
+    <div>
+      {wasCloned ? (
+        <Alert variant="success" className="mb-6">
+          <CircleCheckIcon />
+          <AlertTitle>Policy cloned</AlertTitle>
+          <AlertDescription>You are editing the new copy.</AlertDescription>
+        </Alert>
+      ) : null}
+      {searchParams.get("adjusted") === "1" ? (
+        <Alert variant="success" className="mb-6">
+          <CircleCheckIcon />
+          <AlertTitle>Policy adjusted</AlertTitle>
+          <AlertDescription>Adjustment saved successfully.</AlertDescription>
+        </Alert>
+      ) : null}
+      {deleteError && !deleteOpen ? (
+        <Alert variant="destructive" className="mb-6">
+          <CircleAlertIcon />
+          <AlertTitle>Could not delete</AlertTitle>
+          <AlertDescription>{deleteError}</AlertDescription>
+        </Alert>
+      ) : null}
+      <CarPolicyWizard
+        key={`${loaderData.policy.policyId}-${wasCloned ? "cloned" : "view"}`}
+        policy={loaderData.policy}
+        reference={loaderData.reference}
+        carWording={loaderData.carWording}
+        readOnly={readOnly}
+        freshSteps={wasCloned}
+        isNew={isNew}
+        clientName={loaderData.client.name}
+        brokerName={loaderData.broker?.fullName ?? ""}
+        brokerEmail={loaderData.broker?.email ?? ""}
+        emailTemplates={loaderData.emailTemplates}
+        headerActions={headerActions}
+      />
+      <DeletePoliciesDialog
+        policies={[
+          {
+            policyId: loaderData.policy.policyId,
+            policyNumber: loaderData.policy.policyNumber,
+          },
+        ]}
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        loading={isDeleting}
+        error={deleteOpen ? deleteError : null}
+        onBeforeSubmit={() => {
+          clearWizardStepState(loaderData.policy.policyId);
+          allowWizardLeave(loaderData.policy.policyId);
+        }}
+      />
+    </div>
+  );
+}

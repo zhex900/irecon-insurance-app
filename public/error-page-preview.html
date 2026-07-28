@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Error page preview — BrokerSure</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #fafafa;
+        --fg: #171717;
+        --muted: #737373;
+        --card: #f4f4f5;
+        --border: #e4e4e7;
+        --primary: #18181b;
+        --destructive: #dc2626;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0a0a0a;
+          --fg: #fafafa;
+          --muted: #a3a3a3;
+          --card: #27272a;
+          --border: #3f3f46;
+          --primary: #fafafa;
+          --destructive: #f87171;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          Segoe UI,
+          Roboto,
+          sans-serif;
+        background: var(--bg);
+        color: var(--fg);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        padding: max(3rem, 12vh) 1rem 3rem;
+      }
+      .wrap {
+        width: 100%;
+        max-width: 32rem;
+        text-align: center;
+      }
+      svg {
+        width: 100%;
+        max-width: 20rem;
+        height: auto;
+        margin: 0 auto;
+      }
+      .status {
+        margin-top: 1.5rem;
+        font-size: 3.75rem;
+        font-weight: 600;
+        letter-spacing: -0.03em;
+        font-variant-numeric: tabular-nums;
+        color: var(--fg);
+      }
+      h1 {
+        margin: 0.35rem 0 0;
+        font-size: 1.875rem;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+      .sub {
+        margin: 0.25rem 0 0;
+        font-size: 1.125rem;
+        color: var(--muted);
+      }
+      .details {
+        margin: 0.75rem 0 0;
+        font-size: 0.875rem;
+        color: var(--muted);
+      }
+      .actions {
+        margin-top: 2rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        justify-content: center;
+      }
+      a.btn,
+      button.btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        height: 2.25rem;
+        padding: 0 0.9rem;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        text-decoration: none;
+        border: 1px solid transparent;
+        cursor: pointer;
+        font-family: inherit;
+      }
+      a.btn-primary {
+        background: var(--primary);
+        color: var(--bg);
+      }
+      a.btn-outline,
+      button.btn-outline {
+        border-color: var(--border);
+        color: var(--fg);
+        background: transparent;
+      }
+      .stack-wrap {
+        width: 100%;
+        max-width: 48rem;
+        margin-top: 2.5rem;
+      }
+      .stack-label {
+        margin: 0 0 0.5rem;
+        font-size: 0.7rem;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+        text-align: left;
+      }
+      pre {
+        margin: 0;
+        max-height: 40vh;
+        overflow: auto;
+        border: 1px solid var(--border);
+        border-radius: 0.75rem;
+        background: var(--card);
+        padding: 1rem;
+        text-align: left;
+        font-size: 0.75rem;
+        line-height: 1.5;
+      }
+      [hidden] {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <svg
+        viewBox="0 0 320 220"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        role="img"
+        aria-label="Unexpected server error"
+      >
+        <rect
+          x="24"
+          y="36"
+          width="200"
+          height="148"
+          rx="16"
+          fill="var(--card)"
+          stroke="var(--border)"
+          stroke-width="2"
+        />
+        <path
+          d="M48 72h120M48 96h88M48 120h104"
+          stroke="var(--muted)"
+          stroke-opacity="0.45"
+          stroke-width="8"
+          stroke-linecap="round"
+        />
+        <circle
+          cx="236"
+          cy="128"
+          r="56"
+          fill="var(--bg)"
+          stroke="var(--fg)"
+          stroke-opacity="0.2"
+          stroke-width="3"
+        />
+        <path
+          d="M214 128h44M236 106v44"
+          stroke="var(--fg)"
+          stroke-opacity="0.7"
+          stroke-width="6"
+          stroke-linecap="round"
+        />
+        <path
+          d="M196 168c18 18 48 18 66 0"
+          stroke="var(--destructive)"
+          stroke-opacity="0.85"
+          stroke-width="5"
+          stroke-linecap="round"
+        />
+        <circle cx="210" cy="58" r="10" fill="var(--primary)" fill-opacity="0.8" />
+        <circle cx="268" cy="78" r="6" fill="var(--muted)" fill-opacity="0.5" />
+        <path
+          d="M72 176c28-36 64-36 92 0"
+          stroke="var(--primary)"
+          stroke-opacity="0.3"
+          stroke-width="4"
+          stroke-linecap="round"
+        />
+      </svg>
+
+      <p class="status" id="status">500</p>
+      <h1>Oops!</h1>
+      <p class="sub" id="sub">Unexpected Server Error</p>
+      <p class="details" id="details">
+        Something exploded while handling this request.
+      </p>
+      <div class="actions">
+        <a class="btn btn-primary" href="/dashboard">Go to dashboard</a>
+        <button type="button" class="btn btn-outline" id="toggle-error">
+          Show error
+        </button>
+      </div>
+    </div>
+
+    <div class="stack-wrap" id="stack" hidden>
+      <p class="stack-label">Stack trace</p>
+      <pre><code>Error: Something exploded while handling this request.
+    at loader (app/routes/example.tsx:12:11)
+    at callRouteHandler (node_modules/react-router/dist/development/chunk.js:1:1)
+    at requestHandler (workers/app.ts:40:14)</code></pre>
+    </div>
+
+    <script>
+      const toggle = document.getElementById("toggle-error");
+      const stack = document.getElementById("stack");
+      toggle.addEventListener("click", () => {
+        const open = stack.hidden;
+        stack.hidden = !open;
+        toggle.textContent = open ? "Hide error" : "Show error";
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,17 @@
+1.	Generate ROA 
+2.	Generate Schedule
+
+* polish UI and texts
+* pdf docs. pdf generation 
+* reorganise project structures
+* code PR, hygene, code quality
+* CI/CD
+   tests
+   PR deploy
+   Staging deploy
+   Prod deploy
+* resend email 
+* data
+    test, uat, remove private data
+    prod data migration 
+* domain, email domain 

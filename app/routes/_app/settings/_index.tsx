@@ -1,0 +1,184 @@
+import {
+  ArrowRightIcon,
+  BadgeDollarSignIcon,
+  FileStackIcon,
+  MailIcon,
+  ScrollTextIcon,
+  SlidersHorizontalIcon,
+  UserCogIcon,
+  UsersIcon,
+} from "lucide-react";
+import { PageHeader } from "~/components/layout/app-layout";
+import { ThemeModePicker } from "~/components/theme-toggle";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "~/components/ui/card";
+import { requireAuth } from "~/lib/auth/session.server";
+import { isSuperAdmin } from "~/lib/auth/roles";
+import { isFeatureEnabled } from "~/lib/services/feature-flags";
+import type { Route } from "./+types/_index";
+
+export function meta() {
+  return [{ title: "Settings | BrokerSure" }];
+}
+
+export async function loader({ request }: Route.LoaderArgs) {
+  const viewer = await requireAuth(request);
+  const [
+    auditLogEnabled,
+    pricesEnabled,
+    emailTemplatesEnabled,
+    libraryDocumentsEnabled,
+  ] = await Promise.all([
+    isFeatureEnabled("audit_log"),
+    isFeatureEnabled("prices"),
+    isFeatureEnabled("email_templates"),
+    isFeatureEnabled("library_documents"),
+  ]);
+  const superAdmin = isSuperAdmin(viewer);
+  return {
+    showFeatures: superAdmin,
+    showEmailTemplates: emailTemplatesEnabled || superAdmin,
+    showLibraryDocuments: libraryDocumentsEnabled || superAdmin,
+    showPrices: pricesEnabled || superAdmin,
+    showAuditLog: auditLogEnabled || superAdmin,
+    auditLogEnabled,
+    pricesEnabled,
+    emailTemplatesEnabled,
+    libraryDocumentsEnabled,
+  };
+}
+
+export default function SettingsIndexRoute({
+  loaderData,
+}: Route.ComponentProps) {
+  const settingsItems = [
+    {
+      to: "/settings/users",
+      title: "User Management",
+      description: "Manage users and their permissions.",
+      icon: UserCogIcon,
+    },
+    {
+      to: "/settings/ar-brokers",
+      title: "Authorised Representatives",
+      description:
+        "Search, add, edit, and remove authorised representative brokers used on clients.",
+      icon: UsersIcon,
+    },
+    ...(loaderData.showEmailTemplates
+      ? [
+          {
+            to: "/settings/email-templates",
+            title: "Email templates",
+            description: loaderData.emailTemplatesEnabled
+              ? "Set broker and insurer document email templates and the insurer address."
+              : "Email templates is disabled for other roles. Super-admins can still view it.",
+            icon: MailIcon,
+          },
+        ]
+      : []),
+    ...(loaderData.showLibraryDocuments
+      ? [
+          {
+            to: "/settings/library-documents",
+            title: "Library documents",
+            description: loaderData.libraryDocumentsEnabled
+              ? "Upload and manage static PDFs attached to CAR document packs."
+              : "Library documents is disabled for other roles. Super-admins can still manage it.",
+            icon: FileStackIcon,
+          },
+        ]
+      : []),
+    ...(loaderData.showFeatures
+      ? [
+          {
+            to: "/settings/features",
+            title: "Features",
+            description: "Enable or disable product features.",
+            icon: SlidersHorizontalIcon,
+          },
+        ]
+      : []),
+    ...(loaderData.showAuditLog
+      ? [
+          {
+            to: "/settings/audit-log",
+            title: "Audit log",
+            description: loaderData.auditLogEnabled
+              ? "Trace material actions. Admins see everyone; brokers see their own activity."
+              : "Audit log is disabled for other roles. Super-admins can still view it.",
+            icon: ScrollTextIcon,
+          },
+        ]
+      : []),
+    ...(loaderData.showPrices
+      ? [
+          {
+            to: "/settings/prices/car-rates",
+            title: "Prices",
+            description: loaderData.pricesEnabled
+              ? "Manage CAR rate, stamp duty, ESL, plant, terrorism, and fee catalogues."
+              : "Prices is disabled for other roles. Super-admins can still manage it.",
+            icon: BadgeDollarSignIcon,
+          },
+        ]
+      : []),
+  ];
+
+  return (
+    <div>
+      <PageHeader
+        title="Settings"
+        description="Admin configuration for brokers and reference data."
+      />
+
+      <div className="flex flex-col gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Appearance</CardTitle>
+            <CardDescription>
+              Choose light, dark, or match your system preference.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ThemeModePicker className="max-w-md" />
+          </CardContent>
+        </Card>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          {settingsItems.map((item) => (
+            <a
+              key={item.to}
+              href={item.to}
+              className="group block h-full rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+              onClick={(event) => {
+                // Full page load — client-side transitions to /settings/prices
+                // were not completing from this page (direct URL worked).
+                event.preventDefault();
+                window.location.assign(item.to);
+              }}
+            >
+              <Card className="pointer-events-none h-full transition-colors group-hover:border-primary/40 group-hover:bg-muted/30">
+                <CardHeader className="gap-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                      <item.icon className="size-5" />
+                    </span>
+                    <ArrowRightIcon className="size-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                  </div>
+                  <CardTitle className="text-base">{item.title}</CardTitle>
+                  <CardDescription>{item.description}</CardDescription>
+                </CardHeader>
+              </Card>
+            </a>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
