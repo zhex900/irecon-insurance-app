@@ -54,10 +54,6 @@ npm run dev            # http://127.0.0.1:5173
 
 Sign in with a seeded user from `_archive/data/users.json`. Default password: `password123`.
 
-### Address autocomplete (optional)
-
-Set `VITE_MAPBOX_ACCESS_TOKEN` in `.env` for Mapbox site-address autofill + map.
-
 ## Data
 
 | Source                        | Purpose                                                      |

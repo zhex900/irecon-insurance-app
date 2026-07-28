@@ -22,13 +22,6 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    include: [
-      "react",
-      "react-dom",
-      "mapbox-gl",
-      "@mapbox/search-js-react",
-      "@mapbox/search-js-web",
-      "@mapbox/search-js-core",
-    ],
+    include: ["react", "react-dom"],
   },
 });
