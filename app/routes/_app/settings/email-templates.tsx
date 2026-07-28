@@ -8,7 +8,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "~/components/layout/app-layout";
-import { SettingsBackLink } from "~/components/layout/settings-back-link";
 import { Button } from "~/components/ui/button";
 import { LoadingButton } from "~/components/ui/loading-button";
 import {
@@ -335,7 +334,6 @@ export default function SettingsEmailTemplatesRoute({
 
   return (
     <div>
-      <SettingsBackLink />
       <PageHeader
         title="Email templates"
         description={
@@ -343,6 +341,10 @@ export default function SettingsEmailTemplatesRoute({
             ? "Default subject and body when emailing selected policy documents to the broker or insurer."
             : "Email templates is disabled for other roles. Super-admins can still view and edit."
         }
+        breadcrumbs={[
+          { label: "Settings", to: "/settings" },
+          { label: "Email templates" },
+        ]}
       />
 
       <div className="grid max-w-3xl gap-4 sm:grid-cols-2">

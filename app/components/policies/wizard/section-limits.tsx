@@ -56,6 +56,7 @@ export function LimitsOfLiabilityStep({
             inputMode="decimal"
             prefix="$"
             error={errors.plantEquipment?.message}
+            className="md:col-span-2"
           />
         </div>
       </Section>

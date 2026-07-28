@@ -3,7 +3,6 @@ import { redirect, useFetcher } from "react-router";
 import { SlidersHorizontalIcon } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "~/components/layout/app-layout";
-import { SettingsBackLink } from "~/components/layout/settings-back-link";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Label } from "~/components/ui/label";
 import {
@@ -134,10 +133,13 @@ export default function SettingsFeaturesRoute({
 }: Route.ComponentProps) {
   return (
     <div>
-      <SettingsBackLink />
       <PageHeader
         title="Features"
         description="Enable or disable product features."
+        breadcrumbs={[
+          { label: "Settings", to: "/settings" },
+          { label: "Features" },
+        ]}
       />
 
       <div className="flex max-w-2xl flex-col gap-4">

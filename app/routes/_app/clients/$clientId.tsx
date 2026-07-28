@@ -200,18 +200,13 @@ export default function ClientDetailRoute({
 
   return (
     <div>
-      <div className="mb-4">
-        <Link
-          to="/clients"
-          className="text-sm font-medium text-primary hover:underline"
-        >
-          ← Back to Clients
-        </Link>
-      </div>
-
       <PageHeader
         title="Client Profile"
         description="Review client details and CAR policies."
+        breadcrumbs={[
+          { label: "Clients", to: "/clients" },
+          { label: client.name || `Client #${client.clientId}` },
+        ]}
         action={
           <div className="flex flex-wrap gap-2">
             <Link to={`/clients/${client.clientId}/edit`}>

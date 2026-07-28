@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { Form, redirect, useSearchParams } from "react-router";
 import { ScrollTextIcon } from "lucide-react";
 import { PageHeader } from "~/components/layout/app-layout";
-import { SettingsBackLink } from "~/components/layout/settings-back-link";
 import { requireAuth } from "~/lib/auth/session.server";
 import { isAdminRole, isSuperAdmin } from "~/lib/auth/roles";
 import { Button } from "~/components/ui/button";
@@ -145,7 +144,6 @@ export default function SettingsAuditLogRoute({
 
   return (
     <div>
-      <SettingsBackLink />
       <PageHeader
         title={isAdmin ? "Audit log" : "My activity"}
         description={
@@ -153,6 +151,10 @@ export default function SettingsAuditLogRoute({
             ? "Material actions across the app — who changed what and when."
             : "Your material actions in the app."
         }
+        breadcrumbs={[
+          { label: "Settings", to: "/settings" },
+          { label: isAdmin ? "Audit log" : "My activity" },
+        ]}
       />
 
       <Form

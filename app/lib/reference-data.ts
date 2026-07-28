@@ -75,7 +75,7 @@ export const referenceData = {
       inflationProtection: "5% of Contract Value",
       employeesProperty: "$2,500 any one employee/any one loss",
       materialsInOffSiteStorage: "$200,000 any one loss",
-      transit: "$100,000 any one loss",
+      transit: "$200,000 any one loss",
     },
     ownerBuilder: {
       removalOfDebris: "10% of Contract Value",

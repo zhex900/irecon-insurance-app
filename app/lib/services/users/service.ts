@@ -1,10 +1,16 @@
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, inArray } from "drizzle-orm";
 import { getDb } from "~/lib/db/client";
 import { appUser } from "~/lib/db/schema";
 import type { AppUser } from "~/lib/db/types";
 import { normalizeAppUser } from "~/lib/services/users/normalize";
 
 export { normalizeAppUser };
+
+/** Public fields for note author display / hover card. */
+export type NoteAuthor = Pick<
+  AppUser,
+  "userId" | "fullName" | "email" | "role" | "avatarR2Key"
+>;
 
 export async function listUsers(search?: string) {
   const db = getDb();
@@ -39,6 +45,39 @@ export async function getUserByEmail(email: string) {
     .where(eq(appUser.email, email.trim().toLowerCase()))
     .limit(1);
   return row ? normalizeAppUser(row) : null;
+}
+
+/** Resolve note `createdBy` emails to user profiles (keyed by lowercase email). */
+export async function resolveNoteAuthors(
+  createdByValues: Array<string | null | undefined>,
+): Promise<Record<string, NoteAuthor>> {
+  const emails = [
+    ...new Set(
+      createdByValues
+        .map((value) => value?.trim().toLowerCase() ?? "")
+        .filter((value) => value.includes("@")),
+    ),
+  ];
+  if (emails.length === 0) return {};
+
+  const db = getDb();
+  const rows = await db
+    .select()
+    .from(appUser)
+    .where(inArray(appUser.email, emails));
+
+  const authors: Record<string, NoteAuthor> = {};
+  for (const row of rows) {
+    const user = normalizeAppUser(row);
+    authors[user.email.toLowerCase()] = {
+      userId: user.userId,
+      fullName: user.fullName,
+      email: user.email,
+      role: user.role,
+      avatarR2Key: user.avatarR2Key,
+    };
+  }
+  return authors;
 }
 
 export type AppUserWritable = Omit<

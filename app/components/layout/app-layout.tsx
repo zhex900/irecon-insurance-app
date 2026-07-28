@@ -20,6 +20,10 @@ import { Logo } from "~/components/logo";
 import { UserAvatar } from "~/components/ui/user-avatar";
 import { Toaster } from "~/components/ui/sonner";
 import { useSuccessToastFromSearch } from "~/hooks/use-success-toast";
+import {
+  AppBreadcrumb,
+  type AppBreadcrumbItem,
+} from "~/components/layout/app-breadcrumb";
 import { GlobalSearch } from "~/components/layout/global-search";
 import {
   DropdownMenu,
@@ -273,20 +277,25 @@ export function PageHeader({
   title,
   description,
   action,
+  breadcrumbs,
 }: {
   title: string;
   description?: React.ReactNode;
   action?: React.ReactNode;
+  breadcrumbs: AppBreadcrumbItem[];
 }) {
   return (
-    <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-      <div>
-        <h2 className="text-2xl font-semibold tracking-tight">{title}</h2>
-        {description ? (
-          <div className="mt-1 text-sm text-muted-foreground">
-            {description}
-          </div>
-        ) : null}
+    <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+      <div className="flex min-w-0 flex-col gap-2">
+        <AppBreadcrumb items={breadcrumbs} />
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight">{title}</h2>
+          {description ? (
+            <div className="mt-1 text-sm text-muted-foreground">
+              {description}
+            </div>
+          ) : null}
+        </div>
       </div>
       {action}
     </div>

@@ -47,6 +47,7 @@ export default function ReportsIndexRoute() {
       <PageHeader
         title="Reports"
         description="Run operational reports on screen, then export to CSV."
+        breadcrumbs={[{ label: "Reports" }]}
       />
 
       <div className="grid gap-4 sm:grid-cols-2">

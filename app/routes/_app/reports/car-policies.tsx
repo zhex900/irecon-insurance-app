@@ -188,6 +188,10 @@ export default function CarPolicyReportRoute({
       <PageHeader
         title="CAR Policy Report"
         description="Summarise policies created in a period by status, then open a status for detail."
+        breadcrumbs={[
+          { label: "Reports", to: "/reports" },
+          { label: "CAR Policy Report" },
+        ]}
       />
 
       <form

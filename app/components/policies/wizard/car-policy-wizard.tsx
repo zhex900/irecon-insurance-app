@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, type ReactNode } from "react";
-import { Link, useFetcher, useNavigate } from "react-router";
+import { useFetcher, useNavigate } from "react-router";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   FormProvider,
@@ -9,6 +9,7 @@ import {
 } from "react-hook-form";
 import { CircleCheckIcon } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import { Badge } from "~/components/reui/badge";
 import { Button } from "~/components/ui/button";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { PremiumSummaryPanel } from "./sections";
@@ -31,6 +32,7 @@ import {
 } from "~/lib/zod/policy-car";
 import type { CarWording, Policy, ReferenceData } from "~/lib/db/types";
 import type { EmailTemplate } from "~/lib/email-templates";
+import type { NoteAuthor } from "~/lib/services/users/service";
 import {
   JustSavedProvider,
   PolicySaveStatusBadge,
@@ -52,6 +54,50 @@ import {
 import { usePolicySubmit } from "./hooks/use-submit";
 import { usePolicyLeaveGuard } from "./hooks/use-leave-guard";
 
+type WizardMode = "new" | "edit" | "view";
+
+function wizardModeBadge(mode: WizardMode) {
+  if (mode === "new") {
+    return (
+      <Badge variant="primary-light" radius="full">
+        New
+      </Badge>
+    );
+  }
+  if (mode === "edit") {
+    return (
+      <Badge variant="warning-light" radius="full">
+        Editing
+      </Badge>
+    );
+  }
+  return (
+    <Badge variant="success-light" radius="full">
+      View only
+    </Badge>
+  );
+}
+
+function wizardModeHeaderClass(mode: WizardMode) {
+  if (mode === "new") {
+    return "border-l-4 border-l-primary bg-primary/[0.06]";
+  }
+  if (mode === "edit") {
+    return "border-l-4 border-l-warning bg-warning/[0.1]";
+  }
+  return "border-l-4 border-l-success bg-success/[0.08]";
+}
+
+function wizardModeCardBorderClass(mode: WizardMode) {
+  if (mode === "new") {
+    return "border-l-4 border-l-primary";
+  }
+  if (mode === "edit") {
+    return "border-l-4 border-l-warning";
+  }
+  return "border-l-4 border-l-success";
+}
+
 type CarPolicyWizardProps = {
   policy: Policy;
   reference: ReferenceData;
@@ -64,6 +110,7 @@ type CarPolicyWizardProps = {
   clientName?: string;
   brokerName?: string;
   brokerEmail?: string;
+  noteAuthors?: Record<string, NoteAuthor>;
   emailTemplates?: EmailTemplate[];
   headerActions?: ReactNode;
 };
@@ -78,6 +125,7 @@ export function CarPolicyWizard({
   clientName = "",
   brokerName = "",
   brokerEmail = "",
+  noteAuthors: initialNoteAuthors,
   emailTemplates = [],
   headerActions,
 }: CarPolicyWizardProps) {
@@ -120,6 +168,7 @@ export function CarPolicyWizard({
           clientName={clientName}
           brokerName={brokerName}
           brokerEmail={brokerEmail}
+          noteAuthors={initialNoteAuthors}
           emailTemplates={emailTemplates}
           headerActions={headerActions}
         />
@@ -138,6 +187,7 @@ function CarPolicyWizardInner({
   clientName = "",
   brokerName = "",
   brokerEmail = "",
+  noteAuthors: initialNoteAuthors,
   emailTemplates = [],
   headerActions,
 }: CarPolicyWizardProps) {
@@ -163,8 +213,8 @@ function CarPolicyWizardInner({
   const isFormTerminal = isTerminalStatus(selectedStatusId);
   /** Fields lock once Taken/Not taken is chosen or already saved. */
   const fieldsLocked = readOnly || isFormTerminal;
-  /** After full save (not draft), Premium sits under Policy Information. */
-  const premiumPinned = !policy.isDraft;
+  /** Pin Premium under Policy Information only once status is Taken. */
+  const premiumPinned = selectedStatusId === POLICY_STATUS.Taken;
   const navItems = useMemo(
     () => getPolicyFormNavItems(premiumPinned),
     [premiumPinned],
@@ -194,10 +244,12 @@ function CarPolicyWizardInner({
     step,
   } = navigation;
 
-  const { notes, addNote, addNoteError, isAddingNote } = usePolicyNotes({
-    policy,
-    fetcher,
-  });
+  const { notes, noteAuthors, addNote, addNoteError, isAddingNote } =
+    usePolicyNotes({
+      policy,
+      noteAuthors: initialNoteAuthors,
+      fetcher,
+    });
 
   const premiumCalc = usePolicyPremiumCalc({
     policy,
@@ -263,6 +315,7 @@ function CarPolicyWizardInner({
     fetcher,
     step,
     premium,
+    premiumRef,
     setPremium,
     setReferralReasons,
     regenerateDocumentsIfNeeded,
@@ -317,21 +370,31 @@ function CarPolicyWizardInner({
     policy.policyStatusId === POLICY_STATUS.Pending && !fieldsLocked;
   const allSectionsOpen = POLICY_FORM_SECTIONS.every((s) => openMap[s.id]);
   const submitBusy = submitting || isGeneratingDocuments;
+  const wizardMode: WizardMode = isNew ? "new" : fieldsLocked ? "view" : "edit";
 
   return (
-    <div className="flex flex-col gap-4">
-      <div>
-        <Link
-          to={`/clients/${policy.clientId}`}
-          className="text-sm font-medium text-primary hover:underline"
-        >
-          ← Back to Client
-        </Link>
-      </div>
+    <div
+      className={cn(
+        "-mx-4 -mt-4 flex flex-col gap-4 md:-mx-8 md:-mt-8",
+        wizardMode === "view" &&
+          "[&_[data-slot=card]]:bg-muted/40 [&_input]:bg-muted/30 [&_select]:bg-muted/30 [&_textarea]:bg-muted/30",
+      )}
+      data-wizard-mode={wizardMode}
+    >
       <PolicyStickyHeader
         policyNumber={policy.policyNumber}
         clientId={policy.clientId}
         clientName={clientName || "Client"}
+        className={wizardModeHeaderClass(wizardMode)}
+        modeBadge={wizardModeBadge(wizardMode)}
+        breadcrumbs={[
+          { label: "Clients", to: "/clients" },
+          {
+            label: clientName || "Client",
+            to: `/clients/${policy.clientId}`,
+          },
+          { label: policy.policyNumber },
+        ]}
         statusBadge={
           selectedStatus ? (
             <StatusBadge
@@ -341,7 +404,9 @@ function CarPolicyWizardInner({
           ) : null
         }
         saveStatus={
-          !readOnly ? <PolicySaveStatusBadge status={saveStatus} /> : null
+          wizardMode !== "view" ? (
+            <PolicySaveStatusBadge status={saveStatus} />
+          ) : null
         }
         adjusted={Boolean(policy.car.adjusted)}
         actions={headerActions}
@@ -365,7 +430,7 @@ function CarPolicyWizardInner({
       />
 
       {showDocsGeneratedAlert ? (
-        <Alert variant="success">
+        <Alert variant="success" className="mx-4 md:mx-8">
           <CircleCheckIcon />
           <AlertTitle>Documents generated</AlertTitle>
           <AlertDescription>
@@ -374,7 +439,7 @@ function CarPolicyWizardInner({
         </Alert>
       ) : null}
 
-      <div className="grid items-start gap-6 xl:grid-cols-[200px_minmax(0,1fr)_280px]">
+      <div className="grid items-start gap-6 px-4 md:px-8 xl:grid-cols-[200px_minmax(0,1fr)_280px]">
         <aside className={cn("hidden xl:block", POLICY_STICKY_RAIL_CLASS)}>
           <PolicySectionNav
             activeId={activeSectionId}
@@ -383,6 +448,7 @@ function CarPolicyWizardInner({
             invalidIssues={invalidIssues}
             onNavigateToIssue={navigateToIssue}
             items={navItems}
+            className={wizardModeHeaderClass(wizardMode)}
           />
         </aside>
 
@@ -400,11 +466,13 @@ function CarPolicyWizardInner({
             statusName={selectedStatus?.name ?? "Pending"}
             adjusted={Boolean(policy.car.adjusted)}
             notes={notes}
+            noteAuthors={noteAuthors}
             showNotes={!policy.isDraft}
             canAddNotes={!policy.isDraft}
             onAddNote={addNote}
             addNoteBusy={isAddingNote}
             addNoteError={addNoteError}
+            className={wizardModeCardBorderClass(wizardMode)}
           />
 
           <WizardSectionStack
@@ -428,6 +496,7 @@ function CarPolicyWizardInner({
             setHasUnsavedChanges={setHasUnsavedChanges}
             persistDraft={persistDraft}
             handleFieldBlur={handleFieldBlur}
+            shellCardClassName={wizardModeCardBorderClass(wizardMode)}
           />
 
           <WizardFormFooter
@@ -458,6 +527,11 @@ function CarPolicyWizardInner({
             emailTemplates={emailTemplates}
             policy={policy}
             adjustment={policy.car.adjusted ? policy.car.adjustment : undefined}
+            className={cn(
+              // Sticky rail overflow clips Card ring (box-shadow); use a real border.
+              "border border-border",
+              wizardModeCardBorderClass(wizardMode),
+            )}
           />
         </aside>
       </div>

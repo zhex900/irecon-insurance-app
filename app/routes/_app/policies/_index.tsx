@@ -273,6 +273,7 @@ export default function PoliciesIndexRoute({
       <PageHeader
         title="Policies"
         description="Browse and open CAR policies."
+        breadcrumbs={[{ label: "Policies" }]}
         action={<NewPolicyClientDialog />}
       />
 

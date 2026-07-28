@@ -26,7 +26,7 @@ import {
   type PlantRateInput,
   type StampScheduleInput,
   type TerrorScheduleInput,
-} from "~/lib/services/price";
+} from "~/lib/services/price/catalogue.server";
 import type { Route } from "./+types/$catalogue.new";
 
 export function meta({ params }: Route.MetaArgs) {

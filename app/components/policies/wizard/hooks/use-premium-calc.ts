@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { useFetcher } from "react-router";
 import type { UseFormReturn } from "react-hook-form";
 import type { Policy, PremiumBreakdown } from "~/lib/db/types";
+import type { NoteAuthor } from "~/lib/services/users/service";
 import {
   carPolicyPricingSchema,
   pricingFields,
@@ -16,6 +17,7 @@ export type PolicyWizardActionData = {
   referralReasons?: string[];
   rating?: Policy["car"]["rating"];
   notes?: Policy["notes"];
+  noteAuthors?: Record<string, NoteAuthor>;
   errors?: Record<string, string[] | undefined>;
   draft?: boolean;
   message?: string;
@@ -81,11 +83,13 @@ export function usePolicyPremiumCalc({
     }
   }, [fetcher.data]);
 
-  // Auto-calculate premium when Premium section is open (unless user edited values).
-  // Use schema.safeParse so empty/incomplete forms are not marked invalid in the UI.
+  // Auto-calculate only when Premium is open and there is no saved premium yet.
+  // Recalculate persists to the DB — skipping when premium exists preserves manual edits.
+  // Pricing-field draft saves still refresh via refreshPremiumAfterSave.
   useEffect(() => {
     if (fieldsLocked || !premiumSectionOpen) return;
     if (premiumManuallyEditedRef.current) return;
+    if (policy.car.premium) return;
 
     const parsed = carPolicyPricingSchema.safeParse(form.getValues());
     if (!parsed.success) return;
@@ -98,7 +102,7 @@ export function usePolicyPremiumCalc({
       action: `/policies/${policy.policyId}`,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- run when Premium opens
-  }, [premiumSectionOpen, fieldsLocked, policy.policyId]);
+  }, [premiumSectionOpen, fieldsLocked, policy.policyId, policy.car.premium]);
 
   function submitIntent(intent: "recalculate") {
     const values = form.getValues();

@@ -1,8 +1,7 @@
-import { redirect, Link } from "react-router";
+import { redirect } from "react-router";
 import { CarAdjustmentWizard } from "~/components/forms/car-adjustment-wizard";
 import { PageHeader } from "~/components/layout/app-layout";
 import { Badge } from "~/components/reui/badge";
-import { Button } from "~/components/ui/button";
 import { withSuccessToast } from "~/hooks/use-success-toast";
 import { requireAuth } from "~/lib/auth/session.server";
 import {
@@ -127,11 +126,18 @@ export default function PolicyAdjustRoute({
             {status ? <Badge>{status.name}</Badge> : null}
           </span>
         }
-        action={
-          <Link to={`/policies/${loaderData.policy.policyId}`}>
-            <Button variant="outline">Back to policy</Button>
-          </Link>
-        }
+        breadcrumbs={[
+          { label: "Clients", to: "/clients" },
+          {
+            label: loaderData.client.name || "Client",
+            to: `/clients/${loaderData.client.clientId}`,
+          },
+          {
+            label: loaderData.policy.policyNumber,
+            to: `/policies/${loaderData.policy.policyId}`,
+          },
+          { label: "Adjust" },
+        ]}
       />
       <CarAdjustmentWizard policy={loaderData.policy} />
     </div>

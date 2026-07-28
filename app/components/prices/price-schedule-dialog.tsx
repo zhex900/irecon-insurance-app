@@ -1,14 +1,8 @@
-import type { ReactNode } from "react";
-import { Form, useNavigate, useNavigation } from "react-router";
+import { type ReactNode } from "react";
+import { createPortal } from "react-dom";
+import { Form, useNavigation } from "react-router";
+import { XIcon } from "lucide-react";
 import { Badge } from "~/components/reui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "~/components/ui/dialog";
 import { Field, FieldLabel } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import { LoadingButton } from "~/components/ui/loading-button";
@@ -97,49 +91,86 @@ export type ScheduleView =
   | TerrorScheduleView
   | FeesScheduleView;
 
+function CloseControl({
+  closeHref,
+  onClose,
+}: {
+  closeHref?: string;
+  onClose?: () => void;
+}) {
+  const className =
+    "inline-flex size-7 items-center justify-center rounded-lg hover:bg-muted";
+  if (onClose) {
+    return (
+      <button
+        type="button"
+        aria-label="Close"
+        className={className}
+        onClick={onClose}
+      >
+        <XIcon className="size-4" />
+      </button>
+    );
+  }
+  return (
+    <a href={closeHref ?? ".."} aria-label="Close" className={className}>
+      <XIcon className="size-4" />
+    </a>
+  );
+}
+
 function DialogShell({
   title,
   description,
   closeHref,
+  onClose,
   error,
   children,
   footer,
 }: {
   title: string;
   description?: string;
-  closeHref: string;
+  closeHref?: string;
+  onClose?: () => void;
   error?: string | null;
   children: ReactNode;
   footer?: ReactNode;
 }) {
-  const navigate = useNavigate();
-  return (
-    <Dialog
-      open
-      onOpenChange={(open) => {
-        if (!open) navigate(closeHref);
-      }}
+  const overlay = (
+    <div
+      className="fixed inset-x-0 top-14 bottom-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 p-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="price-schedule-title"
     >
-      <DialogContent
-        className="max-h-[min(90vh,56rem)] w-full overflow-y-auto sm:max-w-5xl"
-        showCloseButton
-      >
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          {description ? (
-            <DialogDescription>{description}</DialogDescription>
-          ) : null}
-        </DialogHeader>
+      <div className="my-auto flex max-h-[min(90vh,56rem)] w-full max-w-5xl flex-col gap-4 overflow-y-auto rounded-xl bg-popover p-4 text-sm text-popover-foreground shadow-lg ring-1 ring-foreground/10">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-col gap-1.5">
+            <h2
+              id="price-schedule-title"
+              className="font-heading text-base leading-none font-medium"
+            >
+              {title}
+            </h2>
+            {description ? (
+              <p className="text-sm text-muted-foreground">{description}</p>
+            ) : null}
+          </div>
+          <CloseControl closeHref={closeHref} onClose={onClose} />
+        </div>
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
         {children}
         {footer ? (
-          <DialogFooter className="border-0 bg-transparent p-0 sm:justify-end">
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             {footer}
-          </DialogFooter>
+          </div>
         ) : null}
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
+
+  if (typeof document === "undefined") return overlay;
+  return createPortal(overlay, document.body);
 }
 
 function PublishedBadge({ published }: { published: boolean }) {
@@ -226,40 +257,78 @@ function NumInput({
   );
 }
 
+function FooterButton({
+  href,
+  onClick,
+  className,
+  children,
+}: {
+  href?: string;
+  onClick?: () => void;
+  className: string;
+  children: ReactNode;
+}) {
+  if (onClick) {
+    return (
+      <button type="button" className={className} onClick={onClick}>
+        {children}
+      </button>
+    );
+  }
+  return (
+    <a href={href} className={className}>
+      {children}
+    </a>
+  );
+}
+
 export function PriceScheduleDialog({
   title,
   closeHref,
   editHref,
+  onClose,
+  onEdit,
   schedule,
   editing,
   canEdit,
   catalogue,
   id,
   error,
+  formAction,
 }: {
   title: string;
-  closeHref: string;
-  editHref: string;
+  closeHref?: string;
+  editHref?: string;
+  onClose?: () => void;
+  onEdit?: () => void;
   schedule: ScheduleView;
   editing: boolean;
   canEdit: boolean;
   catalogue: PriceCatalogueKind;
   id: number;
   error?: string | null;
+  /** Where update posts (defaults to current route). */
+  formAction?: string;
 }) {
   const navigation = useNavigation();
   const saving =
     navigation.state === "submitting" &&
     navigation.formData?.get("intent") === "update";
 
+  const secondaryClass =
+    "inline-flex h-8 items-center justify-center rounded-lg border border-foreground/25 bg-background px-2.5 text-sm font-medium hover:bg-muted";
+  const primaryClass =
+    "inline-flex h-8 items-center justify-center rounded-lg bg-primary px-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/80";
+
   const footer = editing ? (
     <>
-      <a
+      <FooterButton
         href={closeHref}
-        className="inline-flex h-8 items-center justify-center rounded-lg border border-foreground/25 bg-background px-2.5 text-sm font-medium hover:bg-muted"
+        onClick={onClose}
+        className={secondaryClass}
       >
         Cancel
-      </a>
+      </FooterButton>
       <LoadingButton
         type="submit"
         form="price-schedule-form"
@@ -271,19 +340,17 @@ export function PriceScheduleDialog({
     </>
   ) : (
     <>
-      <a
+      <FooterButton
         href={closeHref}
-        className="inline-flex h-8 items-center justify-center rounded-lg border border-foreground/25 bg-background px-2.5 text-sm font-medium hover:bg-muted"
+        onClick={onClose}
+        className={secondaryClass}
       >
         Close
-      </a>
+      </FooterButton>
       {canEdit ? (
-        <a
-          href={editHref}
-          className="inline-flex h-8 items-center justify-center rounded-lg bg-primary px-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/80"
-        >
+        <FooterButton href={editHref} onClick={onEdit} className={primaryClass}>
           Edit
-        </a>
+        </FooterButton>
       ) : null}
     </>
   );
@@ -292,13 +359,15 @@ export function PriceScheduleDialog({
     <DialogShell
       title={title}
       closeHref={closeHref}
+      onClose={onClose}
       error={error}
       footer={footer}
     >
       {editing ? (
-        <form
+        <Form
           id="price-schedule-form"
           method="post"
+          action={formAction}
           className="flex flex-col gap-4"
         >
           <input type="hidden" name="intent" value="update" />
@@ -311,7 +380,7 @@ export function PriceScheduleDialog({
             editing
           />
           <ScheduleBody schedule={schedule} editing />
-        </form>
+        </Form>
       ) : (
         <div className="flex flex-col gap-4">
           <MetaRow
@@ -806,15 +875,19 @@ function FeesBody({
 export function PriceDeleteDialog({
   label,
   closeHref,
+  onClose,
   catalogue,
   id,
   error,
+  formAction,
 }: {
   label: string;
-  closeHref: string;
+  closeHref?: string;
+  onClose?: () => void;
   catalogue: string;
   id: number;
   error?: string | null;
+  formAction?: string;
 }) {
   const navigation = useNavigation();
   const deleting =
@@ -826,16 +899,18 @@ export function PriceDeleteDialog({
       title="Delete schedule?"
       description={`This permanently removes ${label}. This cannot be undone.`}
       closeHref={closeHref}
+      onClose={onClose}
       error={error}
       footer={
         <>
-          <a
+          <FooterButton
             href={closeHref}
+            onClick={onClose}
             className="inline-flex h-8 items-center justify-center rounded-lg border border-foreground/25 bg-background px-2.5 text-sm font-medium hover:bg-muted"
           >
             Cancel
-          </a>
-          <Form method="post">
+          </FooterButton>
+          <Form method="post" action={formAction}>
             <input type="hidden" name="intent" value="delete" />
             <input type="hidden" name="catalogue" value={catalogue} />
             <input type="hidden" name="id" value={id} />

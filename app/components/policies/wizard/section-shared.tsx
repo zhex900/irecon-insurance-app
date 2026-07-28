@@ -49,7 +49,13 @@ export function SubLimitField({ field }: { field: SubLimitFieldConfig }) {
   );
 }
 
-export function ExcessField({ field }: { field: ExcessFieldConfig }) {
+export function ExcessField({
+  field,
+  className,
+}: {
+  field: ExcessFieldConfig;
+  className?: string;
+}) {
   const {
     formState: { errors },
   } = useFormContext<CarPolicyFormValues>();
@@ -57,7 +63,7 @@ export function ExcessField({ field }: { field: ExcessFieldConfig }) {
   const inputId = `excesses.${field.key}`;
 
   return (
-    <Field data-invalid={error ? true : undefined}>
+    <Field data-invalid={error ? true : undefined} className={className}>
       <div className="flex items-center gap-1.5">
         <FieldLabel htmlFor={inputId} required>
           {field.label}
@@ -85,12 +91,14 @@ export function ExcessField({ field }: { field: ExcessFieldConfig }) {
 export function Section({
   title,
   children,
+  className,
 }: {
   title: string;
   children: ReactNode;
+  className?: string;
 }) {
   return (
-    <Card>
+    <Card className={className}>
       <CardHeader>
         <CardTitle>{title}</CardTitle>
       </CardHeader>

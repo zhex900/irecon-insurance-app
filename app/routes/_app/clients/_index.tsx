@@ -293,6 +293,7 @@ export default function ClientsIndexRoute({
       <PageHeader
         title="Clients Directory"
         description="Manage and review all client records."
+        breadcrumbs={[{ label: "Clients" }]}
         action={
           <Link to="/clients/new">
             <Button>+ New Client</Button>

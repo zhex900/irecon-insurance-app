@@ -113,15 +113,16 @@ export function FilterAutocomplete({
                 {emptyMessage}
               </li>
             ) : (
-              filtered.map((item) => {
+              filtered.map((item, index) => {
                 const active = valuesEqual(item.value, value);
+                const highlighted = index === 0;
                 return (
                   <li key={String(item.value)} role="option">
                     <button
                       type="button"
                       className={cn(
                         "flex w-full flex-col items-start rounded-md px-2.5 py-2 text-left hover:bg-muted",
-                        active && "bg-muted",
+                        (active || highlighted) && "bg-muted",
                       )}
                       onMouseDown={(event) => event.preventDefault()}
                       onClick={() => selectOption(item)}
@@ -165,6 +166,12 @@ export function FilterAutocomplete({
             setQuery(next);
             setOpen(true);
             if (!next.trim() && hasSelection) clearSelection();
+          }}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter") return;
+            if (!open || filtered.length === 0) return;
+            event.preventDefault();
+            selectOption(filtered[0]!);
           }}
           onBlur={() => {
             blurTimer.current = window.setTimeout(() => {

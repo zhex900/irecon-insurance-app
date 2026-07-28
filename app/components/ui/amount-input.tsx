@@ -1,8 +1,10 @@
+import { useLayoutEffect, useRef } from "react";
 import { Controller, useFormContext } from "react-hook-form";
 import { CheckIcon } from "lucide-react";
 import {
   formatAmountInput,
   isZeroAmount,
+  mapAmountCaret,
   sanitizeAmountInput,
 } from "~/lib/amount-input";
 import {
@@ -23,6 +25,16 @@ type AmountInputProps = Omit<
   showCurrencySymbol?: boolean;
 };
 
+function assignRef<T>(ref: React.Ref<T> | undefined, value: T | null) {
+  if (typeof ref === "function") {
+    ref(value);
+    return;
+  }
+  if (ref && typeof ref === "object") {
+    (ref as React.MutableRefObject<T | null>).current = value;
+  }
+}
+
 /**
  * Controlled currency/amount input: shows thousands separators, stores a bare
  * numeric string (no commas) in RHF so zod coerce/regex keep working.
@@ -37,6 +49,16 @@ export function AmountInput({
   const { control } = useFormContext();
   const { saved, className: highlight } = useFieldSaveState(name);
   const fieldId = id ?? name;
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const pendingCaretRef = useRef<number | null>(null);
+
+  useLayoutEffect(() => {
+    const input = inputRef.current;
+    const caret = pendingCaretRef.current;
+    if (!input || caret == null) return;
+    pendingCaretRef.current = null;
+    input.setSelectionRange(caret, caret);
+  });
 
   return (
     <Controller
@@ -54,7 +76,10 @@ export function AmountInput({
             inputMode="decimal"
             {...inputProps}
             name={field.name}
-            ref={field.ref}
+            ref={(node) => {
+              inputRef.current = node;
+              assignRef(field.ref, node);
+            }}
             value={formatAmountInput(field.value as string | number)}
             onFocus={(event) => {
               inputProps.onFocus?.(event);
@@ -67,7 +92,16 @@ export function AmountInput({
               inputProps.onBlur?.(event);
             }}
             onChange={(event) => {
-              field.onChange(sanitizeAmountInput(event.target.value));
+              const input = event.target;
+              const caret = input.selectionStart ?? input.value.length;
+              const next = sanitizeAmountInput(input.value);
+              const formatted = formatAmountInput(next);
+              pendingCaretRef.current = mapAmountCaret(
+                input.value,
+                caret,
+                formatted,
+              );
+              field.onChange(next);
             }}
           />
           {saved ? (

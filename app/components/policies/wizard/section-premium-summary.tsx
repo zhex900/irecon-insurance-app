@@ -41,6 +41,7 @@ export function PremiumSummaryPanel({
   emailTemplates = [],
   adjustment,
   policy,
+  className,
 }: {
   premium?: PremiumBreakdown;
   referralReasons?: string[];
@@ -54,6 +55,7 @@ export function PremiumSummaryPanel({
   emailTemplates?: EmailTemplate[];
   adjustment?: CarAdjustmentRecord;
   policy?: Policy;
+  className?: string;
 }) {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [showPreviousVersions, setShowPreviousVersions] = useState(false);
@@ -229,8 +231,8 @@ export function PremiumSummaryPanel({
   }
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between gap-2">
+    <Card className={className}>
+      <CardHeader className="flex flex-row items-center justify-between gap-2 border-b">
         <CardTitle>Premium Summary</CardTitle>
         {isCalculating && premium ? (
           <span className="text-xs font-normal text-muted-foreground">

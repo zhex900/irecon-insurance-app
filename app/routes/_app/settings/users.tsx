@@ -3,7 +3,6 @@ import { useActionData, useNavigation, useSearchParams } from "react-router";
 import { PlusIcon } from "lucide-react";
 import { useActionSuccessToast } from "~/hooks/use-success-toast";
 import { PageHeader } from "~/components/layout/app-layout";
-import { SettingsBackLink } from "~/components/layout/settings-back-link";
 import {
   UserDeleteConfirmDialog,
   UserToggleConfirmDialog,
@@ -290,10 +289,13 @@ export default function SettingsUsersRoute({
 
   return (
     <div>
-      <SettingsBackLink />
       <PageHeader
         title="User Management"
         description="Manage broker and admin users who can sign in to the portal."
+        breadcrumbs={[
+          { label: "Settings", to: "/settings" },
+          { label: "Users" },
+        ]}
         action={
           <Button type="button" onClick={openCreate}>
             <PlusIcon data-icon="inline-start" />

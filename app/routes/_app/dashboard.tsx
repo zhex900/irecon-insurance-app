@@ -1,6 +1,7 @@
 import { Link } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import { AppBreadcrumb } from "~/components/layout/app-breadcrumb";
 import { NewPolicyClientDialog } from "~/components/policies/new-policy-client-dialog";
 import { requireAuth } from "~/lib/auth/session.server";
 import { getDashboardStats } from "~/lib/services/clients/dashboard.service";
@@ -34,13 +35,16 @@ export default function DashboardRoute({ loaderData }: Route.ComponentProps) {
   return (
     <div>
       <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-            Good day, {firstName}
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Here&apos;s your operational overview for {today}.
-          </p>
+        <div className="flex min-w-0 flex-col gap-2">
+          <AppBreadcrumb items={[{ label: "Dashboard" }]} />
+          <div>
+            <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+              Good day, {firstName}
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Here&apos;s your operational overview for {today}.
+            </p>
+          </div>
         </div>
         <div className="flex flex-wrap gap-2">
           <Link to="/clients/new">

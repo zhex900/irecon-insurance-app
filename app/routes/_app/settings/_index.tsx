@@ -135,6 +135,7 @@ export default function SettingsIndexRoute({
       <PageHeader
         title="Settings"
         description="Admin configuration for brokers and reference data."
+        breadcrumbs={[{ label: "Settings" }]}
       />
 
       <div className="flex flex-col gap-6">

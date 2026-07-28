@@ -63,17 +63,26 @@ export async function savePolicyDraft(policyId: number, values: DraftValues) {
     throw new PolicySaveError("This policy status cannot be changed.");
   }
   // Drafts stay Pending — status changes only on full save
+  const premiumOverride =
+    values.premium && typeof values.premium === "object"
+      ? ({
+          ...existing.car.premium,
+          ...values.premium,
+        } as Policy["car"]["premium"])
+      : undefined;
   const policy = applyFormValues(
     existing,
     { ...values, policyStatusId: POLICY_STATUS.Pending },
-    { draft: true },
+    { draft: true, premium: premiumOverride },
   );
   return savePolicy({ ...policy, isDraft: true });
 }
 
 export async function upsertPolicyFromForm(
   policyId: number,
-  values: CarPolicyFormValues,
+  values: CarPolicyFormValues & {
+    premium?: NonNullable<Policy["car"]["premium"]> | Record<string, number>;
+  },
 ) {
   const existing = await getPolicy(policyId);
   if (!existing) throw new Error("Policy not found");
@@ -81,8 +90,20 @@ export async function upsertPolicyFromForm(
     throw new PolicySaveError("This policy status cannot be changed.");
   }
 
-  const { premium, rating, referralReasons } =
-    await calculatePremiumForPolicy(values);
+  const {
+    premium: calculatedPremium,
+    rating,
+    referralReasons,
+  } = await calculatePremiumForPolicy(values);
+
+  // Prefer broker manual edits when provided; otherwise use the calculator.
+  const premium: PremiumBreakdown =
+    values.premium && typeof values.premium === "object"
+      ? {
+          ...calculatedPremium,
+          ...(values.premium as Partial<PremiumBreakdown>),
+        }
+      : calculatedPremium;
 
   if (
     existing.policyStatusId !== POLICY_STATUS.Taken &&
@@ -139,15 +160,18 @@ export async function applyPremiumCalculation(
   return savePolicy(policy);
 }
 
-export async function addPolicyNote(policyId: number, description: string) {
+export async function addPolicyNote(
+  policyId: number,
+  description: string,
+  createdBy: string,
+) {
   const text = description.trim();
   if (!text) {
     throw new PolicySaveError("Note cannot be empty.");
   }
   const existing = await getPolicy(policyId);
   if (!existing) throw new Error("Policy not found");
-  const broker = getBrokerSession();
-  const note = createMessageNote(policyId, text, broker.email);
+  const note = createMessageNote(policyId, text, createdBy);
   return savePolicy({
     ...existing,
     notes: [...(existing.notes ?? []), note],

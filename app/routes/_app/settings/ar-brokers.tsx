@@ -12,7 +12,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { BadgeCheckIcon, PlusIcon, Trash2Icon, XIcon } from "lucide-react";
 import { useActionSuccessToast } from "~/hooks/use-success-toast";
 import { PageHeader } from "~/components/layout/app-layout";
-import { SettingsBackLink } from "~/components/layout/settings-back-link";
 import { Button } from "~/components/ui/button";
 import { LoadingButton } from "~/components/ui/loading-button";
 import {
@@ -426,10 +425,13 @@ export default function SettingsArBrokersRoute({
 
   return (
     <div>
-      <SettingsBackLink />
       <PageHeader
         title="Authorised Representatives"
         description="Manage brokers available in the client AR autocomplete."
+        breadcrumbs={[
+          { label: "Settings", to: "/settings" },
+          { label: "Authorised Representatives" },
+        ]}
         action={
           <Button type="button" onClick={openCreate}>
             <PlusIcon data-icon="inline-start" />

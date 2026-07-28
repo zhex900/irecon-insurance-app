@@ -1,7 +1,6 @@
 import { redirect } from "react-router";
 import { FileStackIcon } from "lucide-react";
 import { PageHeader } from "~/components/layout/app-layout";
-import { SettingsBackLink } from "~/components/layout/settings-back-link";
 import { LibraryDocumentsManager } from "~/components/settings/library-documents-manager";
 import { isAdminRole, isSuperAdmin } from "~/lib/auth/roles";
 import { requireAuth } from "~/lib/auth/session.server";
@@ -186,7 +185,6 @@ export default function SettingsLibraryDocumentsRoute({
 }: Route.ComponentProps) {
   return (
     <div>
-      <SettingsBackLink />
       <PageHeader
         title="Library documents"
         description={
@@ -194,6 +192,10 @@ export default function SettingsLibraryDocumentsRoute({
             ? "Static PDFs attached to CAR document packs (stored in R2)."
             : "Library documents is disabled for other roles. Super-admins can still manage it."
         }
+        breadcrumbs={[
+          { label: "Settings", to: "/settings" },
+          { label: "Library documents" },
+        ]}
       />
       <div className="flex items-start gap-3 pb-4 text-sm text-muted-foreground">
         <FileStackIcon className="mt-0.5 size-4 shrink-0" />

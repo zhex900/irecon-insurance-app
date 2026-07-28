@@ -1,8 +1,7 @@
-import type { ReactNode } from "react";
+import type { ReactNode, MouseEvent } from "react";
 import { Outlet, redirect } from "react-router";
 import { PlusIcon, Trash2Icon } from "lucide-react";
 import { PageHeader } from "~/components/layout/app-layout";
-import { SettingsBackLink } from "~/components/layout/settings-back-link";
 import { Badge } from "~/components/reui/badge";
 import {
   Card,
@@ -25,6 +24,7 @@ import {
   emptyCatalogue,
   isPriceCatalogueSlug,
   kindToSlug,
+  pricesDeleteHref,
   pricesItemHref,
   pricesListHref,
   pricesNewHref,
@@ -36,7 +36,7 @@ import {
 import {
   getPriceCatalogueSnapshot,
   type PriceCatalogueSnapshot,
-} from "~/lib/services/price";
+} from "~/lib/services/price/catalogue.server";
 import { cn, formatCurrency, formatDate, formatNumber } from "~/lib/utils";
 import type { Route } from "./+types/$catalogue";
 
@@ -94,7 +94,6 @@ export default function SettingsPricesCatalogueRoute({
 
   return (
     <div>
-      <SettingsBackLink />
       <PageHeader
         title="Prices"
         description={
@@ -102,6 +101,10 @@ export default function SettingsPricesCatalogueRoute({
             ? "Click a row to view rates. Use Edit in the dialog to change values."
             : "Click a row to view rates."
         }
+        breadcrumbs={[
+          { label: "Settings", to: "/settings" },
+          { label: "Prices" },
+        ]}
       />
 
       {loadError ? (
@@ -177,6 +180,10 @@ function CataloguePanel({
   }
 }
 
+/**
+ * Whole-row open via real anchors (Add schedule pattern). Avoid React onClick —
+ * this route used to pull postgres into the client bundle and break hydration.
+ */
 function ClickableScheduleRow({
   href,
   deleteHref,
@@ -192,12 +199,16 @@ function ClickableScheduleRow({
   id: number;
   children: ReactNode;
 }) {
+  function onDeleteClick(event: MouseEvent<HTMLAnchorElement>) {
+    event.stopPropagation();
+  }
+
   return (
-    <TableRow className="relative hover:bg-muted/50">
+    <TableRow className="relative cursor-pointer hover:bg-muted/50">
       <TableCell className="text-foreground tabular-nums">
         <a
           href={href}
-          className="text-foreground before:absolute before:inset-0 before:z-10"
+          className="font-medium text-foreground after:absolute after:inset-0 hover:underline"
           aria-label={`View schedule ${id}`}
         >
           {id}
@@ -205,11 +216,12 @@ function ClickableScheduleRow({
       </TableCell>
       {children}
       {canEdit ? (
-        <TableCell className="relative z-20 w-12 text-right">
+        <TableCell className="relative z-10 w-12 text-right">
           <a
             href={deleteHref}
             aria-label={deleteLabel}
-            className="relative z-20 inline-flex size-7 items-center justify-center rounded-lg text-destructive hover:bg-destructive/10"
+            className="inline-flex size-7 items-center justify-center rounded-lg text-destructive hover:bg-destructive/10"
+            onClick={onDeleteClick}
           >
             <Trash2Icon className="size-4" />
           </a>
@@ -282,20 +294,18 @@ function CarPanel({
                   key={schedule.priceId}
                   id={schedule.priceId}
                   href={pricesItemHref(slug, schedule.priceId)}
-                  deleteHref={`${pricesItemHref(slug, schedule.priceId)}?delete=1`}
+                  deleteHref={pricesDeleteHref(slug, schedule.priceId)}
                   canEdit={canEdit}
                   deleteLabel={`Delete CAR rates #${schedule.priceId}`}
                 >
-                  <TableCell className="pointer-events-none">
-                    {formatDate(schedule.dateStart)}
-                  </TableCell>
-                  <TableCell className="pointer-events-none">
+                  <TableCell>{formatDate(schedule.dateStart)}</TableCell>
+                  <TableCell>
                     <PublishedBadge published={schedule.published} />
                   </TableCell>
-                  <TableCell className="pointer-events-none text-right tabular-nums">
+                  <TableCell className="text-right tabular-nums">
                     {schedule.bands.length}
                   </TableCell>
-                  <TableCell className="pointer-events-none text-muted-foreground">
+                  <TableCell className="text-muted-foreground">
                     {schedule.createdBy || "—"}
                   </TableCell>
                 </ClickableScheduleRow>
@@ -341,17 +351,15 @@ function StampPanel({
                   key={schedule.priceStampDutyId}
                   id={schedule.priceStampDutyId}
                   href={pricesItemHref(slug, schedule.priceStampDutyId)}
-                  deleteHref={`${pricesItemHref(slug, schedule.priceStampDutyId)}?delete=1`}
+                  deleteHref={pricesDeleteHref(slug, schedule.priceStampDutyId)}
                   canEdit={canEdit}
                   deleteLabel={`Delete stamp duty #${schedule.priceStampDutyId}`}
                 >
-                  <TableCell className="pointer-events-none">
-                    {formatDate(schedule.dateStart)}
-                  </TableCell>
-                  <TableCell className="pointer-events-none">
+                  <TableCell>{formatDate(schedule.dateStart)}</TableCell>
+                  <TableCell>
                     <PublishedBadge published={schedule.published} />
                   </TableCell>
-                  <TableCell className="pointer-events-none text-right tabular-nums">
+                  <TableCell className="text-right tabular-nums">
                     {schedule.rates.length}
                   </TableCell>
                 </ClickableScheduleRow>
@@ -397,17 +405,15 @@ function EslPanel({
                   key={schedule.priceEslId}
                   id={schedule.priceEslId}
                   href={pricesItemHref(slug, schedule.priceEslId)}
-                  deleteHref={`${pricesItemHref(slug, schedule.priceEslId)}?delete=1`}
+                  deleteHref={pricesDeleteHref(slug, schedule.priceEslId)}
                   canEdit={canEdit}
                   deleteLabel={`Delete ESL #${schedule.priceEslId}`}
                 >
-                  <TableCell className="pointer-events-none">
-                    {formatDate(schedule.dateStart)}
-                  </TableCell>
-                  <TableCell className="pointer-events-none">
+                  <TableCell>{formatDate(schedule.dateStart)}</TableCell>
+                  <TableCell>
                     <PublishedBadge published={schedule.published} />
                   </TableCell>
-                  <TableCell className="pointer-events-none text-right tabular-nums">
+                  <TableCell className="text-right tabular-nums">
                     {schedule.rates.length}
                   </TableCell>
                 </ClickableScheduleRow>
@@ -455,23 +461,21 @@ function PlantPanel({
                   key={row.pricePlantId}
                   id={row.pricePlantId}
                   href={pricesItemHref(slug, row.pricePlantId)}
-                  deleteHref={`${pricesItemHref(slug, row.pricePlantId)}?delete=1`}
+                  deleteHref={pricesDeleteHref(slug, row.pricePlantId)}
                   canEdit={canEdit}
                   deleteLabel={`Delete plant #${row.pricePlantId}`}
                 >
-                  <TableCell className="pointer-events-none">
-                    {formatDate(row.dateStart)}
-                  </TableCell>
-                  <TableCell className="pointer-events-none">
+                  <TableCell>{formatDate(row.dateStart)}</TableCell>
+                  <TableCell>
                     <PublishedBadge published={row.published} />
                   </TableCell>
-                  <TableCell className="pointer-events-none text-right tabular-nums">
+                  <TableCell className="text-right tabular-nums">
                     {formatNumber(row.rate)}
                   </TableCell>
-                  <TableCell className="pointer-events-none text-right tabular-nums">
+                  <TableCell className="text-right tabular-nums">
                     {formatCurrency(row.plantMinValue)}
                   </TableCell>
-                  <TableCell className="pointer-events-none text-right tabular-nums">
+                  <TableCell className="text-right tabular-nums">
                     {formatCurrency(row.plantMaxValue)}
                   </TableCell>
                 </ClickableScheduleRow>
@@ -517,17 +521,15 @@ function TerrorPanel({
                   key={schedule.priceTerrorismId}
                   id={schedule.priceTerrorismId}
                   href={pricesItemHref(slug, schedule.priceTerrorismId)}
-                  deleteHref={`${pricesItemHref(slug, schedule.priceTerrorismId)}?delete=1`}
+                  deleteHref={pricesDeleteHref(slug, schedule.priceTerrorismId)}
                   canEdit={canEdit}
                   deleteLabel={`Delete terrorism #${schedule.priceTerrorismId}`}
                 >
-                  <TableCell className="pointer-events-none">
-                    {formatDate(schedule.dateStart)}
-                  </TableCell>
-                  <TableCell className="pointer-events-none">
+                  <TableCell>{formatDate(schedule.dateStart)}</TableCell>
+                  <TableCell>
                     <PublishedBadge published={schedule.published} />
                   </TableCell>
-                  <TableCell className="pointer-events-none text-right tabular-nums">
+                  <TableCell className="text-right tabular-nums">
                     {schedule.tiers.length}
                   </TableCell>
                 </ClickableScheduleRow>
@@ -573,17 +575,18 @@ function FeesPanel({
                   key={schedule.brokerFeeScheduleId}
                   id={schedule.brokerFeeScheduleId}
                   href={pricesItemHref(slug, schedule.brokerFeeScheduleId)}
-                  deleteHref={`${pricesItemHref(slug, schedule.brokerFeeScheduleId)}?delete=1`}
+                  deleteHref={pricesDeleteHref(
+                    slug,
+                    schedule.brokerFeeScheduleId,
+                  )}
                   canEdit={canEdit}
                   deleteLabel={`Delete fee schedule #${schedule.brokerFeeScheduleId}`}
                 >
-                  <TableCell className="pointer-events-none">
-                    {formatDate(schedule.dateStart)}
-                  </TableCell>
-                  <TableCell className="pointer-events-none">
+                  <TableCell>{formatDate(schedule.dateStart)}</TableCell>
+                  <TableCell>
                     <PublishedBadge published={schedule.published} />
                   </TableCell>
-                  <TableCell className="pointer-events-none text-right tabular-nums">
+                  <TableCell className="text-right tabular-nums">
                     {schedule.lines.length}
                   </TableCell>
                 </ClickableScheduleRow>

@@ -35,6 +35,7 @@ import {
   carPolicyPricingSchema,
   carPolicySchema,
   isTerminalStatus,
+  parsePremiumOverride,
   POLICY_STATUS,
   type CarPolicyFormValues,
 } from "~/lib/zod/policy-car";
@@ -56,6 +57,7 @@ import {
 } from "~/lib/services/reference.service";
 import { getClient } from "~/lib/services/clients/service";
 import { listEmailTemplates } from "~/lib/services/email/templates";
+import { resolveNoteAuthors } from "~/lib/services/users/service";
 import type { Route } from "./+types/$policyId";
 
 export function meta({ loaderData }: Route.MetaArgs) {
@@ -68,9 +70,10 @@ export async function loader({ params }: Route.LoaderArgs) {
   if (!policy) throw new Response("Policy not found", { status: 404 });
   const client = await getClient(policy.clientId);
   if (!client) throw new Response("Client not found", { status: 404 });
-  const [broker, emailTemplates] = await Promise.all([
+  const [broker, emailTemplates, noteAuthors] = await Promise.all([
     getAuthorisedRepresentative(client.authorisedRepresentativeId),
     listEmailTemplates(),
+    resolveNoteAuthors((policy.notes ?? []).map((note) => note.createdBy)),
   ]);
 
   return {
@@ -78,6 +81,7 @@ export async function loader({ params }: Route.LoaderArgs) {
     client,
     broker,
     emailTemplates,
+    noteAuthors,
     reference: getReferenceData(),
     carWording: await getCarWording(),
   };
@@ -154,7 +158,11 @@ export async function action({ request, params }: Route.ActionArgs) {
   if (intent === "add-note") {
     const description = String(formData.get("description") ?? "");
     try {
-      const policy = await addPolicyNote(policyId, description);
+      const policy = await addPolicyNote(
+        policyId,
+        description,
+        actor.email || actor.fullName,
+      );
       await writeAuditLog({
         actor,
         action: "policy.note_add",
@@ -167,6 +175,9 @@ export async function action({ request, params }: Route.ActionArgs) {
       return {
         ok: true as const,
         notes: policy.notes,
+        noteAuthors: await resolveNoteAuthors(
+          (policy.notes ?? []).map((note) => note.createdBy),
+        ),
         message: `Note saved on ${policy.policyNumber}`,
       };
     } catch (error) {
@@ -225,9 +236,15 @@ export async function action({ request, params }: Route.ActionArgs) {
     return { errors: parsed.error.flatten().fieldErrors };
   }
 
+  // Full schema strips premium; re-attach manual override from the raw payload.
+  const premiumOverride = parsePremiumOverride(payload);
+
   const before = await getPolicy(policyId);
   try {
-    await upsertPolicyFromForm(policyId, parsed.data);
+    await upsertPolicyFromForm(policyId, {
+      ...parsed.data,
+      ...(premiumOverride ? { premium: premiumOverride } : {}),
+    });
   } catch (error) {
     if (error instanceof PolicySaveError) {
       return { formError: error.message };
@@ -410,6 +427,7 @@ export default function PolicyDetailRoute({
         clientName={loaderData.client.name}
         brokerName={loaderData.broker?.fullName ?? ""}
         brokerEmail={loaderData.broker?.email ?? ""}
+        noteAuthors={loaderData.noteAuthors}
         emailTemplates={loaderData.emailTemplates}
         headerActions={headerActions}
       />

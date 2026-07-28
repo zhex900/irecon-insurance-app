@@ -4,8 +4,8 @@
 import type {
   PriceCatalogueKind,
   PriceCatalogueSnapshot,
-} from "~/lib/services/price";
-import { catalogueLabel } from "~/lib/services/price";
+} from "~/lib/services/price/types";
+import { catalogueLabel } from "~/lib/services/price/labels";
 
 export const PRICE_CATALOGUE_SLUGS = [
   "car-rates",
@@ -71,11 +71,26 @@ export function pricesItemHref(slug: PriceCatalogueSlug, id: number) {
 }
 
 export function pricesEditHref(slug: PriceCatalogueSlug, id: number) {
-  return `/settings/prices/${slug}/${id}?edit=1`;
+  return `${pricesItemHref(slug, id)}?edit=1`;
 }
 
 export function pricesDeleteHref(slug: PriceCatalogueSlug, id: number) {
-  return `/settings/prices/${slug}/${id}?delete=1`;
+  return `${pricesItemHref(slug, id)}?delete=1`;
+}
+
+/** @deprecated Prefer pricesItemHref / pricesEditHref / pricesDeleteHref */
+export function pricesViewHref(slug: PriceCatalogueSlug, id: number) {
+  return pricesItemHref(slug, id);
+}
+
+/** @deprecated Prefer pricesEditHref */
+export function pricesViewEditHref(slug: PriceCatalogueSlug, id: number) {
+  return pricesEditHref(slug, id);
+}
+
+/** @deprecated Prefer pricesDeleteHref */
+export function pricesViewDeleteHref(slug: PriceCatalogueSlug, id: number) {
+  return pricesDeleteHref(slug, id);
 }
 
 export function emptyCatalogue(): PriceCatalogueSnapshot {

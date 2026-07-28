@@ -24,9 +24,26 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 }
 
 export default function EditClientRoute({ loaderData }: Route.ComponentProps) {
+  const clientLabel =
+    loaderData.client.name || `Client #${loaderData.client.clientId}`;
+
   return (
     <div>
-      <PageHeader title={loaderData.isNew ? "New client" : "Edit client"} />
+      <PageHeader
+        title={loaderData.isNew ? "New client" : "Edit client"}
+        breadcrumbs={
+          loaderData.isNew
+            ? [{ label: "Clients", to: "/clients" }, { label: "New client" }]
+            : [
+                { label: "Clients", to: "/clients" },
+                {
+                  label: clientLabel,
+                  to: `/clients/${loaderData.client.clientId}`,
+                },
+                { label: "Edit" },
+              ]
+        }
+      />
       <ClientForm
         client={loaderData.client}
         reference={loaderData.reference}

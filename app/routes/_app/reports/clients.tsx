@@ -146,6 +146,10 @@ export default function ClientReportRoute({
       <PageHeader
         title="Client Report"
         description="Client policies with turnover limit and expiry. Clear dates to show all."
+        breadcrumbs={[
+          { label: "Reports", to: "/reports" },
+          { label: "Client Report" },
+        ]}
       />
 
       <Form

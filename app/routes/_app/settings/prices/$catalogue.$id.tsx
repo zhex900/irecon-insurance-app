@@ -7,9 +7,9 @@ import {
 import { requireAuth } from "~/lib/auth/session.server";
 import { isSuperAdmin } from "~/lib/auth/roles";
 import {
-  emptyCatalogue,
   isPriceCatalogueSlug,
   pricesEditHref,
+  pricesItemHref,
   pricesListHref,
   scheduleViewFromSnapshot,
   slugLabel,
@@ -37,7 +37,7 @@ import {
   type PlantRateInput,
   type StampScheduleInput,
   type TerrorScheduleInput,
-} from "~/lib/services/price";
+} from "~/lib/services/price/catalogue.server";
 import type { Route } from "./+types/$catalogue.$id";
 
 export function meta({ params }: Route.MetaArgs) {
@@ -53,18 +53,14 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     throw redirect("/settings/prices/car-rates");
   }
   const id = Number(params.id);
-  if (!id) throw redirect(pricesListHref(slug));
+  if (!Number.isFinite(id) || id <= 0) throw redirect(pricesListHref(slug));
 
-  let catalogue;
-  try {
-    catalogue = await getPriceCatalogueSnapshot();
-  } catch {
-    catalogue = emptyCatalogue();
-  }
-
+  const catalogue = await getPriceCatalogueSnapshot();
   const kind = slugToKind(slug);
   const schedule = scheduleViewFromSnapshot(kind, catalogue, id);
-  if (!schedule) throw redirect(pricesListHref(slug));
+  if (!schedule) {
+    throw new Response(`Price schedule #${id} not found`, { status: 404 });
+  }
 
   const url = new URL(request.url);
   const deleting = url.searchParams.get("delete") === "1";
@@ -72,7 +68,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   const canEdit = isSuperAdmin(viewer);
 
   if ((editing || deleting) && !canEdit) {
-    throw redirect(`/settings/prices/${slug}/${id}`);
+    throw redirect(pricesItemHref(slug, id));
   }
 
   return {
@@ -215,7 +211,7 @@ export default function SettingsPricesItemRoute({
     return (
       <PriceDeleteDialog
         label={label}
-        closeHref={`/settings/prices/${slug}/${id}`}
+        closeHref={pricesItemHref(slug, id)}
         catalogue={kind}
         id={id}
         error={error}
@@ -226,9 +222,7 @@ export default function SettingsPricesItemRoute({
   return (
     <PriceScheduleDialog
       title={label}
-      closeHref={
-        editing ? `/settings/prices/${slug}/${id}` : pricesListHref(slug)
-      }
+      closeHref={editing ? pricesItemHref(slug, id) : pricesListHref(slug)}
       editHref={pricesEditHref(slug, id)}
       schedule={schedule}
       editing={editing}

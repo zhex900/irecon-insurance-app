@@ -25,7 +25,7 @@ export function ClaimsWordingStep({
   return (
     <div className="flex flex-col gap-8">
       <Section title="Claims History">
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="flex flex-col gap-4">
           <FieldInput
             label="Number of claims last 3 years"
             required
@@ -76,7 +76,7 @@ export function ClaimsWordingStep({
         </p>
       </Section>
 
-      <Section title="General Disclosure">
+      <Section title="General Disclosure" className="bg-muted/40">
         <Controller
           control={control}
           name="declarationConfirmed"

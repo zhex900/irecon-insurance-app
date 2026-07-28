@@ -19,6 +19,7 @@ export function usePolicySubmit({
   fetcher,
   step,
   premium,
+  premiumRef,
   setPremium,
   setReferralReasons,
   regenerateDocumentsIfNeeded,
@@ -36,6 +37,7 @@ export function usePolicySubmit({
   fetcher: ReturnType<typeof useFetcher<PolicyWizardActionData>>;
   step: number;
   premium: PremiumBreakdown | undefined;
+  premiumRef: MutableRefObject<PremiumBreakdown | undefined>;
   setPremium: (premium: PremiumBreakdown | undefined) => void;
   setReferralReasons: (reasons: string[]) => void;
   regenerateDocumentsIfNeeded: (options?: {
@@ -146,7 +148,12 @@ export function usePolicySubmit({
     }
     const leave = getLeaveApi();
     if (leave) leave.allowLeaveRef.current = true;
-    const values = { ...form.getValues(), ...overrides };
+    const premiumOverride = premiumRef.current ?? premium;
+    const values = {
+      ...form.getValues(),
+      ...overrides,
+      ...(premiumOverride ? { premium: premiumOverride } : {}),
+    };
     const payload = JSON.stringify(values);
     // Clear dirty state so leave navigation is not blocked after status save.
     savedSnapshotRef.current = payload;

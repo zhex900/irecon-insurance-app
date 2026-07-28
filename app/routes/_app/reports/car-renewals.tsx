@@ -165,6 +165,10 @@ export default function CarRenewalReportRoute({
       <PageHeader
         title="CAR Renewal Report"
         description="Policies relative to a reference date — filter by status, type, and search."
+        breadcrumbs={[
+          { label: "Reports", to: "/reports" },
+          { label: "CAR Renewal Report" },
+        ]}
       />
 
       <Form

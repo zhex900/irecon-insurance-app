@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router";
 import { ChevronDownIcon } from "lucide-react";
+import {
+  AppBreadcrumb,
+  type AppBreadcrumbItem,
+} from "~/components/layout/app-breadcrumb";
 import { Badge } from "~/components/reui/badge";
 import { Button } from "~/components/ui/button";
 import { LoadingButton } from "~/components/ui/loading-button";
@@ -21,6 +25,8 @@ import { Textarea } from "~/components/ui/textarea";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { cn } from "~/lib/utils";
 import type { PolicyNote } from "~/lib/db/types";
+import type { NoteAuthor } from "~/lib/services/users/service";
+import { UserHoverCard } from "~/components/ui/user-hover-card";
 import { wizardSteps } from "~/lib/zod/policy-car";
 
 export const POLICY_FORM_SECTIONS = [
@@ -95,9 +101,9 @@ export function stepIndexForSection(sectionId: string): number | null {
   return index >= 0 ? index : null;
 }
 
-/** Below app header (3.5rem) + sticky policy chrome. */
+/** Below app header (3.5rem) + sticky policy chrome (incl. breadcrumbs). */
 export const POLICY_STICKY_RAIL_CLASS =
-  "sticky top-36 z-10 self-start max-h-[calc(100svh-9.5rem)] overflow-y-auto";
+  "sticky top-40 z-10 self-start max-h-[calc(100svh-10.5rem)] overflow-y-auto";
 
 function formatNoteDate(iso: string): string {
   const date = new Date(iso);
@@ -106,6 +112,18 @@ function formatNoteDate(iso: string): string {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const year = date.getFullYear();
   return `${day}/${month}/${year}`;
+}
+
+function NoteAuthorLabel({
+  createdBy,
+  authors,
+}: {
+  createdBy: string;
+  authors: Record<string, NoteAuthor>;
+}) {
+  const author = authors[createdBy.trim().toLowerCase()];
+  if (!author) return <>{createdBy}</>;
+  return <UserHoverCard user={author}>{author.fullName}</UserHoverCard>;
 }
 
 function InfoRow({ label, children }: { label: string; children: ReactNode }) {
@@ -124,11 +142,13 @@ export function PolicyInformationCard({
   statusName,
   adjusted,
   notes = [],
+  noteAuthors = {},
   showNotes = true,
   canAddNotes = false,
   onAddNote,
   addNoteBusy = false,
   addNoteError,
+  className,
 }: {
   insurerName: string;
   policyNumber: string;
@@ -136,12 +156,14 @@ export function PolicyInformationCard({
   statusName: string;
   adjusted: boolean;
   notes?: PolicyNote[];
+  noteAuthors?: Record<string, NoteAuthor>;
   /** Hide the Policy Notes row entirely (e.g. draft policies). */
   showNotes?: boolean;
   canAddNotes?: boolean;
   onAddNote?: (description: string) => void;
   addNoteBusy?: boolean;
   addNoteError?: string | null;
+  className?: string;
 }) {
   const [draft, setDraft] = useState("");
   const [localError, setLocalError] = useState<string | null>(null);
@@ -166,7 +188,7 @@ export function PolicyInformationCard({
   }
 
   return (
-    <Card id="policy-information" className="scroll-mt-28">
+    <Card id="policy-information" className={cn("scroll-mt-28", className)}>
       <CardHeader className="border-b">
         <CardTitle>Policy Information</CardTitle>
         <CardDescription>Summary at a glance</CardDescription>
@@ -196,11 +218,18 @@ export function PolicyInformationCard({
                           <p className="text-sm whitespace-pre-wrap text-foreground">
                             {note.description}
                           </p>
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {[formatNoteDate(note.createdWhen), note.createdBy]
-                              .filter(Boolean)
-                              .join(" · ")}
-                          </p>
+                          <div className="mt-1 text-xs text-muted-foreground">
+                            {formatNoteDate(note.createdWhen)}
+                            {note.createdBy ? (
+                              <>
+                                {" · "}
+                                <NoteAuthorLabel
+                                  createdBy={note.createdBy}
+                                  authors={noteAuthors}
+                                />
+                              </>
+                            ) : null}
+                          </div>
                         </li>
                       ))}
                     </ul>
@@ -257,6 +286,7 @@ export function PolicyCollapsibleSection({
   open,
   onOpenChange,
   children,
+  className,
 }: {
   id: string;
   title: string;
@@ -264,10 +294,11 @@ export function PolicyCollapsibleSection({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   children: ReactNode;
+  className?: string;
 }) {
   return (
     <Collapsible open={open} onOpenChange={onOpenChange}>
-      <Card id={id} className="scroll-mt-28">
+      <Card id={id} className={cn("scroll-mt-28", className)}>
         <CardHeader className="border-b">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -311,6 +342,7 @@ export function PolicySectionNav({
   invalidIssues = [],
   onNavigateToIssue,
   items = POLICY_FORM_NAV_ITEMS,
+  className,
 }: {
   activeId: string;
   openMap: Record<string, boolean>;
@@ -318,6 +350,7 @@ export function PolicySectionNav({
   invalidIssues?: { path: string; label: string; message?: string }[];
   onNavigateToIssue?: (path: string) => void;
   items?: { id: string; label: string }[];
+  className?: string;
 }) {
   const [invalidOpen, setInvalidOpen] = useState(false);
   const invalidCount = invalidIssues.length;
@@ -332,7 +365,10 @@ export function PolicySectionNav({
   return (
     <nav
       aria-label="Policy sections"
-      className="flex flex-col gap-1 rounded-xl border border-border bg-card p-3"
+      className={cn(
+        "flex flex-col gap-1 rounded-xl border border-border bg-card p-3",
+        className,
+      )}
     >
       {invalidCount > 0 ? (
         <Collapsible open={invalidOpen} onOpenChange={setInvalidOpen}>
@@ -426,50 +462,66 @@ export function PolicyStickyHeader({
   policyNumber,
   clientId,
   clientName,
+  modeBadge,
   statusBadge,
   saveStatus,
   adjusted,
   actions,
   expandControl,
+  className,
+  breadcrumbs,
 }: {
   policyNumber: string;
   clientId: number;
   clientName: string;
+  /** New / Editing / View only cue — shown before status. */
+  modeBadge?: ReactNode;
   statusBadge?: ReactNode;
   saveStatus?: ReactNode;
   adjusted?: boolean;
   actions?: ReactNode;
   expandControl?: ReactNode;
+  className?: string;
+  breadcrumbs: AppBreadcrumbItem[];
 }) {
   return (
-    <div className="sticky top-14 z-20 -mx-4 border-b border-border bg-background/95 px-4 py-3 backdrop-blur supports-backdrop-filter:bg-background/80 md:-mx-8 md:px-8">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex min-w-0 flex-col gap-1">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <h2 className="truncate text-lg font-semibold tracking-tight md:text-xl">
-              {policyNumber}
-            </h2>
-            {statusBadge}
-            {saveStatus}
-            {adjusted ? (
-              <Badge className="border-border bg-muted text-foreground">
-                Adjusted
-              </Badge>
-            ) : null}
+    <div
+      className={cn(
+        "sticky top-14 z-20 border-b border-border px-4 py-3 backdrop-blur md:px-8",
+        className,
+      )}
+    >
+      <div className="flex flex-col gap-2">
+        <AppBreadcrumb items={breadcrumbs} />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-col gap-1">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <h2 className="truncate text-lg font-semibold tracking-tight md:text-xl">
+                {policyNumber}
+              </h2>
+              {modeBadge}
+              {statusBadge}
+              {saveStatus}
+              {adjusted ? (
+                <Badge className="border-border bg-muted text-foreground">
+                  Adjusted
+                </Badge>
+              ) : null}
+            </div>
+            <p className="truncate text-sm text-muted-foreground">
+              CAR policy for{" "}
+              <Link
+                to={`/clients/${clientId}`}
+                className="font-medium text-foreground underline-offset-4 hover:underline"
+              >
+                {clientName}
+              </Link>
+            </p>
           </div>
-          <p className="truncate text-sm text-muted-foreground">
-            CAR policy for{" "}
-            <Link
-              to={`/clients/${clientId}`}
-              className="font-medium text-foreground underline-offset-4 hover:underline"
-            >
-              {clientName}
-            </Link>
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {actions}
-          {expandControl}
+          <div className="flex flex-wrap items-center gap-2">
+            {actions}
+            {expandControl}
+          </div>
         </div>
       </div>
     </div>

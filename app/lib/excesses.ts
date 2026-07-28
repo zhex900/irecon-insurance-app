@@ -122,11 +122,11 @@ export const EXCESS_FIELDS: ExcessFieldConfig[] = [
   },
 ];
 
-/** Resolve Section 1 contract works sum insured into an excess band. */
+/** Resolve estimated turnover / project value into an excess band. */
 export function resolveContractValueBand(
-  contractWorksSumInsured: unknown,
+  estimatedTurnover: unknown,
 ): ContractValueBand | null {
-  const raw = stripAmountCommas(contractWorksSumInsured);
+  const raw = stripAmountCommas(estimatedTurnover);
   if (raw === "" || raw == null) return null;
   const value = typeof raw === "number" ? raw : Number(raw);
   if (!Number.isFinite(value) || value < 0) return null;
@@ -134,41 +134,25 @@ export function resolveContractValueBand(
   return "from2mTo5m";
 }
 
-/** Map liabilityLimitBand id → millions (1=$10m, 2=$20m). */
-export function resolveLiabilityLimitMillions(
-  liabilityLimitBand: unknown,
-): 10 | 20 | null {
-  const id = Number(liabilityLimitBand);
-  if (id === 1) return 10;
-  if (id === 2) return 20;
-  return null;
-}
-
 export function isExcessFieldVisible(
   field: ExcessFieldConfig,
   opts: {
-    contractWorksSumInsured: unknown;
-    liabilityLimitBand: unknown;
+    estimatedTurnover: unknown;
+    liabilityLimitBand?: unknown;
   },
 ): boolean {
   if (!field.band) return true;
 
-  const band = resolveContractValueBand(opts.contractWorksSumInsured);
+  const band = resolveContractValueBand(opts.estimatedTurnover);
   if (!band) return false;
-  if (field.band !== CONTRACT_VALUE_BAND_LABEL[band]) return false;
-
-  if (field.liabilityLimitMillions != null) {
-    const millions = resolveLiabilityLimitMillions(opts.liabilityLimitBand);
-    if (millions == null) return false;
-    return field.liabilityLimitMillions === millions;
-  }
-
-  return true;
+  // Show the whole band (e.g. Minor+Major, or $10m+$20m) — same theory as
+  // Section 1: only the matching estimated-turnover band appears.
+  return field.band === CONTRACT_VALUE_BAND_LABEL[band];
 }
 
 export function visibleExcessFields(opts: {
-  contractWorksSumInsured: unknown;
-  liabilityLimitBand: unknown;
+  estimatedTurnover: unknown;
+  liabilityLimitBand?: unknown;
   group?: ExcessGroup;
 }): ExcessFieldConfig[] {
   return EXCESS_FIELDS.filter((field) => {

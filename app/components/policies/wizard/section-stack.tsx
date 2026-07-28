@@ -73,6 +73,7 @@ export type WizardSectionStackProps = {
   setHasUnsavedChanges: Dispatch<SetStateAction<boolean>>;
   persistDraft: (opts?: { force?: boolean }) => Promise<unknown>;
   handleFieldBlur: () => void;
+  shellCardClassName?: string;
 };
 
 export function WizardSectionStack({
@@ -96,6 +97,7 @@ export function WizardSectionStack({
   setHasUnsavedChanges,
   persistDraft,
   handleFieldBlur,
+  shellCardClassName,
 }: WizardSectionStackProps) {
   return (
     <fieldset
@@ -112,6 +114,7 @@ export function WizardSectionStack({
           onOpenChange={(open) =>
             setOpenMap((prev) => ({ ...prev, premium: open }))
           }
+          className={shellCardClassName}
         >
           <PricingDeclarationConfirmedStep
             premium={premium}
@@ -137,6 +140,7 @@ export function WizardSectionStack({
         onOpenChange={(open) =>
           setOpenMap((prev) => ({ ...prev, "risk-details": open }))
         }
+        className={shellCardClassName}
       >
         <RiskDetailsStep reference={reference} />
       </PolicyCollapsibleSection>
@@ -152,6 +156,7 @@ export function WizardSectionStack({
             "limits-of-liability": open,
           }))
         }
+        className={shellCardClassName}
       >
         <LimitsOfLiabilityStep reference={reference} />
       </PolicyCollapsibleSection>
@@ -164,6 +169,7 @@ export function WizardSectionStack({
         onOpenChange={(open) =>
           setOpenMap((prev) => ({ ...prev, excesses: open }))
         }
+        className={shellCardClassName}
       >
         <ExcessesStep />
       </PolicyCollapsibleSection>
@@ -176,6 +182,7 @@ export function WizardSectionStack({
         onOpenChange={(open) =>
           setOpenMap((prev) => ({ ...prev, claims: open }))
         }
+        className={shellCardClassName}
       >
         <ClaimsWordingStep carWording={carWording} />
       </PolicyCollapsibleSection>
@@ -189,6 +196,7 @@ export function WizardSectionStack({
           onOpenChange={(open) =>
             setOpenMap((prev) => ({ ...prev, premium: open }))
           }
+          className={shellCardClassName}
         >
           <PricingDeclarationConfirmedStep
             premium={premium}

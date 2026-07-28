@@ -10,9 +10,8 @@ import { ExcessField, Section } from "./section-shared";
 
 export function ExcessesStep() {
   const { register, watch } = useFormContext<CarPolicyFormValues>();
-  const contractWorksSumInsured = watch("contractWorksSumInsured");
-  const liabilityLimitBand = watch("liabilityLimitBand");
-  const visibility = { contractWorksSumInsured, liabilityLimitBand };
+  const estimatedTurnover = watch("estimatedTurnover");
+  const visibility = { estimatedTurnover };
 
   const contractWorksBands = groupExcessFieldsByBand(
     visibleExcessFields({ ...visibility, group: "contractWorks" }),
@@ -20,7 +19,7 @@ export function ExcessesStep() {
   const legalLiabilityBands = groupExcessFieldsByBand(
     visibleExcessFields({ ...visibility, group: "legalLiability" }),
   );
-  const contractValueBand = resolveContractValueBand(contractWorksSumInsured);
+  const contractValueBand = resolveContractValueBand(estimatedTurnover);
 
   return (
     <div className="flex flex-col gap-8">
@@ -29,7 +28,7 @@ export function ExcessesStep() {
           <ExcessBandGroups bands={contractWorksBands} />
           {!contractValueBand ? (
             <p className="text-sm text-muted-foreground">
-              Enter Contract Works sum insured in Limits of Liability to show
+              Enter Estimated Turnover / Project Value in Risk Details to show
               Minor / Major Perils excesses for the matching contract value
               band.
             </p>
@@ -46,8 +45,9 @@ export function ExcessesStep() {
           <ExcessBandGroups bands={legalLiabilityBands} />
           {!contractValueBand ? (
             <p className="text-sm text-muted-foreground">
-              Enter Contract Works sum insured and Limit of Liability to show
-              the matching legal liability excess.
+              Enter Estimated Turnover / Project Value in Risk Details to show
+              the matching Limit of Liability excesses for that contract value
+              band.
             </p>
           ) : null}
         </div>
@@ -73,7 +73,13 @@ function ExcessBandGroups({
           ) : null}
           <div className="grid gap-4 md:grid-cols-2">
             {group.fields.map((field) => (
-              <ExcessField key={field.key} field={field} />
+              <ExcessField
+                key={field.key}
+                field={field}
+                className={
+                  field.key === "excessSection1A" ? "md:col-span-2" : undefined
+                }
+              />
             ))}
           </div>
         </div>

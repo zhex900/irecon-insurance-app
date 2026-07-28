@@ -267,16 +267,14 @@ function applyPolicyRules(data: PolicyRuleFields, ctx: z.RefinementCtx) {
 
 function applyExcessRules(
   data: {
-    contractWorksSumInsured?: unknown;
-    liabilityLimitBand?: unknown;
+    estimatedTurnover?: unknown;
     excesses?: Record<string, string | undefined>;
   },
   ctx: z.RefinementCtx,
 ) {
   if (!data.excesses) return;
   const visible = visibleExcessFields({
-    contractWorksSumInsured: data.contractWorksSumInsured,
-    liabilityLimitBand: data.liabilityLimitBand,
+    estimatedTurnover: data.estimatedTurnover,
   });
   for (const field of visible) {
     const raw = String(data.excesses[field.key] ?? "")
@@ -383,6 +381,27 @@ const draftFields = {
 
 /** Autosave / leave-without-full-validation — do not enforce Taken-gate rules. */
 export const carPolicyDraftSchema = z.object(draftFields);
+
+/**
+ * Full premium breakdown shape for save overrides (manual edits).
+ * Loose record keeps draft/save tolerant of extra keys.
+ */
+export const premiumBreakdownSchema = z.record(z.string(), z.number());
+
+export type PremiumBreakdownInput = z.infer<typeof premiumBreakdownSchema>;
+
+/** Parse an optional premium override from a save/draft payload. */
+export function parsePremiumOverride(
+  payload: unknown,
+): PremiumBreakdownInput | undefined {
+  if (!payload || typeof payload !== "object" || !("premium" in payload)) {
+    return undefined;
+  }
+  const parsed = premiumBreakdownSchema.safeParse(
+    (payload as { premium?: unknown }).premium,
+  );
+  return parsed.success ? parsed.data : undefined;
+}
 
 /** Minimum fields required for premium calculation */
 export const carPolicyPricingSchema = z
