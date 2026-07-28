@@ -3,6 +3,13 @@
     "shadcn": {
       "command": "/bin/bash",
       "args": ["${workspaceFolder}/scripts/mcp/shadcn-mcp.sh"]
+    },
+    "reui": {
+      "url": "https://mcp.reui.io"
+    },
+    "mssql": {
+      "command": "/bin/bash",
+      "args": ["${workspaceFolder}/scripts/mcp/mssql-mcp.sh"]
     }
   }
 }

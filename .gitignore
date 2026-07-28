@@ -1,3 +1,32 @@
+# Dependencies & secrets
+node_modules/
+.env
+.env.*
+!.env.example
+!.env.staging.example
+.dev.vars
+
+# Build / tooling
+.DS_Store
+Thumbs.db
+desktop.ini
 *.bak
-legacy-app
-script.sql
+*.log
+logs/
+.tmp/
+.wrangler/
+.react-router/
+/build/
+
+# Word lock files
+~$*
+
+# Tests
+coverage/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# Local MSSQL credentials (live under _archive/mssql/)
+_archive/mssql/.env.mssql

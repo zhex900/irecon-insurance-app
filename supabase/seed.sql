@@ -1,4 +1,2 @@
--- Reference data seeds for local/dev Supabase
--- Run via: supabase db reset
-
-\ir seeds/car_wording.sql
+-- Optional: additional SQL seeds can go here.
+-- Prefer files under supabase/seeds/ (see config.toml sql_paths).
