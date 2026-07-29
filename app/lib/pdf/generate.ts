@@ -8,11 +8,7 @@ import { applyFlowPushDown } from "~/lib/pdf/flow-push-down";
 import { buildLegacyTextPdfBlob } from "~/lib/pdf/legacy-text-pdf";
 import { policyToMergeInputs } from "~/lib/pdf/merge-fields";
 import { pdfmePlugins } from "~/lib/pdf/plugins";
-import {
-  LIBRARY_DOCUMENT_PATHS,
-  resolvePdfTemplate,
-  type PdfTemplateSlot,
-} from "~/lib/pdf/templates";
+import { resolvePdfTemplate, type PdfTemplateSlot } from "~/lib/pdf/templates";
 
 const plugins = pdfmePlugins;
 
@@ -193,12 +189,7 @@ export async function buildPdfBlobFromDocument(
       const apiRes = await fetch(apiPath);
       if (apiRes.ok) return apiRes.blob();
     } catch {
-      // Fall through to public path / text stub.
-    }
-    const path = LIBRARY_DOCUMENT_PATHS[doc.filename];
-    if (path) {
-      const res = await fetch(path);
-      if (res.ok) return res.blob();
+      // Fall through to text stub when R2/API is unavailable.
     }
     return buildLegacyTextPdfBlob(doc.name, doc.content);
   }

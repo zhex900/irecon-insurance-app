@@ -70,13 +70,3 @@ export function listPdfTemplateSlots() {
     }),
   );
 }
-
-/** Static library PDFs copied from car-pdf-templates/ into public/. */
-export const LIBRARY_DOCUMENT_PATHS: Record<string, string> = {
-  "ATC Stamp duty Exemption.pdf":
-    "/library-documents/ATC%20Stamp%20duty%20Exemption.pdf",
-  "POLICY COMPARISON JUNE 2024.pdf":
-    "/library-documents/POLICY%20COMPARISON%20JUNE%202024.pdf",
-  "IA Annual CAR TPL Wording (eff Jan 2026) - Sample.pdf":
-    "/library-documents/IA%20Annual%20CAR%20TPL%20Wording%20(eff%20Jan%202026)%20-%20Sample.pdf",
-};

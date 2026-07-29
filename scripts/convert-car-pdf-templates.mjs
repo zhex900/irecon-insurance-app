@@ -15,13 +15,7 @@
  * Requires Docker + image linuxserver/libreoffice (pulled on first run).
  */
 import { execFileSync } from "node:child_process";
-import {
-  copyFileSync,
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
@@ -32,7 +26,6 @@ const REPO_ROOT = resolve(__dirname, "..");
 const SOURCE_DIR = join(REPO_ROOT, "_archive/car-pdf-templates/source");
 const OUT_DIR = join(REPO_ROOT, "app/assets/pdf-templates");
 const BASE_PDF_DIR = join(OUT_DIR, "base-pdfs");
-const LIBRARY_OUT = join(REPO_ROOT, "public/library-documents");
 const TMP_PDF_DIR = join(REPO_ROOT, ".tmp/base-pdfs");
 
 const PT_TO_MM = 25.4 / 72;
@@ -102,7 +95,6 @@ const LIBRARY_PDFS = [
 function ensureDirs() {
   mkdirSync(OUT_DIR, { recursive: true });
   mkdirSync(BASE_PDF_DIR, { recursive: true });
-  mkdirSync(LIBRARY_OUT, { recursive: true });
   mkdirSync(TMP_PDF_DIR, { recursive: true });
 }
 
@@ -681,7 +673,7 @@ function writeIndex(results) {
         })),
         libraryDocuments: LIBRARY_PDFS.map((name) => ({
           name,
-          path: `/library-documents/${encodeURIComponent(name)}`,
+          note: "Upload via Settings → Library Documents (R2); kept in _archive/car-pdf-templates/source",
         })),
       },
       null,
@@ -690,14 +682,14 @@ function writeIndex(results) {
   );
 }
 
-function copyLibraryPdfs() {
+function noteLibraryPdfs() {
   for (const name of LIBRARY_PDFS) {
     const src = join(SOURCE_DIR, name);
     if (!existsSync(src)) {
-      console.warn(`Skip missing library PDF: ${name}`);
+      console.warn(`Missing archive library PDF: ${name}`);
       continue;
     }
-    copyFileSync(src, join(LIBRARY_OUT, name));
+    console.log(`Library PDF (upload to R2 via Settings): ${name}`);
   }
 }
 
@@ -757,7 +749,7 @@ async function main() {
   writeCatalogue(allFields);
   writeIndex(results);
   writeReadme();
-  copyLibraryPdfs();
+  noteLibraryPdfs();
   console.log(`Catalogue: ${allFields.size} unique merge fields`);
 }
 

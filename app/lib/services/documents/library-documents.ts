@@ -140,32 +140,3 @@ export async function deleteLibraryDocument(
     .where(eq(libraryDocument.libraryDocumentId, id));
   return existing;
 }
-
-/** Copy seed PDFs from public/ into R2 + DB (idempotent by filename). */
-export async function importSeedLibraryDocuments(
-  bucket: R2BucketLike,
-  requestUrl: string,
-  actorEmail: string,
-): Promise<LibraryDocumentRecord[]> {
-  const { LIBRARY_DOCUMENT_PATHS } = await import("~/lib/pdf/templates");
-  const imported: LibraryDocumentRecord[] = [];
-
-  for (const [filename, path] of Object.entries(LIBRARY_DOCUMENT_PATHS)) {
-    const existing = await getLibraryDocumentByFilename(filename);
-    if (existing) {
-      imported.push(existing);
-      continue;
-    }
-
-    const res = await fetch(new URL(path, requestUrl));
-    if (!res.ok) continue;
-    const bytes = await res.arrayBuffer();
-    const file = new File([bytes], filename, { type: "application/pdf" });
-    const attachRule = /stamp\s*duty/i.test(filename) ? "state:2" : "";
-    imported.push(
-      await uploadLibraryDocument(bucket, file, actorEmail, attachRule),
-    );
-  }
-
-  return imported;
-}

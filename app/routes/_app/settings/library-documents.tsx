@@ -9,7 +9,6 @@ import { writeAuditLog } from "~/lib/services/audit/service";
 import { isFeatureEnabled } from "~/lib/services/feature-flags";
 import {
   deleteLibraryDocument,
-  importSeedLibraryDocuments,
   listLibraryDocuments,
   uploadLibraryDocument,
 } from "~/lib/services/documents/library-documents";
@@ -119,37 +118,6 @@ export async function action({ request, context }: Route.ActionArgs) {
     }
   }
 
-  if (intent === "import_seed") {
-    try {
-      const documents = await importSeedLibraryDocuments(
-        bucket,
-        request.url,
-        viewer.email,
-      );
-      await writeAuditLog({
-        actor: viewer,
-        action: "settings.library_document_upload",
-        entityType: "library_document",
-        entityId: "seed",
-        summary: `Imported ${documents.length} seed library document(s)`,
-        metadata: {
-          filenames: documents.map((d) => d.filename),
-        },
-        request,
-      });
-      return {
-        ok: true as const,
-        intent: "import_seed" as const,
-        count: documents.length,
-      };
-    } catch (error) {
-      return {
-        ok: false as const,
-        error: error instanceof Error ? error.message : "Seed import failed.",
-      };
-    }
-  }
-
   if (intent === "delete") {
     const id = Number(formData.get("id"));
     if (!Number.isFinite(id) || id <= 0) {
@@ -200,11 +168,7 @@ export default function SettingsLibraryDocumentsRoute({
       />
       <div className="flex items-start gap-3 pb-4 text-sm text-muted-foreground">
         <FileStackIcon className="mt-0.5 size-4 shrink-0" />
-        <p>
-          Uploading replaces an existing file with the same name. Deleting
-          removes it from future packs only — already-issued policy documents
-          are kept.
-        </p>
+        <p>Uploading replaces an existing file with the same name.</p>
       </div>
       <LibraryDocumentsManager
         documents={loaderData.documents}
