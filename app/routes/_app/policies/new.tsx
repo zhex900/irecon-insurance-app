@@ -12,7 +12,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   const client = await getClient(clientId);
   if (!client) throw new Response("Client not found", { status: 404 });
 
-  const policy = await createPolicyDraft(clientId, {});
+  const policy = await createPolicyDraft(clientId, {}, actor.email);
   await writeAuditLog({
     actor,
     action: "policy.create",

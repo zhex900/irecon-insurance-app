@@ -31,11 +31,12 @@ import { listClientReportPage } from "~/lib/services/reports/list.service";
 import { defaultClientReportPeriod } from "~/lib/services/reports/service";
 import { formatCurrency, formatDate } from "~/lib/utils";
 import type { Route } from "./+types/clients";
+import { pageTitle } from "~/lib/brand";
 
 const PAGE_SIZE = 50;
 
 export function meta() {
-  return [{ title: "Client Report | BrokerSure" }];
+  return [{ title: pageTitle("Client Report") }];
 }
 
 export async function loader({ request }: Route.LoaderArgs) {

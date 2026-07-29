@@ -34,7 +34,8 @@
     "test:e2e": "playwright test --project=e2e",
     "test:smoke": "playwright test --project=smoke",
     "verify": "npm run lint && npm run format:check && npm run typecheck && npm run test:unit",
-    "prepare": "husky"
+    "prepare": "husky",
+    "pdf:templates:editable": "node scripts/make-pdf-templates-editable.mjs"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,mjs,cjs}": [
@@ -52,11 +53,17 @@
     "@pdfme/common": "^6.1.11",
     "@pdfme/generator": "^6.1.11",
     "@pdfme/schemas": "^6.1.11",
+    "@pdfme/ui": "^6.1.12",
+    "@react-email/editor": "^1.6.13",
     "@react-router/cloudflare": "^8.2.0",
     "@react-router/node": "8.2.0",
     "@react-router/serve": "8.2.0",
     "@supabase/ssr": "^0.12.3",
     "@supabase/supabase-js": "^2.110.8",
+    "@tiptap/core": "^3.29.2",
+    "@tiptap/extension-placeholder": "^3.29.2",
+    "@tiptap/pm": "^3.29.2",
+    "@tiptap/suggestion": "^3.29.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",

@@ -1,6 +1,6 @@
 # Tooling (lint / format)
 
-Local quality gate for BrokerSure (Phase 8). CI should re-run the same commands — hooks alone are not enough.
+Local quality gate for Irecon Insurance (Phase 8). CI should re-run the same commands — hooks alone are not enough.
 
 ## Commands
 

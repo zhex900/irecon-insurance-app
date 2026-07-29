@@ -1,6 +1,6 @@
 # UI guidelines
 
-shadcn/ui, ReUI, Tailwind, accessibility, and design-system rules for BrokerSure.
+shadcn/ui, ReUI, Tailwind, accessibility, and design-system rules for Irecon Insurance.
 
 Also follow the local skills: `.cursor/skills/shadcn/` and `.cursor/skills/reui/` (and the ReUI MCP). This doc is the project contract; skills carry detailed Incorrect/Correct examples.
 
@@ -129,7 +129,7 @@ Also:
 
 ## Copy & locale
 
-- User-facing product name: **BrokerSure**.
+- User-facing product name: **Irecon Insurance** (`APP_NAME` in `app/lib/brand.ts`).
 - Dates/currency: Australian conventions (`en-AU`, AUD helpers in `~/lib/utils`).
 - Avoid prototype leftover titles (“CAR Broker Portal”) in new UI strings.
 

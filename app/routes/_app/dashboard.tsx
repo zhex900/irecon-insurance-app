@@ -11,9 +11,10 @@ import { toBrokerSession } from "~/lib/services/broker-session";
 import { formatNumber } from "~/lib/utils";
 import { POLICY_STATUS } from "~/lib/zod/policy-car";
 import type { Route } from "./+types/dashboard";
+import { pageTitle } from "~/lib/brand";
 
 export function meta() {
-  return [{ title: "Dashboard | BrokerSure" }];
+  return [{ title: pageTitle("Dashboard") }];
 }
 
 export async function loader({ request }: Route.LoaderArgs) {

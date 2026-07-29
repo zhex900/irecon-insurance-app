@@ -1,6 +1,6 @@
 # Design patterns
 
-Patterns we use (or are migrating toward) in BrokerSure. Prefer the simplest pattern that fits — see architecture principles.
+Patterns we use (or are migrating toward) in Irecon Insurance. Prefer the simplest pattern that fits — see architecture principles.
 
 ## Service pattern
 

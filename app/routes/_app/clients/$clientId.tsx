@@ -33,11 +33,12 @@ import {
 import { deletePolicies } from "~/lib/services/policy/data.service";
 import { getReferenceDataAsync } from "~/lib/services/reference.service";
 import type { Route } from "./+types/$clientId";
+import { pageTitle } from "~/lib/brand";
 
 const PAGE_SIZE = 25;
 
 export function meta({ loaderData }: Route.MetaArgs) {
-  return [{ title: `${loaderData.client.name} | BrokerSure` }];
+  return [{ title: pageTitle(`${loaderData.client.name}`) }];
 }
 
 export async function loader({ params, request }: Route.LoaderArgs) {

@@ -61,9 +61,10 @@ import {
   type AuthorisedRepresentativeFormValues,
 } from "~/lib/zod/authorised-representative";
 import type { Route } from "./+types/ar-brokers";
+import { pageTitle } from "~/lib/brand";
 
 export function meta() {
-  return [{ title: "Authorised Representatives | BrokerSure" }];
+  return [{ title: pageTitle("Authorised Representatives") }];
 }
 
 const PAGE_SIZE = 25;
@@ -140,7 +141,10 @@ export async function action({ request }: Route.ActionArgs) {
 
     try {
       if (intent === "create") {
-        const created = await createAuthorisedRepresentative(parsed.data);
+        const created = await createAuthorisedRepresentative(
+          parsed.data,
+          actor.email,
+        );
         await writeAuditLog({
           actor,
           action: "ar.create",

@@ -12,9 +12,10 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
+import { pageTitle } from "~/lib/brand";
 
 export function meta() {
-  return [{ title: "Reports | BrokerSure" }];
+  return [{ title: pageTitle("Reports") }];
 }
 
 const reports = [

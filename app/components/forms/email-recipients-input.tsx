@@ -1,0 +1,249 @@
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { createPortal } from "react-dom";
+import { Input } from "~/components/ui/input";
+import {
+  EMAIL_DIRECTORY_KIND_LABEL,
+  type EmailDirectoryEntry,
+} from "~/lib/email/directory";
+import { cn } from "~/lib/utils";
+
+type ListPosition = {
+  top: number;
+  left: number;
+  width: number;
+};
+
+/** Head (completed addresses + separator) and the fragment currently being typed. */
+function splitDraft(value: string): { head: string; draft: string } {
+  const lastSep = Math.max(value.lastIndexOf(";"), value.lastIndexOf(","));
+  if (lastSep < 0) return { head: "", draft: value };
+  return {
+    head: value.slice(0, lastSep + 1),
+    draft: value.slice(lastSep + 1).replace(/^\s+/, ""),
+  };
+}
+
+function replaceDraftWithEmail(value: string, email: string): string {
+  const { head } = splitDraft(value);
+  const prefix = head.trimEnd();
+  if (!prefix) return `${email}; `;
+  return `${prefix} ${email}; `;
+}
+
+/** Highlight case-insensitive matches of `query` in yellow. */
+function HighlightMatch({ text, query }: { text: string; query: string }) {
+  if (!query || !text) return <>{text}</>;
+  const lower = text.toLowerCase();
+  const q = query.toLowerCase();
+  const parts: ReactNode[] = [];
+  let start = 0;
+  let index = lower.indexOf(q, start);
+  let key = 0;
+  while (index >= 0) {
+    if (index > start) {
+      parts.push(text.slice(start, index));
+    }
+    parts.push(
+      <mark
+        key={key++}
+        className="rounded-sm bg-warning/35 px-0.5 text-foreground"
+      >
+        {text.slice(index, index + q.length)}
+      </mark>,
+    );
+    start = index + q.length;
+    index = lower.indexOf(q, start);
+  }
+  if (start < text.length) {
+    parts.push(text.slice(start));
+  }
+  return <>{parts}</>;
+}
+
+export function EmailRecipientsInput({
+  id,
+  value,
+  onChange,
+  options,
+  placeholder = "name@example.com; …",
+  className,
+  "aria-label": ariaLabel,
+}: {
+  id: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: EmailDirectoryEntry[];
+  placeholder?: string;
+  className?: string;
+  "aria-label"?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [position, setPosition] = useState<ListPosition | null>(null);
+  const [highlight, setHighlight] = useState(0);
+  const blurTimer = useRef<number | null>(null);
+  const anchorRef = useRef<HTMLDivElement>(null);
+
+  const draft = splitDraft(value).draft;
+  const draftLower = draft.trim().toLowerCase();
+
+  const filtered = useMemo(() => {
+    if (!draftLower) return [];
+    return options
+      .filter((item) => {
+        const haystack =
+          `${item.email} ${item.name} ${EMAIL_DIRECTORY_KIND_LABEL[item.kind]}`.toLowerCase();
+        return haystack.includes(draftLower);
+      })
+      .slice(0, 40);
+  }, [options, draftLower]);
+
+  function updatePosition() {
+    const el = anchorRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    setPosition({
+      top: rect.bottom + 4,
+      left: rect.left,
+      width: Math.max(rect.width, 280),
+    });
+  }
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    updatePosition();
+  }, [open, filtered.length]);
+
+  useEffect(() => {
+    if (!open) return;
+    function onReposition() {
+      updatePosition();
+    }
+    window.addEventListener("resize", onReposition);
+    window.addEventListener("scroll", onReposition, true);
+    return () => {
+      window.removeEventListener("resize", onReposition);
+      window.removeEventListener("scroll", onReposition, true);
+    };
+  }, [open]);
+
+  function selectEntry(entry: EmailDirectoryEntry) {
+    onChange(replaceDraftWithEmail(value, entry.email));
+    setOpen(false);
+    setHighlight(0);
+  }
+
+  const listbox =
+    open && position && filtered.length > 0
+      ? createPortal(
+          <ul
+            id={`${id}-listbox`}
+            role="listbox"
+            className="fixed z-[100] max-h-56 overflow-auto rounded-lg border bg-popover p-1 text-sm shadow-md"
+            style={{
+              top: position.top,
+              left: position.left,
+              width: position.width,
+            }}
+          >
+            {filtered.map((item, index) => {
+              const active = index === highlight;
+              return (
+                <li key={`${item.kind}:${item.email}`} role="option">
+                  <button
+                    type="button"
+                    className={cn(
+                      "flex w-full flex-col items-start rounded-md px-2.5 py-2 text-left hover:bg-muted",
+                      active && "bg-muted",
+                    )}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onMouseEnter={() => setHighlight(index)}
+                    onClick={() => selectEntry(item)}
+                  >
+                    <span className="font-medium">
+                      <HighlightMatch text={item.email} query={draftLower} />
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {item.name ? (
+                        <>
+                          <HighlightMatch text={item.name} query={draftLower} />
+                          {" · "}
+                          {EMAIL_DIRECTORY_KIND_LABEL[item.kind]}
+                        </>
+                      ) : (
+                        EMAIL_DIRECTORY_KIND_LABEL[item.kind]
+                      )}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>,
+          document.body,
+        )
+      : null;
+
+  return (
+    <div ref={anchorRef} className="min-w-0 flex-1">
+      <Input
+        id={id}
+        type="text"
+        role="combobox"
+        aria-label={ariaLabel}
+        aria-expanded={open}
+        aria-autocomplete="list"
+        aria-controls={`${id}-listbox`}
+        autoComplete="off"
+        placeholder={placeholder}
+        value={value}
+        onFocus={() => {
+          if (blurTimer.current) window.clearTimeout(blurTimer.current);
+        }}
+        onChange={(event) => {
+          const next = event.target.value;
+          onChange(next);
+          const nextDraft = splitDraft(next).draft.trim();
+          setOpen(nextDraft.length > 0);
+          setHighlight(0);
+        }}
+        onKeyDown={(event) => {
+          if (!open || filtered.length === 0) return;
+          if (event.key === "ArrowDown") {
+            event.preventDefault();
+            setHighlight((i) => (i + 1) % filtered.length);
+            return;
+          }
+          if (event.key === "ArrowUp") {
+            event.preventDefault();
+            setHighlight((i) => (i - 1 + filtered.length) % filtered.length);
+            return;
+          }
+          if (event.key === "Enter" && draft.trim()) {
+            const match = filtered[highlight];
+            if (!match) return;
+            event.preventDefault();
+            selectEntry(match);
+            return;
+          }
+          if (event.key === "Escape") {
+            setOpen(false);
+          }
+        }}
+        onBlur={() => {
+          blurTimer.current = window.setTimeout(() => setOpen(false), 150);
+        }}
+        className={cn(
+          "rounded-none border-0 px-0 shadow-none focus-visible:ring-0",
+          className,
+        )}
+      />
+      {listbox}
+    </div>
+  );
+}

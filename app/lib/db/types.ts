@@ -32,6 +32,12 @@ export type AccountManager = {
   accountManagerId: number;
   fullName: string;
   abbrev: string;
+  /** Legacy AccountManager.EmailAddress — email signature merge. */
+  email: string;
+  /** Legacy AccountManager.ARNumber — PDF/email AccountManagerARNumber. */
+  arNumber: string;
+  /** Legacy AccountManager.Mobile — Direct phone in email signature. */
+  mobile: string;
 };
 
 /** Legacy WholesaleBroker → Phase 1 AuthorisedRepresentative. */

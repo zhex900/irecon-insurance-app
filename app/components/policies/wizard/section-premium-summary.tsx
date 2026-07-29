@@ -24,9 +24,12 @@ import { buildPdfBlobFromDocument } from "~/lib/pdf/generate";
 import { EmailDocumentsDialog } from "~/components/forms/email-documents-dialog";
 import {
   DEFAULT_EMAIL_TEMPLATES,
-  type EmailRecipientType,
+  resolveBrokerTemplateKey,
+  type EmailSendRecipient,
   type EmailTemplate,
+  type EmailTemplateVars,
 } from "~/lib/email-templates";
+import type { EmailDirectoryEntry } from "~/lib/email/directory";
 
 export function PremiumSummaryPanel({
   premium,
@@ -39,6 +42,8 @@ export function PremiumSummaryPanel({
   brokerName = "",
   brokerEmail = "",
   emailTemplates = [],
+  emailDirectory = [],
+  emailTemplateVars,
   adjustment,
   policy,
   className,
@@ -53,6 +58,8 @@ export function PremiumSummaryPanel({
   brokerName?: string;
   brokerEmail?: string;
   emailTemplates?: EmailTemplate[];
+  emailDirectory?: EmailDirectoryEntry[];
+  emailTemplateVars?: EmailTemplateVars;
   adjustment?: CarAdjustmentRecord;
   policy?: Policy;
   className?: string;
@@ -61,7 +68,7 @@ export function PremiumSummaryPanel({
   const [showPreviousVersions, setShowPreviousVersions] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
   const [emailRecipient, setEmailRecipient] =
-    useState<EmailRecipientType>("broker");
+    useState<EmailSendRecipient>("broker");
   const [previewDoc, setPreviewDoc] = useState<PolicyDocument | null>(null);
   const [previewSrc, setPreviewSrc] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -184,11 +191,15 @@ export function PremiumSummaryPanel({
     .filter((row) => selectedIds.includes(row.doc.policyDocumentId))
     .map((row) => row.doc);
 
+  const brokerTemplateKey = resolveBrokerTemplateKey({
+    coverTypeId: policy?.car?.coverTypeId ?? 1,
+    policyCategoryId: policy?.policyCategoryId ?? 1,
+  });
   const brokerTemplate = emailTemplates.find(
-    (t) => t.recipientType === "broker",
+    (t) => t.recipientType === brokerTemplateKey,
   ) ?? {
-    recipientType: "broker" as const,
-    ...DEFAULT_EMAIL_TEMPLATES.broker,
+    recipientType: brokerTemplateKey,
+    ...DEFAULT_EMAIL_TEMPLATES[brokerTemplateKey],
   };
   const insurerTemplate = emailTemplates.find(
     (t) => t.recipientType === "insurer",
@@ -224,7 +235,7 @@ export function PremiumSummaryPanel({
     );
   }
 
-  function openEmail(recipient: EmailRecipientType) {
+  function openEmail(recipient: EmailSendRecipient) {
     setEmailRecipient(recipient);
     // Open composer after the menu closes so focus/portal don't clash.
     window.setTimeout(() => setEmailOpen(true), 0);
@@ -467,6 +478,8 @@ export function PremiumSummaryPanel({
                 recipientType={emailRecipient}
                 template={activeTemplate}
                 defaultTo={activeDefaultTo}
+                templateVars={emailTemplateVars}
+                emailDirectory={emailDirectory}
               />
               <PdfPreviewDialog
                 open={previewDoc != null}

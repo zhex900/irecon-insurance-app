@@ -9,7 +9,6 @@ import {
   buildAdjustmentDocumentPack,
   mergeReviewDocuments,
 } from "~/lib/services/policy/documents";
-import { getBrokerSession } from "~/lib/services/broker-session";
 import { getPolicy, savePolicy } from "~/lib/services/policy/data.service";
 
 export class AdjustmentError extends Error {
@@ -48,6 +47,7 @@ export function calculateAdjustmentForPolicy(
 export async function submitPolicyAdjustment(
   policyId: number,
   input: CarAdjustmentInput,
+  createdBy: string,
 ) {
   const existing = await getPolicy(policyId);
   if (!existing) throw new AdjustmentError("Policy not found");
@@ -58,7 +58,6 @@ export async function submitPolicyAdjustment(
     throw new AdjustmentError(validationError);
   }
 
-  const broker = getBrokerSession();
   const adjustment: CarAdjustmentRecord = {
     adjustedTurnover: input.adjustmentTurnover,
     stampDutyExempt: input.stampDutyExempt === "yes",
@@ -97,9 +96,9 @@ export async function submitPolicyAdjustment(
     policyNoteId: Date.now(),
     policyId,
     policyNoteTypeId: 2,
-    description: `Adjusted by ${broker.email}`,
+    description: `Adjusted by ${createdBy}`,
     createdWhen: new Date().toISOString(),
-    createdBy: broker.email,
+    createdBy,
   };
 
   const policy: Policy = {
@@ -116,7 +115,7 @@ export async function submitPolicyAdjustment(
   // (effective premium). Append-only — previous PDFs are kept.
   const pack = buildAdjustmentDocumentPack(
     policy,
-    broker.email,
+    createdBy,
     policy.documents ?? [],
   );
   const documents = mergeReviewDocuments(policy.documents, pack);

@@ -1,6 +1,6 @@
 # Refactor to production
 
-Guide for taking this BrokerSure / CAR broker portal from a working prototype to a production-ready codebase and delivery pipeline.
+Guide for taking this Irecon Insurance / CAR broker portal from a working prototype to a production-ready codebase and delivery pipeline.
 
 Use this as the checklist and decision log. Prefer **small, mergeable PRs** over one big-bang move. Each phase should leave `main` deployable.
 
@@ -292,7 +292,7 @@ Cleared — former follow-ups split into domain folders:
 - [x] Accessibility: dialog titles (price schedule `Dialog`), label associations, `focusFormIssue` on client / user / AR / wizard forms.
 - [x] Loading/disabled states via `LoadingButton` / Spinner—not ad-hoc opacity.
 - [x] Responsive pass on list + wizard (pagination already wraps; verify).
-- [x] Copy review: remove prototype wording (“CAR Broker Portal” → BrokerSure) consistently.
+- [x] Copy review: remove prototype wording (“CAR Broker Portal” → Irecon Insurance) consistently.
 - [x] Feature-flag unfinished surfaces (settings modules via existing flags).
 
 Optional: Storybook later—not required for v1 prod if Playwright covers critical UI.
@@ -551,19 +551,19 @@ Beyond those—industry defaults for this stack (keep in sync when promoting rul
 
 Copy into the project board; check off in PRs.
 
-| Phase               | Status      | Owner | Notes                                   |
-| ------------------- | ----------- | ----- | --------------------------------------- |
-| 0 Prep              | Done        |       | Decisions in this doc                   |
-| 1 Repo layout       | Done        |       | App at root; `_archive/`                |
-| 2 Routes folders    | Done        |       | `_auth/`, `_app/`, `api/`               |
-| 3 Domain splits     | Done        |       | store façade; wizard/sections/users     |
-| 4 Dead code / data  | Done        |       | seeds archived; dead UI/deps removed    |
-| 5 UI quality        | Done        |       | BrokerSure copy; Empty; a11y focus      |
-| 6 Resend            | Done        |       | document email API + Supabase auth mail |
-| 7 Tests             | Done        |       | Vitest unit/integration + Playwright    |
-| 8 Lint/format       | Done        |       | ESLint + Prettier + husky + verify      |
-| 9 CI/CD             | Not started |       |                                         |
-| 10 Go-live data/DNS | Not started |       |                                         |
+| Phase               | Status      | Owner | Notes                                    |
+| ------------------- | ----------- | ----- | ---------------------------------------- |
+| 0 Prep              | Done        |       | Decisions in this doc                    |
+| 1 Repo layout       | Done        |       | App at root; `_archive/`                 |
+| 2 Routes folders    | Done        |       | `_auth/`, `_app/`, `api/`                |
+| 3 Domain splits     | Done        |       | store façade; wizard/sections/users      |
+| 4 Dead code / data  | Done        |       | seeds archived; dead UI/deps removed     |
+| 5 UI quality        | Done        |       | Irecon Insurance copy; Empty; a11y focus |
+| 6 Resend            | Done        |       | document email API + Supabase auth mail  |
+| 7 Tests             | Done        |       | Vitest unit/integration + Playwright     |
+| 8 Lint/format       | Done        |       | ESLint + Prettier + husky + verify       |
+| 9 CI/CD             | Not started |       |                                          |
+| 10 Go-live data/DNS | Not started |       |                                          |
 
 ---
 

@@ -52,11 +52,15 @@ import {
 } from "~/lib/services/reference.service";
 import { getClient } from "~/lib/services/clients/service";
 import { listEmailTemplates } from "~/lib/services/email/templates";
+import { getEmailFooterDataUri } from "~/lib/services/email/footer-image";
+import { listEmailDirectory } from "~/lib/services/email/directory.server";
+import { emailVarsFromAccountManager } from "~/lib/email-templates";
 import { resolveNoteAuthors } from "~/lib/services/users/service";
 import type { Route } from "./+types/$policyId";
+import { pageTitle } from "~/lib/brand";
 
 export function meta({ loaderData }: Route.MetaArgs) {
-  return [{ title: `${loaderData.policy.policyNumber} | BrokerSure` }];
+  return [{ title: pageTitle(`${loaderData.policy.policyNumber}`) }];
 }
 
 export async function loader({ params }: Route.LoaderArgs) {
@@ -65,14 +69,23 @@ export async function loader({ params }: Route.LoaderArgs) {
   if (!policy) throw new Response("Policy not found", { status: 404 });
   const client = await getClient(policy.clientId);
   if (!client) throw new Response("Client not found", { status: 404 });
-  const [broker, emailTemplates, noteAuthors, reference, carWording] =
-    await Promise.all([
-      getAuthorisedRepresentative(client.authorisedRepresentativeId),
-      listEmailTemplates(),
-      resolveNoteAuthors((policy.notes ?? []).map((note) => note.createdBy)),
-      getReferenceDataAsync(policy.dateStart),
-      getCarWording(),
-    ]);
+  const [
+    broker,
+    emailTemplates,
+    noteAuthors,
+    reference,
+    carWording,
+    footerImageDataUri,
+    emailDirectory,
+  ] = await Promise.all([
+    getAuthorisedRepresentative(client.authorisedRepresentativeId),
+    listEmailTemplates(),
+    resolveNoteAuthors((policy.notes ?? []).map((note) => note.createdBy)),
+    getReferenceDataAsync(policy.dateStart),
+    getCarWording(),
+    getEmailFooterDataUri(),
+    listEmailDirectory(),
+  ]);
 
   return {
     policy,
@@ -82,6 +95,8 @@ export async function loader({ params }: Route.LoaderArgs) {
     noteAuthors,
     reference,
     carWording,
+    footerImageDataUri,
+    emailDirectory,
   };
 }
 
@@ -102,7 +117,7 @@ export async function action({ request, params }: Route.ActionArgs) {
         status: 400,
       });
     }
-    const cloned = await clonePolicy(policyId);
+    const cloned = await clonePolicy(policyId, actor.email);
     await writeAuditLog({
       actor,
       action: "policy.clone",
@@ -261,6 +276,7 @@ export async function action({ request, params }: Route.ActionArgs) {
     const policy = await applyPremiumCalculation(
       policyId,
       parsed.data as CarPolicyFormValues,
+      actor.email,
     );
     return {
       premium: policy.car.premium,
@@ -280,10 +296,14 @@ export async function action({ request, params }: Route.ActionArgs) {
 
   const before = await getPolicy(policyId);
   try {
-    await upsertPolicyFromForm(policyId, {
-      ...parsed.data,
-      ...(premiumOverride ? { premium: premiumOverride } : {}),
-    });
+    await upsertPolicyFromForm(
+      policyId,
+      {
+        ...parsed.data,
+        ...(premiumOverride ? { premium: premiumOverride } : {}),
+      },
+      actor.email,
+    );
   } catch (error) {
     if (error instanceof PolicySaveError) {
       return { formError: error.message };
@@ -455,6 +475,22 @@ export default function PolicyDetailRoute({
         brokerEmail={loaderData.broker?.email ?? ""}
         noteAuthors={loaderData.noteAuthors}
         emailTemplates={loaderData.emailTemplates}
+        emailDirectory={loaderData.emailDirectory}
+        emailTemplateVars={{
+          coverType:
+            loaderData.reference.coverTypes.find(
+              (item) => item.coverTypeId === loaderData.policy.car.coverTypeId,
+            )?.name ?? "",
+          insuredName: loaderData.policy.car.insuredName,
+          siteAddress: loaderData.policy.car.siteAddress,
+          ...emailVarsFromAccountManager(
+            loaderData.reference.accountManagers.find(
+              (item) =>
+                item.accountManagerId === loaderData.client.accountManagerId,
+            ),
+          ),
+          footerImage: loaderData.footerImageDataUri,
+        }}
         headerActions={headerActions}
       />
       <DeletePoliciesDialog

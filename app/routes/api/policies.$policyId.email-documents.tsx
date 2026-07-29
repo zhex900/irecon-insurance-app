@@ -1,7 +1,7 @@
 import { requireAuth } from "~/lib/auth/session.server";
 import { getLibraryDocumentsBucket } from "~/lib/cloudflare.server";
-import type { EmailRecipientType } from "~/lib/email-templates";
-import { EMAIL_RECIPIENT_TYPES } from "~/lib/email-templates";
+import type { EmailSendRecipient } from "~/lib/email-templates";
+import { EMAIL_SEND_RECIPIENTS } from "~/lib/email-templates";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import { sendPolicyDocumentsEmail } from "~/lib/services/email/send-policy-documents.server";
 import { getPolicy } from "~/lib/services/policy/data.service";
@@ -13,6 +13,7 @@ type EmailDocumentsBody = {
   cc?: string;
   subject?: string;
   body?: string;
+  html?: string;
   recipientType?: string;
 };
 
@@ -38,7 +39,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 
   const payload = (await request.json()) as EmailDocumentsBody;
   const recipientType = String(payload.recipientType ?? "").trim();
-  if (!EMAIL_RECIPIENT_TYPES.includes(recipientType as EmailRecipientType)) {
+  if (!EMAIL_SEND_RECIPIENTS.includes(recipientType as EmailSendRecipient)) {
     return Response.json({ error: "Invalid recipient type" }, { status: 400 });
   }
 
@@ -58,6 +59,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
   const to = String(payload.to ?? "").trim();
   const subject = String(payload.subject ?? "").trim();
   const body = String(payload.body ?? "");
+  const html = String(payload.html ?? "").trim() || undefined;
   if (!to) {
     return Response.json(
       { error: "Enter at least one recipient email." },
@@ -77,7 +79,8 @@ export async function action({ request, params, context }: Route.ActionArgs) {
       cc: String(payload.cc ?? "").trim() || undefined,
       subject,
       body,
-      recipientType: recipientType as EmailRecipientType,
+      html,
+      recipientType: recipientType as EmailSendRecipient,
       libraryBucket,
     });
 

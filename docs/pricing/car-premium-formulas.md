@@ -1,6 +1,6 @@
 # CAR Policy Pricing Calculation Formulas
 
-Canonical legacy formulas for BrokerSure CAR premium. **Rates come from the database** (Postgres `price_*` tables, migrated from MSSQL `CAR_*`). Only the small constants table below is hardcoded — never invent terrorism / CW / ESL / stamp-duty rates in code.
+Canonical legacy formulas for Irecon Insurance CAR premium. **Rates come from the database** (Postgres `price_*` tables, migrated from MSSQL `CAR_*`). Only the small constants table below is hardcoded — never invent terrorism / CW / ESL / stamp-duty rates in code.
 
 | Rebuild implementation                            | Role                                                 |
 | ------------------------------------------------- | ---------------------------------------------------- |

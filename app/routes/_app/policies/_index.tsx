@@ -54,11 +54,12 @@ import { getReferenceData } from "~/lib/services/reference.service";
 import { cn, formatCurrency, formatDate } from "~/lib/utils";
 import { isTerminalStatus } from "~/lib/zod/policy-car";
 import type { Route } from "./+types/_index";
+import { pageTitle } from "~/lib/brand";
 
 const PAGE_SIZE = 25;
 
 export function meta() {
-  return [{ title: "Policies | BrokerSure" }];
+  return [{ title: pageTitle("Policies") }];
 }
 
 /** Always refetch when landing on the list (e.g. after creating/editing a policy). */

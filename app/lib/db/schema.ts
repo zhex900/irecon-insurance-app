@@ -429,6 +429,48 @@ export const appEmailTemplate = pgTable("app_email_template", {
   updatedBy: varchar("updated_by", { length: 255 }).notNull().default(""),
 });
 
+/** Singleton email footer logo (data URI blob). Settings → Email templates. */
+export const appEmailFooterImage = pgTable("app_email_footer_image", {
+  id: integer("id").primaryKey().default(1),
+  contentType: varchar("content_type", { length: 64 })
+    .notNull()
+    .default("image/png"),
+  /** Full data URI: `data:image/png;base64,...` */
+  dataUri: text("data_uri").notNull(),
+  updatedWhen: timestamp("updated_when", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedBy: varchar("updated_by", { length: 255 }).notNull().default(""),
+});
+
+/** Versioned CAR pdfme templates (Settings → Document templates). */
+export const appDocumentTemplateVersion = pgTable(
+  "app_document_template_version",
+  {
+    documentTemplateVersionId: bigint("document_template_version_id", {
+      mode: "number",
+    })
+      .generatedAlwaysAsIdentity()
+      .primaryKey(),
+    slotKey: varchar("slot_key", { length: 64 }).notNull(),
+    versionNumber: integer("version_number").notNull(),
+    /** pdfme Template: { basePdf, schemas }. */
+    templateJson: jsonb("template_json")
+      .$type<Record<string, unknown>>()
+      .notNull(),
+    flowPushDown: jsonb("flow_push_down").$type<Record<
+      string,
+      unknown
+    > | null>(),
+    mergeFields: jsonb("merge_fields").$type<string[]>().notNull().default([]),
+    isPublished: boolean("is_published").notNull().default(false),
+    createdWhen: timestamp("created_when", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    createdBy: varchar("created_by", { length: 255 }).notNull().default(""),
+  },
+);
+
 /** Material-action audit trail — who / what / when. */
 export const auditLog = pgTable("audit_log", {
   auditLogId: bigint("audit_log_id", { mode: "number" })

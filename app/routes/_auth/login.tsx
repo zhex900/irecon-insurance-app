@@ -15,9 +15,10 @@ import {
 import { writeAuditLog } from "~/lib/services/audit/service";
 import { getUser } from "~/lib/services/users/service";
 import type { Route } from "./+types/login";
+import { pageTitle } from "~/lib/brand";
 
 export function meta() {
-  return [{ title: "Sign in | BrokerSure" }];
+  return [{ title: pageTitle("Sign in") }];
 }
 
 export async function action({ request }: Route.ActionArgs) {

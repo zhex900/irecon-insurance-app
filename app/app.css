@@ -171,3 +171,270 @@
     transition: background-color 99999s ease-in-out 0s;
   }
 }
+
+/* React Email editor — isolate TipTap canvas from Tailwind preflight quirks */
+.email-rich-editor {
+  --re-bg: var(--background);
+  --re-border: var(--border);
+  --re-text: var(--foreground);
+  --re-text-muted: var(--muted-foreground);
+  --re-hover: color-mix(in oklab, var(--foreground) 4%, transparent);
+  --re-active: color-mix(in oklab, var(--foreground) 8%, transparent);
+  --re-pressed: color-mix(in oklab, var(--foreground) 8%, transparent);
+  --re-separator: var(--border);
+  --re-radius: var(--radius-lg);
+  --re-radius-sm: var(--radius-md);
+}
+
+.email-rich-editor .email-rich-editor-canvas.tiptap,
+.email-rich-editor .tiptap {
+  min-height: 100%;
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.email-rich-editor .tiptap > * + * {
+  margin-top: 0.75rem;
+}
+
+.email-rich-editor .tiptap p {
+  margin: 0;
+}
+
+.email-rich-editor .tiptap h1,
+.email-rich-editor .tiptap h2,
+.email-rich-editor .tiptap h3 {
+  font-weight: 700;
+  line-height: 1.25;
+  margin: 0;
+}
+
+.email-rich-editor .tiptap h1 {
+  font-size: 1.5rem;
+}
+.email-rich-editor .tiptap h2 {
+  font-size: 1.25rem;
+}
+.email-rich-editor .tiptap h3 {
+  font-size: 1.1rem;
+}
+
+.email-rich-editor .tiptap ul,
+.email-rich-editor .tiptap ol {
+  margin: 0;
+  padding-left: 1.5rem;
+  list-style-position: outside;
+}
+
+.email-rich-editor .tiptap ul {
+  list-style-type: disc;
+}
+
+.email-rich-editor .tiptap ol {
+  list-style-type: decimal;
+}
+
+.email-rich-editor .tiptap li + li {
+  margin-top: 0.25rem;
+}
+
+.email-rich-editor .tiptap a {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+.email-rich-editor .tiptap blockquote {
+  margin: 0;
+  border-left: 4px solid #ffc000;
+  background: #ffffcc;
+  padding: 0.75rem 1rem;
+  border-radius: 0.25rem;
+}
+
+.email-rich-editor .tiptap table {
+  border-collapse: collapse;
+  width: 100%;
+  max-width: 36rem;
+  table-layout: fixed;
+}
+
+.email-rich-editor .tiptap th,
+.email-rich-editor .tiptap td {
+  /* Borders come from inline styles so inspector changes persist on save. */
+  padding: 0.4rem 0.55rem;
+  vertical-align: top;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+.email-rich-editor .tiptap th {
+  background: #808080;
+  color: #fff;
+  font-weight: 700;
+  width: 9rem;
+}
+
+.email-rich-editor .tiptap img {
+  max-width: 100%;
+  height: auto;
+  display: inline-block;
+}
+
+.email-rich-editor .tiptap hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1rem 0;
+}
+
+.dark .email-rich-editor .tiptap blockquote {
+  color: #141414;
+}
+
+.dark .email-rich-editor .tiptap th {
+  color: #fff;
+}
+
+/* In-app email preview — render outbound HTML only (no invented table chrome) */
+.email-template-preview {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  color: #000;
+}
+
+.email-template-preview > * + * {
+  margin-top: 0.75rem;
+}
+
+.email-template-preview p {
+  margin: 0;
+}
+
+.email-template-preview ul,
+.email-template-preview ol {
+  margin: 0;
+  padding-left: 1.5rem;
+  list-style-position: outside;
+}
+
+.email-template-preview ul {
+  list-style-type: disc;
+}
+
+.email-template-preview ol {
+  list-style-type: decimal;
+}
+
+.email-template-preview li + li {
+  margin-top: 0.25rem;
+}
+
+.email-template-preview a {
+  color: #0670db;
+  text-decoration: underline;
+}
+
+.email-template-preview table {
+  border-collapse: collapse;
+}
+
+.email-template-preview img {
+  max-width: 100%;
+  height: auto;
+  display: inline-block;
+}
+
+/* Merge-field tokens — tag look without changing document text */
+.email-rich-editor .tiptap .email-placeholder-tag {
+  display: inline;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in oklab, var(--warning) 30%, transparent);
+  background: color-mix(in oklab, var(--warning) 18%, transparent);
+  color: var(--warning-foreground);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.8125em;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  padding: 0.1em 0.45em;
+  white-space: nowrap;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.dark .email-rich-editor .tiptap .email-placeholder-tag {
+  border-color: color-mix(in oklab, var(--warning) 40%, transparent);
+  background: color-mix(in oklab, var(--warning) 22%, transparent);
+  color: var(--warning);
+}
+
+.email-placeholder-suggest {
+  z-index: 100;
+  max-height: 16rem;
+  min-width: 12rem;
+  overflow-y: auto;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: var(--popover);
+  color: var(--popover-foreground);
+  padding: 0.25rem;
+  box-shadow: var(--shadow-md, 0 8px 24px rgb(0 0 0 / 12%));
+}
+
+/*
+ * React Email slash menu portals to document.body. Dialogs use z-50, so without
+ * a higher z-index the menu opens behind the policy email dialog and looks broken.
+ * --re-* tokens live on .email-rich-editor; redefine popover colors on the portal.
+ */
+body > div:has(> [data-re-slash-command]) {
+  z-index: 100 !important;
+}
+
+[data-re-slash-command] {
+  z-index: 100;
+  background: var(--popover);
+  color: var(--popover-foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md, 0 8px 24px rgb(0 0 0 / 12%));
+}
+
+.email-placeholder-suggest__empty {
+  padding: 0.5rem 0.625rem;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.email-placeholder-suggest__item {
+  display: flex;
+  width: 100%;
+  cursor: pointer;
+  align-items: center;
+  border-radius: var(--radius-md);
+  border: 0;
+  background: transparent;
+  padding: 0.375rem 0.5rem;
+  text-align: left;
+  color: inherit;
+}
+
+.email-placeholder-suggest__item:hover,
+.email-placeholder-suggest__item[data-selected="true"] {
+  background: color-mix(in oklab, var(--warning) 16%, transparent);
+}
+
+.email-placeholder-suggest__token {
+  border-radius: 9999px;
+  border: 1px solid color-mix(in oklab, var(--warning) 30%, transparent);
+  background: color-mix(in oklab, var(--warning) 18%, transparent);
+  color: var(--warning-foreground);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 0.1rem 0.45rem;
+}
+
+.dark .email-placeholder-suggest__token {
+  color: var(--warning);
+}

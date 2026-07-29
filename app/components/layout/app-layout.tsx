@@ -57,6 +57,7 @@ import {
   getAppEnvironmentBadgeClass,
   getAppVersion,
 } from "~/lib/app-version";
+import { APP_NAME } from "~/lib/brand";
 import type { BrokerSession } from "~/lib/db/types";
 import { cn } from "~/lib/utils";
 
@@ -119,12 +120,12 @@ export function AppLayout({ broker }: { broker: BrokerSession }) {
               className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden px-1 group-data-[collapsible=icon]:hidden"
             >
               <Logo size="sm" tone="invert" className="min-w-0" />
-              <span className="sr-only">IRECON BrokerSure</span>
+              <span className="sr-only">{APP_NAME}</span>
             </Link>
             <Link
               to="/dashboard"
               className="hidden size-8 items-center justify-center group-data-[collapsible=icon]:flex"
-              aria-label="IRECON dashboard"
+              aria-label={`${APP_NAME} dashboard`}
             >
               <img
                 src="/apple-touch-icon.png"
@@ -141,20 +142,6 @@ export function AppLayout({ broker }: { broker: BrokerSession }) {
                 <SidebarMenu>
                   {navItems.map((item) => {
                     const Icon = item.icon;
-                    if ("disabled" in item && item.disabled) {
-                      return (
-                        <SidebarMenuItem key={item.label}>
-                          <SidebarMenuButton
-                            disabled
-                            tooltip="Coming soon"
-                            className="opacity-50"
-                          >
-                            <Icon />
-                            <span>{item.label}</span>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      );
-                    }
                     return (
                       <SidebarMenuItem key={`${item.label}-${item.to}`}>
                         <SidebarMenuButton
@@ -206,14 +193,7 @@ export function AppLayout({ broker }: { broker: BrokerSession }) {
                   className={cn(
                     "rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                   )}
-                  nativeButton={false}
-                  render={
-                    <button
-                      type="button"
-                      aria-label="Account menu"
-                      className="rounded-full"
-                    />
-                  }
+                  aria-label="Account menu"
                 >
                   <UserAvatar
                     email={broker.email}
@@ -275,11 +255,14 @@ export function AppLayout({ broker }: { broker: BrokerSession }) {
 
 export function PageHeader({
   title,
+  titleAddon,
   description,
   action,
   breadcrumbs,
 }: {
   title: string;
+  /** Shown inline after the title (e.g. a status badge). */
+  titleAddon?: React.ReactNode;
   description?: React.ReactNode;
   action?: React.ReactNode;
   breadcrumbs: AppBreadcrumbItem[];
@@ -289,7 +272,10 @@ export function PageHeader({
       <div className="flex min-w-0 flex-col gap-2">
         <AppBreadcrumb items={breadcrumbs} />
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight">{title}</h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-2xl font-semibold tracking-tight">{title}</h2>
+            {titleAddon}
+          </div>
           {description ? (
             <div className="mt-1 text-sm text-muted-foreground">
               {description}

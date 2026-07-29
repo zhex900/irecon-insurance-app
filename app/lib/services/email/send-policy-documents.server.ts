@@ -1,8 +1,9 @@
 import type { R2BucketLike } from "~/lib/cloudflare.server";
 import type { Policy, PolicyDocument } from "~/lib/db/types";
-import type { EmailRecipientType } from "~/lib/email-templates";
+import type { EmailSendRecipient } from "~/lib/email-templates";
 import { generatePolicyPdf, uint8ToBase64 } from "~/lib/pdf/generate";
 import { buildLegacyTextPdfBlob } from "~/lib/pdf/legacy-text-pdf";
+import { resolveActivePdfTemplate } from "~/lib/services/documents/document-templates";
 import { getLibraryDocumentByFilename } from "~/lib/services/documents/library-documents";
 import { getLibraryDocumentObject } from "~/lib/storage/library-documents.server";
 import {
@@ -19,8 +20,11 @@ export type SendPolicyDocumentsInput = {
   to: string;
   cc?: string;
   subject: string;
+  /** Plain-text body (and legacy HTML-escaped fallback when `html` omitted). */
   body: string;
-  recipientType: EmailRecipientType;
+  /** Email-ready HTML from React Email editor export. */
+  html?: string;
+  recipientType: EmailSendRecipient;
   libraryBucket?: R2BucketLike | null;
 };
 
@@ -43,6 +47,10 @@ function plainTextToHtml(text: string) {
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;");
   return `<div style="font-family:system-ui,sans-serif;white-space:pre-wrap">${escaped}</div>`;
+}
+
+function looksLikeHtml(value: string) {
+  return /<[a-z][\s\S]*>/i.test(value.trim());
 }
 
 async function blobToUint8(blob: Blob): Promise<Uint8Array> {
@@ -78,16 +86,30 @@ async function resolveDocumentPdfBytes(
   }
 
   if (doc.mergeInputs) {
+    const slot = await resolveActivePdfTemplate(
+      doc.documentTypeCode,
+      policy.car.coverTypeId,
+    );
     const { pdf } = await generatePolicyPdf(
       doc.documentTypeCode,
       policy,
       doc.mergeInputs,
+      slot ?? undefined,
     );
     return pdf;
   }
 
   try {
-    const { pdf } = await generatePolicyPdf(doc.documentTypeCode, policy);
+    const slot = await resolveActivePdfTemplate(
+      doc.documentTypeCode,
+      policy.car.coverTypeId,
+    );
+    const { pdf } = await generatePolicyPdf(
+      doc.documentTypeCode,
+      policy,
+      undefined,
+      slot ?? undefined,
+    );
     return pdf;
   } catch {
     return blobToUint8(await buildLegacyTextPdfBlob(doc.name, doc.content));
@@ -134,12 +156,24 @@ export async function sendPolicyDocumentsEmail(
   }
 
   const ccList = input.cc ? splitEmails(input.cc) : [];
+  const html =
+    input.html?.trim() ||
+    (looksLikeHtml(input.body) ? input.body : plainTextToHtml(input.body));
+  const text = looksLikeHtml(input.body)
+    ? input.body
+        .replace(/<br\s*\/?>/gi, "\n")
+        .replace(/<\/p>/gi, "\n\n")
+        .replace(/<[^>]+>/g, "")
+        .replaceAll("&nbsp;", " ")
+        .trim() || input.body
+    : input.body;
+
   const result = await sendEmail({
     to: toList,
     cc: ccList.length > 0 ? ccList : undefined,
     subject: input.subject.trim(),
-    text: input.body,
-    html: plainTextToHtml(input.body),
+    text,
+    html,
     attachments,
     tags: [
       { name: "policy_id", value: String(input.policy.policyId) },

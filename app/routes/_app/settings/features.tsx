@@ -23,9 +23,10 @@ import {
   type FeatureKey,
 } from "~/lib/services/feature-flags";
 import type { Route } from "./+types/features";
+import { pageTitle } from "~/lib/brand";
 
 export function meta() {
-  return [{ title: "Features | BrokerSure" }];
+  return [{ title: pageTitle("Features") }];
 }
 
 export async function loader({ request }: Route.LoaderArgs) {

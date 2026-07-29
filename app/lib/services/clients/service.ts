@@ -1,5 +1,4 @@
 import { asc, eq, sql } from "drizzle-orm";
-import { getBrokerSession } from "~/lib/services/broker-session";
 import { getReferenceDataAsync } from "~/lib/services/reference.service";
 import { getDb } from "~/lib/db/client";
 import { client, policy } from "~/lib/db/schema";
@@ -105,35 +104,38 @@ export type ClientWritable = Omit<
   "clientId" | "createdWhen" | "createdBy"
 >;
 
-export async function createClient(input: ClientWritable) {
+export async function createClient(input: ClientWritable, createdBy: string) {
   const db = getDb();
   const [created] = await db
     .insert(client)
     .values({
       ...input,
-      createdBy: getBrokerSession().email,
+      createdBy,
     })
     .returning();
   return normalizeClient(created);
 }
 
 /** Create an empty draft client (same pattern as createPolicyDraft). */
-export async function createClientDraft() {
+export async function createClientDraft(createdBy: string) {
   const reference = await getReferenceDataAsync();
   const firstManager = reference.accountManagers[0]?.accountManagerId ?? 1;
   const firstBroker =
     reference.wholesaleBrokers[0]?.authorisedRepresentativeId ?? 1;
 
-  return createClient({
-    name: "",
-    tradingName: "",
-    abn: "",
-    phone: "",
-    email: "",
-    accountManagerId: firstManager,
-    clientSourceId: 16,
-    authorisedRepresentativeId: firstBroker,
-  });
+  return createClient(
+    {
+      name: "",
+      tradingName: "",
+      abn: "",
+      phone: "",
+      email: "",
+      accountManagerId: firstManager,
+      clientSourceId: 16,
+      authorisedRepresentativeId: firstBroker,
+    },
+    createdBy,
+  );
 }
 
 export async function updateClient(clientId: number, input: ClientWritable) {

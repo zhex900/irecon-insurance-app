@@ -3,9 +3,10 @@ import { requireAuth } from "~/lib/auth/session.server";
 import { isSuperAdmin } from "~/lib/auth/roles";
 import { isFeatureEnabled } from "~/lib/services/feature-flags";
 import type { Route } from "./+types/prices";
+import { pageTitle } from "~/lib/brand";
 
 export function meta() {
-  return [{ title: "Prices | BrokerSure" }];
+  return [{ title: pageTitle("Prices") }];
 }
 
 export async function loader({ request }: Route.LoaderArgs) {

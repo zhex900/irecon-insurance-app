@@ -29,7 +29,8 @@ import {
   type CarPolicyFormValues,
 } from "~/lib/zod/policy-car";
 import type { CarWording, Policy, ReferenceData } from "~/lib/db/types";
-import type { EmailTemplate } from "~/lib/email-templates";
+import type { EmailTemplate, EmailTemplateVars } from "~/lib/email-templates";
+import type { EmailDirectoryEntry } from "~/lib/email/directory";
 import type { NoteAuthor } from "~/lib/services/users/service";
 import {
   JustSavedProvider,
@@ -112,6 +113,8 @@ type CarPolicyWizardProps = {
   brokerEmail?: string;
   noteAuthors?: Record<string, NoteAuthor>;
   emailTemplates?: EmailTemplate[];
+  emailDirectory?: EmailDirectoryEntry[];
+  emailTemplateVars?: EmailTemplateVars;
   headerActions?: ReactNode;
 };
 
@@ -127,6 +130,8 @@ export function CarPolicyWizard({
   brokerEmail = "",
   noteAuthors: initialNoteAuthors,
   emailTemplates = [],
+  emailDirectory = [],
+  emailTemplateVars,
   headerActions,
 }: CarPolicyWizardProps) {
   const form = useForm<CarPolicyFormValues>({
@@ -170,6 +175,8 @@ export function CarPolicyWizard({
           brokerEmail={brokerEmail}
           noteAuthors={initialNoteAuthors}
           emailTemplates={emailTemplates}
+          emailDirectory={emailDirectory}
+          emailTemplateVars={emailTemplateVars}
           headerActions={headerActions}
         />
       </JustSavedProvider>
@@ -189,6 +196,8 @@ function CarPolicyWizardInner({
   brokerEmail = "",
   noteAuthors: initialNoteAuthors,
   emailTemplates = [],
+  emailDirectory = [],
+  emailTemplateVars,
   headerActions,
 }: CarPolicyWizardProps) {
   const form = useFormContext<CarPolicyFormValues>();
@@ -532,7 +541,7 @@ function CarPolicyWizardInner({
               className={wizardModeCardBorderClass(wizardMode)}
             />
           </div>
-          {!isNew && notes.length > 0 ? (
+          {!isNew && (notes?.length ?? 0) > 0 ? (
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
               <PolicyNotesCard
                 notes={notes}
@@ -614,7 +623,7 @@ function CarPolicyWizardInner({
             className={wizardModeCardBorderClass(wizardMode)}
           />
 
-          {!isNew && notes.length > 0 ? (
+          {!isNew && (notes?.length ?? 0) > 0 ? (
             <div className="xl:hidden">
               <PolicyNotesCard
                 notes={notes}
@@ -678,6 +687,8 @@ function CarPolicyWizardInner({
             brokerName={brokerName}
             brokerEmail={brokerEmail}
             emailTemplates={emailTemplates}
+            emailDirectory={emailDirectory}
+            emailTemplateVars={emailTemplateVars}
             policy={policy}
             adjustment={policy.car.adjusted ? policy.car.adjustment : undefined}
             className={wizardModeCardBorderClass(wizardMode)}

@@ -17,9 +17,10 @@ import {
   updatePassword,
 } from "~/lib/supabase/auth.server";
 import type { Route } from "./+types/reset-password";
+import { pageTitle } from "~/lib/brand";
 
 export function meta() {
-  return [{ title: "Reset password | BrokerSure" }];
+  return [{ title: pageTitle("Reset password") }];
 }
 
 export async function loader({ request }: Route.LoaderArgs) {

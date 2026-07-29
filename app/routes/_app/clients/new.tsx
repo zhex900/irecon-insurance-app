@@ -3,15 +3,16 @@ import { requireAuth } from "~/lib/auth/session.server";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import { createClientDraft } from "~/lib/services/clients/service";
 import type { Route } from "./+types/new";
+import { pageTitle } from "~/lib/brand";
 
 export function meta() {
-  return [{ title: "New Client | BrokerSure" }];
+  return [{ title: pageTitle("New Client") }];
 }
 
 /** Create a draft client then open the edit form (same pattern as new policy). */
 export async function loader({ request }: Route.LoaderArgs) {
   const actor = await requireAuth(request);
-  const client = await createClientDraft();
+  const client = await createClientDraft(actor.email);
   await writeAuditLog({
     actor,
     action: "client.create",

@@ -45,11 +45,12 @@ import {
   formatRate,
 } from "~/lib/utils";
 import type { Route } from "./+types/$catalogue";
+import { pageTitle } from "~/lib/brand";
 
 export function meta({ params }: Route.MetaArgs) {
   const slug = params.catalogue ?? "car-rates";
   const label = isPriceCatalogueSlug(slug) ? slugLabel(slug) : "Prices";
-  return [{ title: `${label} | BrokerSure` }];
+  return [{ title: pageTitle(`${label}`) }];
 }
 
 export async function loader({ request, params }: Route.LoaderArgs) {

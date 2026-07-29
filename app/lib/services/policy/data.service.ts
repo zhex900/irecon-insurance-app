@@ -1,5 +1,4 @@
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
-import { getBrokerSession } from "~/lib/services/broker-session";
 import { getClient } from "~/lib/services/clients/service";
 import {
   getDefaultExcesses,
@@ -245,6 +244,7 @@ export async function savePolicy(policyDoc: Policy) {
 export async function createPolicyDraft(
   clientId: number,
   partial: Partial<Policy> = {},
+  createdBy: string,
 ) {
   const ref = getReferenceData();
   const defaultExcesses = await getDefaultExcesses();
@@ -272,7 +272,7 @@ export async function createPolicyDraft(
     dateStart: today.toISOString().slice(0, 10),
     dateEnd: nextYear.toISOString().slice(0, 10),
     createdWhen: new Date().toISOString(),
-    createdBy: getBrokerSession().email,
+    createdBy,
     insurerCode: ref.insurers[0].code,
     isDraft: true,
     car: {

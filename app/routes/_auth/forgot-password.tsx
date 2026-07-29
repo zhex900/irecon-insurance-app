@@ -13,9 +13,10 @@ import { cn } from "~/lib/utils";
 import { resetPasswordForEmail } from "~/lib/supabase/auth.server";
 import { getAppOrigin } from "~/lib/supabase/env.server";
 import type { Route } from "./+types/forgot-password";
+import { pageTitle } from "~/lib/brand";
 
 export function meta() {
-  return [{ title: "Forgot password | BrokerSure" }];
+  return [{ title: pageTitle("Forgot password") }];
 }
 
 export async function action({ request }: Route.ActionArgs) {

@@ -1,6 +1,6 @@
 # Architecture
 
-Layering, data flow, folder ownership, and runtime shape for BrokerSure.
+Layering, data flow, folder ownership, and runtime shape for Irecon Insurance.
 
 AI behavior: [AGENTS.md](../AGENTS.md). Standards: [coding-standards.md](coding-standards.md). Patterns: [design-patterns.md](design-patterns.md).
 
@@ -150,9 +150,9 @@ Draft (soft) vs full (`superRefine`) schemas. Validate at the route edge.
 | policies    | CAR wizard, status, notes, clone/delete |
 | pricing     | Premium, referral, catalogues           |
 | adjustments | Turnover adjustment                     |
-| documents   | PDF, library docs                       |
+| documents   | PDF, library docs, document templates   |
 | email       | Templates + Resend document send        |
-| settings    | Users, features, AR, prices admin       |
+| settings    | Users, features, AR, prices, templates  |
 | reports     | List / export                           |
 | audit       | Audit log                               |
 | shared      | Primitives, utils, shared Zod           |

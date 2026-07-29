@@ -1,7 +1,8 @@
 import type { Route } from "./+types/$";
+import { pageTitle } from "~/lib/brand";
 
 export function meta() {
-  return [{ title: "Not found | BrokerSure" }];
+  return [{ title: pageTitle("Not found") }];
 }
 
 /** Catch-all — unknown URLs render the root ErrorBoundary as 404. */

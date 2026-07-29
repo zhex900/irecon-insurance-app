@@ -34,11 +34,12 @@ import { getReferenceData } from "~/lib/services/reference.service";
 import { formatDate } from "~/lib/utils";
 import { POLICY_STATUS } from "~/lib/zod/policy-car";
 import type { Route } from "./+types/car-renewals";
+import { pageTitle } from "~/lib/brand";
 
 const PAGE_SIZE = 50;
 
 export function meta() {
-  return [{ title: "CAR Renewal Report | BrokerSure" }];
+  return [{ title: pageTitle("CAR Renewal Report") }];
 }
 
 function parseIdList(value: string | null, fallback: number[]) {

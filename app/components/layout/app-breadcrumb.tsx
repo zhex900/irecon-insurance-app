@@ -13,6 +13,11 @@ export type AppBreadcrumbItem = {
   label: string;
   /** Omit (or leave undefined) for the current page. */
   to?: string;
+  /**
+   * Full document navigation. Use when SPA transitions stall (e.g. leaving
+   * TipTap / React Email editor pages).
+   */
+  reloadDocument?: boolean;
 };
 
 export function AppBreadcrumb({ items }: { items: AppBreadcrumbItem[] }) {
@@ -30,7 +35,15 @@ export function AppBreadcrumb({ items }: { items: AppBreadcrumbItem[] }) {
                 {isLast || !item.to ? (
                   <BreadcrumbPage>{item.label}</BreadcrumbPage>
                 ) : (
-                  <BreadcrumbLink render={<Link to={item.to} />}>
+                  <BreadcrumbLink
+                    render={
+                      item.reloadDocument ? (
+                        <a href={item.to} />
+                      ) : (
+                        <Link to={item.to} />
+                      )
+                    }
+                  >
                     {item.label}
                   </BreadcrumbLink>
                 )}

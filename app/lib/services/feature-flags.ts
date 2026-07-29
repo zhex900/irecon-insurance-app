@@ -7,6 +7,7 @@ export const FEATURE_KEYS = [
   "prices",
   "email_templates",
   "library_documents",
+  "document_templates",
 ] as const;
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
 
@@ -43,6 +44,12 @@ const FEATURE_CATALOGUE: Record<
     label: "Library documents",
     description:
       "When disabled, Library documents is hidden from everyone except super-admins.",
+    defaultEnabled: true,
+  },
+  document_templates: {
+    label: "Document templates",
+    description:
+      "When disabled, Document templates (PDF editor) is hidden from everyone except super-admins.",
     defaultEnabled: true,
   },
 };

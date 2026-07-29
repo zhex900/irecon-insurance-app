@@ -14,9 +14,10 @@ import {
   uploadLibraryDocument,
 } from "~/lib/services/documents/library-documents";
 import type { Route } from "./+types/library-documents";
+import { pageTitle } from "~/lib/brand";
 
 export function meta() {
-  return [{ title: "Library documents | BrokerSure" }];
+  return [{ title: pageTitle("Library documents") }];
 }
 
 export async function loader({ request }: Route.LoaderArgs) {

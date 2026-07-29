@@ -1,6 +1,6 @@
 # Testing
 
-Unit, integration, and browser tests for BrokerSure (Phase 7).
+Unit, integration, and browser tests for Irecon Insurance (Phase 7).
 
 ## Commands
 

@@ -39,11 +39,12 @@ import {
   type TerrorScheduleInput,
 } from "~/lib/services/price/catalogue.server";
 import type { Route } from "./+types/$catalogue.$id";
+import { pageTitle } from "~/lib/brand";
 
 export function meta({ params }: Route.MetaArgs) {
   const slug = params.catalogue ?? "car-rates";
   const label = isPriceCatalogueSlug(slug) ? slugLabel(slug) : "Prices";
-  return [{ title: `${label} #${params.id} | BrokerSure` }];
+  return [{ title: pageTitle(`${label} #${params.id}`) }];
 }
 
 export async function loader({ request, params }: Route.LoaderArgs) {

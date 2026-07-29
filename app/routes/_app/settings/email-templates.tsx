@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState, type ComponentType } from "react";
-import { redirect, useFetcher, useRevalidator } from "react-router";
+import { useRef, useState, type ComponentType } from "react";
+import { redirect } from "react-router";
 import {
   ArrowRightIcon,
   Building2Icon,
+  ImageIcon,
   UsersIcon,
   type LucideProps,
 } from "lucide-react";
@@ -16,32 +17,26 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "~/components/ui/dialog";
-import { Field, FieldLabel } from "~/components/ui/field";
-import { Input } from "~/components/ui/input";
-import { Textarea } from "~/components/ui/textarea";
+import { Badge } from "~/components/reui/badge";
 import { requireAuth } from "~/lib/auth/session.server";
 import { isSuperAdmin } from "~/lib/auth/roles";
-import { writeAuditLog } from "~/lib/services/audit/service";
+import {
+  DEFAULT_EMAIL_TEMPLATES,
+  EMAIL_TEMPLATE_META,
+} from "~/lib/email-templates";
+import { getEmailFooterDataUri } from "~/lib/services/email/footer-image";
 import { isFeatureEnabled } from "~/lib/services/feature-flags";
 import {
-  EMAIL_RECIPIENT_TYPES,
+  EMAIL_TEMPLATE_KEYS,
   listEmailTemplates,
-  saveEmailTemplate,
-  type EmailRecipientType,
   type EmailTemplate,
+  type EmailTemplateKey,
 } from "~/lib/services/email/templates";
 import type { Route } from "./+types/email-templates";
+import { pageTitle } from "~/lib/brand";
 
 export function meta() {
-  return [{ title: "Email templates | BrokerSure" }];
+  return [{ title: pageTitle("Email templates") }];
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -54,99 +49,65 @@ export async function loader({ request }: Route.LoaderArgs) {
     templates: await listEmailTemplates(),
     canEdit: isSuperAdmin(viewer),
     emailTemplatesEnabled,
+    footerImageDataUri: await getEmailFooterDataUri(),
   };
 }
 
-export async function action({ request }: Route.ActionArgs) {
-  const viewer = await requireAuth(request);
-  if (!isSuperAdmin(viewer)) {
-    return {
-      ok: false as const,
-      error: "Only super-admins can change email templates.",
-    };
-  }
-
-  const formData = await request.formData();
-  const recipientType = String(
-    formData.get("recipientType") ?? "",
-  ) as EmailRecipientType;
-  if (!EMAIL_RECIPIENT_TYPES.includes(recipientType)) {
-    return { ok: false as const, error: "Unknown recipient type." };
-  }
-
-  const subject = String(formData.get("subject") ?? "");
-  const body = String(formData.get("body") ?? "");
-  const toEmail = String(formData.get("toEmail") ?? "");
-
-  if (!subject.trim()) {
-    return { ok: false as const, error: "Subject is required." };
-  }
-  if (!body.trim()) {
-    return { ok: false as const, error: "Message body is required." };
-  }
-  if (recipientType === "insurer" && !toEmail.trim()) {
-    return { ok: false as const, error: "Insurer email address is required." };
-  }
-  if (
-    recipientType === "insurer" &&
-    toEmail.trim() &&
-    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(toEmail.trim())
-  ) {
-    return {
-      ok: false as const,
-      error: "Enter a valid insurer email address.",
-    };
-  }
-
-  const saved = await saveEmailTemplate(
-    { recipientType, subject, body, toEmail },
-    viewer.email,
+function templateForKey(
+  byKey: Map<string, EmailTemplate>,
+  key: EmailTemplateKey,
+): EmailTemplate {
+  return (
+    byKey.get(key) ?? {
+      recipientType: key,
+      ...DEFAULT_EMAIL_TEMPLATES[key],
+    }
   );
-  await writeAuditLog({
-    actor: viewer,
-    action: "settings.email_template",
-    entityType: "email_template",
-    entityId: recipientType,
-    summary: `Updated ${recipientType} email template`,
-    metadata: {
-      recipientType,
-      hasToEmail: Boolean(saved.toEmail),
-    },
-    request,
-  });
-
-  return { ok: true as const, recipientType, template: saved };
 }
 
-const PLACEHOLDER_HINT =
-  "Use {{clientName}}, {{policyNumber}}, and {{brokerName}} as placeholders.";
-
 function TemplateSummaryCard({
+  href,
   title,
   description,
   preview,
+  policyTag,
   icon: Icon,
-  onOpen,
 }: {
+  href: string;
   title: string;
   description: string;
   preview: string;
+  policyTag: string | null;
   icon: ComponentType<LucideProps>;
-  onOpen: () => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className="group block h-full w-full rounded-xl text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+    <a
+      href={href}
+      className="group block h-full rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+      onClick={(event) => {
+        // Full page load — same as Settings index; client transitions can stall here.
+        event.preventDefault();
+        window.location.assign(href);
+      }}
     >
-      <Card className="h-full transition-colors group-hover:border-primary/40 group-hover:bg-muted/30">
+      <Card className="pointer-events-none h-full transition-colors group-hover:border-primary/40 group-hover:bg-muted/30">
         <CardHeader className="gap-3">
           <div className="flex items-start justify-between gap-3">
             <span className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <Icon className="size-5" />
             </span>
-            <ArrowRightIcon className="size-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+            <div className="flex items-center gap-2">
+              {policyTag ? (
+                <Badge variant="primary-light" size="sm" radius="full">
+                  {policyTag}
+                </Badge>
+              ) : (
+                <Badge variant="secondary" size="sm" radius="full">
+                  Insurer
+                </Badge>
+              )}
+              <ArrowRightIcon className="size-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+            </div>
           </div>
           <CardTitle className="text-base">{title}</CardTitle>
           <CardDescription>{description}</CardDescription>
@@ -157,188 +118,158 @@ function TemplateSummaryCard({
           ) : null}
         </CardHeader>
       </Card>
-    </button>
+    </a>
   );
 }
 
-function TemplateEditDialog({
-  open,
-  onOpenChange,
-  title,
-  description,
-  template,
-  showToEmail = false,
-  canEdit = false,
+function EmailFooterCard({
+  canEdit,
+  initialDataUri,
 }: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  title: string;
-  description: string;
-  template: EmailTemplate;
-  showToEmail?: boolean;
-  canEdit?: boolean;
+  canEdit: boolean;
+  initialDataUri: string;
 }) {
-  const fetcher = useFetcher<typeof action>();
-  const revalidator = useRevalidator();
-  const handledDataRef = useRef<typeof fetcher.data>(undefined);
-  const [subject, setSubject] = useState(template.subject);
-  const [body, setBody] = useState(template.body);
-  const [toEmail, setToEmail] = useState(template.toEmail);
-  const busy = fetcher.state !== "idle";
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [dataUri, setDataUri] = useState(initialDataUri);
+  const [busy, setBusy] = useState(false);
 
-  // Keep dialog fields in sync when the dialog opens or loader data updates after save.
-  const wasOpenRef = useRef(false);
-  useEffect(() => {
-    const justOpened = open && !wasOpenRef.current;
-    wasOpenRef.current = open;
-    if (!justOpened) return;
-    setSubject(template.subject);
-    setBody(template.body);
-    setToEmail(template.toEmail);
-  }, [open, template.subject, template.body, template.toEmail]);
-
-  useEffect(() => {
-    if (fetcher.state !== "idle" || !fetcher.data) return;
-    if (handledDataRef.current === fetcher.data) return;
-    handledDataRef.current = fetcher.data;
-    const data = handledDataRef.current;
-
-    if (data.ok && data.recipientType === template.recipientType) {
-      const saved = data.template;
-      setSubject(saved.subject);
-      setBody(saved.body);
-      setToEmail(saved.toEmail);
-      toast.success(`${title} saved`);
-      onOpenChange(false);
-      revalidator.revalidate();
-    } else if (!data.ok && "error" in data) {
-      toast.error(data.error);
+  async function upload(file: File) {
+    setBusy(true);
+    try {
+      const body = new FormData();
+      body.set("file", file);
+      const response = await fetch("/api/email-footer", {
+        method: "POST",
+        body,
+        credentials: "same-origin",
+      });
+      const data = (await response.json().catch(() => null)) as {
+        error?: string;
+        dataUri?: string;
+      } | null;
+      if (!response.ok) {
+        throw new Error(data?.error || "Upload failed.");
+      }
+      if (!data?.dataUri) {
+        throw new Error("Upload did not return an image.");
+      }
+      setDataUri(data.dataUri);
+      toast.success("Footer image saved");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Could not upload image.",
+      );
+    } finally {
+      setBusy(false);
     }
-  }, [
-    fetcher.state,
-    fetcher.data,
-    template.recipientType,
-    title,
-    onOpenChange,
-    revalidator,
-  ]);
+  }
+
+  async function restoreDefault() {
+    setBusy(true);
+    try {
+      const response = await fetch("/api/email-footer", {
+        method: "DELETE",
+        credentials: "same-origin",
+      });
+      const data = (await response.json().catch(() => null)) as {
+        error?: string;
+        dataUri?: string;
+      } | null;
+      if (!response.ok) {
+        throw new Error(data?.error || "Could not restore default.");
+      }
+      if (!data?.dataUri) {
+        throw new Error("Restore did not return an image.");
+      }
+      setDataUri(data.dataUri);
+      toast.success("Restored default footer image");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Could not restore default.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg" showCloseButton>
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>
-            {canEdit
-              ? description
-              : "View only — only super-admins can edit email templates."}
-          </DialogDescription>
-        </DialogHeader>
-
-        <fetcher.Form method="post" className="flex flex-col gap-4">
-          <input
-            type="hidden"
-            name="recipientType"
-            value={template.recipientType}
-          />
-          {showToEmail ? (
-            <Field>
-              <FieldLabel htmlFor={`${template.recipientType}-to`}>
-                Insurer email
-              </FieldLabel>
-              <Input
-                id={`${template.recipientType}-to`}
-                name="toEmail"
-                type="email"
-                value={toEmail}
-                onChange={(event) => setToEmail(event.target.value)}
-                placeholder="underwriting@insurer.com"
-                autoComplete="email"
-                required
-                disabled={!canEdit}
-                readOnly={!canEdit}
+    <Card className="max-w-3xl">
+      <CardHeader className="gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <span className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <ImageIcon className="size-5" />
+          </span>
+          <div>
+            <CardTitle className="text-base">Email footer image</CardTitle>
+            <CardDescription>
+              Stored in the database as an image blob. Templates use{" "}
+              {"{{footerImage}}"} which is filled with this image (no hosted
+              URL).
+            </CardDescription>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {dataUri ? (
+            <img
+              src={dataUri}
+              alt="Email footer"
+              className="h-12 max-w-[220px] rounded border bg-white object-contain"
+            />
+          ) : null}
+          {canEdit ? (
+            <>
+              <input
+                ref={inputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                className="hidden"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) void upload(file);
+                  event.target.value = "";
+                }}
               />
-            </Field>
-          ) : (
-            <input type="hidden" name="toEmail" value="" />
-          )}
-          <Field>
-            <FieldLabel htmlFor={`${template.recipientType}-subject`}>
-              Subject
-            </FieldLabel>
-            <Input
-              id={`${template.recipientType}-subject`}
-              name="subject"
-              value={subject}
-              onChange={(event) => setSubject(event.target.value)}
-              required
-              disabled={!canEdit}
-              readOnly={!canEdit}
-            />
-          </Field>
-          <Field>
-            <FieldLabel htmlFor={`${template.recipientType}-body`}>
-              Message
-            </FieldLabel>
-            <Textarea
-              id={`${template.recipientType}-body`}
-              name="body"
-              value={body}
-              onChange={(event) => setBody(event.target.value)}
-              rows={10}
-              className="min-h-48 font-mono text-sm"
-              required
-              disabled={!canEdit}
-              readOnly={!canEdit}
-            />
-            <p className="mt-1.5 text-xs text-muted-foreground">
-              {PLACEHOLDER_HINT}
-            </p>
-          </Field>
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={busy}
-            >
-              {canEdit ? "Cancel" : "Close"}
-            </Button>
-            {canEdit ? (
               <LoadingButton
-                type="submit"
+                type="button"
+                variant="outline"
+                size="sm"
                 loading={busy}
-                loadingLabel="Saving…"
+                loadingLabel="Uploading…"
+                onClick={() => inputRef.current?.click()}
               >
-                Save
+                Upload
               </LoadingButton>
-            ) : null}
-          </DialogFooter>
-        </fetcher.Form>
-      </DialogContent>
-    </Dialog>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={busy}
+                onClick={() => void restoreDefault()}
+              >
+                Restore default
+              </Button>
+            </>
+          ) : null}
+        </div>
+      </CardHeader>
+    </Card>
   );
 }
 
 export default function SettingsEmailTemplatesRoute({
   loaderData,
 }: Route.ComponentProps) {
-  const broker = loaderData.templates.find(
-    (t) => t.recipientType === "broker",
-  )!;
-  const insurer = loaderData.templates.find(
-    (t) => t.recipientType === "insurer",
-  )!;
-  const [openType, setOpenType] = useState<EmailRecipientType | null>(null);
+  const byKey = new Map(
+    loaderData.templates.map((template) => [template.recipientType, template]),
+  );
 
   return (
-    <div>
+    <div className="flex flex-col gap-6">
       <PageHeader
         title="Email templates"
         description={
           loaderData.emailTemplatesEnabled
-            ? "Default subject and body when emailing selected policy documents to the broker or insurer."
+            ? "Five templates: insurer plus Annual, Renewal, Single, and Owner Builder broker emails."
             : "Email templates is disabled for other roles. Super-admins can still view and edit."
         }
         breadcrumbs={[
@@ -347,44 +278,32 @@ export default function SettingsEmailTemplatesRoute({
         ]}
       />
 
-      <div className="grid max-w-3xl gap-4 sm:grid-cols-2">
-        <TemplateSummaryCard
-          title="Broker template"
-          description="Sent to the client's authorised representative email address."
-          preview={broker.subject}
-          icon={UsersIcon}
-          onOpen={() => setOpenType("broker")}
-        />
-        <TemplateSummaryCard
-          title="Insurer template"
-          description="Sent to the configured insurer email address."
-          preview={
-            insurer.toEmail
-              ? `${insurer.toEmail} · ${insurer.subject}`
-              : insurer.subject
-          }
-          icon={Building2Icon}
-          onOpen={() => setOpenType("insurer")}
-        />
-      </div>
+      <EmailFooterCard
+        canEdit={loaderData.canEdit}
+        initialDataUri={loaderData.footerImageDataUri}
+      />
 
-      <TemplateEditDialog
-        open={openType === "broker"}
-        onOpenChange={(open) => setOpenType(open ? "broker" : null)}
-        title="Broker template"
-        description="Edit the subject and message used when emailing documents to the broker."
-        template={broker}
-        canEdit={loaderData.canEdit}
-      />
-      <TemplateEditDialog
-        open={openType === "insurer"}
-        onOpenChange={(open) => setOpenType(open ? "insurer" : null)}
-        title="Insurer template"
-        description="Edit the insurer email address, subject, and message."
-        template={insurer}
-        showToEmail
-        canEdit={loaderData.canEdit}
-      />
+      <div className="grid max-w-5xl gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {EMAIL_TEMPLATE_KEYS.map((key) => {
+          const template = templateForKey(byKey, key);
+          const meta = EMAIL_TEMPLATE_META[key];
+          return (
+            <TemplateSummaryCard
+              key={key}
+              href={`/settings/email-templates/${encodeURIComponent(key)}`}
+              title={meta.title}
+              description={meta.description}
+              preview={
+                key === "insurer" && template.toEmail
+                  ? `${template.toEmail} · ${template.subject}`
+                  : template.subject
+              }
+              policyTag={meta.policyTag}
+              icon={key === "insurer" ? Building2Icon : UsersIcon}
+            />
+          );
+        })}
+      </div>
     </div>
   );
 }

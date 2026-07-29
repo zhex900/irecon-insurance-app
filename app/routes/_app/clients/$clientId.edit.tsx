@@ -1,5 +1,6 @@
 import { ClientForm } from "~/components/clients/client-form";
 import { PageHeader } from "~/components/layout/app-layout";
+import { pageTitle } from "~/lib/brand";
 import { getClient } from "~/lib/services/clients/service";
 import { getReferenceDataAsync } from "~/lib/services/reference.service";
 import type { Route } from "./+types/$clientId.edit";
@@ -7,7 +8,9 @@ import type { Route } from "./+types/$clientId.edit";
 export function meta({ loaderData }: Route.MetaArgs) {
   return [
     {
-      title: `${loaderData.isNew ? "New client" : `Edit ${loaderData.client.name}`} | BrokerSure`,
+      title: pageTitle(
+        loaderData.isNew ? "New client" : `Edit ${loaderData.client.name}`,
+      ),
     },
   ];
 }

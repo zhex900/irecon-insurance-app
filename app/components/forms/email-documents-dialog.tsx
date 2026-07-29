@@ -1,6 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FileTextIcon, MailIcon, XIcon } from "lucide-react";
 import { toast } from "sonner";
+import {
+  EmailRichEditor,
+  type EmailRichEditorHandle,
+} from "~/components/forms/email-rich-editor";
 import { Button } from "~/components/ui/button";
 import { LoadingButton } from "~/components/ui/loading-button";
 import {
@@ -11,17 +15,23 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
-import { Field, FieldLabel } from "~/components/ui/field";
+import { FieldLabel } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
-import { Textarea } from "~/components/ui/textarea";
+import { EmailRecipientsInput } from "~/components/forms/email-recipients-input";
 import type { PolicyDocument } from "~/lib/db/types";
+import { Badge } from "~/components/reui/badge";
+import type { EmailDirectoryEntry } from "~/lib/email/directory";
 import {
   applyEmailTemplate,
-  type EmailRecipientType,
+  EMAIL_TEMPLATE_META,
+  ensureEmailEditorHtml,
+  preferEmailHtml,
+  type EmailSendRecipient,
   type EmailTemplate,
+  type EmailTemplateVars,
 } from "~/lib/email-templates";
 
-const RECIPIENT_LABELS: Record<EmailRecipientType, string> = {
+const RECIPIENT_LABELS: Record<EmailSendRecipient, string> = {
   broker: "broker",
   insurer: "insurer",
 };
@@ -38,6 +48,9 @@ export function EmailDocumentsDialog({
   recipientType,
   template,
   defaultTo = "",
+  templateVars,
+  footerImageDataUri = "",
+  emailDirectory = [],
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -47,43 +60,73 @@ export function EmailDocumentsDialog({
   clientName?: string;
   brokerName?: string;
   brokerEmail?: string;
-  recipientType: EmailRecipientType;
+  recipientType: EmailSendRecipient;
   template: EmailTemplate;
   defaultTo?: string;
+  /** Extra merge fields (cover type, insured, account manager, …). */
+  templateVars?: EmailTemplateVars;
+  /** DB-stored footer image data URI (blob). */
+  footerImageDataUri?: string;
+  /** Users, ARs, and clients for To/Cc autocomplete. */
+  emailDirectory?: EmailDirectoryEntry[];
 }) {
-  const vars = {
+  const vars: EmailTemplateVars = {
     clientName,
     policyNumber,
     brokerName,
+    ...templateVars,
+    footerImage: footerImageDataUri || templateVars?.footerImage || "",
   };
   const [to, setTo] = useState(defaultTo);
   const [cc, setCc] = useState("");
   const [subject, setSubject] = useState(
     applyEmailTemplate(template.subject, vars),
   );
-  const [body, setBody] = useState(applyEmailTemplate(template.body, vars));
+  const [editorContent, setEditorContent] = useState(() =>
+    applyEmailTemplate(ensureEmailEditorHtml(template.body), vars),
+  );
+  const [editorKey, setEditorKey] = useState(0);
   const [attachments, setAttachments] = useState(documents);
   const [sending, setSending] = useState(false);
+  const editorHandleRef = useRef<EmailRichEditorHandle>(null);
 
-  const toSuggestions = [
-    ...new Set(
-      [defaultTo, brokerEmail, template.toEmail]
-        .map((email) => email.trim())
-        .filter(Boolean),
-    ),
-  ];
-  const toListId = "email-documents-to-suggestions";
+  const directoryOptions = useMemo(() => {
+    const extras: EmailDirectoryEntry[] = [];
+    const seen = new Set(
+      emailDirectory.map((entry) => entry.email.trim().toLowerCase()),
+    );
+    for (const [email, name, kind] of [
+      [defaultTo, brokerName || "Default", "ar"],
+      [brokerEmail, brokerName || "Broker", "ar"],
+      [template.toEmail, "Insurer", "ar"],
+    ] as const) {
+      const normalized = email.trim().toLowerCase();
+      if (!normalized.includes("@") || seen.has(normalized)) continue;
+      seen.add(normalized);
+      extras.push({ email: normalized, name, kind });
+    }
+    return [...extras, ...emailDirectory];
+  }, [emailDirectory, defaultTo, brokerEmail, brokerName, template.toEmail]);
 
   const wasOpenRef = useRef(false);
   useEffect(() => {
     const justOpened = open && !wasOpenRef.current;
     wasOpenRef.current = open;
     if (!justOpened) return;
-    const nextVars = { clientName, policyNumber, brokerName };
+    const nextVars: EmailTemplateVars = {
+      clientName,
+      policyNumber,
+      brokerName,
+      ...templateVars,
+      footerImage: footerImageDataUri || templateVars?.footerImage || "",
+    };
     setTo(defaultTo);
     setCc("");
     setSubject(applyEmailTemplate(template.subject, nextVars));
-    setBody(applyEmailTemplate(template.body, nextVars));
+    setEditorContent(
+      applyEmailTemplate(ensureEmailEditorHtml(template.body), nextVars),
+    );
+    setEditorKey((key) => key + 1);
     setAttachments(documents);
     setSending(false);
   }, [
@@ -95,6 +138,8 @@ export function EmailDocumentsDialog({
     documents,
     template.subject,
     template.body,
+    templateVars,
+    footerImageDataUri,
   ]);
 
   function removeAttachment(id: number) {
@@ -118,6 +163,19 @@ export function EmailDocumentsDialog({
 
     setSending(true);
     try {
+      const exported = await editorHandleRef.current?.getEmail();
+      const documentHtml =
+        editorHandleRef.current?.getDocumentHtml().trim() || editorContent;
+      const html = preferEmailHtml({
+        documentHtml,
+        exportedHtml: exported?.html,
+        footerImageDataUri: vars.footerImage,
+      });
+      const text = exported?.text?.trim() || "";
+      if (!html) {
+        throw new Error("Message body is empty.");
+      }
+
       const response = await fetch(
         `/api/policies/${policyId}/email-documents`,
         {
@@ -129,7 +187,8 @@ export function EmailDocumentsDialog({
             to: recipient,
             cc: cc.trim() || undefined,
             subject: subject.trim(),
-            body,
+            body: text || html,
+            html,
             recipientType,
           }),
         },
@@ -141,10 +200,13 @@ export function EmailDocumentsDialog({
       if (!response.ok) {
         throw new Error(data?.error || "Could not send email. Try again.");
       }
-      toast.success(`Email sent to ${recipient}`, {
-        description: `${attachments.length} attachment${attachments.length === 1 ? "" : "s"} · ${RECIPIENT_LABELS[recipientType]}`,
-      });
       onOpenChange(false);
+      window.setTimeout(() => {
+        toast.success("Email sent", {
+          description: `Sent to ${recipient} · ${attachments.length} attachment${attachments.length === 1 ? "" : "s"} (${RECIPIENT_LABELS[recipientType]})`,
+          duration: 5000,
+        });
+      }, 0);
     } catch (error) {
       toast.error(
         error instanceof Error
@@ -157,127 +219,154 @@ export function EmailDocumentsDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg" showCloseButton>
+    <Dialog open={open} onOpenChange={onOpenChange} modal={false}>
+      <DialogContent
+        className="flex max-h-[92vh] flex-col gap-0 overflow-hidden sm:max-w-5xl"
+        showCloseButton
+      >
         <DialogHeader>
-          <DialogTitle>Email {RECIPIENT_LABELS[recipientType]}</DialogTitle>
-          <DialogDescription>
-            Compose a message and send the selected PDFs to the{" "}
-            {RECIPIENT_LABELS[recipientType]}.
-          </DialogDescription>
+          <DialogTitle className="flex flex-wrap items-center gap-2">
+            <span>Email {RECIPIENT_LABELS[recipientType]}</span>
+            <Badge variant="warning-light" size="sm" radius="full">
+              {EMAIL_TEMPLATE_META[template.recipientType].policyTag ??
+                EMAIL_TEMPLATE_META[template.recipientType].title}
+            </Badge>
+          </DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4">
-          <Field>
-            <FieldLabel htmlFor="email-to">To</FieldLabel>
-            <Input
-              id="email-to"
-              type="email"
-              value={to}
-              onChange={(event) => setTo(event.target.value)}
-              placeholder={
-                recipientType === "broker" && brokerEmail
-                  ? brokerEmail
-                  : "recipient@example.com"
-              }
-              list={toSuggestions.length > 0 ? toListId : undefined}
-              autoComplete="off"
-            />
-            {toSuggestions.length > 0 ? (
-              <datalist id={toListId}>
-                {toSuggestions.map((email) => (
-                  <option key={email} value={email}>
-                    {brokerEmail === email && brokerName
-                      ? `${brokerName} (broker)`
-                      : email}
-                  </option>
-                ))}
-              </datalist>
-            ) : null}
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="email-cc">Cc</FieldLabel>
-            <Input
-              id="email-cc"
-              type="email"
-              value={cc}
-              onChange={(event) => setCc(event.target.value)}
-              placeholder="optional"
-              autoComplete="email"
-            />
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="email-subject">Subject</FieldLabel>
-            <Input
-              id="email-subject"
-              value={subject}
-              onChange={(event) => setSubject(event.target.value)}
-            />
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="email-body">Message</FieldLabel>
-            <Textarea
-              id="email-body"
-              value={body}
-              onChange={(event) => setBody(event.target.value)}
-              rows={8}
-              className="min-h-40"
-            />
-          </Field>
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-1 py-1">
+          <div className="flex flex-col divide-y divide-border rounded-md border border-border">
+            <div className="flex items-center gap-3 px-3">
+              <label
+                htmlFor="email-to"
+                className="w-16 shrink-0 text-sm text-muted-foreground"
+              >
+                To
+              </label>
+              <EmailRecipientsInput
+                id="email-to"
+                aria-label="To"
+                value={to}
+                onChange={setTo}
+                options={directoryOptions}
+                placeholder={
+                  recipientType === "broker" && brokerEmail
+                    ? `${brokerEmail}; …`
+                    : "name@example.com; …"
+                }
+              />
+            </div>
+            <div className="flex items-center gap-3 px-3">
+              <label
+                htmlFor="email-cc"
+                className="w-16 shrink-0 text-sm text-muted-foreground"
+              >
+                Cc
+              </label>
+              <EmailRecipientsInput
+                id="email-cc"
+                aria-label="Cc"
+                value={cc}
+                onChange={setCc}
+                options={directoryOptions}
+                placeholder=""
+              />
+            </div>
+            <div className="flex items-center gap-3 px-3">
+              <label
+                htmlFor="email-subject"
+                className="w-16 shrink-0 text-sm text-muted-foreground"
+              >
+                Subject
+              </label>
+              <Input
+                id="email-subject"
+                value={subject}
+                onChange={(event) => setSubject(event.target.value)}
+                placeholder="Subject"
+                className="min-w-0 flex-1 rounded-none border-0 px-0 shadow-none focus-visible:ring-0"
+              />
+            </div>
+          </div>
 
-          <div className="flex flex-col gap-2">
-            <p className="text-sm font-medium">
-              Attachments ({attachments.length})
-            </p>
-            {attachments.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No documents attached.
-              </p>
-            ) : (
-              <ul className="flex max-h-36 flex-col gap-1 overflow-y-auto rounded-md border border-border p-2">
-                {attachments.map((doc) => (
-                  <li
-                    key={doc.policyDocumentId}
-                    className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm"
-                  >
-                    <FileTextIcon className="size-3.5 shrink-0 text-muted-foreground" />
-                    <span className="min-w-0 flex-1 truncate">
-                      {doc.filename}
-                    </span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-xs"
-                      aria-label={`Remove ${doc.name}`}
-                      onClick={() => removeAttachment(doc.policyDocumentId)}
-                    >
-                      <XIcon />
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            )}
+          <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_16rem]">
+            <div className="flex min-w-0 flex-col gap-2">
+              <FieldLabel>Message</FieldLabel>
+              <EmailRichEditor
+                ref={editorHandleRef}
+                content={editorContent}
+                contentKey={`compose-${recipientType}-${editorKey}`}
+                heightClassName="h-[min(28rem,50vh)]"
+                showInspector={false}
+              />
+            </div>
+
+            <div className="flex min-w-0 flex-col gap-2">
+              <FieldLabel>Attachments ({attachments.length})</FieldLabel>
+              <div className="flex h-[min(28rem,50vh)] flex-col overflow-hidden rounded-md border border-border bg-muted/20">
+                <div className="min-h-0 flex-1 overflow-y-auto p-2">
+                  {attachments.length === 0 ? (
+                    <p className="px-1 py-2 text-sm text-muted-foreground">
+                      No documents attached. Select documents on the policy
+                      before emailing.
+                    </p>
+                  ) : (
+                    <ul className="flex flex-col gap-1">
+                      {attachments.map((doc) => (
+                        <li
+                          key={doc.policyDocumentId}
+                          className="flex items-start gap-2 rounded-md bg-background px-2 py-1.5 text-sm ring-1 ring-foreground/10"
+                        >
+                          <FileTextIcon className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+                          <span className="min-w-0 flex-1 break-words">
+                            {doc.filename}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-xs"
+                            className="shrink-0"
+                            aria-label={`Remove ${doc.name}`}
+                            onClick={() =>
+                              removeAttachment(doc.policyDocumentId)
+                            }
+                          >
+                            <XIcon />
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={sending}
-          >
-            Cancel
-          </Button>
-          <LoadingButton
-            type="button"
-            onClick={() => void handleSend()}
-            loading={sending}
-            loadingLabel="Sending…"
-          >
-            <MailIcon data-icon="inline-start" />
-            Send
-          </LoadingButton>
+        <DialogFooter className="sm:items-center sm:justify-between">
+          <DialogDescription className="text-left text-xs sm:max-w-[55%]">
+            Type <kbd className="rounded border px-1 text-[0.7rem]">/</kbd> to
+            insert blocks; select text for formatting.
+          </DialogDescription>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={sending}
+            >
+              Cancel
+            </Button>
+            <LoadingButton
+              type="button"
+              onClick={() => void handleSend()}
+              loading={sending}
+              loadingLabel="Sending…"
+            >
+              <MailIcon data-icon="inline-start" />
+              Send
+            </LoadingButton>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

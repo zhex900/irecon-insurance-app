@@ -137,7 +137,7 @@ export function resolveLibraryAttachments(
       filename: "IA Annual CAR TPL Wording (eff Jan 2026) - Sample.pdf",
       content: [
         "IA Annual CAR TPL Wording (effective January 2026)",
-        `Sample wording attached for policy ${policy.policyNumber}.`,
+        `Wording attached for policy ${policy.policyNumber}.`,
       ].join("\n"),
     },
   );

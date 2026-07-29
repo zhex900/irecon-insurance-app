@@ -60,11 +60,12 @@ import {
 import { deleteClient } from "~/lib/services/clients/service";
 import { getReferenceDataAsync } from "~/lib/services/reference.service";
 import type { Route } from "./+types/_index";
+import { pageTitle } from "~/lib/brand";
 
 const PAGE_SIZE = 25;
 
 export function meta() {
-  return [{ title: "Clients | BrokerSure" }];
+  return [{ title: pageTitle("Clients") }];
 }
 
 function parsePositiveInt(value: string | null) {

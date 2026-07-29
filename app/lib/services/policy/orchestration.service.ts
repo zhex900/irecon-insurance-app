@@ -25,7 +25,6 @@ import {
   getPolicy,
   savePolicy,
 } from "~/lib/services/policy/data.service";
-import { getBrokerSession } from "~/lib/services/broker-session";
 import {
   formatTakenStatusBlockMessage,
   getTakenStatusErrors,
@@ -69,9 +68,9 @@ export async function savePolicyDraft(policyId: number, values: DraftValues) {
         ? existing.policyStatusId
         : POLICY_STATUS.Pending,
     },
-    { draft: existing.isDraft, premium: premiumOverride },
+    { draft: existing.isDraft ?? true, premium: premiumOverride },
   );
-  return savePolicy({ ...policy, isDraft: existing.isDraft });
+  return savePolicy({ ...policy, isDraft: existing.isDraft ?? true });
 }
 
 export async function upsertPolicyFromForm(
@@ -79,6 +78,7 @@ export async function upsertPolicyFromForm(
   values: CarPolicyFormValues & {
     premium?: NonNullable<Policy["car"]["premium"]> | Record<string, number>;
   },
+  createdBy: string,
 ) {
   const existing = await getPolicy(policyId);
   if (!existing) throw new Error("Policy not found");
@@ -111,7 +111,6 @@ export async function upsertPolicyFromForm(
     }
   }
 
-  const broker = getBrokerSession();
   const policy = applyFormValues(existing, values, {
     draft: false,
     premium,
@@ -121,7 +120,7 @@ export async function upsertPolicyFromForm(
       existing.notes,
       policyId,
       referralReasons,
-      broker.email,
+      createdBy,
     ),
   });
 
@@ -131,16 +130,16 @@ export async function upsertPolicyFromForm(
 export async function applyPremiumCalculation(
   policyId: number,
   values: CarPolicyFormValues,
+  createdBy: string,
 ) {
   const existing = await getPolicy(policyId);
   if (!existing) throw new Error("Policy not found");
   const { premium, rating, referralReasons } =
     await calculatePremiumForPolicy(values);
-  const broker = getBrokerSession();
 
   // Preserve submitted state — recalculate must not flip isDraft back to true.
   const policy = applyFormValues(existing, values, {
-    draft: existing.isDraft,
+    draft: existing.isDraft ?? true,
     premium,
     rating,
     referralReasons,
@@ -148,7 +147,7 @@ export async function applyPremiumCalculation(
       existing.notes,
       policyId,
       referralReasons,
-      broker.email,
+      createdBy,
     ),
   });
 
@@ -201,7 +200,7 @@ export async function updatePolicyNote(
   });
 }
 
-export async function clonePolicy(sourcePolicyId: number) {
+export async function clonePolicy(sourcePolicyId: number, createdBy: string) {
   const source = await getPolicy(sourcePolicyId);
   if (!source) throw new Error("Policy not found");
 
@@ -242,18 +241,22 @@ export async function clonePolicy(sourcePolicyId: number) {
     referralReasons: [],
   };
 
-  return createPolicyDraft(source.clientId, {
-    policyCategoryId: source.policyCategoryId,
-    policyStatusId: POLICY_STATUS.Pending,
-    postcode: source.postcode,
-    stateId: source.stateId,
-    dateEffective: source.dateEffective,
-    dateStart: source.dateStart,
-    dateEnd: source.dateEnd,
-    insurerCode: source.insurerCode,
-    isDraft: true,
-    car,
-  });
+  return createPolicyDraft(
+    source.clientId,
+    {
+      policyCategoryId: source.policyCategoryId,
+      policyStatusId: POLICY_STATUS.Pending,
+      postcode: source.postcode,
+      stateId: source.stateId,
+      dateEffective: source.dateEffective,
+      dateStart: source.dateStart,
+      dateEnd: source.dateEnd,
+      insurerCode: source.insurerCode,
+      isDraft: true,
+      car,
+    },
+    createdBy,
+  );
 }
 
 function applyFormValues(

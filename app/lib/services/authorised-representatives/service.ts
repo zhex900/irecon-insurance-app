@@ -1,5 +1,4 @@
 import { asc, eq, ilike, or } from "drizzle-orm";
-import { getBrokerSession } from "~/lib/services/broker-session";
 import { getDb } from "~/lib/db/client";
 import { authorisedRepresentative } from "~/lib/db/schema";
 import type { WholesaleBroker } from "~/lib/db/types";
@@ -46,6 +45,7 @@ export async function getAuthorisedRepresentative(id: number) {
 
 export async function createAuthorisedRepresentative(
   input: AuthorisedRepresentativeWritable,
+  createdBy: string,
 ) {
   const db = getDb();
   const [created] = await db
@@ -55,7 +55,7 @@ export async function createAuthorisedRepresentative(
       companyName: input.companyName.trim(),
       arNumber: input.arNumber.trim(),
       email: input.email.trim(),
-      createdBy: getBrokerSession().email,
+      createdBy,
     })
     .returning();
   return normalizeAuthorisedRepresentative(created);

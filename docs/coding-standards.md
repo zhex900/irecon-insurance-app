@@ -1,6 +1,6 @@
 # Coding standards
 
-Opinionated, measurable rules for BrokerSure. Prefer tooling (TypeScript strict, ESLint, Prettier, `npm run verify`, CI) for what machines can enforce; this doc covers the rest.
+Opinionated, measurable rules for Irecon Insurance. Prefer tooling (TypeScript strict, ESLint, Prettier, `npm run verify`, CI) for what machines can enforce; this doc covers the rest.
 
 Companions: [architecture.md](architecture.md) · [design-patterns.md](design-patterns.md) · [performance.md](performance.md) · [ui-guidelines.md](ui-guidelines.md) · [code-review.md](code-review.md)
 
@@ -152,7 +152,7 @@ No `console.log` in committed app code; use the project logger once introduced.
 | Types      | PascalCase DTOs                                                  |
 | Intents    | `draft`, `save`, `delete`                                        |
 
-Product copy: **BrokerSure**.
+Product copy: **Irecon Insurance** (`APP_NAME` / `pageTitle()` in `app/lib/brand.ts`).
 
 ## Documentation
 

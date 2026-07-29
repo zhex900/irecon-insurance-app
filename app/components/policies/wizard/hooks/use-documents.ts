@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
+import { useRouteLoaderData } from "react-router";
 import { toast } from "sonner";
 import type { Policy, PolicyDocument, PremiumBreakdown } from "~/lib/db/types";
 import { ensureReviewDocumentsClient } from "~/lib/services/policy/documents/documents.client";
@@ -20,6 +21,11 @@ export function usePolicyDocuments({
   referralReasons: string[];
   rating: Policy["car"]["rating"] | undefined;
 }) {
+  const layoutData = useRouteLoaderData("routes/_app/layout") as
+    { broker?: { email?: string } } | undefined;
+  const generatedBy =
+    policy.createdBy.trim() || layoutData?.broker?.email?.trim() || "unknown";
+
   const [documents, setDocuments] = useState<PolicyDocument[]>(
     policy.documents ?? [],
   );
@@ -81,11 +87,9 @@ export function usePolicyDocuments({
     setIsGeneratingDocuments(true);
     try {
       const previous = documentsRef.current;
-      const next = await ensureReviewDocumentsClient(
-        snapshot,
-        policy.createdBy || "broker@demo.local",
-        { force: options?.force },
-      );
+      const next = await ensureReviewDocumentsClient(snapshot, generatedBy, {
+        force: options?.force,
+      });
       if (options?.cancelled?.()) return;
       setDocuments(next);
       if (next !== previous) {

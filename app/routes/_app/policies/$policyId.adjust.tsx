@@ -16,9 +16,10 @@ import { getClient } from "~/lib/services/clients/service";
 import { getPolicy } from "~/lib/services/policy/data.service";
 import { getReferenceData } from "~/lib/services/reference.service";
 import type { Route } from "./+types/$policyId.adjust";
+import { pageTitle } from "~/lib/brand";
 
 export function meta({ loaderData }: Route.MetaArgs) {
-  return [{ title: `Adjust ${loaderData.policy.policyNumber} | BrokerSure` }];
+  return [{ title: pageTitle(`Adjust ${loaderData.policy.policyNumber}`) }];
 }
 
 export async function loader({ params }: Route.LoaderArgs) {
@@ -78,7 +79,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 
   try {
     if (intent === "finish") {
-      await submitPolicyAdjustment(policyId, parsed.data);
+      await submitPolicyAdjustment(policyId, parsed.data, actor.email);
       await writeAuditLog({
         actor,
         action: "policy.adjust",

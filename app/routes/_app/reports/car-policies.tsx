@@ -30,9 +30,10 @@ import {
 import { getCarPolicyReportSummary } from "~/lib/services/reports/list.service";
 import { formatCurrency, formatDate } from "~/lib/utils";
 import type { Route } from "./+types/car-policies";
+import { pageTitle } from "~/lib/brand";
 
 export function meta() {
-  return [{ title: "CAR Policy Report | BrokerSure" }];
+  return [{ title: pageTitle("CAR Policy Report") }];
 }
 
 export async function loader({ request }: Route.LoaderArgs) {

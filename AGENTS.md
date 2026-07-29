@@ -1,6 +1,6 @@
 # AGENTS.md
 
-AI assistant behavior for BrokerSure (CAR broker portal).
+AI assistant behavior for Irecon Insurance (CAR broker portal).
 
 This file is **behavior only**. Engineering rules live in `docs/`.
 

@@ -44,9 +44,10 @@ import { isFeatureEnabled } from "~/lib/services/feature-flags";
 import { listUsers } from "~/lib/services/users/service";
 import type { AuditLogEntry } from "~/lib/db/types";
 import type { Route } from "./+types/audit-log";
+import { pageTitle } from "~/lib/brand";
 
 export function meta() {
-  return [{ title: "Audit log | BrokerSure" }];
+  return [{ title: pageTitle("Audit log") }];
 }
 
 const PAGE_SIZE = 50;

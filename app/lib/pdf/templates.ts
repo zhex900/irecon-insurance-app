@@ -53,6 +53,12 @@ export function resolvePdfTemplate(
   );
 }
 
+export function resolvePdfTemplateByKey(
+  slotKey: string,
+): PdfTemplateSlot | null {
+  return SLOTS.find((s) => s.key === slotKey) ?? null;
+}
+
 export function listPdfTemplateSlots() {
   return SLOTS.map(
     ({ key, documentTypeCode, coverTypeId, title, sourceFile }) => ({

@@ -1,6 +1,7 @@
 import {
   ArrowRightIcon,
   BadgeDollarSignIcon,
+  FilePenLineIcon,
   FileStackIcon,
   MailIcon,
   ScrollTextIcon,
@@ -21,9 +22,10 @@ import { requireAuth } from "~/lib/auth/session.server";
 import { isSuperAdmin } from "~/lib/auth/roles";
 import { isFeatureEnabled } from "~/lib/services/feature-flags";
 import type { Route } from "./+types/_index";
+import { pageTitle } from "~/lib/brand";
 
 export function meta() {
-  return [{ title: "Settings | BrokerSure" }];
+  return [{ title: pageTitle("Settings") }];
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -33,23 +35,27 @@ export async function loader({ request }: Route.LoaderArgs) {
     pricesEnabled,
     emailTemplatesEnabled,
     libraryDocumentsEnabled,
+    documentTemplatesEnabled,
   ] = await Promise.all([
     isFeatureEnabled("audit_log"),
     isFeatureEnabled("prices"),
     isFeatureEnabled("email_templates"),
     isFeatureEnabled("library_documents"),
+    isFeatureEnabled("document_templates"),
   ]);
   const superAdmin = isSuperAdmin(viewer);
   return {
     showFeatures: superAdmin,
     showEmailTemplates: emailTemplatesEnabled || superAdmin,
     showLibraryDocuments: libraryDocumentsEnabled || superAdmin,
+    showDocumentTemplates: documentTemplatesEnabled || superAdmin,
     showPrices: pricesEnabled || superAdmin,
     showAuditLog: auditLogEnabled || superAdmin,
     auditLogEnabled,
     pricesEnabled,
     emailTemplatesEnabled,
     libraryDocumentsEnabled,
+    documentTemplatesEnabled,
   };
 }
 
@@ -91,6 +97,18 @@ export default function SettingsIndexRoute({
               ? "Upload and manage static PDFs attached to CAR document packs."
               : "Library documents is disabled for other roles. Super-admins can still manage it.",
             icon: FileStackIcon,
+          },
+        ]
+      : []),
+    ...(loaderData.showDocumentTemplates
+      ? [
+          {
+            to: "/settings/document-templates",
+            title: "Document templates",
+            description: loaderData.documentTemplatesEnabled
+              ? "Edit pdfme layouts for Schedule, ROA, and Adjustment PDFs."
+              : "Document templates is disabled for other roles. Super-admins can still manage it.",
+            icon: FilePenLineIcon,
           },
         ]
       : []),

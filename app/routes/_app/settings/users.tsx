@@ -31,9 +31,10 @@ import {
 import { deleteUserAvatar, putUserAvatar } from "~/lib/storage/avatars.server";
 import { parseAppUserFormData } from "~/lib/zod/app-user";
 import type { Route } from "./+types/users";
+import { pageTitle } from "~/lib/brand";
 
 export function meta() {
-  return [{ title: "User Management | BrokerSure" }];
+  return [{ title: pageTitle("User Management") }];
 }
 
 const PAGE_SIZE = 25;

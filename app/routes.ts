@@ -33,12 +33,17 @@ export default [
     "routes/api/clients.$clientId.draft.tsx",
   ),
   route("api/avatars/:userId", "routes/api/avatars.$userId.tsx"),
+  route("api/email-footer", "routes/api/email-footer.tsx"),
   route("api/library-documents", "routes/api/library-documents.tsx"),
   route(
     "api/library-documents/file/:filename",
     "routes/api/library-documents.file.$filename.tsx",
   ),
   route("api/library-documents/:id", "routes/api/library-documents.$id.tsx"),
+  route(
+    "api/document-templates/:slotKey",
+    "routes/api/document-templates.$slotKey.tsx",
+  ),
   route("api/audit", "routes/api/audit.tsx"),
   route("api/search", "routes/api/search.tsx"),
   layout("routes/_app/layout.tsx", [
@@ -64,6 +69,18 @@ export default [
     route(
       "settings/email-templates",
       "routes/_app/settings/email-templates.tsx",
+    ),
+    route(
+      "settings/email-templates/:key",
+      "routes/_app/settings/email-templates.$key.tsx",
+    ),
+    route(
+      "settings/document-templates",
+      "routes/_app/settings/document-templates.tsx",
+    ),
+    route(
+      "settings/document-templates/:slotKey",
+      "routes/_app/settings/document-templates.$slotKey.tsx",
     ),
     route("settings/features", "routes/_app/settings/features.tsx"),
     route(
