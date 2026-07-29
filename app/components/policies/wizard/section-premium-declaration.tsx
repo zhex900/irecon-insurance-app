@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useFormContext } from "react-hook-form";
 import { CalculatorIcon, InfoIcon, PencilIcon, XIcon } from "lucide-react";
 import {
@@ -307,11 +307,9 @@ export function PricingDeclarationConfirmedStep({
                   <td className="w-full py-2 pr-2">
                     <span className="break-words whitespace-normal">
                       {fee.name}{" "}
-                      <button
-                        type="button"
-                        className="inline-flex size-4 translate-y-px items-center justify-center rounded-full align-text-bottom text-muted-foreground hover:bg-muted hover:text-foreground"
-                        title={`How ${fee.name} is calculated`}
-                        aria-label={`How ${fee.name} is calculated`}
+                      <PremiumExplainTrigger
+                        label={`How ${fee.name} is calculated`}
+                        className="text-muted-foreground hover:bg-muted hover:text-foreground"
                         onClick={() =>
                           setWorking({
                             title: fee.name,
@@ -336,7 +334,7 @@ export function PricingDeclarationConfirmedStep({
                         }
                       >
                         <InfoIcon className="size-3.5" aria-hidden />
-                      </button>
+                      </PremiumExplainTrigger>
                     </span>
                   </td>
                   <td className="py-2 pl-2" />
@@ -370,6 +368,53 @@ export function PricingDeclarationConfirmedStep({
         }}
       />
     </div>
+  );
+}
+
+/**
+ * Must not be a <button>/<input>: premium sits in a disabled fieldset when the
+ * policy is view-only, and native form controls inside that fieldset ignore clicks.
+ */
+function PremiumExplainTrigger({
+  label,
+  className,
+  onClick,
+  children,
+}: {
+  label: string;
+  className?: string;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  function activate() {
+    onClick();
+  }
+
+  function onKeyDown(event: KeyboardEvent<HTMLSpanElement>) {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    activate();
+  }
+
+  return (
+    <span
+      role="button"
+      tabIndex={0}
+      title={label}
+      aria-label={label}
+      className={cn(
+        "inline-flex size-4 translate-y-px cursor-pointer items-center justify-center rounded-full align-text-bottom outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+        className,
+      )}
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        activate();
+      }}
+      onKeyDown={onKeyDown}
+    >
+      {children}
+    </span>
   );
 }
 
@@ -496,24 +541,18 @@ function PremiumRow({
           {explainKey && onExplain ? (
             <>
               {" "}
-              <button
-                type="button"
-                className={cn(
-                  "inline-flex size-4 translate-y-px items-center justify-center rounded-full align-text-bottom hover:bg-muted",
-                  rowManual
-                    ? "text-warning hover:text-warning"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-                title={
-                  rowManual
-                    ? `${label} — manually adjusted. View calculation`
-                    : `How ${label} is calculated`
-                }
-                aria-label={
+              <PremiumExplainTrigger
+                label={
                   rowManual
                     ? `${label} manually adjusted. View calculation`
                     : `How ${label} is calculated`
                 }
+                className={cn(
+                  "hover:bg-muted",
+                  rowManual
+                    ? "text-warning hover:text-warning"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
                 onClick={() => onExplain(label, explainKey)}
               >
                 {rowManual ? (
@@ -521,7 +560,7 @@ function PremiumRow({
                 ) : (
                   <InfoIcon className="size-3.5" aria-hidden />
                 )}
-              </button>
+              </PremiumExplainTrigger>
             </>
           ) : null}
         </span>
