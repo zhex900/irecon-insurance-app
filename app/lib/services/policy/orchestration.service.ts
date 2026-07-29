@@ -1,4 +1,9 @@
-import type { Policy, PremiumBreakdown } from "~/lib/db/types";
+import {
+  POLICY_MESSAGE_NOTE_TYPE_ID,
+  type Policy,
+  type PremiumBreakdown,
+} from "~/lib/db/types";
+export { POLICY_MESSAGE_NOTE_TYPE_ID };
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
 import type { z } from "zod";
 import {
@@ -21,8 +26,16 @@ import {
   savePolicy,
 } from "~/lib/services/policy/data.service";
 import { getBrokerSession } from "~/lib/services/broker-session";
+import {
+  formatTakenStatusBlockMessage,
+  getTakenStatusErrors,
+} from "~/lib/policy-taken-status";
 
 export { isTerminalStatus };
+export {
+  formatTakenStatusBlockMessage,
+  getTakenStatusErrors,
+} from "~/lib/policy-taken-status";
 
 type DraftValues = z.infer<typeof carPolicyDraftSchema>;
 
@@ -33,36 +46,14 @@ export class PolicySaveError extends Error {
   }
 }
 
-export function getTakenStatusErrors(
-  values: Pick<CarPolicyFormValues, "existingStructure" | "plantEquipment">,
-  premium: Pick<
-    PremiumBreakdown,
-    "contractWorksExistingStructurePremium" | "contractWorksPlantPremium"
-  >,
-): string[] {
-  const errors: string[] = [];
-  if (
-    values.existingStructure > 0 &&
-    premium.contractWorksExistingStructurePremium === 0
-  ) {
-    errors.push("Existing Structures has value however there are no premiums.");
-  }
-  if (
-    values.plantEquipment > 25000 &&
-    premium.contractWorksPlantPremium === 0
-  ) {
-    errors.push("Plant and equipment has value however there are no premiums.");
-  }
-  return errors;
-}
-
 export async function savePolicyDraft(policyId: number, values: DraftValues) {
   const existing = await getPolicy(policyId);
   if (!existing) throw new Error("Policy not found");
   if (isTerminalStatus(existing.policyStatusId)) {
     throw new PolicySaveError("This policy status cannot be changed.");
   }
-  // Drafts stay Pending — status changes only on full save
+  // Preserve submitted policies — blur-save must not re-draft them.
+  const keepSubmitted = !existing.isDraft;
   const premiumOverride =
     values.premium && typeof values.premium === "object"
       ? ({
@@ -72,10 +63,15 @@ export async function savePolicyDraft(policyId: number, values: DraftValues) {
       : undefined;
   const policy = applyFormValues(
     existing,
-    { ...values, policyStatusId: POLICY_STATUS.Pending },
-    { draft: true, premium: premiumOverride },
+    {
+      ...values,
+      policyStatusId: keepSubmitted
+        ? existing.policyStatusId
+        : POLICY_STATUS.Pending,
+    },
+    { draft: existing.isDraft, premium: premiumOverride },
   );
-  return savePolicy({ ...policy, isDraft: true });
+  return savePolicy({ ...policy, isDraft: existing.isDraft });
 }
 
 export async function upsertPolicyFromForm(
@@ -111,9 +107,7 @@ export async function upsertPolicyFromForm(
   ) {
     const takenErrors = getTakenStatusErrors(values, premium);
     if (takenErrors.length > 0) {
-      throw new PolicySaveError(
-        `Unable to set status to taken. ${takenErrors.join(" ")}`,
-      );
+      throw new PolicySaveError(formatTakenStatusBlockMessage(takenErrors));
     }
   }
 
@@ -144,8 +138,9 @@ export async function applyPremiumCalculation(
     await calculatePremiumForPolicy(values);
   const broker = getBrokerSession();
 
+  // Preserve submitted state — recalculate must not flip isDraft back to true.
   const policy = applyFormValues(existing, values, {
-    draft: true,
+    draft: existing.isDraft,
     premium,
     rating,
     referralReasons,
@@ -175,6 +170,34 @@ export async function addPolicyNote(
   return savePolicy({
     ...existing,
     notes: [...(existing.notes ?? []), note],
+  });
+}
+
+export async function updatePolicyNote(
+  policyId: number,
+  policyNoteId: number,
+  description: string,
+) {
+  const text = description.trim();
+  if (!text) {
+    throw new PolicySaveError("Note cannot be empty.");
+  }
+  const existing = await getPolicy(policyId);
+  if (!existing) throw new Error("Policy not found");
+  const notes = existing.notes ?? [];
+  const index = notes.findIndex((note) => note.policyNoteId === policyNoteId);
+  if (index < 0) {
+    throw new PolicySaveError("Note not found.");
+  }
+  const current = notes[index]!;
+  if (current.policyNoteTypeId !== POLICY_MESSAGE_NOTE_TYPE_ID) {
+    throw new PolicySaveError("Only broker notes can be edited.");
+  }
+  const next = [...notes];
+  next[index] = { ...current, description: text };
+  return savePolicy({
+    ...existing,
+    notes: next,
   });
 }
 
@@ -285,10 +308,13 @@ function applyFormValues(
       existingStructure:
         values.existingStructure ?? existing.car.existingStructure,
       displayHomes: values.displayHomes ?? existing.car.displayHomes,
+      // Premium lines come from the calculator / existing premium — not risk values.
       contractWorksExistingStructurePremium:
-        values.existingStructure ?? existing.car.existingStructure,
+        extras.premium?.contractWorksExistingStructurePremium ??
+        existing.car.contractWorksExistingStructurePremium,
       contractWorksDisplayHomesPremium:
-        values.displayHomes ?? existing.car.displayHomes,
+        extras.premium?.contractWorksDisplayHomesPremium ??
+        existing.car.contractWorksDisplayHomesPremium,
       claimsCountLast3Years:
         values.claimsCountLast3Years ?? existing.car.claimsCountLast3Years,
       anyClaimsExceed20k:

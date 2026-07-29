@@ -27,10 +27,16 @@ export function mergeDraftIntoPolicy(
         } as Policy["car"]["premium"])
       : existing.car.premium;
 
+  // After Submit, blur-saves must not flip the policy back to draft (that
+  // unpins Premium and resets status). True drafts stay Pending + isDraft.
+  const keepSubmitted = !existing.isDraft;
+
   return {
     ...existing,
     policyCategoryId: values.policyCategoryId ?? existing.policyCategoryId,
-    policyStatusId: POLICY_STATUS.Pending,
+    policyStatusId: keepSubmitted
+      ? existing.policyStatusId
+      : POLICY_STATUS.Pending,
     policyNumber:
       values.policyCategoryId === 2 && values.policyNumber
         ? values.policyNumber
@@ -44,7 +50,7 @@ export function mergeDraftIntoPolicy(
     dateEnd: values.dateEnd ?? existing.dateEnd,
     dateEffective: values.dateStart ?? existing.dateEffective,
     insurerCode: values.insurerCode ?? existing.insurerCode,
-    isDraft: true,
+    isDraft: existing.isDraft,
     car: {
       ...existing.car,
       coverTypeId: values.coverTypeId ?? existing.car.coverTypeId,
@@ -72,10 +78,13 @@ export function mergeDraftIntoPolicy(
       existingStructure:
         values.existingStructure ?? existing.car.existingStructure,
       displayHomes: values.displayHomes ?? existing.car.displayHomes,
+      // Premium lines stay on the premium breakdown — not the risk sum-insured.
       contractWorksExistingStructurePremium:
-        values.existingStructure ?? existing.car.existingStructure,
+        premiumOverride?.contractWorksExistingStructurePremium ??
+        existing.car.contractWorksExistingStructurePremium,
       contractWorksDisplayHomesPremium:
-        values.displayHomes ?? existing.car.displayHomes,
+        premiumOverride?.contractWorksDisplayHomesPremium ??
+        existing.car.contractWorksDisplayHomesPremium,
       claimsCountLast3Years:
         values.claimsCountLast3Years ?? existing.car.claimsCountLast3Years,
       anyClaimsExceed20k:

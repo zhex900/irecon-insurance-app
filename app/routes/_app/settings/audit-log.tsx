@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 import { Form, redirect, useSearchParams } from "react-router";
+import { format } from "date-fns";
+import { enAU } from "date-fns/locale";
 import { ScrollTextIcon } from "lucide-react";
 import { PageHeader } from "~/components/layout/app-layout";
 import { requireAuth } from "~/lib/auth/session.server";
@@ -50,14 +52,9 @@ export function meta() {
 const PAGE_SIZE = 50;
 
 function formatWhen(iso: string) {
-  try {
-    return new Intl.DateTimeFormat(undefined, {
-      dateStyle: "medium",
-      timeStyle: "short",
-    }).format(new Date(iso));
-  } catch {
-    return iso;
-  }
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return format(date, "PPp", { locale: enAU });
 }
 
 export async function loader({ request }: Route.LoaderArgs) {

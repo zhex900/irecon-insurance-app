@@ -16,6 +16,7 @@ type ListPosition = {
 export function FilterAutocomplete({
   id,
   label,
+  hideLabel = false,
   value,
   onChange,
   options,
@@ -25,6 +26,8 @@ export function FilterAutocomplete({
 }: {
   id: string;
   label: string;
+  /** Keep label for a11y but hide it visually. */
+  hideLabel?: boolean;
   value: string | number | "";
   onChange: (value: string | number | "") => void;
   options: FormAutocompleteOption[];
@@ -144,8 +147,16 @@ export function FilterAutocomplete({
       : null;
 
   return (
-    <div className={cn("flex min-w-0 flex-col gap-1.5", className)}>
-      <Label htmlFor={id}>{label}</Label>
+    <div
+      className={cn(
+        "flex min-w-0 flex-col",
+        hideLabel ? "gap-0" : "gap-1.5",
+        className,
+      )}
+    >
+      <Label htmlFor={id} className={hideLabel ? "sr-only" : undefined}>
+        {label}
+      </Label>
       <div ref={anchorRef} className="relative">
         <Input
           id={id}

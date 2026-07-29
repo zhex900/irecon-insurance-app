@@ -3,13 +3,21 @@ import type { useFetcher } from "react-router";
 import type { UseFormReturn } from "react-hook-form";
 import { focusFormIssue } from "~/lib/form-validation-ui";
 import type { Policy, PremiumBreakdown } from "~/lib/db/types";
+import { rollupPremiumTotals } from "~/lib/premium-totals";
+import { getTakenStatusErrors } from "~/lib/policy-taken-status";
 import { listReviewDocumentsForConfirm } from "~/lib/services/policy/documents";
 import {
   carPolicyPricingSchema,
+  POLICY_STATUS,
   pricingFields,
   wizardStepFields,
   type CarPolicyFormValues,
 } from "~/lib/zod/policy-car";
+import {
+  PRICING_CONFIRMATION_STEP,
+  rememberFocusSection,
+  rememberWizardStep,
+} from "../step-memory";
 import type { PolicyWizardActionData } from "./use-premium-calc";
 import type { PolicyLeaveApi } from "./use-draft-save";
 
@@ -24,6 +32,7 @@ export function usePolicySubmit({
   setReferralReasons,
   regenerateDocumentsIfNeeded,
   goToStep,
+  navigateToSection,
   firstIssuePath,
   findStepForField,
   pendingFocusPathRef,
@@ -45,6 +54,7 @@ export function usePolicySubmit({
     premiumOverride?: PremiumBreakdown;
   }) => Promise<void>;
   goToStep: (index: number, options?: { unlock?: boolean }) => void;
+  navigateToSection: (sectionId: string) => void;
   firstIssuePath: (fieldOrder?: string[]) => string | null;
   findStepForField: (path: string) => number | null;
   pendingFocusPathRef: MutableRefObject<string | null>;
@@ -89,7 +99,7 @@ export function usePolicySubmit({
         if (!parsed.success) {
           setSubmitConfirmOpen(false);
           await form.trigger([...pricingFields]);
-          return;
+          return false;
         }
         const body = new FormData();
         body.set("intent", "recalculate");
@@ -100,8 +110,9 @@ export function usePolicySubmit({
         });
         const data = (await response.json()) as PolicyWizardActionData;
         if (data.premium) {
-          setPremium(data.premium);
-          premiumForDocs = data.premium;
+          const rolled = rollupPremiumTotals(data.premium);
+          setPremium(rolled);
+          premiumForDocs = rolled;
         }
         if (data.referralReasons) {
           setReferralReasons(data.referralReasons);
@@ -110,8 +121,18 @@ export function usePolicySubmit({
       await regenerateDocumentsIfNeeded({
         premiumOverride: premiumForDocs,
       });
-      await savePolicy();
+      const saved = await savePolicy();
       setSubmitConfirmOpen(false);
+      if (saved !== false) {
+        // Land on Premium after the save redirect/revalidation.
+        rememberWizardStep(
+          policy.policyId,
+          PRICING_CONFIRMATION_STEP,
+          PRICING_CONFIRMATION_STEP,
+        );
+        rememberFocusSection(policy.policyId, "premium");
+      }
+      return saved !== false;
     } finally {
       setSubmitting(false);
     }
@@ -171,6 +192,22 @@ export function usePolicySubmit({
 
   /** Confirm Taken / Not taken and persist immediately (draft save is locked once terminal). */
   function confirmTerminalStatusAndSave(statusId: number) {
+    // Menu validates Taken first; keep a hard stop here if confirm is invoked anyway.
+    if (statusId === POLICY_STATUS.Taken) {
+      const values = form.getValues();
+      const currentPremium = premiumRef.current ?? premium;
+      const takenErrors = getTakenStatusErrors(values, {
+        contractWorksExistingStructurePremium:
+          currentPremium?.contractWorksExistingStructurePremium ?? 0,
+        contractWorksPlantPremium:
+          currentPremium?.contractWorksPlantPremium ?? 0,
+      });
+      if (takenErrors.length > 0) {
+        navigateToSection("premium");
+        return;
+      }
+    }
+
     form.setValue("policyStatusId", statusId, {
       shouldDirty: true,
       shouldValidate: false,

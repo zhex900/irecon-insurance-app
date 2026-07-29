@@ -8,13 +8,8 @@ import {
   useSubmit,
   type ShouldRevalidateFunctionArgs,
 } from "react-router";
-import {
-  CircleAlertIcon,
-  CircleCheckIcon,
-  CopyIcon,
-  SlidersHorizontalIcon,
-  Trash2Icon,
-} from "lucide-react";
+import { toast } from "sonner";
+import { CopyIcon, SlidersHorizontalIcon, Trash2Icon } from "lucide-react";
 import { CarPolicyWizard } from "~/components/policies/wizard/car-policy-wizard";
 import {
   allowWizardLeave,
@@ -23,7 +18,6 @@ import {
 import { DeletePoliciesDialog } from "~/components/policies/delete-policies-dialog";
 import { Button } from "~/components/ui/button";
 import { LoadingButton } from "~/components/ui/loading-button";
-import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import {
   Tooltip,
   TooltipContent,
@@ -47,13 +41,14 @@ import {
   clonePolicy,
   PolicySaveError,
   savePolicyDraft,
+  updatePolicyNote,
   upsertPolicyFromForm,
 } from "~/lib/services/policy/orchestration.service";
 import { deletePolicies, getPolicy } from "~/lib/services/policy/data.service";
 import { getAuthorisedRepresentative } from "~/lib/services/authorised-representatives/service";
 import {
   getCarWording,
-  getReferenceData,
+  getReferenceDataAsync,
 } from "~/lib/services/reference.service";
 import { getClient } from "~/lib/services/clients/service";
 import { listEmailTemplates } from "~/lib/services/email/templates";
@@ -70,11 +65,14 @@ export async function loader({ params }: Route.LoaderArgs) {
   if (!policy) throw new Response("Policy not found", { status: 404 });
   const client = await getClient(policy.clientId);
   if (!client) throw new Response("Client not found", { status: 404 });
-  const [broker, emailTemplates, noteAuthors] = await Promise.all([
-    getAuthorisedRepresentative(client.authorisedRepresentativeId),
-    listEmailTemplates(),
-    resolveNoteAuthors((policy.notes ?? []).map((note) => note.createdBy)),
-  ]);
+  const [broker, emailTemplates, noteAuthors, reference, carWording] =
+    await Promise.all([
+      getAuthorisedRepresentative(client.authorisedRepresentativeId),
+      listEmailTemplates(),
+      resolveNoteAuthors((policy.notes ?? []).map((note) => note.createdBy)),
+      getReferenceDataAsync(policy.dateStart),
+      getCarWording(),
+    ]);
 
   return {
     policy,
@@ -82,8 +80,8 @@ export async function loader({ params }: Route.LoaderArgs) {
     broker,
     emailTemplates,
     noteAuthors,
-    reference: getReferenceData(),
-    carWording: await getCarWording(),
+    reference,
+    carWording,
   };
 }
 
@@ -121,7 +119,7 @@ export async function action({ request, params }: Route.ActionArgs) {
     return redirect(
       withSuccessToast(
         `/policies/${cloned.policyId}?cloned=1`,
-        `Policy ${cloned.policyNumber} created`,
+        `Policy cloned · ${cloned.policyNumber}. You are editing the new copy.`,
       ),
     );
   }
@@ -188,6 +186,47 @@ export async function action({ request, params }: Route.ActionArgs) {
             : error instanceof Error
               ? error.message
               : "Could not add note.",
+      };
+    }
+  }
+
+  if (intent === "update-note") {
+    const description = String(formData.get("description") ?? "");
+    const policyNoteId = Number(formData.get("policyNoteId"));
+    if (!Number.isFinite(policyNoteId) || policyNoteId <= 0) {
+      return { formError: "Invalid note." };
+    }
+    try {
+      const policy = await updatePolicyNote(
+        policyId,
+        policyNoteId,
+        description,
+      );
+      await writeAuditLog({
+        actor,
+        action: "policy.note_update",
+        entityType: "policy",
+        entityId: policyId,
+        summary: `Updated note on ${policy.policyNumber}`,
+        metadata: { policyNumber: policy.policyNumber, policyNoteId },
+        request,
+      });
+      return {
+        ok: true as const,
+        notes: policy.notes,
+        noteAuthors: await resolveNoteAuthors(
+          (policy.notes ?? []).map((note) => note.createdBy),
+        ),
+        message: `Note updated on ${policy.policyNumber}`,
+      };
+    } catch (error) {
+      return {
+        formError:
+          error instanceof PolicySaveError
+            ? error.message
+            : error instanceof Error
+              ? error.message
+              : "Could not update note.",
       };
     }
   }
@@ -345,6 +384,14 @@ export default function PolicyDetailRoute({
     clearedCloneForPolicyId.current = loaderData.policy.policyId;
   }, [wasCloned, loaderData.policy.policyId]);
 
+  const lastDeleteErrorRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!deleteError || deleteOpen) return;
+    if (lastDeleteErrorRef.current === deleteError) return;
+    lastDeleteErrorRef.current = deleteError;
+    toast.error("Could not delete", { description: deleteError });
+  }, [deleteError, deleteOpen]);
+
   const headerActions: ReactNode =
     canAdjust || canClone || canDelete ? (
       <div className="flex items-center gap-2">
@@ -395,27 +442,6 @@ export default function PolicyDetailRoute({
 
   return (
     <div>
-      {wasCloned ? (
-        <Alert variant="success" className="mb-6">
-          <CircleCheckIcon />
-          <AlertTitle>Policy cloned</AlertTitle>
-          <AlertDescription>You are editing the new copy.</AlertDescription>
-        </Alert>
-      ) : null}
-      {searchParams.get("adjusted") === "1" ? (
-        <Alert variant="success" className="mb-6">
-          <CircleCheckIcon />
-          <AlertTitle>Policy adjusted</AlertTitle>
-          <AlertDescription>Adjustment saved successfully.</AlertDescription>
-        </Alert>
-      ) : null}
-      {deleteError && !deleteOpen ? (
-        <Alert variant="destructive" className="mb-6">
-          <CircleAlertIcon />
-          <AlertTitle>Could not delete</AlertTitle>
-          <AlertDescription>{deleteError}</AlertDescription>
-        </Alert>
-      ) : null}
       <CarPolicyWizard
         key={`${loaderData.policy.policyId}-${wasCloned ? "cloned" : "view"}`}
         policy={loaderData.policy}

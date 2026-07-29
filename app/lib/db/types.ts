@@ -109,6 +109,9 @@ export type RatingSnapshot = {
   isTerrorismRateExist: boolean;
 };
 
+/** Broker/user message notes (editable). Referral notes use type 2. */
+export const POLICY_MESSAGE_NOTE_TYPE_ID = 3;
+
 export type PolicyNote = {
   policyNoteId: number;
   policyId: number;

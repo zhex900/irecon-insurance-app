@@ -45,7 +45,7 @@ No crossing responsibilities.
 | `app/lib/zod/`                             | Validation schemas                                                             | Side effects                           |
 | `app/components/`                          | Rendering                                                                      | DB access, auth decisions as sole gate |
 | `app/hooks/`                               | Reusable UI logic                                                              | Server imports                         |
-| `app/server/pricing/`                      | Pure premium calculators                                                       | Framework imports                      |
+| `app/server/pricing/`                      | Pure premium calculators ([formulas](pricing/car-premium-formulas.md))         | Framework imports                      |
 | `app/lib/` (utils, pdf, storage, supabase) | Cross-cutting infrastructure                                                   | Domain UI                              |
 | `app/assets/`                              | Static assets (e.g. PDF templates)                                             | Runtime business data                  |
 | `supabase/`                                | Migrations, local config                                                       | App UI                                 |

@@ -1,10 +1,11 @@
 /**
- * Seed Price* / BrokerFeeSchedule* tables from _archive/data/prices.json (+ reference feeNames fallback).
+ * Seed Price* / BrokerFeeSchedule* tables from a PricesPayload
+ * (in-memory from MSSQL migrate, or `_archive/data/prices.json`).
  *
  * Usage:
  *   npm run db:seed:prices
+ *   npm run db:migrate:prices   # preferred: MSSQL → Postgres directly
  *   npx tsx --env-file=.env scripts/seed-prices.mts
- *   npx tsx --env-file=.env.staging scripts/seed-prices.mts
  */
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -26,6 +27,11 @@ import {
   priceTerrorismRate,
   state,
 } from "../app/lib/db/price-schema";
+import type {
+  PricesPayload,
+  PricesSeedCounts,
+  TerrorPostcode,
+} from "./lib/prices-payload";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -34,76 +40,6 @@ function readJson<T>(name: string): T {
     readFileSync(join(root, "_archive/data", name), "utf8"),
   ) as T;
 }
-
-type TerrorPostcode =
-  | string
-  | {
-      postcode: string;
-      stateCode?: string;
-    };
-
-type PricesFile = {
-  prices: Array<{
-    priceId: number;
-    dateStart: string;
-    published?: boolean;
-    bands: Array<{
-      coverTypeId: number;
-      lowerTO: number;
-      upperTO: number | null;
-      cwRate: number;
-      cwMinPrem: number;
-      tenMilRate: number;
-      tenMilMinPrem: number;
-      twentyMilRate: number;
-      twentyMilMinPrem: number;
-    }>;
-  }>;
-  stampDuty: Array<{
-    priceStampDutyId: number;
-    dateStart: string;
-    published?: boolean;
-    rates: Array<{ stateCode: string; rate: number }>;
-  }>;
-  esl: Array<{
-    priceEslId: number;
-    dateStart: string;
-    published?: boolean;
-    rates: Array<{
-      stateCode: string;
-      constructionRate: number;
-      plantRate: number;
-    }>;
-  }>;
-  terror: Array<{
-    priceTerrorismId: number;
-    dateStart: string;
-    published?: boolean;
-    tiers: Array<{
-      tier: string;
-      rate: number;
-      postcodes: TerrorPostcode[];
-    }>;
-  }>;
-  plant: Array<{
-    pricePlantId: number;
-    dateStart: string;
-    published?: boolean;
-    rate: number;
-    plantMinValue: number;
-    plantMaxValue: number;
-  }>;
-  brokerFees?: Array<{
-    dateStart: string;
-    published?: boolean;
-    lines: Array<{
-      sortOrder: number;
-      name: string;
-      fee: number;
-      feeGst: number;
-    }>;
-  }>;
-};
 
 /** Best-effort AU postcode → state_id (matches seeded public.state). */
 function stateIdForPostcode(postcode: string): number {
@@ -132,17 +68,18 @@ function normalizePostcode(entry: TerrorPostcode): {
   };
 }
 
-export async function seedPrices() {
+export type SeedPricesOptions = {
+  /** When omitted, loads `_archive/data/prices.json`. */
+  data?: PricesPayload;
+  createdBy?: string;
+};
+
+export async function seedPrices(
+  options: SeedPricesOptions = {},
+): Promise<PricesSeedCounts> {
   const db = getDb();
-  const data = readJson<PricesFile>("prices.json");
-  const reference = readJson<{
-    feeNames: Array<{
-      name: string;
-      sortOrder: number;
-      fee: number;
-      feeGst: number;
-    }>;
-  }>("reference.json");
+  const data = options.data ?? readJson<PricesPayload>("prices.json");
+  const createdBy = options.createdBy ?? "seed:prices";
 
   const states = await db.select().from(state);
   const stateIdByCode = new Map(
@@ -167,6 +104,8 @@ export async function seedPrices() {
     RESTART IDENTITY CASCADE
   `);
 
+  let terrorPostcodes = 0;
+
   for (const header of data.prices) {
     const published = header.published ?? true;
     await db.insert(price).values({
@@ -175,7 +114,7 @@ export async function seedPrices() {
       dateStart: header.dateStart,
       published,
       datePublished: published ? new Date(header.dateStart) : null,
-      createdBy: "seed:prices",
+      createdBy,
     });
     for (const band of header.bands) {
       await db.insert(priceCar).values({
@@ -201,7 +140,7 @@ export async function seedPrices() {
       dateStart: header.dateStart,
       published,
       datePublished: published ? new Date(header.dateStart) : null,
-      createdBy: "seed:prices",
+      createdBy,
     });
     for (const rate of header.rates) {
       const stateId = stateIdByCode.get(rate.stateCode.toUpperCase());
@@ -222,7 +161,7 @@ export async function seedPrices() {
       dateStart: header.dateStart,
       published,
       datePublished: published ? new Date(header.dateStart) : null,
-      createdBy: "seed:prices",
+      createdBy,
     });
     for (const rate of header.rates) {
       const stateId = stateIdByCode.get(rate.stateCode.toUpperCase());
@@ -244,7 +183,7 @@ export async function seedPrices() {
       dateStart: header.dateStart,
       published,
       datePublished: published ? new Date(header.dateStart) : null,
-      createdBy: "seed:prices",
+      createdBy,
     });
     for (const tier of header.tiers) {
       const [rateRow] = await db
@@ -266,6 +205,7 @@ export async function seedPrices() {
           postcode,
           stateId,
         });
+        terrorPostcodes += 1;
       }
     }
   }
@@ -281,7 +221,7 @@ export async function seedPrices() {
       dateStart: header.dateStart,
       published,
       datePublished: published ? new Date(header.dateStart) : null,
-      createdBy: "seed:prices",
+      createdBy,
     });
   }
 
@@ -290,9 +230,22 @@ export async function seedPrices() {
       ? data.brokerFees
       : [
           {
-            dateStart: "2025-01-01",
+            dateStart: "2000-01-01",
             published: true,
-            lines: reference.feeNames,
+            lines: [
+              {
+                sortOrder: 1,
+                name: "Insurer Admin",
+                fee: 200,
+                feeGst: 20,
+              },
+              {
+                sortOrder: 2,
+                name: "IAA Admin Fee",
+                fee: 80,
+                feeGst: 8,
+              },
+            ],
           },
         ];
 
@@ -305,7 +258,7 @@ export async function seedPrices() {
         dateStart: schedule.dateStart,
         published,
         datePublished: published ? new Date(schedule.dateStart) : null,
-        createdBy: "seed:prices",
+        createdBy,
       })
       .returning();
 
@@ -339,7 +292,20 @@ export async function seedPrices() {
     (sum, schedule) => sum + schedule.lines.length,
     0,
   );
+  const counts: PricesSeedCounts = {
+    prices: data.prices.length,
+    stampDuty: data.stampDuty.length,
+    esl: data.esl.length,
+    terror: data.terror.length,
+    terrorPostcodes,
+    plant: data.plant.length,
+    feeSchedules: feeSchedules.length,
+    feeLines: feeLineCount,
+  };
+
   console.log(
-    `Seeded prices: ${data.prices.length} price file(s), ${data.stampDuty.length} stamp duty, ${data.esl.length} ESL, ${data.terror.length} terror, ${data.plant.length} plant, ${feeSchedules.length} fee schedule(s) / ${feeLineCount} lines`,
+    `Seeded prices into Postgres: ${counts.prices} price file(s), ${counts.stampDuty} stamp duty, ${counts.esl} ESL, ${counts.terror} terror (${counts.terrorPostcodes} postcodes), ${counts.plant} plant, ${counts.feeSchedules} fee schedule(s) / ${counts.feeLines} lines`,
   );
+
+  return counts;
 }

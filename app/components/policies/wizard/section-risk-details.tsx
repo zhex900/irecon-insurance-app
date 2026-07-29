@@ -120,6 +120,7 @@ export function RiskDetailsStep({ reference }: { reference: ReferenceData }) {
         />
       </div>
       <FieldInput
+        className="md:col-span-2"
         label="Estimated Turnover / Project Value"
         required
         name="estimatedTurnover"

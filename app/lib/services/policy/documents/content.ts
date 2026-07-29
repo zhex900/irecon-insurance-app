@@ -5,7 +5,7 @@ import type {
 } from "~/lib/db/types";
 import { policyToMergeInputs } from "~/lib/pdf/merge-fields";
 import { resolvePdfTemplate } from "~/lib/pdf/templates";
-import { formatCurrency } from "~/lib/utils";
+import { formatCurrency, formatRate } from "~/lib/utils";
 
 function pad2(n: number) {
   return String(n).padStart(2, "0");
@@ -114,7 +114,7 @@ export function buildRatingContent(policy: Policy): string {
     lines.push(
       `CW applied rate: ${rating.contractWorksAppliedRate}`,
       `Liability applied rate: ${rating.liabilityAppliedRate}`,
-      `Terrorism rate: ${rating.terrorismRate}`,
+      `Terrorism rate: ${formatRate(rating.terrorismRate)}`,
     );
   } else {
     lines.push("Rating snapshot unavailable");

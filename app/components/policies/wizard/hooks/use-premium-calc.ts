@@ -1,13 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 import type { useFetcher } from "react-router";
 import type { UseFormReturn } from "react-hook-form";
+import { toast } from "sonner";
 import type { Policy, PremiumBreakdown } from "~/lib/db/types";
+import { rollupPremiumTotals } from "~/lib/premium-totals";
 import type { NoteAuthor } from "~/lib/services/users/service";
 import {
   carPolicyPricingSchema,
   pricingFields,
   type CarPolicyFormValues,
 } from "~/lib/zod/policy-car";
+
+function withRolledTotals(
+  next: PremiumBreakdown | undefined,
+): PremiumBreakdown | undefined {
+  return next ? rollupPremiumTotals(next) : undefined;
+}
 
 export type PolicyWizardActionData = {
   ok?: boolean;
@@ -36,8 +44,8 @@ export function usePolicyPremiumCalc({
   fieldsLocked: boolean;
   premiumSectionOpen: boolean;
 }) {
-  const [premium, setPremium] = useState<PremiumBreakdown | undefined>(
-    policy.car.premium,
+  const [premium, setPremium] = useState<PremiumBreakdown | undefined>(() =>
+    withRolledTotals(policy.car.premium),
   );
   const premiumRef = useRef(premium);
   useEffect(() => {
@@ -45,6 +53,8 @@ export function usePolicyPremiumCalc({
   });
   /** When true, skip auto-recalculate so click-to-edit premium values stick. */
   const premiumManuallyEditedRef = useRef(false);
+  /** Next recalculate response should always replace premium (clears overrides). */
+  const forceApplyRecalcRef = useRef(false);
   const [referralReasons, setReferralReasons] = useState<string[]>(
     policy.car.referralReasons ?? [],
   );
@@ -66,7 +76,7 @@ export function usePolicyPremiumCalc({
     lastPremiumFromPolicyRef.current = policy.car.premium;
     lastReferralReasonsFromPolicyRef.current = policy.car.referralReasons;
     premiumManuallyEditedRef.current = false;
-    setPremium(policy.car.premium);
+    setPremium(withRolledTotals(policy.car.premium));
     setReferralReasons(policy.car.referralReasons ?? []);
   }, [policy.policyId, policy.car.premium, policy.car.referralReasons]);
 
@@ -75,8 +85,17 @@ export function usePolicyPremiumCalc({
     if (lastFetcherDataRef.current === fetcher.data) return;
     lastFetcherDataRef.current = fetcher.data;
     const data = lastFetcherDataRef.current;
-    if (data?.premium && !premiumManuallyEditedRef.current) {
-      setPremium(data.premium);
+    const applyPremium =
+      Boolean(data?.premium) &&
+      (!premiumManuallyEditedRef.current || forceApplyRecalcRef.current);
+    if (applyPremium && data?.premium) {
+      const fromRecalculateButton = forceApplyRecalcRef.current;
+      forceApplyRecalcRef.current = false;
+      premiumManuallyEditedRef.current = false;
+      setPremium(withRolledTotals(data.premium));
+      if (fromRecalculateButton) {
+        toast.success("Premium recalculated — manual overrides cleared");
+      }
     }
     if (data?.referralReasons) {
       setReferralReasons(data.referralReasons);
@@ -115,6 +134,14 @@ export function usePolicyPremiumCalc({
     });
   }
 
+  /** Force server recalculation; clears the manual-override guard so results apply. */
+  function recalculatePremium() {
+    if (fieldsLocked) return;
+    premiumManuallyEditedRef.current = false;
+    forceApplyRecalcRef.current = true;
+    submitIntent("recalculate");
+  }
+
   /** Keep Premium Summary in sync after draft saves that touch pricing inputs. */
   function refreshPremiumAfterSave(dirtyPaths: string[]) {
     if (fieldsLocked) return;
@@ -127,6 +154,8 @@ export function usePolicyPremiumCalc({
 
     const parsed = carPolicyPricingSchema.safeParse(form.getValues());
     if (!parsed.success) return;
+    // Apply server result even if something else toggled the manual flag mid-flight.
+    forceApplyRecalcRef.current = true;
     submitIntent("recalculate");
   }
 
@@ -140,6 +169,7 @@ export function usePolicyPremiumCalc({
     isFetcherBusy,
     isCalculating,
     submitIntent,
+    recalculatePremium,
     refreshPremiumAfterSave,
   };
 }

@@ -166,14 +166,14 @@
     {
       "name": "Insurer Admin (includes GST)",
       "sortOrder": 1,
-      "fee": 150,
-      "feeGst": 15
+      "fee": 200,
+      "feeGst": 20
     },
     {
       "name": "IAA Admin Fee (includes GST)",
       "sortOrder": 2,
-      "fee": 75,
-      "feeGst": 7.5
+      "fee": 80,
+      "feeGst": 8
     }
   ],
   "defaultSubLimits": {

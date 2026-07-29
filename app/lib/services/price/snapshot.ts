@@ -149,12 +149,32 @@ export async function getPriceCatalogueSnapshot(): Promise<PriceCatalogueSnapsho
     plantMaxValue: num(row.plantMaxValue),
   }));
 
-  const postcodeCountByRate = new Map<number, number>();
+  const postcodesByRate = new Map<
+    number,
+    Array<{
+      postcode: string;
+      stateId: number;
+      stateCode: string;
+      stateName: string;
+    }>
+  >();
   for (const pc of terrorPostcodes) {
-    postcodeCountByRate.set(
-      pc.priceTerrorismRateId,
-      (postcodeCountByRate.get(pc.priceTerrorismRateId) ?? 0) + 1,
-    );
+    const st = stateById.get(pc.stateId);
+    const list = postcodesByRate.get(pc.priceTerrorismRateId) ?? [];
+    list.push({
+      postcode: pc.postcode,
+      stateId: pc.stateId,
+      stateCode: st?.code ?? String(pc.stateId),
+      stateName: st?.name ?? "",
+    });
+    postcodesByRate.set(pc.priceTerrorismRateId, list);
+  }
+  for (const list of postcodesByRate.values()) {
+    list.sort((a, b) => {
+      const byState = a.stateCode.localeCompare(b.stateCode);
+      if (byState !== 0) return byState;
+      return a.postcode.localeCompare(b.postcode);
+    });
   }
 
   const terrorism = terrorHeaders.map((header) => ({
@@ -164,9 +184,10 @@ export async function getPriceCatalogueSnapshot(): Promise<PriceCatalogueSnapsho
     tiers: terrorRates
       .filter((r) => r.priceTerrorismId === header.priceTerrorismId)
       .map((r) => ({
+        priceTerrorismRateId: r.priceTerrorismRateId,
         tier: r.tier,
         rate: num(r.rate),
-        postcodeCount: postcodeCountByRate.get(r.priceTerrorismRateId) ?? 0,
+        postcodes: postcodesByRate.get(r.priceTerrorismRateId) ?? [],
       })),
   }));
 

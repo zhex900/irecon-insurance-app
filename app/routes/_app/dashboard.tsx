@@ -1,4 +1,6 @@
 import { Link } from "react-router";
+import { format } from "date-fns";
+import { enAU } from "date-fns/locale";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { AppBreadcrumb } from "~/components/layout/app-breadcrumb";
@@ -25,12 +27,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 export default function DashboardRoute({ loaderData }: Route.ComponentProps) {
   const firstName = loaderData.broker.fullName.split(" ")[0] ?? "there";
-  const today = new Date().toLocaleDateString("en-AU", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+  const today = format(new Date(), "EEEE, d MMMM yyyy", { locale: enAU });
 
   return (
     <div>

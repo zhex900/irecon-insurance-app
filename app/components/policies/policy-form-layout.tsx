@@ -1,13 +1,12 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router";
-import { ChevronDownIcon } from "lucide-react";
+import { CheckIcon, ChevronDownIcon } from "lucide-react";
 import {
   AppBreadcrumb,
   type AppBreadcrumbItem,
 } from "~/components/layout/app-breadcrumb";
+import { FilterAutocomplete } from "~/components/clients/filter-autocomplete";
 import { Badge } from "~/components/reui/badge";
-import { Button } from "~/components/ui/button";
-import { LoadingButton } from "~/components/ui/loading-button";
 import {
   Card,
   CardContent,
@@ -21,12 +20,13 @@ import {
   CollapsibleTrigger,
 } from "~/components/ui/collapsible";
 import { Separator } from "~/components/ui/separator";
-import { Textarea } from "~/components/ui/textarea";
 import { StatusBadge } from "~/components/ui/status-badge";
+import {
+  PolicyStatusMenu,
+  type TerminalStatusValidation,
+} from "~/components/policies/policy-status-menu";
 import { cn } from "~/lib/utils";
-import type { PolicyNote } from "~/lib/db/types";
-import type { NoteAuthor } from "~/lib/services/users/service";
-import { UserHoverCard } from "~/components/ui/user-hover-card";
+import { listPolicyFieldSearchOptions } from "~/lib/policy-field-labels";
 import { wizardSteps } from "~/lib/zod/policy-car";
 
 export const POLICY_FORM_SECTIONS = [
@@ -101,30 +101,19 @@ export function stepIndexForSection(sectionId: string): number | null {
   return index >= 0 ? index : null;
 }
 
-/** Below app header (3.5rem) + sticky policy chrome (incl. breadcrumbs). */
+/**
+ * Side rails in the xl fill-height shell — parent is height-locked so these
+ * stay put; only the centre form column scrolls.
+ */
 export const POLICY_STICKY_RAIL_CLASS =
-  "sticky top-40 z-10 self-start max-h-[calc(100svh-10.5rem)] overflow-y-auto";
+  "min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain";
 
-function formatNoteDate(iso: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "";
-  const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const year = date.getFullYear();
-  return `${day}/${month}/${year}`;
-}
-
-function NoteAuthorLabel({
-  createdBy,
-  authors,
-}: {
-  createdBy: string;
-  authors: Record<string, NoteAuthor>;
-}) {
-  const author = authors[createdBy.trim().toLowerCase()];
-  if (!author) return <>{createdBy}</>;
-  return <UserHoverCard user={author}>{author.fullName}</UserHoverCard>;
-}
+/**
+ * Offset for section scroll-into-view.
+ * Mobile/tablet: clears sticky app bar + policy header + section tags.
+ * xl: centre form scroller — chrome sits outside that scroller.
+ */
+export const POLICY_SECTION_SCROLL_MT_CLASS = "scroll-mt-44 xl:scroll-mt-4";
 
 function InfoRow({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -140,55 +129,35 @@ export function PolicyInformationCard({
   policyNumber,
   statusId,
   statusName,
+  statusOptions = [],
+  canChangeStatus = false,
+  onStatusChange,
+  onConfirmTerminalStatus,
+  validateTerminalStatus,
+  onTerminalStatusInvalid,
+  statusConfirmBusy = false,
   adjusted,
-  notes = [],
-  noteAuthors = {},
-  showNotes = true,
-  canAddNotes = false,
-  onAddNote,
-  addNoteBusy = false,
-  addNoteError,
   className,
 }: {
   insurerName: string;
   policyNumber: string;
   statusId: number;
   statusName: string;
+  statusOptions?: { policyStatusId: number; name: string }[];
+  canChangeStatus?: boolean;
+  onStatusChange?: (statusId: number) => void;
+  onConfirmTerminalStatus?: (statusId: number) => void;
+  validateTerminalStatus?: (statusId: number) => TerminalStatusValidation;
+  onTerminalStatusInvalid?: (statusId: number) => void;
+  statusConfirmBusy?: boolean;
   adjusted: boolean;
-  notes?: PolicyNote[];
-  noteAuthors?: Record<string, NoteAuthor>;
-  /** Hide the Policy Notes row entirely (e.g. draft policies). */
-  showNotes?: boolean;
-  canAddNotes?: boolean;
-  onAddNote?: (description: string) => void;
-  addNoteBusy?: boolean;
-  addNoteError?: string | null;
   className?: string;
 }) {
-  const [draft, setDraft] = useState("");
-  const [localError, setLocalError] = useState<string | null>(null);
-  const wasBusyRef = useRef(false);
-
-  useEffect(() => {
-    if (wasBusyRef.current && !addNoteBusy && !addNoteError) {
-      setDraft("");
-      setLocalError(null);
-    }
-    wasBusyRef.current = addNoteBusy;
-  }, [addNoteBusy, addNoteError]);
-
-  function submitNote() {
-    const text = draft.trim();
-    if (!text) {
-      setLocalError("Enter a note before saving.");
-      return;
-    }
-    setLocalError(null);
-    onAddNote?.(text);
-  }
-
   return (
-    <Card id="policy-information" className={cn("scroll-mt-28", className)}>
+    <Card
+      id="policy-information"
+      className={cn(POLICY_SECTION_SCROLL_MT_CLASS, className)}
+    >
       <CardHeader className="border-b">
         <CardTitle>Policy Information</CardTitle>
         <CardDescription>Summary at a glance</CardDescription>
@@ -200,79 +169,22 @@ export function PolicyInformationCard({
           <InfoRow label="Policy Number">{policyNumber}</InfoRow>
           <Separator />
           <InfoRow label="Status">
-            <StatusBadge statusId={statusId} name={statusName} />
+            {statusOptions.length > 0 && onStatusChange ? (
+              <PolicyStatusMenu
+                statuses={statusOptions}
+                value={statusId}
+                disabled={!canChangeStatus}
+                onChange={onStatusChange}
+                onConfirmTerminal={onConfirmTerminalStatus}
+                validateTerminal={validateTerminalStatus}
+                onTerminalInvalid={onTerminalStatusInvalid}
+                confirmBusy={statusConfirmBusy}
+              />
+            ) : (
+              <StatusBadge statusId={statusId} name={statusName} />
+            )}
           </InfoRow>
           <InfoRow label="Adjusted">{adjusted ? "Yes" : "No"}</InfoRow>
-          {showNotes ? (
-            <>
-              <Separator />
-              <InfoRow label="Policy Notes">
-                <div className="flex flex-col gap-3 font-normal">
-                  {notes.length > 0 ? (
-                    <ul className="flex flex-col gap-2">
-                      {notes.map((note) => (
-                        <li
-                          key={note.policyNoteId}
-                          className="rounded-md border border-border bg-muted/30 px-3 py-2"
-                        >
-                          <p className="text-sm whitespace-pre-wrap text-foreground">
-                            {note.description}
-                          </p>
-                          <div className="mt-1 text-xs text-muted-foreground">
-                            {formatNoteDate(note.createdWhen)}
-                            {note.createdBy ? (
-                              <>
-                                {" · "}
-                                <NoteAuthorLabel
-                                  createdBy={note.createdBy}
-                                  authors={noteAuthors}
-                                />
-                              </>
-                            ) : null}
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <span className="text-muted-foreground">None</span>
-                  )}
-
-                  {canAddNotes ? (
-                    <div className="flex flex-col gap-2">
-                      <Textarea
-                        value={draft}
-                        onChange={(event) => {
-                          setDraft(event.target.value);
-                          if (localError) setLocalError(null);
-                        }}
-                        rows={3}
-                        placeholder="Add a policy note…"
-                        aria-label="New policy note"
-                        disabled={addNoteBusy}
-                      />
-                      {localError || addNoteError ? (
-                        <p className="text-sm text-destructive" role="alert">
-                          {localError || addNoteError}
-                        </p>
-                      ) : null}
-                      <div>
-                        <LoadingButton
-                          type="button"
-                          size="sm"
-                          loading={addNoteBusy}
-                          loadingLabel="Saving…"
-                          disabled={!draft.trim()}
-                          onClick={submitNote}
-                        >
-                          Add note
-                        </LoadingButton>
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
-              </InfoRow>
-            </>
-          ) : null}
         </dl>
       </CardContent>
     </Card>
@@ -298,32 +210,23 @@ export function PolicyCollapsibleSection({
 }) {
   return (
     <Collapsible open={open} onOpenChange={onOpenChange}>
-      <Card id={id} className={cn("scroll-mt-28", className)}>
-        <CardHeader className="border-b">
-          <div className="flex items-start justify-between gap-3">
+      <Card id={id} className={cn(POLICY_SECTION_SCROLL_MT_CLASS, className)}>
+        <CardHeader className="border-b p-0">
+          <CollapsibleTrigger
+            className="flex w-full items-start justify-between gap-3 px-(--card-spacing) pb-(--card-spacing) text-left transition-colors outline-none hover:bg-muted/40 focus-visible:bg-muted/40 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
+            aria-label={open ? `Collapse ${title}` : `Expand ${title}`}
+          >
             <div className="min-w-0">
               <CardTitle>{title}</CardTitle>
               <CardDescription>{description}</CardDescription>
             </div>
-            <CollapsibleTrigger
-              render={
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="shrink-0"
-                  aria-label={open ? `Collapse ${title}` : `Expand ${title}`}
-                />
-              }
-            >
-              <ChevronDownIcon
-                className={cn(
-                  "transition-transform duration-200",
-                  open && "rotate-180",
-                )}
-              />
-            </CollapsibleTrigger>
-          </div>
+            <ChevronDownIcon
+              className={cn(
+                "mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform duration-200",
+                open && "rotate-180",
+              )}
+            />
+          </CollapsibleTrigger>
         </CardHeader>
         <CollapsiblePanel>
           <CardContent className="flex flex-col gap-4 pt-(--card-spacing) pb-(--card-spacing)">
@@ -339,22 +242,32 @@ export function PolicySectionNav({
   activeId,
   openMap,
   onNavigate,
+  onToggleSection,
   invalidIssues = [],
+  sectionIssueCounts = {},
   onNavigateToIssue,
+  onNavigateToSectionFirstIssue,
   items = POLICY_FORM_NAV_ITEMS,
   className,
 }: {
   activeId: string;
   openMap: Record<string, boolean>;
-  onNavigate: (sectionId: string) => void;
+  onNavigate: (sectionId: string, opts?: { ensureOpen?: boolean }) => void;
+  onToggleSection: (sectionId: string, open: boolean) => void;
   invalidIssues?: { path: string; label: string; message?: string }[];
+  /** Incomplete / invalid field counts keyed by section id. */
+  sectionIssueCounts?: Record<string, number>;
   onNavigateToIssue?: (path: string) => void;
+  /** Focus the first incomplete/invalid field in a section. */
+  onNavigateToSectionFirstIssue?: (sectionId: string) => void;
   items?: { id: string; label: string }[];
   className?: string;
 }) {
   const [invalidOpen, setInvalidOpen] = useState(false);
+  const [fieldQuery, setFieldQuery] = useState<string | number | "">("");
   const invalidCount = invalidIssues.length;
   const lastInvalidCountRef = useRef(invalidCount);
+  const fieldOptions = useMemo(() => listPolicyFieldSearchOptions(), []);
 
   useEffect(() => {
     if (lastInvalidCountRef.current === invalidCount) return;
@@ -362,98 +275,192 @@ export function PolicySectionNav({
     if (lastInvalidCountRef.current === 0) setInvalidOpen(false);
   }, [invalidCount]);
 
+  function goToSection(sectionId: string, opts?: { ensureOpen?: boolean }) {
+    onNavigate(sectionId, opts);
+    document.getElementById(sectionId)?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }
+
   return (
-    <nav
-      aria-label="Policy sections"
-      className={cn(
-        "flex flex-col gap-1 rounded-xl border border-border bg-card p-3",
-        className,
-      )}
-    >
-      {invalidCount > 0 ? (
-        <Collapsible open={invalidOpen} onOpenChange={setInvalidOpen}>
-          <CollapsibleTrigger
-            render={
-              <button
-                type="button"
-                className={cn(
-                  "flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-destructive transition-colors hover:bg-destructive/10",
-                  invalidOpen && "bg-destructive/10 font-medium",
-                )}
-              />
-            }
-          >
-            <span className="flex min-w-0 items-center gap-1.5">
-              <ChevronDownIcon
-                className={cn(
-                  "size-3.5 shrink-0 transition-transform duration-200",
-                  invalidOpen ? "rotate-0" : "-rotate-90",
-                )}
-              />
-              <span className="truncate">Invalid fields</span>
-            </span>
-            <Badge
-              variant="outline"
-              className="border-destructive/40 text-[10px] text-destructive tabular-nums"
-            >
-              {invalidCount}
-            </Badge>
-          </CollapsibleTrigger>
-          <CollapsiblePanel>
-            <div className="mt-1 mb-1 ml-3 flex flex-col gap-0.5 border-l border-border pl-2">
-              {invalidIssues.map((issue) => (
+    <nav aria-label="Policy sections">
+      <Card size="sm" className={cn("gap-1 px-(--card-spacing)", className)}>
+        {onNavigateToIssue ? (
+          <>
+            <FilterAutocomplete
+              id="policy-section-field-search"
+              label="Search fields and sections"
+              hideLabel
+              value={fieldQuery}
+              onChange={(value) => {
+                if (value === "" || value == null) {
+                  setFieldQuery("");
+                  return;
+                }
+                const target = String(value);
+                if (target.startsWith("#")) {
+                  goToSection(target.slice(1));
+                } else {
+                  onNavigateToIssue(target);
+                }
+                // Jump control — clear so the next search starts fresh.
+                setFieldQuery("");
+              }}
+              options={fieldOptions}
+              placeholder="Search…"
+              emptyMessage="No matches."
+              className="mb-1"
+            />
+            <Separator className="my-1" />
+          </>
+        ) : null}
+
+        {invalidCount > 0 ? (
+          <Collapsible open={invalidOpen} onOpenChange={setInvalidOpen}>
+            <CollapsibleTrigger
+              render={
                 <button
-                  key={issue.path}
                   type="button"
-                  title={issue.message || issue.label}
-                  onClick={() => {
-                    onNavigateToIssue?.(issue.path);
+                  className={cn(
+                    "flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-destructive transition-colors hover:bg-destructive/10",
+                    invalidOpen && "bg-destructive/10 font-medium",
+                  )}
+                />
+              }
+            >
+              <span className="flex min-w-0 items-center gap-1.5">
+                <ChevronDownIcon
+                  className={cn(
+                    "size-3.5 shrink-0 transition-transform duration-200",
+                    invalidOpen ? "rotate-0" : "-rotate-90",
+                  )}
+                />
+                <span className="truncate">Invalid fields</span>
+              </span>
+              <Badge
+                variant="outline"
+                className="border-destructive/40 text-[10px] text-destructive tabular-nums"
+              >
+                {invalidCount}
+              </Badge>
+            </CollapsibleTrigger>
+            <CollapsiblePanel>
+              <div className="mt-1 mb-1 ml-3 flex flex-col gap-0.5 border-l border-border pl-2">
+                {invalidIssues.map((issue) => (
+                  <button
+                    key={issue.path}
+                    type="button"
+                    title={issue.message || issue.label}
+                    onClick={() => {
+                      onNavigateToIssue?.(issue.path);
+                    }}
+                    className="rounded-md px-2 py-1.5 text-left text-xs text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+                  >
+                    <span className="line-clamp-2">{issue.label}</span>
+                  </button>
+                ))}
+              </div>
+            </CollapsiblePanel>
+          </Collapsible>
+        ) : null}
+
+        {invalidCount > 0 ? <Separator className="my-1" /> : null}
+
+        {items.map((item) => {
+          const active = activeId === item.id;
+          const isCollapsible = item.id !== "policy-information";
+          const sectionOpen = openMap[item.id] ?? true;
+          const issueCount = sectionIssueCounts[item.id] ?? 0;
+          const statusLabel =
+            issueCount > 0
+              ? `${issueCount} incomplete or invalid field${issueCount === 1 ? "" : "s"}`
+              : "Section complete";
+          return (
+            <div
+              key={item.id}
+              className={cn(
+                "flex items-center gap-0.5 rounded-lg text-sm transition-colors",
+                active
+                  ? "bg-primary font-medium text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+              )}
+            >
+              {issueCount > 0 ? (
+                <button
+                  type="button"
+                  title={statusLabel}
+                  aria-label={`Go to first invalid field · ${statusLabel}`}
+                  className={cn(
+                    "ml-1.5 inline-flex h-5 min-w-4 shrink-0 items-center justify-center text-xs font-semibold tabular-nums underline-offset-2 hover:underline",
+                    active ? "text-primary-foreground" : "text-destructive",
+                  )}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onNavigateToSectionFirstIssue?.(item.id);
                   }}
-                  className="rounded-md px-2 py-1.5 text-left text-xs text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
                 >
-                  <span className="line-clamp-2">{issue.label}</span>
+                  {issueCount > 99 ? "99+" : issueCount}
                 </button>
-              ))}
-            </div>
-          </CollapsiblePanel>
-        </Collapsible>
-      ) : null}
-
-      {invalidCount > 0 ? <Separator className="my-1" /> : null}
-
-      {items.map((item) => {
-        const active = activeId === item.id;
-        const isCollapsible = item.id !== "policy-information";
-        return (
-          <a
-            key={item.id}
-            href={`#${item.id}`}
-            onClick={(event) => {
-              event.preventDefault();
-              onNavigate(item.id);
-              document.getElementById(item.id)?.scrollIntoView({
-                behavior: "smooth",
-                block: "start",
-              });
-            }}
-            className={cn(
-              "rounded-lg px-2 py-1.5 text-sm transition-colors",
-              active
-                ? "bg-primary font-medium text-primary-foreground"
-                : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-            )}
-          >
-            <span className="flex items-center justify-between gap-2">
-              <span>{item.label}</span>
-              {isCollapsible && !openMap[item.id] ? (
-                <Badge variant="outline" className="text-[10px]">
-                  Closed
-                </Badge>
+              ) : (
+                <span
+                  title={statusLabel}
+                  aria-label={statusLabel}
+                  className={cn(
+                    "ml-1.5 inline-flex size-4 shrink-0 items-center justify-center",
+                    active ? "text-primary-foreground" : "text-success",
+                  )}
+                >
+                  <CheckIcon className="size-3.5" aria-hidden />
+                </span>
+              )}
+              <a
+                href={`#${item.id}`}
+                onClick={(event) => {
+                  event.preventDefault();
+                  goToSection(item.id);
+                }}
+                className="min-w-0 flex-1 truncate py-1.5 pr-2 pl-1"
+              >
+                {item.label}
+              </a>
+              {isCollapsible ? (
+                <button
+                  type="button"
+                  className={cn(
+                    "mr-1 inline-flex size-6 shrink-0 items-center justify-center rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+                    active
+                      ? "text-primary-foreground hover:bg-primary-foreground/15"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  )}
+                  aria-label={
+                    sectionOpen
+                      ? `Collapse ${item.label}`
+                      : `Expand ${item.label}`
+                  }
+                  aria-expanded={sectionOpen}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onToggleSection(item.id, !sectionOpen);
+                    // Do not ensureOpen — navigateToSection defaults to
+                    // forcing the section open and would undo the toggle.
+                    goToSection(item.id, { ensureOpen: false });
+                  }}
+                >
+                  <ChevronDownIcon
+                    className={cn(
+                      "size-3.5 transition-transform duration-200",
+                      sectionOpen ? "rotate-0" : "-rotate-90",
+                    )}
+                  />
+                </button>
               ) : null}
-            </span>
-          </a>
-        );
-      })}
+            </div>
+          );
+        })}
+      </Card>
     </nav>
   );
 }
@@ -487,7 +494,7 @@ export function PolicyStickyHeader({
   return (
     <div
       className={cn(
-        "sticky top-14 z-20 border-b border-border px-4 py-3 backdrop-blur md:px-8",
+        "sticky top-14 z-20 border-b border-border bg-background/95 px-4 py-3 backdrop-blur md:px-8",
         className,
       )}
     >
@@ -528,10 +535,30 @@ export function PolicyStickyHeader({
   );
 }
 
+/**
+ * Tracks which policy section is in view. Calling the returned setter (nav
+ * click) pins that section until smooth scrolling finishes, so intermediate
+ * sections are not highlighted while the page scrolls past them.
+ */
 export function usePolicySectionScrollSpy(
   sectionIds: readonly string[],
 ): [string, (id: string) => void] {
   const [activeId, setActiveId] = useState(sectionIds[0] ?? "");
+  const pinnedUntilRef = useRef(0);
+  const unlockTimerRef = useRef<number | null>(null);
+
+  function selectSection(id: string) {
+    setActiveId(id);
+    // Cover typical smooth-scroll duration; scrollend clears earlier when available.
+    pinnedUntilRef.current = Date.now() + 1200;
+    if (unlockTimerRef.current != null) {
+      window.clearTimeout(unlockTimerRef.current);
+    }
+    unlockTimerRef.current = window.setTimeout(() => {
+      pinnedUntilRef.current = 0;
+      unlockTimerRef.current = null;
+    }, 1200);
+  }
 
   useEffect(() => {
     const elements = sectionIds
@@ -539,28 +566,78 @@ export function usePolicySectionScrollSpy(
       .filter((el): el is HTMLElement => Boolean(el));
     if (elements.length === 0) return;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort(
-            (a, b) =>
-              (a.target as HTMLElement).offsetTop -
-              (b.target as HTMLElement).offsetTop,
-          );
-        if (visible[0]?.target.id) {
-          setActiveId(visible[0].target.id);
-        }
-      },
-      {
-        rootMargin: "-25% 0px -55% 0px",
-        threshold: [0, 0.25, 0.5],
-      },
+    const formScroll = document.querySelector<HTMLElement>(
+      "[data-policy-form-scroll]",
     );
+    const formIsScroller =
+      Boolean(formScroll) &&
+      formScroll!.scrollHeight > formScroll!.clientHeight + 1;
 
-    for (const el of elements) observer.observe(el);
-    return () => observer.disconnect();
+    /** Nearest overflow scroller (SidebarInset on mobile, form column on xl). */
+    function resolveScrollRoot(): HTMLElement | null {
+      if (formIsScroller && formScroll) return formScroll;
+      let node: HTMLElement | null = elements[0]?.parentElement ?? null;
+      while (node) {
+        const { overflowY } = getComputedStyle(node);
+        if (
+          (overflowY === "auto" ||
+            overflowY === "scroll" ||
+            overflowY === "overlay") &&
+          node.scrollHeight > node.clientHeight + 1
+        ) {
+          return node;
+        }
+        node = node.parentElement;
+      }
+      return null;
+    }
+
+    const scrollRoot = resolveScrollRoot();
+
+    function updateActiveFromScroll() {
+      if (Date.now() < pinnedUntilRef.current) return;
+
+      // Marker line just below sticky chrome (or a small gap inside the form scroller).
+      const markerY = formIsScroller
+        ? (formScroll?.getBoundingClientRect().top ?? 0) + 16
+        : (scrollRoot?.getBoundingClientRect().top ?? 0) + 11 * 16;
+
+      let nextId = sectionIds[0] ?? "";
+      for (const id of sectionIds) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        if (el.getBoundingClientRect().top <= markerY + 4) {
+          nextId = id;
+        }
+      }
+      if (nextId) setActiveId(nextId);
+    }
+
+    function onScrollEnd() {
+      pinnedUntilRef.current = 0;
+      if (unlockTimerRef.current != null) {
+        window.clearTimeout(unlockTimerRef.current);
+        unlockTimerRef.current = null;
+      }
+      updateActiveFromScroll();
+    }
+
+    const scrollTarget: HTMLElement | Window = scrollRoot ?? window;
+    scrollTarget.addEventListener("scroll", updateActiveFromScroll, {
+      passive: true,
+    });
+    document.addEventListener("scrollend", onScrollEnd, true);
+    updateActiveFromScroll();
+
+    return () => {
+      scrollTarget.removeEventListener("scroll", updateActiveFromScroll);
+      document.removeEventListener("scrollend", onScrollEnd, true);
+      if (unlockTimerRef.current != null) {
+        window.clearTimeout(unlockTimerRef.current);
+        unlockTimerRef.current = null;
+      }
+    };
   }, [sectionIds]);
 
-  return [activeId, setActiveId];
+  return [activeId, selectSection];
 }

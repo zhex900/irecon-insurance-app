@@ -1,4 +1,10 @@
-import { useFormContext, Controller } from "react-hook-form";
+import {
+  useFormContext,
+  Controller,
+  type Control,
+  type FieldError as RhfFieldError,
+} from "react-hook-form";
+import { useFieldSaveState } from "~/components/forms/field-save-highlight";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Field, FieldError, FieldLabel } from "~/components/ui/field";
 import {
@@ -6,6 +12,7 @@ import {
   FieldTextarea,
   Select,
 } from "~/components/ui/form-controls";
+import { cn } from "~/lib/utils";
 import { type CarPolicyFormValues } from "~/lib/zod/policy-car";
 import type { CarWording } from "~/lib/db/types";
 import { Section } from "./section-shared";
@@ -77,35 +84,9 @@ export function ClaimsWordingStep({
       </Section>
 
       <Section title="General Disclosure" className="bg-muted/40">
-        <Controller
+        <GeneralDisclosureField
           control={control}
-          name="declarationConfirmed"
-          render={({ field }) => (
-            <Field
-              orientation="horizontal"
-              data-invalid={errors.declarationConfirmed ? true : undefined}
-            >
-              <Checkbox
-                id="declarationConfirmed"
-                ref={field.ref}
-                checked={field.value === true}
-                onCheckedChange={(checked) => field.onChange(checked === true)}
-                onBlur={field.onBlur}
-                aria-invalid={!!errors.declarationConfirmed}
-              />
-              <FieldLabel
-                htmlFor="declarationConfirmed"
-                required
-                className="font-normal"
-              >
-                Confirm you have asked and received responses from the client in
-                relation to their Duty of Disclosure (as per IA)
-              </FieldLabel>
-              {errors.declarationConfirmed?.message ? (
-                <FieldError>{errors.declarationConfirmed.message}</FieldError>
-              ) : null}
-            </Field>
-          )}
+          error={errors.declarationConfirmed}
         />
       </Section>
 
@@ -149,5 +130,58 @@ export function ClaimsWordingStep({
         </div>
       </Section>
     </div>
+  );
+}
+
+function GeneralDisclosureField({
+  control,
+  error,
+}: {
+  control: Control<CarPolicyFormValues>;
+  error?: RhfFieldError;
+}) {
+  const { attention, className: highlight } = useFieldSaveState(
+    "declarationConfirmed",
+  );
+
+  return (
+    <Controller
+      control={control}
+      name="declarationConfirmed"
+      render={({ field }) => (
+        <div
+          className={cn(
+            "rounded-lg transition-[border-color,box-shadow] duration-300",
+            attention && "border border-warning p-3 ring-2 ring-warning/25",
+          )}
+        >
+          <Field
+            orientation="horizontal"
+            data-invalid={!attention && error ? true : undefined}
+          >
+            <Checkbox
+              id="declarationConfirmed"
+              ref={field.ref}
+              checked={field.value === true}
+              onCheckedChange={(checked) => field.onChange(checked === true)}
+              onBlur={field.onBlur}
+              aria-invalid={!attention && !!error}
+              className={cn(highlight)}
+            />
+            <FieldLabel
+              htmlFor="declarationConfirmed"
+              required
+              className="font-normal"
+            >
+              Confirm you have asked and received responses from the client in
+              relation to their Duty of Disclosure (as per IA)
+            </FieldLabel>
+            {!attention && error?.message ? (
+              <FieldError>{error.message}</FieldError>
+            ) : null}
+          </Field>
+        </div>
+      )}
+    />
   );
 }

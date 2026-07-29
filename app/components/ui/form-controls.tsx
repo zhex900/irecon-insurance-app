@@ -43,8 +43,12 @@ export function FieldInput({
 
   return (
     <Field data-invalid={error ? true : undefined} className={className}>
-      <div className="flex items-center gap-1.5">
-        <FieldLabel htmlFor={fieldId} required={required}>
+      <div className="flex w-full items-start gap-1.5">
+        <FieldLabel
+          htmlFor={fieldId}
+          required={required}
+          className="w-auto min-w-0 flex-1"
+        >
           {label}
         </FieldLabel>
         {tooltip ? (

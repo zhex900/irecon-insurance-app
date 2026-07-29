@@ -55,17 +55,12 @@ export async function calculateCarPremium(
     contractWorksCalculatedBasePremium,
     cwMinPrem,
   );
-  const contractWorksDisplayHomesPremium = input.displayHomes;
-  const contractWorksExistingStructurePremium = input.existingStructure;
-  const section1BaseTerrorismPremium = contractWorksBasePremium * terrorismRate;
-  const contractWorksDisplayHomesPremiumTerror =
-    contractWorksDisplayHomesPremium * terrorismRate;
-  const contractWorksExistingStructurePremiumTerror =
-    contractWorksExistingStructurePremium * terrorismRate;
+  // Legacy CARCalculator: Terrorism Levy = True Base Premium × τ only.
+  // Display Homes / Existing Structure are manual premium lines (not SI → premium).
+  const contractWorksDisplayHomesPremium = 0;
+  const contractWorksExistingStructurePremium = 0;
   const contractWorksTerrorismPremium =
-    section1BaseTerrorismPremium +
-    contractWorksDisplayHomesPremiumTerror +
-    contractWorksExistingStructurePremiumTerror;
+    contractWorksBasePremium * terrorismRate;
   const contractWorksPlantPremium = getContractWorksPlantPremium({
     certificateDate,
     plantEquipment: input.plantEquipment,
@@ -76,26 +71,18 @@ export async function calculateCarPremium(
     contractWorksPlantPremium > 0
       ? contractWorksPlantPremium * terrorismRate
       : 0;
+  // Legacy CARCalculator uses construction ESL rate `e` for plant ESL
+  // (PlantEslRate is loaded/stored but not applied in server calc).
   const contractWorksPlantESL =
     contractWorksPlantPremium > 0
       ? (contractWorksPlantPremium + contractWorksPlantTerrorismPremium) *
-        plantEslRate
+        eslRate
       : 0;
   const contractWorksESL =
-    (contractWorksBasePremium +
-      section1BaseTerrorismPremium +
-      contractWorksExistingStructurePremiumTerror +
-      contractWorksExistingStructurePremium +
-      contractWorksDisplayHomesPremium +
-      contractWorksDisplayHomesPremiumTerror) *
-    eslRate;
+    (contractWorksBasePremium + contractWorksTerrorismPremium) * eslRate;
   const contractWorksGST =
     (contractWorksBasePremium +
-      section1BaseTerrorismPremium +
-      contractWorksExistingStructurePremiumTerror +
-      contractWorksExistingStructurePremium +
-      contractWorksDisplayHomesPremium +
-      contractWorksDisplayHomesPremiumTerror +
+      contractWorksTerrorismPremium +
       contractWorksPlantPremium +
       contractWorksPlantTerrorismPremium +
       contractWorksPlantESL +
@@ -103,11 +90,7 @@ export async function calculateCarPremium(
     GST_RATE;
   const contractWorksStampDuty =
     (contractWorksBasePremium +
-      section1BaseTerrorismPremium +
-      contractWorksExistingStructurePremiumTerror +
-      contractWorksExistingStructurePremium +
-      contractWorksDisplayHomesPremium +
-      contractWorksDisplayHomesPremiumTerror +
+      contractWorksTerrorismPremium +
       contractWorksPlantPremium +
       contractWorksPlantTerrorismPremium +
       contractWorksPlantESL +
@@ -116,11 +99,9 @@ export async function calculateCarPremium(
     sdRate;
   const contractWorksTotalPremium =
     contractWorksBasePremium +
-    section1BaseTerrorismPremium +
-    contractWorksExistingStructurePremiumTerror +
-    contractWorksExistingStructurePremium +
+    contractWorksTerrorismPremium +
     contractWorksDisplayHomesPremium +
-    contractWorksDisplayHomesPremiumTerror +
+    contractWorksExistingStructurePremium +
     contractWorksPlantPremium +
     contractWorksPlantTerrorismPremium +
     contractWorksPlantESL +

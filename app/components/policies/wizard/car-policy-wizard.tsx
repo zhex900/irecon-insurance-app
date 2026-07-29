@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useFetcher, useNavigate } from "react-router";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -7,23 +7,21 @@ import {
   useFormContext,
   type Resolver,
 } from "react-hook-form";
-import { CircleCheckIcon } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Badge } from "~/components/reui/badge";
-import { Button } from "~/components/ui/button";
+import { LoadingButton } from "~/components/ui/loading-button";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { PremiumSummaryPanel } from "./sections";
 import { LeaveDiscardDialog, SubmitConfirmDialog } from "./dialogs";
 import { WizardFormFooter } from "./form-footer";
 import { MobileSectionNav, WizardSectionStack } from "./section-stack";
 import {
-  POLICY_FORM_SECTIONS,
   POLICY_STICKY_RAIL_CLASS,
   PolicyInformationCard,
   PolicySectionNav,
   PolicyStickyHeader,
   getPolicyFormNavItems,
 } from "~/components/policies/policy-form-layout";
+import { PolicyNotesCard } from "~/components/policies/policy-notes-card";
 import {
   POLICY_STATUS,
   carPolicySchema,
@@ -38,6 +36,7 @@ import {
   PolicySaveStatusBadge,
   useJustSaved,
 } from "~/components/forms/field-save-highlight";
+import { getTakenStatusIssues } from "~/lib/policy-taken-status";
 import { cn } from "~/lib/utils";
 import { policyToFormValues } from "./policy-to-form-values";
 import { usePolicyNotes } from "./hooks/use-notes";
@@ -89,13 +88,14 @@ function wizardModeHeaderClass(mode: WizardMode) {
 }
 
 function wizardModeCardBorderClass(mode: WizardMode) {
+  // Real border (not ring) — overflow on rails/scroll areas clips Card ring.
   if (mode === "new") {
-    return "border-l-4 border-l-primary";
+    return "border border-border border-l-4 border-l-primary";
   }
   if (mode === "edit") {
-    return "border-l-4 border-l-warning";
+    return "border border-border border-l-4 border-l-warning";
   }
-  return "border-l-4 border-l-success";
+  return "border border-border border-l-4 border-l-success";
 }
 
 type CarPolicyWizardProps = {
@@ -194,8 +194,12 @@ function CarPolicyWizardInner({
   const form = useFormContext<CarPolicyFormValues>();
   // Subscribe so post-trigger reads of formState.errors are current.
   void form.formState.errors;
-  const { commitSavedPaths, rollbackSavedPaths, getDirtyPaths } =
-    useJustSaved();
+  const {
+    commitSavedPaths,
+    rollbackSavedPaths,
+    getDirtyPaths,
+    markAttentionPaths,
+  } = useJustSaved();
 
   const fetcher = useFetcher<PolicyWizardActionData>();
   const navigate = useNavigate();
@@ -213,8 +217,16 @@ function CarPolicyWizardInner({
   const isFormTerminal = isTerminalStatus(selectedStatusId);
   /** Fields lock once Taken/Not taken is chosen or already saved. */
   const fieldsLocked = readOnly || isFormTerminal;
-  /** Pin Premium under Policy Information only once status is Taken. */
-  const premiumPinned = selectedStatusId === POLICY_STATUS.Taken;
+  /**
+   * After the first successful Submit, keep Submit off until values change again.
+   * Draft autosave must NOT clear this — only a successful Submit resets it.
+   * Also keeps Premium pinned under Policy Information (do not move it back).
+   */
+  /** Session submit, or already non-draft — pins Premium and gates re-submit. */
+  const [submittedInSession, setSubmittedInSession] = useState(false);
+  const hasSubmittedOnce = submittedInSession || !policy.isDraft;
+  /** Pin Premium under Policy Information after submit — stay at the top. */
+  const premiumPinned = hasSubmittedOnce;
   const navItems = useMemo(
     () => getPolicyFormNavItems(premiumPinned),
     [premiumPinned],
@@ -228,6 +240,7 @@ function CarPolicyWizardInner({
     freshSteps,
     fieldsLocked,
     policyPremium: policy.car.premium,
+    isDraft: Boolean(policy.isDraft),
     navIds,
   });
   const {
@@ -238,13 +251,17 @@ function CarPolicyWizardInner({
     goToStep,
     navigateToSection,
     navigateToIssue,
+    navigateToSectionFirstIssue,
     firstIssuePath,
     findStepForField,
     invalidIssues,
+    sectionIssueCounts,
+    sectionIssuePaths,
+    isFormValid,
     step,
   } = navigation;
 
-  const { notes, noteAuthors, addNote, addNoteError, isAddingNote } =
+  const { notes, noteAuthors, addNote, updateNote, noteError, isSavingNote } =
     usePolicyNotes({
       policy,
       noteAuthors: initialNoteAuthors,
@@ -267,21 +284,18 @@ function CarPolicyWizardInner({
     setReferralReasons,
     isFetcherBusy,
     isCalculating,
+    recalculatePremium,
     refreshPremiumAfterSave,
   } = premiumCalc;
 
-  const {
-    documents,
-    isGeneratingDocuments,
-    showDocsGeneratedAlert,
-    regenerateDocumentsIfNeeded,
-  } = usePolicyDocuments({
-    policy,
-    form,
-    premium,
-    referralReasons,
-    rating: fetcher.data?.rating,
-  });
+  const { documents, isGeneratingDocuments, regenerateDocumentsIfNeeded } =
+    usePolicyDocuments({
+      policy,
+      form,
+      premium,
+      referralReasons,
+      rating: fetcher.data?.rating,
+    });
 
   const draftSave = usePolicyDraftSave({
     policy,
@@ -297,7 +311,6 @@ function CarPolicyWizardInner({
     navigate,
   });
   const {
-    manualSaving,
     hasUnsavedChanges,
     hasUnsavedChangesRef,
     setHasUnsavedChanges,
@@ -320,6 +333,7 @@ function CarPolicyWizardInner({
     setReferralReasons,
     regenerateDocumentsIfNeeded,
     goToStep,
+    navigateToSection,
     firstIssuePath,
     findStepForField,
     pendingFocusPathRef,
@@ -366,114 +380,249 @@ function CarPolicyWizardInner({
     handleCancelClick,
   } = leave;
 
+  // Status stays locked on drafts / new policies — changeable only after submit.
   const canChangeStatus =
-    policy.policyStatusId === POLICY_STATUS.Pending && !fieldsLocked;
-  const allSectionsOpen = POLICY_FORM_SECTIONS.every((s) => openMap[s.id]);
+    !policy.isDraft &&
+    policy.policyStatusId === POLICY_STATUS.Pending &&
+    !fieldsLocked;
+
+  function handleSectionIssueCounter(sectionId: string) {
+    navigateToSectionFirstIssue(sectionId);
+    const paths = sectionIssuePaths[sectionId] ?? [];
+    if (paths.length === 0) return;
+    // Yellow attention — clear red invalid so the cue stays warning.
+    for (const path of paths) {
+      form.clearErrors(path as never);
+    }
+    markAttentionPaths(paths);
+  }
+
   const submitBusy = submitting || isGeneratingDocuments;
   const wizardMode: WizardMode = isNew ? "new" : fieldsLocked ? "view" : "edit";
+  const formValues = form.watch();
+  const submitFingerprint = useMemo(
+    () => JSON.stringify({ values: formValues, premium: premium ?? null }),
+    [formValues, premium],
+  );
+  const [submittedFingerprint, setSubmittedFingerprint] =
+    useState(submitFingerprint);
+  const hasChangesSinceSubmit = submitFingerprint !== submittedFingerprint;
+  const submitDisabled =
+    !isFormValid || (hasSubmittedOnce && !hasChangesSinceSubmit);
+  const saveDraftNowRef = useRef(saveDraftNow);
+
+  useEffect(() => {
+    saveDraftNowRef.current = saveDraftNow;
+  }, [saveDraftNow]);
+
+  // Cmd/Ctrl+S — same draft save path as blur autosave (toast on success).
+  useEffect(() => {
+    if (fieldsLocked) return;
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key.toLowerCase() !== "s") return;
+      if (!(event.metaKey || event.ctrlKey) || event.altKey) return;
+      event.preventDefault();
+      saveDraftNowRef.current();
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [fieldsLocked]);
 
   return (
     <div
       className={cn(
+        // Bleed into app content padding. On xl, lock height under the app
+        // header so side rails stay put and only the centre form scrolls.
         "-mx-4 -mt-4 flex flex-col gap-4 md:-mx-8 md:-mt-8",
+        "xl:-mb-4 xl:h-[calc(100svh-3.5rem)] xl:min-h-0 xl:overflow-hidden md:xl:-mb-8",
+        // Keep cards within the column — no horizontal scrollbars.
+        "[&_[data-slot=card]]:overflow-x-hidden",
         wizardMode === "view" &&
           "[&_[data-slot=card]]:bg-muted/40 [&_input]:bg-muted/30 [&_select]:bg-muted/30 [&_textarea]:bg-muted/30",
       )}
       data-wizard-mode={wizardMode}
     >
-      <PolicyStickyHeader
-        policyNumber={policy.policyNumber}
-        clientId={policy.clientId}
-        clientName={clientName || "Client"}
-        className={wizardModeHeaderClass(wizardMode)}
-        modeBadge={wizardModeBadge(wizardMode)}
-        breadcrumbs={[
-          { label: "Clients", to: "/clients" },
-          {
-            label: clientName || "Client",
-            to: `/clients/${policy.clientId}`,
-          },
-          { label: policy.policyNumber },
-        ]}
-        statusBadge={
-          selectedStatus ? (
-            <StatusBadge
-              statusId={selectedStatus.policyStatusId}
-              name={selectedStatus.name}
-            />
-          ) : null
-        }
-        saveStatus={
-          wizardMode !== "view" ? (
-            <PolicySaveStatusBadge status={saveStatus} />
-          ) : null
-        }
-        adjusted={Boolean(policy.car.adjusted)}
-        actions={headerActions}
-        expandControl={
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              const next = !allSectionsOpen;
-              setOpenMap(
-                Object.fromEntries(
-                  POLICY_FORM_SECTIONS.map((s) => [s.id, next]),
-                ),
-              );
-            }}
-          >
-            {allSectionsOpen ? "Collapse all" : "Expand all"}
-          </Button>
-        }
-      />
-
-      {showDocsGeneratedAlert ? (
-        <Alert variant="success" className="mx-4 md:mx-8">
-          <CircleCheckIcon />
-          <AlertTitle>Documents generated</AlertTitle>
-          <AlertDescription>
-            Policy PDFs are ready. Open or download them from Premium Summary.
-          </AlertDescription>
-        </Alert>
-      ) : null}
-
-      <div className="grid items-start gap-6 px-4 md:px-8 xl:grid-cols-[200px_minmax(0,1fr)_280px]">
-        <aside className={cn("hidden xl:block", POLICY_STICKY_RAIL_CLASS)}>
-          <PolicySectionNav
-            activeId={activeSectionId}
-            openMap={openMap}
-            onNavigate={navigateToSection}
-            invalidIssues={invalidIssues}
-            onNavigateToIssue={navigateToIssue}
-            items={navItems}
-            className={wizardModeHeaderClass(wizardMode)}
-          />
-        </aside>
-
-        <div className="flex min-w-0 flex-col gap-4">
+      {/* Header + mobile section nav share one sticky stack under the app bar. */}
+      <div
+        className={cn(
+          "sticky top-14 z-20 shrink-0 border-b border-border backdrop-blur",
+          "xl:static xl:backdrop-blur-none",
+          wizardModeHeaderClass(wizardMode),
+        )}
+      >
+        <PolicyStickyHeader
+          policyNumber={policy.policyNumber}
+          clientId={policy.clientId}
+          clientName={clientName || "Client"}
+          className="static border-0 bg-transparent backdrop-blur-none"
+          modeBadge={wizardModeBadge(wizardMode)}
+          breadcrumbs={[
+            { label: "Clients", to: "/clients" },
+            {
+              label: clientName || "Client",
+              to: `/clients/${policy.clientId}`,
+            },
+            { label: policy.policyNumber },
+          ]}
+          statusBadge={
+            selectedStatus ? (
+              <StatusBadge
+                statusId={selectedStatus.policyStatusId}
+                name={selectedStatus.name}
+              />
+            ) : null
+          }
+          saveStatus={
+            wizardMode !== "view" ? (
+              <PolicySaveStatusBadge status={saveStatus} />
+            ) : null
+          }
+          adjusted={Boolean(policy.car.adjusted)}
+          actions={headerActions}
+          expandControl={
+            !readOnly && !isFormTerminal ? (
+              <LoadingButton
+                type="button"
+                size="sm"
+                disabled={submitDisabled}
+                onClick={() => {
+                  void requestSubmit();
+                }}
+                loading={submitBusy}
+                loadingLabel="Submitting…"
+              >
+                Submit
+              </LoadingButton>
+            ) : null
+          }
+        />
+        <div className="border-t border-border px-4 py-2 md:px-8 xl:hidden">
           <MobileSectionNav
             items={navItems}
             activeSectionId={activeSectionId}
             onNavigate={navigateToSection}
+            sectionIssueCounts={sectionIssueCounts}
+            onNavigateToSectionFirstIssue={handleSectionIssueCounter}
           />
+        </div>
+      </div>
 
+      <div className="grid min-h-0 flex-1 gap-6 px-4 pb-4 md:px-8 xl:grid-cols-[200px_minmax(0,1fr)_280px] xl:overflow-hidden xl:pb-4">
+        <aside className="hidden min-h-0 xl:flex xl:h-full xl:flex-col xl:gap-4 xl:overflow-hidden">
+          <div className="shrink-0">
+            <PolicySectionNav
+              activeId={activeSectionId}
+              openMap={openMap}
+              onNavigate={navigateToSection}
+              onToggleSection={(sectionId, open) => {
+                setOpenMap((prev) => ({ ...prev, [sectionId]: open }));
+              }}
+              invalidIssues={invalidIssues}
+              sectionIssueCounts={sectionIssueCounts}
+              onNavigateToIssue={navigateToIssue}
+              onNavigateToSectionFirstIssue={handleSectionIssueCounter}
+              items={navItems}
+              className={wizardModeCardBorderClass(wizardMode)}
+            />
+          </div>
+          {!isNew ? (
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              <PolicyNotesCard
+                notes={notes}
+                noteAuthors={noteAuthors}
+                canAddNotes={!policy.isDraft}
+                onAddNote={addNote}
+                onUpdateNote={updateNote}
+                noteBusy={isSavingNote}
+                noteError={noteError}
+                className={wizardModeCardBorderClass(wizardMode)}
+              />
+            </div>
+          ) : null}
+        </aside>
+
+        <div
+          data-policy-form-scroll
+          className="flex min-h-0 min-w-0 flex-col gap-4 overflow-x-hidden xl:overflow-y-auto xl:overscroll-contain xl:[&>*]:shrink-0"
+        >
           <PolicyInformationCard
             insurerName={insurerName}
             policyNumber={policy.policyNumber}
             statusId={selectedStatus?.policyStatusId ?? selectedStatusId}
             statusName={selectedStatus?.name ?? "Pending"}
+            statusOptions={reference.policyStatuses}
+            canChangeStatus={canChangeStatus}
+            onStatusChange={(next) => {
+              form.setValue("policyStatusId", next, {
+                shouldDirty: true,
+                shouldValidate: false,
+              });
+            }}
+            onConfirmTerminalStatus={confirmTerminalStatusAndSave}
+            validateTerminalStatus={(statusId) => {
+              if (statusId !== POLICY_STATUS.Taken) return { ok: true };
+              const values = form.getValues();
+              const currentPremium = premiumRef.current ?? premium;
+              const issues = getTakenStatusIssues(values, {
+                contractWorksExistingStructurePremium:
+                  currentPremium?.contractWorksExistingStructurePremium ?? 0,
+                contractWorksPlantPremium:
+                  currentPremium?.contractWorksPlantPremium ?? 0,
+              });
+              if (issues.length === 0) return { ok: true };
+              return {
+                ok: false,
+                requirements: issues.map((issue) => ({
+                  label: issue.label,
+                  message: issue.message,
+                })),
+              };
+            }}
+            onTerminalStatusInvalid={(statusId) => {
+              if (statusId !== POLICY_STATUS.Taken) return;
+              const values = form.getValues();
+              const currentPremium = premiumRef.current ?? premium;
+              const issues = getTakenStatusIssues(values, {
+                contractWorksExistingStructurePremium:
+                  currentPremium?.contractWorksExistingStructurePremium ?? 0,
+                contractWorksPlantPremium:
+                  currentPremium?.contractWorksPlantPremium ?? 0,
+              });
+              const keys = issues.map((issue) => issue.premiumKey);
+              setOpenMap((prev) => ({ ...prev, premium: true }));
+              navigateToSection("premium");
+              // Open the section first, then pulse so the row is mounted/visible.
+              window.setTimeout(() => {
+                markAttentionPaths(keys);
+                const firstKey = keys[0];
+                const target =
+                  (firstKey
+                    ? document.getElementById(`premium-row-${firstKey}`)
+                    : null) ?? document.getElementById("premium");
+                target?.scrollIntoView({ behavior: "smooth", block: "center" });
+              }, 120);
+            }}
+            statusConfirmBusy={isFetcherBusy && !isCalculating}
             adjusted={Boolean(policy.car.adjusted)}
-            notes={notes}
-            noteAuthors={noteAuthors}
-            showNotes={!policy.isDraft}
-            canAddNotes={!policy.isDraft}
-            onAddNote={addNote}
-            addNoteBusy={isAddingNote}
-            addNoteError={addNoteError}
             className={wizardModeCardBorderClass(wizardMode)}
           />
+
+          {!isNew ? (
+            <div className="xl:hidden">
+              <PolicyNotesCard
+                notes={notes}
+                noteAuthors={noteAuthors}
+                canAddNotes={!policy.isDraft}
+                onAddNote={addNote}
+                onUpdateNote={updateNote}
+                noteBusy={isSavingNote}
+                noteError={noteError}
+                className={wizardModeCardBorderClass(wizardMode)}
+              />
+            </div>
+          ) : null}
 
           <WizardSectionStack
             premiumPinned={premiumPinned}
@@ -484,11 +633,9 @@ function CarPolicyWizardInner({
             premium={premium}
             referralReasons={referralReasons}
             notes={notes}
-            canChangeStatus={canChangeStatus}
-            onConfirmTerminalStatus={confirmTerminalStatusAndSave}
-            confirmBusy={isFetcherBusy && !isCalculating}
             fieldsLocked={fieldsLocked}
             policy={policy}
+            rating={fetcher.data?.rating ?? policy.car.rating}
             premiumManuallyEditedRef={premiumManuallyEditedRef}
             premiumRef={premiumRef}
             setPremium={setPremium}
@@ -496,6 +643,8 @@ function CarPolicyWizardInner({
             setHasUnsavedChanges={setHasUnsavedChanges}
             persistDraft={persistDraft}
             handleFieldBlur={handleFieldBlur}
+            onRecalculatePremium={recalculatePremium}
+            isCalculating={isCalculating}
             shellCardClassName={wizardModeCardBorderClass(wizardMode)}
           />
 
@@ -504,12 +653,11 @@ function CarPolicyWizardInner({
             isFormTerminal={isFormTerminal}
             actionData={fetcher.data}
             onCancel={handleCancelClick}
-            onSave={saveDraftNow}
             onSubmit={() => {
               void requestSubmit();
             }}
-            manualSaving={manualSaving}
             submitBusy={submitBusy}
+            submitDisabled={submitDisabled}
           />
         </div>
 
@@ -527,11 +675,7 @@ function CarPolicyWizardInner({
             emailTemplates={emailTemplates}
             policy={policy}
             adjustment={policy.car.adjusted ? policy.car.adjustment : undefined}
-            className={cn(
-              // Sticky rail overflow clips Card ring (box-shadow); use a real border.
-              "border border-border",
-              wizardModeCardBorderClass(wizardMode),
-            )}
+            className={wizardModeCardBorderClass(wizardMode)}
           />
         </aside>
       </div>
@@ -543,7 +687,16 @@ function CarPolicyWizardInner({
         busy={submitBusy}
         onCancel={() => setSubmitConfirmOpen(false)}
         onConfirm={() => {
-          void confirmSubmit();
+          void confirmSubmit().then((ok) => {
+            if (!ok) return;
+            setSubmittedInSession(true);
+            setSubmittedFingerprint(
+              JSON.stringify({
+                values: form.getValues(),
+                premium: premiumRef.current ?? premium ?? null,
+              }),
+            );
+          });
         }}
       />
 

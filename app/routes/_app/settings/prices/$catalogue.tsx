@@ -37,7 +37,13 @@ import {
   getPriceCatalogueSnapshot,
   type PriceCatalogueSnapshot,
 } from "~/lib/services/price/catalogue.server";
-import { cn, formatCurrency, formatDate, formatNumber } from "~/lib/utils";
+import {
+  cn,
+  formatCurrency,
+  formatDate,
+  formatNumber,
+  formatRate,
+} from "~/lib/utils";
 import type { Route } from "./+types/$catalogue";
 
 export function meta({ params }: Route.MetaArgs) {
@@ -98,8 +104,8 @@ export default function SettingsPricesCatalogueRoute({
         title="Prices"
         description={
           canEdit
-            ? "Click a row to view rates. Use Edit in the dialog to change values."
-            : "Click a row to view rates."
+            ? "Schedules are stored in Postgres. Click a row to view rates; use Edit to change values."
+            : "Schedules are stored in Postgres. Click a row to view rates."
         }
         breadcrumbs={[
           { label: "Settings", to: "/settings" },
@@ -181,8 +187,8 @@ function CataloguePanel({
 }
 
 /**
- * Whole-row open via real anchors (Add schedule pattern). Avoid React onClick —
- * this route used to pull postgres into the client bundle and break hydration.
+ * Whole-row open. Prefer a real ID link for middle-click / keyboard; row click
+ * covers the rest (tr `position:relative` overlays are unreliable in tables).
  */
 function ClickableScheduleRow({
   href,
@@ -199,16 +205,17 @@ function ClickableScheduleRow({
   id: number;
   children: ReactNode;
 }) {
-  function onDeleteClick(event: MouseEvent<HTMLAnchorElement>) {
-    event.stopPropagation();
+  function onRowClick(event: MouseEvent<HTMLTableRowElement>) {
+    if ((event.target as HTMLElement).closest("a, button")) return;
+    window.location.assign(href);
   }
 
   return (
-    <TableRow className="relative cursor-pointer hover:bg-muted/50">
+    <TableRow className="cursor-pointer hover:bg-muted/50" onClick={onRowClick}>
       <TableCell className="text-foreground tabular-nums">
         <a
           href={href}
-          className="font-medium text-foreground after:absolute after:inset-0 hover:underline"
+          className="font-medium text-foreground hover:underline"
           aria-label={`View schedule ${id}`}
         >
           {id}
@@ -216,12 +223,11 @@ function ClickableScheduleRow({
       </TableCell>
       {children}
       {canEdit ? (
-        <TableCell className="relative z-10 w-12 text-right">
+        <TableCell className="w-12 text-right">
           <a
             href={deleteHref}
             aria-label={deleteLabel}
             className="inline-flex size-7 items-center justify-center rounded-lg text-destructive hover:bg-destructive/10"
-            onClick={onDeleteClick}
           >
             <Trash2Icon className="size-4" />
           </a>
@@ -253,9 +259,16 @@ function ListCard({
 
 function EmptyCatalogue({ label }: { label: string }) {
   return (
-    <p className="py-8 text-center text-sm text-muted-foreground">
-      No {label} loaded yet.
-    </p>
+    <div className="space-y-1 py-8 text-center text-sm text-muted-foreground">
+      <p>No {label} loaded yet.</p>
+      <p>
+        Import from legacy MSSQL with{" "}
+        <code className="rounded bg-muted px-1 py-0.5 text-xs">
+          npm run db:migrate:prices
+        </code>
+        .
+      </p>
+    </div>
   );
 }
 
@@ -447,7 +460,7 @@ function PlantPanel({
               <TableHead>ID</TableHead>
               <TableHead>Effective</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="text-right">Rate</TableHead>
+              <TableHead className="text-right">Rate %</TableHead>
               <TableHead className="text-right">Min</TableHead>
               <TableHead className="text-right">Max</TableHead>
               {canEdit ? <TableHead className="w-12" /> : null}
@@ -470,7 +483,7 @@ function PlantPanel({
                     <PublishedBadge published={row.published} />
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
-                    {formatNumber(row.rate)}
+                    {formatRate(row.rate)}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
                     {formatCurrency(row.plantMinValue)}
@@ -498,7 +511,7 @@ function TerrorPanel({
   return (
     <ListCard
       title="Terrorism schedules"
-      description="Click a row to view terrorism tiers."
+      description="price_terrorism → rates → postcodes with state (legacy CAR_Terrorism*)."
     >
       {catalogue.terrorism.length === 0 ? (
         <EmptyCatalogue label="terrorism schedules" />
@@ -510,30 +523,54 @@ function TerrorPanel({
               <TableHead>Effective</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Tiers</TableHead>
+              <TableHead>States</TableHead>
+              <TableHead className="text-right">Postcodes</TableHead>
               {canEdit ? <TableHead className="w-12" /> : null}
             </TableRow>
           </TableHeader>
           <TableBody>
             {[...catalogue.terrorism]
               .sort((a, b) => b.dateStart.localeCompare(a.dateStart))
-              .map((schedule) => (
-                <ClickableScheduleRow
-                  key={schedule.priceTerrorismId}
-                  id={schedule.priceTerrorismId}
-                  href={pricesItemHref(slug, schedule.priceTerrorismId)}
-                  deleteHref={pricesDeleteHref(slug, schedule.priceTerrorismId)}
-                  canEdit={canEdit}
-                  deleteLabel={`Delete terrorism #${schedule.priceTerrorismId}`}
-                >
-                  <TableCell>{formatDate(schedule.dateStart)}</TableCell>
-                  <TableCell>
-                    <PublishedBadge published={schedule.published} />
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {schedule.tiers.length}
-                  </TableCell>
-                </ClickableScheduleRow>
-              ))}
+              .map((schedule) => {
+                const postcodeCount = schedule.tiers.reduce(
+                  (sum, tier) => sum + tier.postcodes.length,
+                  0,
+                );
+                const states = [
+                  ...new Set(
+                    schedule.tiers.flatMap((tier) =>
+                      tier.postcodes.map((p) => p.stateCode),
+                    ),
+                  ),
+                ].sort();
+                return (
+                  <ClickableScheduleRow
+                    key={schedule.priceTerrorismId}
+                    id={schedule.priceTerrorismId}
+                    href={pricesItemHref(slug, schedule.priceTerrorismId)}
+                    deleteHref={pricesDeleteHref(
+                      slug,
+                      schedule.priceTerrorismId,
+                    )}
+                    canEdit={canEdit}
+                    deleteLabel={`Delete terrorism #${schedule.priceTerrorismId}`}
+                  >
+                    <TableCell>{formatDate(schedule.dateStart)}</TableCell>
+                    <TableCell>
+                      <PublishedBadge published={schedule.published} />
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {schedule.tiers.length}
+                    </TableCell>
+                    <TableCell className="max-w-[12rem] truncate text-muted-foreground">
+                      {states.length ? states.join(", ") : "—"}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatNumber(postcodeCount)}
+                    </TableCell>
+                  </ClickableScheduleRow>
+                );
+              })}
           </TableBody>
         </Table>
       )}

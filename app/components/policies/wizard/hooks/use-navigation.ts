@@ -13,6 +13,7 @@ import {
 } from "~/lib/form-validation-ui";
 import { labelForPolicyFieldPath } from "~/lib/policy-field-labels";
 import {
+  carPolicySchema,
   wizardStepFields,
   wizardSteps,
   type CarPolicyFormValues,
@@ -20,10 +21,23 @@ import {
 import type { PremiumBreakdown } from "~/lib/db/types";
 import {
   PRICING_CONFIRMATION_STEP,
+  clearFocusSection,
+  peekFocusSection,
   readStoredMaxStep,
   readStoredStep,
   rememberWizardStep,
 } from "../step-memory";
+
+function findStepForFieldPath(path: string): number | null {
+  for (const [stepKey, fields] of Object.entries(wizardStepFields)) {
+    if (
+      fields.some((field) => path === field || path.startsWith(`${field}.`))
+    ) {
+      return Number(stepKey);
+    }
+  }
+  return null;
+}
 
 export function usePolicyWizardNavigation({
   policyId,
@@ -32,6 +46,7 @@ export function usePolicyWizardNavigation({
   freshSteps,
   fieldsLocked,
   policyPremium,
+  isDraft,
   navIds,
 }: {
   policyId: number;
@@ -40,6 +55,8 @@ export function usePolicyWizardNavigation({
   freshSteps: boolean;
   fieldsLocked: boolean;
   policyPremium: PremiumBreakdown | null | undefined;
+  /** Used to re-run post-submit focus after save revalidation. */
+  isDraft: boolean;
   navIds: string[];
 }) {
   // Step is owned by module memory + sessionStorage. Never persist the mount
@@ -115,14 +132,7 @@ export function usePolicyWizardNavigation({
   }
 
   function findStepForField(path: string): number | null {
-    for (const [stepKey, fields] of Object.entries(wizardStepFields)) {
-      if (
-        fields.some((field) => path === field || path.startsWith(`${field}.`))
-      ) {
-        return Number(stepKey);
-      }
-    }
-    return null;
+    return findStepForFieldPath(path);
   }
 
   function focusFirstIssue(fieldOrder?: string[]) {
@@ -161,9 +171,14 @@ export function usePolicyWizardNavigation({
     });
   }
 
-  function navigateToSection(sectionId: string) {
+  function navigateToSection(
+    sectionId: string,
+    { ensureOpen = true }: { ensureOpen?: boolean } = {},
+  ) {
     if (sectionId !== "policy-information") {
-      setOpenMap((prev) => ({ ...prev, [sectionId]: true }));
+      if (ensureOpen) {
+        setOpenMap((prev) => ({ ...prev, [sectionId]: true }));
+      }
       const stepIndex = stepIndexForSection(sectionId);
       if (stepIndex != null) {
         const nextMax = Math.max(maxStep, stepIndex);
@@ -174,6 +189,23 @@ export function usePolicyWizardNavigation({
     }
     setActiveSectionId(sectionId);
   }
+
+  // After submit redirect/revalidation, open and scroll to Premium once.
+  useEffect(() => {
+    const sectionId = peekFocusSection(policyId);
+    if (!sectionId) return;
+    const frame = requestAnimationFrame(() => {
+      navigateToSection(sectionId);
+      document.getElementById(sectionId)?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+      clearFocusSection(policyId);
+    });
+    return () => cancelAnimationFrame(frame);
+    // Re-run when draft clears after submit (same URL revalidation) or remount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional one-shot after submit
+  }, [policyId, isDraft]);
 
   function navigateToIssue(path: string) {
     const targetStep = findStepForField(path);
@@ -224,6 +256,79 @@ export function usePolicyWizardNavigation({
     }));
   }, [form.formState.errors, fieldOrder]);
 
+  // Live completeness for side-nav badges / Submit enablement (not only RHF errors).
+  const watchedValues = form.watch();
+  const {
+    sectionIssueCounts,
+    sectionFirstIssuePaths,
+    sectionIssuePaths,
+    isFormValid,
+  } = useMemo(() => {
+    const counts: Record<string, number> = {
+      "policy-information": 0,
+    };
+    const firstPaths: Record<string, string> = {};
+    const allPaths: Record<string, string[]> = {
+      "policy-information": [],
+    };
+    for (const section of POLICY_FORM_SECTIONS) {
+      counts[section.id] = 0;
+      allPaths[section.id] = [];
+    }
+
+    const parsed = carPolicySchema.safeParse(watchedValues);
+    if (parsed.success) {
+      return {
+        sectionIssueCounts: counts,
+        sectionFirstIssuePaths: firstPaths,
+        sectionIssuePaths: allPaths,
+        isFormValid: true,
+      };
+    }
+
+    const pathsBySection = new Map<string, Set<string>>();
+    for (const issue of parsed.error.issues) {
+      const path = issue.path.map(String).join(".");
+      if (!path) continue;
+      const stepIndex = findStepForFieldPath(path);
+      if (stepIndex == null) continue;
+      const sectionId = sectionIdForStep(stepIndex);
+      let set = pathsBySection.get(sectionId);
+      if (!set) {
+        set = new Set();
+        pathsBySection.set(sectionId, set);
+      }
+      set.add(path);
+    }
+    for (const [sectionId, paths] of pathsBySection) {
+      const ordered = orderFormIssues(
+        [...paths].map((path) => ({ path, message: "" })),
+        fieldOrder,
+      );
+      const orderedPaths = ordered.map((item) => item.path);
+      counts[sectionId] = paths.size;
+      allPaths[sectionId] = orderedPaths;
+      if (orderedPaths[0]) firstPaths[sectionId] = orderedPaths[0];
+    }
+    return {
+      sectionIssueCounts: counts,
+      sectionFirstIssuePaths: firstPaths,
+      sectionIssuePaths: allPaths,
+      isFormValid: false,
+    };
+  }, [watchedValues, fieldOrder]);
+
+  function navigateToSectionFirstIssue(sectionId: string) {
+    const path = sectionFirstIssuePaths[sectionId];
+    if (path) {
+      // Yellow attention border — do not trigger RHF errors (red invalid).
+      navigateToIssue(path);
+      return path;
+    }
+    navigateToSection(sectionId);
+    return null;
+  }
+
   return {
     step,
     maxStep,
@@ -235,10 +340,15 @@ export function usePolicyWizardNavigation({
     goToStep,
     navigateToSection,
     navigateToIssue,
+    navigateToSectionFirstIssue,
     firstIssuePath,
     findStepForField,
     focusFirstIssue,
     fieldOrder,
     invalidIssues,
+    sectionIssueCounts,
+    sectionFirstIssuePaths,
+    sectionIssuePaths,
+    isFormValid,
   };
 }

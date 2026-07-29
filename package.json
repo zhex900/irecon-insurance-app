@@ -13,6 +13,7 @@
     "db:seed:ar": "tsx --env-file=.env scripts/seed-ar-from-csv.mts",
     "db:seed:clients": "tsx --env-file=.env scripts/seed-clients-from-csv.mts",
     "db:export:prices": "tsx scripts/export-prices-from-mssql.mts",
+    "db:migrate:prices": "tsx --env-file=.env scripts/migrate-prices-from-mssql.mts",
     "db:seed:prices": "tsx --env-file=.env scripts/seed-prices.mts",
     "db:seed:faker": "tsx --env-file=.env scripts/seed-faker.mts",
     "db:reset": "supabase db reset --yes && npm run db:seed",
@@ -37,7 +38,7 @@
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,mjs,cjs}": [
-      "eslint --fix",
+      "eslint --fix --no-warn-ignored",
       "prettier --write"
     ],
     "*.{json,md,css,yml,yaml,html}": [
@@ -58,6 +59,7 @@
     "@supabase/supabase-js": "^2.110.8",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "date-fns": "^4.4.0",
     "drizzle-orm": "^0.45.2",
     "isbot": "^5.2.0",
     "lucide-react": "^1.25.0",

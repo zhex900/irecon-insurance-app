@@ -13,25 +13,35 @@ import { useFormContext } from "react-hook-form";
 import { cn } from "~/lib/utils";
 
 const JUST_SAVED_MS = 2500;
+/** Keep Taken-gate / nav attention visible long enough to find the field. */
+const ATTENTION_MS = 12_000;
 
 type SaveHighlightContextValue = {
   isJustSaved: (name: string | undefined) => boolean;
   isDirtyPath: (name: string | undefined) => boolean;
+  isAttentionPath: (name: string | undefined) => boolean;
   getDirtyPaths: () => string[];
   /** Optimistic: green flash + clear amber immediately. */
   commitSavedPaths: (paths: string[]) => void;
   /** Roll back optimistic commit if the network save fails. */
   rollbackSavedPaths: (paths: string[]) => void;
   noteDirtyPath: (name: string | undefined) => void;
+  /** Yellow border focus cue (e.g. side-nav incomplete counter). */
+  markAttentionPath: (name: string | undefined) => void;
+  /** Yellow border for multiple fields at once (section invalid counter). */
+  markAttentionPaths: (paths: string[]) => void;
 };
 
 const SaveHighlightContext = createContext<SaveHighlightContextValue>({
   isJustSaved: () => false,
   isDirtyPath: () => false,
+  isAttentionPath: () => false,
   getDirtyPaths: () => [],
   commitSavedPaths: () => {},
   rollbackSavedPaths: () => {},
   noteDirtyPath: () => {},
+  markAttentionPath: () => {},
+  markAttentionPaths: () => {},
 });
 
 /** Flatten RHF dirtyFields into dot-paths like "excesses.excessSection1A". */
@@ -63,11 +73,15 @@ export function JustSavedProvider({ children }: { children: ReactNode }) {
     () => new Set(),
   );
   const [dirtyPaths, setDirtyPaths] = useState<Set<string>>(() => new Set());
+  const [attentionPaths, setAttentionPaths] = useState<Set<string>>(
+    () => new Set(),
+  );
   const dirtyPathsRef = useRef(dirtyPaths);
   useEffect(() => {
     dirtyPathsRef.current = dirtyPaths;
   });
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const attentionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const subscription = form.watch((_values, info) => {
@@ -116,6 +130,25 @@ export function JustSavedProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const markAttentionPaths = useCallback((paths: string[]) => {
+    const next = paths.filter(Boolean);
+    if (next.length === 0) return;
+    if (attentionTimerRef.current) clearTimeout(attentionTimerRef.current);
+    setAttentionPaths(new Set(next));
+    attentionTimerRef.current = setTimeout(() => {
+      setAttentionPaths(new Set());
+      attentionTimerRef.current = null;
+    }, ATTENTION_MS);
+  }, []);
+
+  const markAttentionPath = useCallback(
+    (name: string | undefined) => {
+      if (!name) return;
+      markAttentionPaths([name]);
+    },
+    [markAttentionPaths],
+  );
+
   const getDirtyPaths = useCallback(() => [...dirtyPathsRef.current], []);
 
   const isJustSaved = useCallback(
@@ -130,28 +163,41 @@ export function JustSavedProvider({ children }: { children: ReactNode }) {
     [dirtyPaths],
   );
 
+  const isAttentionPath = useCallback(
+    (name: string | undefined) =>
+      name ? pathMatches(attentionPaths, name) : false,
+    [attentionPaths],
+  );
+
   const value = useMemo(
     () => ({
       isJustSaved,
       isDirtyPath,
+      isAttentionPath,
       getDirtyPaths,
       commitSavedPaths,
       rollbackSavedPaths,
       noteDirtyPath,
+      markAttentionPath,
+      markAttentionPaths,
     }),
     [
       isJustSaved,
       isDirtyPath,
+      isAttentionPath,
       getDirtyPaths,
       commitSavedPaths,
       rollbackSavedPaths,
       noteDirtyPath,
+      markAttentionPath,
+      markAttentionPaths,
     ],
   );
 
   useEffect(() => {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
+      if (attentionTimerRef.current) clearTimeout(attentionTimerRef.current);
     };
   }, []);
 
@@ -167,18 +213,26 @@ export function useJustSaved() {
 }
 
 export function useFieldSaveState(name: string | undefined) {
-  const { isJustSaved, isDirtyPath } = useContext(SaveHighlightContext);
+  const { isJustSaved, isDirtyPath, isAttentionPath } =
+    useContext(SaveHighlightContext);
   const saved = isJustSaved(name);
   const dirty = isDirtyPath(name);
+  const attention = isAttentionPath(name);
 
   return {
     saved,
     dirty,
+    attention,
     className: cn(
       saved &&
         "border-success ring-2 ring-success/25 transition-[border-color,box-shadow] duration-300",
+      // Yellow attention cue — overrides red invalid while focused from nav.
+      attention &&
+        !saved &&
+        "border-warning ring-2 ring-warning/25 transition-[border-color,box-shadow] duration-300 aria-invalid:border-warning aria-invalid:ring-warning/25 dark:aria-invalid:border-warning dark:aria-invalid:ring-warning/25",
       dirty &&
         !saved &&
+        !attention &&
         "border-warning ring-2 ring-warning/25 transition-[border-color,box-shadow] duration-300",
     ),
   };

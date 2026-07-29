@@ -152,9 +152,8 @@ export async function action({ request, params }: Route.ActionArgs) {
     return { ok: false as const, error: "Unknown action" };
   }
 
-  const payload = parseScheduleFormData(kind, formData);
-
   try {
+    const payload = parseScheduleFormData(kind, formData);
     switch (kind) {
       case "car":
         await updateCarSchedule(id, payload as CarScheduleInput);

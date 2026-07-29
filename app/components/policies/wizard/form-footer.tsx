@@ -1,4 +1,5 @@
-import { Alert, AlertDescription } from "~/components/ui/alert";
+import { useEffect, useRef } from "react";
+import { toast } from "sonner";
 import { Button } from "~/components/ui/button";
 import { LoadingButton } from "~/components/ui/loading-button";
 import type { PolicyWizardActionData } from "./hooks/use-premium-calc";
@@ -8,10 +9,9 @@ export type WizardFormFooterProps = {
   isFormTerminal: boolean;
   actionData: PolicyWizardActionData | undefined;
   onCancel: () => void;
-  onSave: () => void;
   onSubmit: () => void;
-  manualSaving: boolean;
   submitBusy: boolean;
+  submitDisabled?: boolean;
 };
 
 export function WizardFormFooter({
@@ -19,67 +19,57 @@ export function WizardFormFooter({
   isFormTerminal,
   actionData,
   onCancel,
-  onSave,
   onSubmit,
-  manualSaving,
   submitBusy,
+  submitDisabled = false,
 }: WizardFormFooterProps) {
+  const lastToastKeyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!actionData) return;
+
+    if (actionData.formError) {
+      const key = `formError:${actionData.formError}`;
+      if (lastToastKeyRef.current !== key) {
+        lastToastKeyRef.current = key;
+        toast.error(actionData.formError);
+      }
+      return;
+    }
+
+    const fieldErrors = actionData.errors
+      ? Object.entries(actionData.errors).flatMap(([field, messages]) =>
+          (messages ?? []).map((msg) => `${field}: ${msg}`),
+        )
+      : [];
+    if (fieldErrors.length === 0) return;
+
+    const key = `errors:${fieldErrors.join("|")}`;
+    if (lastToastKeyRef.current === key) return;
+    lastToastKeyRef.current = key;
+    toast.error("Please fix the following errors", {
+      description: fieldErrors.slice(0, 5).join(" · "),
+    });
+  }, [actionData]);
+
   return (
-    <>
-      {actionData?.formError ? (
-        <Alert variant="destructive">
-          <AlertDescription>{actionData.formError}</AlertDescription>
-        </Alert>
+    <div className="flex flex-wrap items-center gap-3">
+      <Button type="button" variant="secondary" onClick={onCancel}>
+        {readOnly ? "Back to client" : "Cancel"}
+      </Button>
+
+      {!readOnly && !isFormTerminal ? (
+        <LoadingButton
+          type="button"
+          className="ml-auto"
+          onClick={onSubmit}
+          loading={submitBusy}
+          loadingLabel="Submitting…"
+          disabled={submitDisabled}
+        >
+          Submit
+        </LoadingButton>
       ) : null}
-
-      {actionData?.errors &&
-      Object.values(actionData.errors).some(
-        (messages) => (messages?.length ?? 0) > 0,
-      ) ? (
-        <Alert variant="destructive">
-          <AlertDescription>
-            <p className="font-medium">Please fix the following errors:</p>
-            <ul className="mt-2 list-disc pl-5">
-              {Object.entries(actionData.errors).flatMap(([field, messages]) =>
-                (messages ?? []).map((msg) => (
-                  <li key={`${field}-${msg}`}>
-                    {field}: {msg}
-                  </li>
-                )),
-              )}
-            </ul>
-          </AlertDescription>
-        </Alert>
-      ) : null}
-
-      <div className="flex flex-wrap items-center gap-3">
-        <Button type="button" variant="secondary" onClick={onCancel}>
-          {readOnly ? "Back to client" : "Cancel"}
-        </Button>
-
-        {!readOnly && !isFormTerminal ? (
-          <>
-            <LoadingButton
-              type="button"
-              className="ml-auto"
-              onClick={onSave}
-              loading={manualSaving}
-              loadingLabel="Saving…"
-            >
-              Save
-            </LoadingButton>
-            <LoadingButton
-              type="button"
-              variant="secondary"
-              onClick={onSubmit}
-              loading={submitBusy}
-              loadingLabel="Submitting…"
-            >
-              Submit
-            </LoadingButton>
-          </>
-        ) : null}
-      </div>
-    </>
+    </div>
   );
 }

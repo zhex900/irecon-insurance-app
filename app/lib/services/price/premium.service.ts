@@ -1,5 +1,5 @@
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
-import type { PolicyNote } from "~/lib/db/types";
+import { POLICY_MESSAGE_NOTE_TYPE_ID, type PolicyNote } from "~/lib/db/types";
 import { calculateCarPremium } from "~/server/pricing/car-calculator";
 import { resolveBrokerFeeTotal } from "~/server/pricing/rate-resolver";
 import { getReferenceData } from "~/lib/services/reference.service";
@@ -60,7 +60,7 @@ export function createMessageNote(
   return {
     policyNoteId: Date.now(),
     policyId,
-    policyNoteTypeId: 3,
+    policyNoteTypeId: POLICY_MESSAGE_NOTE_TYPE_ID,
     description: description.trim(),
     createdWhen: new Date().toISOString(),
     createdBy,

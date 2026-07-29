@@ -4,9 +4,48 @@ import {
   priceTerrorism,
   priceTerrorismPostcode,
   priceTerrorismRate,
+  state,
 } from "~/lib/db/price-schema";
 import { POLICY_TYPE_CAR, requireDate, strNum } from "./helpers";
 import type { TerrorScheduleInput } from "./types";
+
+type TerrorTier = TerrorScheduleInput["tiers"][number];
+
+async function loadStateIdByCode(dbOrTx: {
+  select: ReturnType<typeof getDb>["select"];
+}) {
+  const rows = await dbOrTx.select().from(state);
+  return new Map(rows.map((row) => [row.code.toUpperCase(), row.stateId]));
+}
+
+async function insertTierPostcodes(
+  dbOrTx: { insert: ReturnType<typeof getDb>["insert"] },
+  priceTerrorismRateId: number,
+  tier: TerrorTier,
+  stateIdByCode: Map<string, number>,
+) {
+  const seen = new Set<string>();
+  for (const entry of tier.postcodes ?? []) {
+    const postcode = String(entry.postcode ?? "").trim();
+    const stateCode = String(entry.stateCode ?? "")
+      .trim()
+      .toUpperCase();
+    if (!postcode || !stateCode) continue;
+    if (seen.has(postcode)) continue;
+    const stateId = stateIdByCode.get(stateCode);
+    if (stateId == null) {
+      throw new Error(
+        `Unknown state "${stateCode}" for postcode ${postcode} (tier ${tier.tier})`,
+      );
+    }
+    seen.add(postcode);
+    await dbOrTx.insert(priceTerrorismPostcode).values({
+      priceTerrorismRateId,
+      postcode,
+      stateId,
+    });
+  }
+}
 
 export async function createTerrorSchedule(
   input: TerrorScheduleInput,
@@ -17,6 +56,7 @@ export async function createTerrorSchedule(
   if (!input.tiers.length) throw new Error("Add at least one tier");
 
   return db.transaction(async (tx) => {
+    const stateIdByCode = await loadStateIdByCode(tx);
     const [header] = await tx
       .insert(priceTerrorism)
       .values({
@@ -28,11 +68,20 @@ export async function createTerrorSchedule(
       })
       .returning();
     for (const tier of input.tiers) {
-      await tx.insert(priceTerrorismRate).values({
-        priceTerrorismId: header.priceTerrorismId,
-        tier: tier.tier.trim(),
-        rate: strNum(tier.rate),
-      });
+      const [rateRow] = await tx
+        .insert(priceTerrorismRate)
+        .values({
+          priceTerrorismId: header.priceTerrorismId,
+          tier: tier.tier.trim(),
+          rate: strNum(tier.rate),
+        })
+        .returning();
+      await insertTierPostcodes(
+        tx,
+        rateRow.priceTerrorismRateId,
+        tier,
+        stateIdByCode,
+      );
     }
     return header.priceTerrorismId;
   });
@@ -47,6 +96,7 @@ export async function updateTerrorSchedule(
   if (!input.tiers.length) throw new Error("Add at least one tier");
 
   await db.transaction(async (tx) => {
+    const stateIdByCode = await loadStateIdByCode(tx);
     const [existing] = await tx
       .select()
       .from(priceTerrorism)
@@ -78,12 +128,22 @@ export async function updateTerrorSchedule(
         .delete(priceTerrorismRate)
         .where(eq(priceTerrorismRate.priceTerrorismId, priceTerrorismId));
     }
+
     for (const tier of input.tiers) {
-      await tx.insert(priceTerrorismRate).values({
-        priceTerrorismId,
-        tier: tier.tier.trim(),
-        rate: strNum(tier.rate),
-      });
+      const [rateRow] = await tx
+        .insert(priceTerrorismRate)
+        .values({
+          priceTerrorismId,
+          tier: tier.tier.trim(),
+          rate: strNum(tier.rate),
+        })
+        .returning();
+      await insertTierPostcodes(
+        tx,
+        rateRow.priceTerrorismRateId,
+        tier,
+        stateIdByCode,
+      );
     }
   });
 }

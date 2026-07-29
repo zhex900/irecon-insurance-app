@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
+import { toast } from "sonner";
 import type { Policy, PolicyDocument, PremiumBreakdown } from "~/lib/db/types";
 import { ensureReviewDocumentsClient } from "~/lib/services/policy/documents/documents.client";
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
@@ -21,7 +22,6 @@ export function usePolicyDocuments({
     policy.documents ?? [],
   );
   const [isGeneratingDocuments, setIsGeneratingDocuments] = useState(false);
-  const [showDocsGeneratedAlert, setShowDocsGeneratedAlert] = useState(false);
   const documentsRef = useRef(documents);
   useEffect(() => {
     documentsRef.current = documents;
@@ -33,15 +33,6 @@ export function usePolicyDocuments({
     lastPolicyIdRef.current = policy.policyId;
     setDocuments(policy.documents ?? []);
   }, [policy.policyId, policy.documents]);
-
-  // Auto-dismiss the “documents generated” toast.
-  useEffect(() => {
-    if (!showDocsGeneratedAlert) return;
-    const timer = window.setTimeout(() => {
-      setShowDocsGeneratedAlert(false);
-    }, 4000);
-    return () => window.clearTimeout(timer);
-  }, [showDocsGeneratedAlert]);
 
   async function regenerateDocumentsIfNeeded(options?: {
     cancelled?: () => boolean;
@@ -90,7 +81,10 @@ export function usePolicyDocuments({
       if (options?.cancelled?.()) return;
       setDocuments(next);
       if (next !== previous) {
-        setShowDocsGeneratedAlert(true);
+        toast.success("Documents generated", {
+          description:
+            "Policy PDFs are ready. Open or download them from Premium Summary.",
+        });
       }
     } catch {
       // Keep existing docs if persistence fails.
@@ -102,7 +96,6 @@ export function usePolicyDocuments({
   return {
     documents,
     isGeneratingDocuments,
-    showDocsGeneratedAlert,
     regenerateDocumentsIfNeeded,
   };
 }

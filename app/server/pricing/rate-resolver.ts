@@ -225,8 +225,9 @@ export async function resolveTerrorism(
     }
   }
 
-  // Fallback tier C when postcode not listed (matches previous JSON resolver behaviour).
-  return { rate: 0.01, tier: `${stateCode}-default` };
+  // Legacy CARCalculator: missing postcode/state → no rate + referral.
+  // Do not invent a fallback (Tier C is a DB rate, not a hardcode).
+  return null;
 }
 
 export async function resolvePlantRate(
@@ -256,7 +257,11 @@ export async function resolvePlantRate(
   };
 }
 
-export async function resolveBrokerFeeTotal(date: string): Promise<number> {
+export async function resolveBrokerFeeLines(
+  date: string,
+): Promise<
+  Array<{ name: string; sortOrder: number; fee: number; feeGst: number }>
+> {
   const db = getDb();
   const [sched] = await db
     .select()
@@ -270,13 +275,25 @@ export async function resolveBrokerFeeTotal(date: string): Promise<number> {
     )
     .orderBy(desc(brokerFeeSchedule.dateStart))
     .limit(1);
-  if (!sched) return 0;
+  if (!sched) return [];
 
   const lines = await db
     .select()
     .from(brokerFeeScheduleLine)
     .where(
       eq(brokerFeeScheduleLine.brokerFeeScheduleId, sched.brokerFeeScheduleId),
-    );
-  return lines.reduce((sum, line) => sum + num(line.fee) + num(line.feeGst), 0);
+    )
+    .orderBy(asc(brokerFeeScheduleLine.sortOrder));
+
+  return lines.map((line) => ({
+    name: line.name.includes("GST") ? line.name : `${line.name} (includes GST)`,
+    sortOrder: line.sortOrder,
+    fee: num(line.fee),
+    feeGst: num(line.feeGst),
+  }));
+}
+
+export async function resolveBrokerFeeTotal(date: string): Promise<number> {
+  const lines = await resolveBrokerFeeLines(date);
+  return lines.reduce((sum, line) => sum + line.fee + line.feeGst, 0);
 }

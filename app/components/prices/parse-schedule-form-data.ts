@@ -1,4 +1,5 @@
 import type { PriceCatalogueKind } from "~/lib/services/price";
+import { percentToRate } from "~/lib/utils";
 
 /** Parse schedule update payload from the UI form fields. */
 export function parseScheduleFormData(
@@ -20,17 +21,22 @@ export function parseScheduleFormData(
           coverTypeId: Number(formData.get(`band_${i}_coverTypeId`)),
           turnoverMin: Number(formData.get(`band_${i}_turnoverMin`)),
           turnoverMax: maxRaw === "" ? null : Number(maxRaw),
-          contractWorksRate: Number(
-            formData.get(`band_${i}_contractWorksRate`),
+          // UI edits percent; storage is decimal fraction.
+          contractWorksRate: percentToRate(
+            Number(formData.get(`band_${i}_contractWorksRatePercent`)),
           ),
           contractWorksMinPremium: Number(
             formData.get(`band_${i}_contractWorksMinPremium`),
           ),
-          liability10mRate: Number(formData.get(`band_${i}_liability10mRate`)),
+          liability10mRate: percentToRate(
+            Number(formData.get(`band_${i}_liability10mRatePercent`)),
+          ),
           liability10mMinPremium: Number(
             formData.get(`band_${i}_liability10mMinPremium`),
           ),
-          liability20mRate: Number(formData.get(`band_${i}_liability20mRate`)),
+          liability20mRate: percentToRate(
+            Number(formData.get(`band_${i}_liability20mRatePercent`)),
+          ),
           liability20mMinPremium: Number(
             formData.get(`band_${i}_liability20mMinPremium`),
           ),
@@ -44,7 +50,7 @@ export function parseScheduleFormData(
       for (let i = 0; i < rateCount; i++) {
         rates.push({
           stateCode: String(formData.get(`rate_${i}_stateCode`) ?? ""),
-          rate: Number(formData.get(`rate_${i}_rate`)),
+          rate: percentToRate(Number(formData.get(`rate_${i}_ratePercent`))),
         });
       }
       return { dateStart, published, rates };
@@ -55,8 +61,12 @@ export function parseScheduleFormData(
       for (let i = 0; i < rateCount; i++) {
         rates.push({
           stateCode: String(formData.get(`rate_${i}_stateCode`) ?? ""),
-          constructionRate: Number(formData.get(`rate_${i}_constructionRate`)),
-          plantRate: Number(formData.get(`rate_${i}_plantRate`)),
+          constructionRate: percentToRate(
+            Number(formData.get(`rate_${i}_constructionRatePercent`)),
+          ),
+          plantRate: percentToRate(
+            Number(formData.get(`rate_${i}_plantRatePercent`)),
+          ),
         });
       }
       return { dateStart, published, rates };
@@ -65,17 +75,49 @@ export function parseScheduleFormData(
       return {
         dateStart,
         published,
-        rate: Number(formData.get("rate")),
+        rate: percentToRate(Number(formData.get("ratePercent"))),
         plantMinValue: Number(formData.get("plantMinValue")),
         plantMaxValue: Number(formData.get("plantMaxValue")),
       };
     case "terror": {
       const tierCount = Number(formData.get("tierCount") ?? 0);
-      const tiers = [];
+      const tiers: Array<{
+        tier: string;
+        rate: number;
+        postcodes: Array<{ postcode: string; stateCode: string }>;
+      }> = [];
       for (let i = 0; i < tierCount; i++) {
         tiers.push({
           tier: String(formData.get(`tier_${i}_tier`) ?? ""),
-          rate: Number(formData.get(`tier_${i}_rate`)),
+          // UI edits percent; storage is decimal fraction.
+          rate: percentToRate(Number(formData.get(`tier_${i}_ratePercent`))),
+          postcodes: [],
+        });
+      }
+
+      // One row per price_terrorism_postcode: postcode,stateCode,tier
+      const raw = String(formData.get("postcodesCsv") ?? "");
+      for (const line of raw.split(/\r?\n/)) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith("#")) continue;
+        const parts = trimmed.split(/[,\t]/).map((p) => p.trim());
+        if (parts.length < 3) {
+          throw new Error(
+            `Invalid postcode row "${trimmed}". Use postcode,state,tier`,
+          );
+        }
+        const [postcode, stateCode, tierName] = parts;
+        const tier = tiers.find(
+          (t) => t.tier.trim().toUpperCase() === tierName.toUpperCase(),
+        );
+        if (!tier) {
+          throw new Error(
+            `Postcode ${postcode} references unknown tier "${tierName}"`,
+          );
+        }
+        tier.postcodes.push({
+          postcode,
+          stateCode: stateCode.toUpperCase(),
         });
       }
       return { dateStart, published, tiers };

@@ -46,22 +46,10 @@ export const referenceData = {
     { accountManagerId: 3, fullName: "Sam Patel", abbrev: "SP3" },
     { accountManagerId: 4, fullName: "Casey Nguyen", abbrev: "CN4" },
   ],
-  /** Populated from DB in getReferenceDataAsync. */
+  /** Filled from DB in getReferenceDataAsync. */
   wholesaleBrokers: [],
-  feeNames: [
-    {
-      name: "Insurer Admin (includes GST)",
-      sortOrder: 1,
-      fee: 150,
-      feeGst: 15,
-    },
-    {
-      name: "IAA Admin Fee (includes GST)",
-      sortOrder: 2,
-      fee: 75,
-      feeGst: 7.5,
-    },
-  ],
+  /** Filled from broker_fee_schedule in getReferenceDataAsync. */
+  feeNames: [],
   defaultSubLimits: {
     annual: {
       removalOfDebris: "10% of Contract Value",

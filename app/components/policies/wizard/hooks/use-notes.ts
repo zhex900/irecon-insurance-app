@@ -24,9 +24,9 @@ export function usePolicyNotes({
   const [noteAuthors, setNoteAuthors] = useState<Record<string, NoteAuthor>>(
     initialAuthors ?? {},
   );
-  const [addNoteError, setAddNoteError] = useState<string | null>(null);
-  const [isAddingNote, setIsAddingNote] = useState(false);
-  const addNoteSawBusyRef = useRef(false);
+  const [noteError, setNoteError] = useState<string | null>(null);
+  const [isSavingNote, setIsSavingNote] = useState(false);
+  const saveNoteSawBusyRef = useRef(false);
   const noteFetcherDataRef = useRef(fetcher.data);
 
   const lastPolicyNotesRef = useRef(policy.notes);
@@ -52,23 +52,23 @@ export function usePolicyNotes({
   }, [fetcher.data?.notes, fetcher.data?.noteAuthors]);
 
   useEffect(() => {
-    if (!isAddingNote) {
-      addNoteSawBusyRef.current = false;
+    if (!isSavingNote) {
+      saveNoteSawBusyRef.current = false;
       return;
     }
     if (fetcher.state !== "idle") {
-      addNoteSawBusyRef.current = true;
+      saveNoteSawBusyRef.current = true;
       return;
     }
-    if (!addNoteSawBusyRef.current) return;
-    addNoteSawBusyRef.current = false;
+    if (!saveNoteSawBusyRef.current) return;
+    saveNoteSawBusyRef.current = false;
     noteFetcherDataRef.current = fetcher.data;
-    setIsAddingNote(false);
+    setIsSavingNote(false);
     if (noteFetcherDataRef.current?.formError) {
-      setAddNoteError(noteFetcherDataRef.current.formError);
+      setNoteError(noteFetcherDataRef.current.formError);
       return;
     }
-    setAddNoteError(null);
+    setNoteError(null);
     if (
       noteFetcherDataRef.current &&
       "message" in noteFetcherDataRef.current &&
@@ -76,13 +76,26 @@ export function usePolicyNotes({
     ) {
       toast.success(noteFetcherDataRef.current.message);
     }
-  }, [fetcher.state, fetcher.data, isAddingNote]);
+  }, [fetcher.state, fetcher.data, isSavingNote]);
 
   function addNote(description: string) {
-    setAddNoteError(null);
-    setIsAddingNote(true);
+    setNoteError(null);
+    setIsSavingNote(true);
     const body = new FormData();
     body.set("intent", "add-note");
+    body.set("description", description);
+    fetcher.submit(body, {
+      method: "post",
+      action: `/policies/${policy.policyId}`,
+    });
+  }
+
+  function updateNote(policyNoteId: number, description: string) {
+    setNoteError(null);
+    setIsSavingNote(true);
+    const body = new FormData();
+    body.set("intent", "update-note");
+    body.set("policyNoteId", String(policyNoteId));
     body.set("description", description);
     fetcher.submit(body, {
       method: "post",
@@ -94,7 +107,8 @@ export function usePolicyNotes({
     notes,
     noteAuthors,
     addNote,
-    addNoteError,
-    isAddingNote,
+    updateNote,
+    noteError,
+    isSavingNote,
   };
 }

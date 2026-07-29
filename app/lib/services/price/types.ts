@@ -43,10 +43,19 @@ export type PlantRateInput = {
   plantMaxValue: number;
 };
 
+export type TerrorPostcodeInput = {
+  postcode: string;
+  stateCode: string;
+};
+
 export type TerrorScheduleInput = {
   dateStart: string;
   published: boolean;
-  tiers: Array<{ tier: string; rate: number }>;
+  tiers: Array<{
+    tier: string;
+    rate: number;
+    postcodes: TerrorPostcodeInput[];
+  }>;
 };
 
 export type FeeScheduleInput = {
@@ -111,9 +120,15 @@ export type PriceCatalogueSnapshot = {
     dateStart: string;
     published: boolean;
     tiers: Array<{
+      priceTerrorismRateId: number;
       tier: string;
       rate: number;
-      postcodeCount: number;
+      postcodes: Array<{
+        postcode: string;
+        stateId: number;
+        stateCode: string;
+        stateName: string;
+      }>;
     }>;
   }>;
   brokerFees: Array<{

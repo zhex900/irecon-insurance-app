@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { Form, useNavigation } from "react-router";
 import { XIcon } from "lucide-react";
@@ -15,7 +15,18 @@ import {
   TableRow,
 } from "~/components/ui/table";
 import type { PriceCatalogueKind } from "~/lib/services/price";
-import { formatCurrency, formatDate, formatNumber } from "~/lib/utils";
+import {
+  cn,
+  formatCurrency,
+  formatDate,
+  formatNumber,
+  formatRate,
+  rateToPercent,
+} from "~/lib/utils";
+
+/** Percent step in the UI (storage remains a decimal fraction). */
+const RATE_STEP = "0.0001";
+const RATE_FRACTION_DIGITS = 4;
 
 export type CarScheduleView = {
   kind: "car";
@@ -68,7 +79,17 @@ export type TerrorScheduleView = {
   kind: "terror";
   dateStart: string;
   published: boolean;
-  tiers: Array<{ tier: string; rate: number; postcodeCount: number }>;
+  tiers: Array<{
+    priceTerrorismRateId: number;
+    tier: string;
+    rate: number;
+    postcodes: Array<{
+      postcode: string;
+      stateId: number;
+      stateCode: string;
+      stateName: string;
+    }>;
+  }>;
 };
 
 export type FeesScheduleView = {
@@ -240,19 +261,56 @@ function NumInput({
   name,
   defaultValue,
   step = "any",
+  fractionDigits,
+  suffix,
 }: {
   name: string;
   defaultValue: number | "";
   step?: string;
+  /** When set, formats the default for display/edit (e.g. rates → 4 d.p.). */
+  fractionDigits?: number;
+  /** Optional trailing unit (e.g. "%") — display only, not submitted. */
+  suffix?: string;
 }) {
-  return (
+  const display =
+    defaultValue === ""
+      ? ""
+      : fractionDigits != null
+        ? Number(defaultValue).toFixed(fractionDigits)
+        : String(defaultValue);
+
+  const input = (
     <Input
       name={name}
       type="number"
       step={step}
-      defaultValue={defaultValue === "" ? "" : String(defaultValue)}
-      className="h-7 min-w-20 text-right tabular-nums"
+      defaultValue={display}
+      className={cn("h-7 min-w-20 text-right tabular-nums", suffix && "pr-6")}
       required
+    />
+  );
+
+  if (!suffix) return input;
+
+  return (
+    <div className="relative">
+      {input}
+      <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-xs text-muted-foreground">
+        {suffix}
+      </span>
+    </div>
+  );
+}
+
+/** Rate editor: value is percent (storage remains a decimal fraction). */
+function RatePercentInput({ name, rate }: { name: string; rate: number }) {
+  return (
+    <NumInput
+      name={name}
+      defaultValue={rateToPercent(rate)}
+      step={RATE_STEP}
+      fractionDigits={RATE_FRACTION_DIGITS}
+      suffix="%"
     />
   );
 }
@@ -435,11 +493,11 @@ function CarBody({
             <TableHead>Cover</TableHead>
             <TableHead>Turnover min</TableHead>
             <TableHead>Turnover max</TableHead>
-            <TableHead className="text-right">CW rate</TableHead>
+            <TableHead className="text-right">CW rate %</TableHead>
             <TableHead className="text-right">CW min</TableHead>
-            <TableHead className="text-right">$10m rate</TableHead>
+            <TableHead className="text-right">$10m rate %</TableHead>
             <TableHead className="text-right">$10m min</TableHead>
-            <TableHead className="text-right">$20m rate</TableHead>
+            <TableHead className="text-right">$20m rate %</TableHead>
             <TableHead className="text-right">$20m min</TableHead>
           </TableRow>
         </TableHeader>
@@ -477,10 +535,9 @@ function CarBody({
                     />
                   </TableCell>
                   <TableCell>
-                    <NumInput
-                      name={`band_${index}_contractWorksRate`}
-                      defaultValue={band.contractWorksRate}
-                      step="any"
+                    <RatePercentInput
+                      name={`band_${index}_contractWorksRatePercent`}
+                      rate={band.contractWorksRate}
                     />
                   </TableCell>
                   <TableCell>
@@ -490,10 +547,9 @@ function CarBody({
                     />
                   </TableCell>
                   <TableCell>
-                    <NumInput
-                      name={`band_${index}_liability10mRate`}
-                      defaultValue={band.liability10mRate}
-                      step="any"
+                    <RatePercentInput
+                      name={`band_${index}_liability10mRatePercent`}
+                      rate={band.liability10mRate}
                     />
                   </TableCell>
                   <TableCell>
@@ -503,10 +559,9 @@ function CarBody({
                     />
                   </TableCell>
                   <TableCell>
-                    <NumInput
-                      name={`band_${index}_liability20mRate`}
-                      defaultValue={band.liability20mRate}
-                      step="any"
+                    <RatePercentInput
+                      name={`band_${index}_liability20mRatePercent`}
+                      rate={band.liability20mRate}
                     />
                   </TableCell>
                   <TableCell>
@@ -527,19 +582,19 @@ function CarBody({
                       : formatCurrency(band.turnoverMax)}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
-                    {formatNumber(band.contractWorksRate)}
+                    {formatRate(band.contractWorksRate)}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
                     {formatCurrency(band.contractWorksMinPremium)}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
-                    {formatNumber(band.liability10mRate)}
+                    {formatRate(band.liability10mRate)}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
                     {formatCurrency(band.liability10mMinPremium)}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
-                    {formatNumber(band.liability20mRate)}
+                    {formatRate(band.liability20mRate)}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
                     {formatCurrency(band.liability20mMinPremium)}
@@ -568,7 +623,7 @@ function StampBody({
         <TableHeader>
           <TableRow>
             <TableHead>State</TableHead>
-            <TableHead className="text-right">Rate</TableHead>
+            <TableHead className="text-right">Rate %</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -592,15 +647,12 @@ function StampBody({
               </TableCell>
               <TableCell className="text-right">
                 {editing ? (
-                  <NumInput
-                    name={`rate_${index}_rate`}
-                    defaultValue={rate.rate}
-                    step="any"
+                  <RatePercentInput
+                    name={`rate_${index}_ratePercent`}
+                    rate={rate.rate}
                   />
                 ) : (
-                  <span className="tabular-nums">
-                    {formatNumber(rate.rate)}
-                  </span>
+                  <span className="tabular-nums">{formatRate(rate.rate)}</span>
                 )}
               </TableCell>
             </TableRow>
@@ -625,8 +677,8 @@ function EslBody({
         <TableHeader>
           <TableRow>
             <TableHead>State</TableHead>
-            <TableHead className="text-right">Construction</TableHead>
-            <TableHead className="text-right">Plant</TableHead>
+            <TableHead className="text-right">Construction %</TableHead>
+            <TableHead className="text-right">Plant %</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -651,27 +703,25 @@ function EslBody({
               {editing ? (
                 <>
                   <TableCell className="text-right">
-                    <NumInput
-                      name={`rate_${index}_constructionRate`}
-                      defaultValue={rate.constructionRate}
-                      step="any"
+                    <RatePercentInput
+                      name={`rate_${index}_constructionRatePercent`}
+                      rate={rate.constructionRate}
                     />
                   </TableCell>
                   <TableCell className="text-right">
-                    <NumInput
-                      name={`rate_${index}_plantRate`}
-                      defaultValue={rate.plantRate}
-                      step="any"
+                    <RatePercentInput
+                      name={`rate_${index}_plantRatePercent`}
+                      rate={rate.plantRate}
                     />
                   </TableCell>
                 </>
               ) : (
                 <>
                   <TableCell className="text-right tabular-nums">
-                    {formatNumber(rate.constructionRate)}
+                    {formatRate(rate.constructionRate)}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
-                    {formatNumber(rate.plantRate)}
+                    {formatRate(rate.plantRate)}
                   </TableCell>
                 </>
               )}
@@ -694,8 +744,8 @@ function PlantBody({
     return (
       <div className="grid gap-3 sm:grid-cols-3">
         <Field>
-          <FieldLabel htmlFor="rate">Rate</FieldLabel>
-          <NumInput name="rate" defaultValue={schedule.rate} step="any" />
+          <FieldLabel htmlFor="ratePercent">Rate %</FieldLabel>
+          <RatePercentInput name="ratePercent" rate={schedule.rate} />
         </Field>
         <Field>
           <FieldLabel htmlFor="plantMinValue">Min value</FieldLabel>
@@ -718,10 +768,8 @@ function PlantBody({
   return (
     <div className="grid gap-3 sm:grid-cols-3">
       <div>
-        <p className="text-muted-foreground">Rate</p>
-        <p className="font-medium tabular-nums">
-          {formatNumber(schedule.rate)}
-        </p>
+        <p className="text-muted-foreground">Rate %</p>
+        <p className="font-medium tabular-nums">{formatRate(schedule.rate)}</p>
       </div>
       <div>
         <p className="text-muted-foreground">Min value</p>
@@ -746,52 +794,246 @@ function TerrorBody({
   schedule: TerrorScheduleView;
   editing: boolean;
 }) {
+  const rateByTier = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const tier of schedule.tiers) {
+      map.set(tier.tier, Number(tier.rate) || 0);
+    }
+    return map;
+  }, [schedule.tiers]);
+
+  const allPostcodes = useMemo(
+    () =>
+      schedule.tiers.flatMap((tier) =>
+        tier.postcodes.map((pc) => ({
+          postcode: pc.postcode,
+          stateId: pc.stateId,
+          stateCode: pc.stateCode,
+          stateName: pc.stateName,
+          tier: tier.tier,
+          priceTerrorismRateId: tier.priceTerrorismRateId,
+        })),
+      ),
+    [schedule.tiers],
+  );
+
+  const stateOptions = useMemo(() => {
+    const codes = new Set(allPostcodes.map((p) => p.stateCode));
+    return [...codes].sort();
+  }, [allPostcodes]);
+
+  const [tierFilter, setTierFilter] = useState("all");
+  const [stateFilter, setStateFilter] = useState("all");
+  const [postcodeQuery, setPostcodeQuery] = useState("");
+
+  const filteredPostcodes = useMemo(() => {
+    const q = postcodeQuery.trim();
+    return allPostcodes.filter((row) => {
+      if (tierFilter !== "all" && row.tier !== tierFilter) return false;
+      if (stateFilter !== "all" && row.stateCode !== stateFilter) return false;
+      if (q && !row.postcode.includes(q)) return false;
+      return true;
+    });
+  }, [allPostcodes, tierFilter, stateFilter, postcodeQuery]);
+
+  const postcodesCsv = useMemo(
+    () =>
+      allPostcodes
+        .map((row) => `${row.postcode},${row.stateCode},${row.tier}`)
+        .join("\n"),
+    [allPostcodes],
+  );
+
   return (
-    <div className="overflow-x-auto">
-      <input type="hidden" name="tierCount" value={schedule.tiers.length} />
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Tier</TableHead>
-            <TableHead className="text-right">Rate</TableHead>
-            <TableHead className="text-right">Postcodes</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {schedule.tiers.map((tier, index) => (
-            <TableRow key={tier.tier}>
-              <TableCell>
-                {editing ? (
-                  <Input
-                    name={`tier_${index}_tier`}
-                    defaultValue={tier.tier}
-                    className="h-7"
-                    required
-                  />
-                ) : (
-                  tier.tier
-                )}
-              </TableCell>
-              <TableCell className="text-right">
-                {editing ? (
-                  <NumInput
-                    name={`tier_${index}_rate`}
-                    defaultValue={tier.rate}
-                    step="any"
-                  />
-                ) : (
-                  <span className="tabular-nums">
-                    {formatNumber(tier.rate)}
-                  </span>
-                )}
-              </TableCell>
-              <TableCell className="text-right tabular-nums">
-                {formatNumber(tier.postcodeCount)}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+    <div className="space-y-6">
+      <section className="space-y-2">
+        <div>
+          <h3 className="text-sm font-medium">Rates</h3>
+          <p className="text-xs text-muted-foreground">
+            <code className="text-[0.7rem]">price_terrorism_rate</code> — tier
+            and rate
+          </p>
+        </div>
+        <div className="overflow-x-auto">
+          <input type="hidden" name="tierCount" value={schedule.tiers.length} />
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Tier</TableHead>
+                <TableHead className="text-right">Rate %</TableHead>
+                <TableHead className="text-right">Postcodes</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {schedule.tiers.map((tier, index) => (
+                <TableRow key={tier.priceTerrorismRateId || tier.tier}>
+                  <TableCell>
+                    {editing ? (
+                      <Input
+                        name={`tier_${index}_tier`}
+                        defaultValue={tier.tier}
+                        className="h-7"
+                        required
+                      />
+                    ) : (
+                      tier.tier
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {editing ? (
+                      <RatePercentInput
+                        name={`tier_${index}_ratePercent`}
+                        rate={tier.rate}
+                      />
+                    ) : (
+                      <span className="tabular-nums">
+                        {formatRate(tier.rate)}
+                      </span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {formatNumber(tier.postcodes.length)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </section>
+
+      <section className="space-y-2">
+        <div>
+          <h3 className="text-sm font-medium">Postcodes</h3>
+          <p className="text-xs text-muted-foreground">
+            <code className="text-[0.7rem]">price_terrorism_postcode</code> —
+            postcode, state, and tier
+          </p>
+        </div>
+
+        {editing ? (
+          <Field>
+            <FieldLabel htmlFor="postcodesCsv">
+              Postcode rows (postcode,state,tier)
+            </FieldLabel>
+            <textarea
+              id="postcodesCsv"
+              name="postcodesCsv"
+              defaultValue={postcodesCsv}
+              rows={12}
+              className="w-full rounded-lg border border-input bg-transparent px-2.5 py-2 font-mono text-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              spellCheck={false}
+            />
+            <p className="text-xs text-muted-foreground">
+              One row per postcode. State must be an AU code (NSW, VIC, …). Tier
+              must match a rate tier above.
+            </p>
+          </Field>
+        ) : (
+          <>
+            <div className="flex flex-wrap items-end gap-2">
+              <Field className="w-36">
+                <FieldLabel htmlFor="terror-tier-filter">Tier</FieldLabel>
+                <select
+                  id="terror-tier-filter"
+                  className="h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm"
+                  value={tierFilter}
+                  onChange={(e) => setTierFilter(e.target.value)}
+                >
+                  <option value="all">All</option>
+                  {schedule.tiers.map((tier) => (
+                    <option key={tier.tier} value={tier.tier}>
+                      {tier.tier}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field className="w-36">
+                <FieldLabel htmlFor="terror-state-filter">State</FieldLabel>
+                <select
+                  id="terror-state-filter"
+                  className="h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm"
+                  value={stateFilter}
+                  onChange={(e) => setStateFilter(e.target.value)}
+                >
+                  <option value="all">All</option>
+                  {stateOptions.map((code) => (
+                    <option key={code} value={code}>
+                      {code}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field className="min-w-[10rem] flex-1">
+                <FieldLabel htmlFor="terror-postcode-filter">
+                  Postcode
+                </FieldLabel>
+                <Input
+                  id="terror-postcode-filter"
+                  value={postcodeQuery}
+                  onChange={(e) => setPostcodeQuery(e.target.value)}
+                  placeholder="Filter…"
+                  className="h-8"
+                />
+              </Field>
+              <p className="pb-2 text-xs text-muted-foreground tabular-nums">
+                {formatNumber(filteredPostcodes.length)} /{" "}
+                {formatNumber(allPostcodes.length)}
+              </p>
+            </div>
+            <div className="max-h-80 overflow-auto rounded-lg border border-border">
+              <table className="w-full table-fixed caption-bottom text-sm">
+                <TableHeader className="sticky top-0 z-10 bg-popover [&_tr]:border-b">
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="w-[9rem] bg-popover">State</TableHead>
+                    <TableHead className="w-[7rem] bg-popover">
+                      Postcode
+                    </TableHead>
+                    <TableHead className="w-[5rem] bg-popover">Tier</TableHead>
+                    <TableHead className="w-[7rem] bg-popover text-right">
+                      Rate %
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredPostcodes.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={4}
+                        className="py-8 text-center text-muted-foreground"
+                      >
+                        No postcodes match.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredPostcodes.map((row) => (
+                      <TableRow
+                        key={`${row.priceTerrorismRateId}-${row.postcode}`}
+                      >
+                        <TableCell>
+                          <span className="font-medium">{row.stateCode}</span>
+                          {row.stateName ? (
+                            <span className="text-muted-foreground">
+                              {" "}
+                              · {row.stateName}
+                            </span>
+                          ) : null}
+                        </TableCell>
+                        <TableCell className="font-mono tabular-nums">
+                          {row.postcode}
+                        </TableCell>
+                        <TableCell>{row.tier}</TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatRate(rateByTier.get(row.tier) ?? 0)}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </table>
+            </div>
+          </>
+        )}
+      </section>
     </div>
   );
 }

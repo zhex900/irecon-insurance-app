@@ -223,13 +223,20 @@ export function createTemplate(
         return pretty({
           dateStart: todayIsoDate(),
           published: false,
-          tiers: latest.tiers.map((t) => ({ tier: t.tier, rate: t.rate })),
+          tiers: latest.tiers.map((t) => ({
+            tier: t.tier,
+            rate: t.rate,
+            postcodes: t.postcodes.map((p) => ({
+              postcode: p.postcode,
+              stateCode: p.stateCode,
+            })),
+          })),
         });
       }
       return pretty({
         dateStart: todayIsoDate(),
         published: false,
-        tiers: [{ tier: "A", rate: 0 }],
+        tiers: [{ tier: "A", rate: 0, postcodes: [] }],
       });
     }
     case "fees": {
@@ -323,7 +330,14 @@ export function payloadFromExisting(
       return pretty({
         dateStart: row.dateStart,
         published: row.published,
-        tiers: row.tiers.map((t) => ({ tier: t.tier, rate: t.rate })),
+        tiers: row.tiers.map((t) => ({
+          tier: t.tier,
+          rate: t.rate,
+          postcodes: t.postcodes.map((p) => ({
+            postcode: p.postcode,
+            stateCode: p.stateCode,
+          })),
+        })),
       });
     }
     case "fees": {

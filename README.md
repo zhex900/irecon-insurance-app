@@ -74,6 +74,9 @@ npm run db:stop
 npm run db:status
 npm run db:reset          # reset DB + seed
 npm run db:seed
+npm run db:migrate:prices # MSSQL CAR prices → Postgres (repeatable)
+npm run db:seed:prices    # load from _archive/data/prices.json
+npm run db:export:prices  # MSSQL → JSON snapshot only
 npm run db:push           # drizzle-kit push (dev only)
 npm run dev
 npm run build

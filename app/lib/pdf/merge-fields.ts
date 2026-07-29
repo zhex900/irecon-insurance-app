@@ -1,4 +1,5 @@
 import type { Policy } from "~/lib/db/types";
+import { combinedTrueBasePremium } from "~/lib/premium-totals";
 import { referenceData as reference } from "~/lib/reference-data";
 import { formatCurrency, formatDate } from "~/lib/utils";
 
@@ -152,9 +153,7 @@ export function policyToMergeInputs(policy: Policy): Record<string, string> {
       Section2GST: money(premium.liabilityGST),
       Section2SD: money(premium.liabilityStampDuty),
       Section2TotalPremium: money(premium.liabilityTotalPremium),
-      CombinedTrueBasePremium: money(
-        premium.contractWorksBasePremium + premium.liabilityBasePremium,
-      ),
+      CombinedTrueBasePremium: money(combinedTrueBasePremium(premium)),
       CombinedESL: money(premium.contractWorksESL + premium.liabilityESL),
       CombinedGST: money(premium.contractWorksGST + premium.liabilityGST),
       CombinedSD: money(

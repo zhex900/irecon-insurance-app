@@ -1,6 +1,8 @@
 /**
- * Export CAR pricing catalogues from legacy MSSQL into _archive/data/prices.json
- * (format consumed by seed-prices).
+ * Export CAR pricing catalogues from legacy MSSQL.
+ *
+ * Prefer `npm run db:migrate:prices` to load straight into Postgres.
+ * This script writes an optional JSON snapshot for offline `db:seed:prices`.
  *
  * Usage (from repo root):
  *   npm run db:export:prices
@@ -12,77 +14,20 @@ import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import sql from "mssql";
+import type { PricesPayload } from "./lib/prices-payload";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const DEFAULT_OUT = join(repoRoot, "_archive/data/prices.json");
 const ENV_FILE = join(repoRoot, "_archive/mssql/.env.mssql");
 
-type PricesFile = {
-  meta: {
-    source: string;
-    exportedAt: string;
-    database: string;
-  };
-  prices: Array<{
-    priceId: number;
-    dateStart: string;
-    published: boolean;
-    bands: Array<{
-      coverTypeId: number;
-      lowerTO: number;
-      upperTO: number | null;
-      cwRate: number;
-      cwMinPrem: number;
-      tenMilRate: number;
-      tenMilMinPrem: number;
-      twentyMilRate: number;
-      twentyMilMinPrem: number;
-    }>;
-  }>;
-  stampDuty: Array<{
-    priceStampDutyId: number;
-    dateStart: string;
-    published: boolean;
-    rates: Array<{ stateCode: string; rate: number; section?: number | null }>;
-  }>;
-  esl: Array<{
-    priceEslId: number;
-    dateStart: string;
-    published: boolean;
-    rates: Array<{
-      stateCode: string;
-      constructionRate: number;
-      plantRate: number;
-    }>;
-  }>;
-  terror: Array<{
-    priceTerrorismId: number;
-    dateStart: string;
-    published: boolean;
-    tiers: Array<{
-      tier: string;
-      rate: number;
-      postcodes: Array<{ postcode: string; stateCode: string }>;
-    }>;
-  }>;
-  plant: Array<{
-    pricePlantId: number;
-    dateStart: string;
-    published: boolean;
-    rate: number;
-    plantMinValue: number;
-    plantMaxValue: number;
-  }>;
-  brokerFees: Array<{
-    dateStart: string;
-    published: boolean;
-    lines: Array<{
-      sortOrder: number;
-      name: string;
-      fee: number;
-      feeGst: number;
-    }>;
-  }>;
+type PricesFile = Required<
+  Pick<
+    PricesPayload,
+    "meta" | "prices" | "stampDuty" | "esl" | "terror" | "plant" | "brokerFees"
+  >
+> & {
+  meta: NonNullable<PricesPayload["meta"]>;
+  brokerFees: NonNullable<PricesPayload["brokerFees"]>;
 };
 
 function loadEnvFile(path: string) {

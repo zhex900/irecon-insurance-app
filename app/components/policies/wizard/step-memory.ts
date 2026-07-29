@@ -64,7 +64,24 @@ export function clearWizardStepState(policyId: number) {
   if (typeof window !== "undefined") {
     sessionStorage.removeItem(`car-policy-step:${policyId}`);
     sessionStorage.removeItem(`car-policy-max-step:${policyId}`);
+    sessionStorage.removeItem(`car-policy-focus-section:${policyId}`);
   }
+}
+
+/** After submit redirect, land on this section once. */
+export function rememberFocusSection(policyId: number, sectionId: string) {
+  if (typeof window === "undefined") return;
+  sessionStorage.setItem(`car-policy-focus-section:${policyId}`, sectionId);
+}
+
+export function peekFocusSection(policyId: number): string | null {
+  if (typeof window === "undefined") return null;
+  return sessionStorage.getItem(`car-policy-focus-section:${policyId}`);
+}
+
+export function clearFocusSection(policyId: number) {
+  if (typeof window === "undefined") return;
+  sessionStorage.removeItem(`car-policy-focus-section:${policyId}`);
 }
 
 /** One-shot leave allowlist for destructive actions (e.g. delete). */

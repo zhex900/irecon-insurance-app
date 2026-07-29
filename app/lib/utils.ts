@@ -1,4 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
+import { format, formatDistance, isValid } from "date-fns";
+import { enAU } from "date-fns/locale";
 import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
@@ -9,6 +11,23 @@ export function formatNumber(value: number) {
   return new Intl.NumberFormat("en-AU").format(value);
 }
 
+/** Decimal fraction ↔ percent for pricing rates (stored as fractions, shown as %). */
+export function rateToPercent(value: number) {
+  return (Number(value) || 0) * 100;
+}
+
+export function percentToRate(value: number) {
+  return (Number(value) || 0) / 100;
+}
+
+/** Pricing rates (CW, liability, stamp, ESL, plant, terrorism) — percent, 4 d.p. */
+export function formatRate(value: number) {
+  return `${new Intl.NumberFormat("en-AU", {
+    minimumFractionDigits: 4,
+    maximumFractionDigits: 4,
+  }).format(rateToPercent(value))}%`;
+}
+
 export function formatCurrency(value: number) {
   return new Intl.NumberFormat("en-AU", {
     style: "currency",
@@ -17,27 +36,27 @@ export function formatCurrency(value: number) {
   }).format(value);
 }
 
-export function formatDate(value: string) {
-  return new Intl.DateTimeFormat("en-AU").format(new Date(value));
+function toValidDate(value: string | number | Date): Date | null {
+  const date = value instanceof Date ? value : new Date(value);
+  return isValid(date) ? date : null;
 }
 
-/** Relative time for “last saved” status (e.g. "just now", "3 minutes ago"). */
+/** Absolute date for tables/labels — en-AU short date via date-fns. */
+export function formatDate(value: string) {
+  const date = toValidDate(value);
+  if (!date) return "";
+  return format(date, "P", { locale: enAU });
+}
+
+/** Relative time (e.g. "about 3 hours ago") via date-fns. */
 export function formatRelativeTimeAgo(
   isoDate: string,
   now = Date.now(),
 ): string {
-  const then = new Date(isoDate).getTime();
-  if (Number.isNaN(then)) return "";
-  const seconds = Math.round((now - then) / 1000);
-  if (seconds < 45) return "just now";
-  const minutes = Math.round(seconds / 60);
-  if (minutes < 60) {
-    return minutes === 1 ? "1 minute ago" : `${minutes} minutes ago`;
-  }
-  const hours = Math.round(minutes / 60);
-  if (hours < 24) {
-    return hours === 1 ? "1 hour ago" : `${hours} hours ago`;
-  }
-  const days = Math.round(hours / 24);
-  return days === 1 ? "1 day ago" : `${days} days ago`;
+  const date = toValidDate(isoDate);
+  if (!date) return "";
+  return formatDistance(date, new Date(now), {
+    addSuffix: true,
+    locale: enAU,
+  });
 }

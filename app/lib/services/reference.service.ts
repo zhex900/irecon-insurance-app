@@ -6,21 +6,27 @@ import { carWording, policyCarExcessDefault } from "~/lib/db/schema";
 import { defaultExcessesFromCatalogue } from "~/lib/excesses";
 import { listAuthorisedRepresentatives } from "~/lib/services/authorised-representatives/service";
 import type { CarWording, ReferenceData } from "~/lib/db/types";
+import { resolveBrokerFeeLines } from "~/server/pricing/rate-resolver";
 
 export function getReferenceData(): ReferenceData {
   return referenceData;
 }
 
-/** Reference data with live ARs + excess defaults from the DB. */
-export async function getReferenceDataAsync(): Promise<ReferenceData> {
-  const [wholesaleBrokers, defaultExcesses] = await Promise.all([
+/** Reference data with live ARs, excess defaults, and broker fee schedule from the DB. */
+export async function getReferenceDataAsync(
+  feeAsOfDate?: string,
+): Promise<ReferenceData> {
+  const asOf = feeAsOfDate ?? new Date().toISOString().slice(0, 10);
+  const [wholesaleBrokers, defaultExcesses, feeNames] = await Promise.all([
     listAuthorisedRepresentatives(),
     getDefaultExcesses(),
+    resolveBrokerFeeLines(asOf),
   ]);
   return {
     ...getReferenceData(),
     wholesaleBrokers,
     defaultExcesses,
+    feeNames,
   };
 }
 

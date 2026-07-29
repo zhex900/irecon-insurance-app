@@ -8,6 +8,11 @@ export function policyToFormValues(policy: Policy): CarPolicyFormValues {
   const blankZeros = Boolean(policy.isDraft);
   const moneyOrEmpty = (value: number): number | ("" & {}) =>
     blankZeros && value === 0 ? ("" as never) : value;
+  /**
+   * Sum-insured style amounts where 0 is a real answer ("none"), not a
+   * draft placeholder — keep showing 0 even on drafts.
+   */
+  const moneyKeepZero = (value: number): number => value;
 
   return {
     clientId: policy.clientId,
@@ -34,11 +39,11 @@ export function policyToFormValues(policy: Policy): CarPolicyFormValues {
     contractWorksSumInsured: moneyOrEmpty(
       policy.car.contractWorksSumInsured,
     ) as number,
-    displayHomes: moneyOrEmpty(policy.car.displayHomes) as number,
-    existingStructure: moneyOrEmpty(policy.car.existingStructure) as number,
+    displayHomes: moneyKeepZero(policy.car.displayHomes),
+    existingStructure: moneyKeepZero(policy.car.existingStructure),
     section1DisplayHomes: "" as unknown as number,
     section1ExistingStructure: "" as unknown as number,
-    plantEquipment: moneyOrEmpty(policy.car.plantEquipment) as number,
+    plantEquipment: moneyKeepZero(policy.car.plantEquipment),
     liabilityLimitBand: policy.car.liabilityLimitBand,
     // 0 is a real answer ("no claims") — never treat as an empty placeholder.
     claimsCountLast3Years: policy.car.claimsCountLast3Years,

@@ -3,7 +3,6 @@ import { Controller, useFormContext } from "react-hook-form";
 import { CheckIcon } from "lucide-react";
 import {
   formatAmountInput,
-  isZeroAmount,
   mapAmountCaret,
   sanitizeAmountInput,
 } from "~/lib/amount-input";
@@ -83,9 +82,9 @@ export function AmountInput({
             value={formatAmountInput(field.value as string | number)}
             onFocus={(event) => {
               inputProps.onFocus?.(event);
-              if (isZeroAmount(field.value as string | number)) {
-                field.onChange("");
-              }
+              // Select existing value (incl. 0) so typing replaces it — do not
+              // clear zeros; 0 is a valid amount for several money fields.
+              event.currentTarget.select();
             }}
             onBlur={(event) => {
               field.onBlur();

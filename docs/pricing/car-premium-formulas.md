@@ -1,35 +1,64 @@
 # CAR Policy Pricing Calculation Formulas
 
-> **Canonical living doc:** [`docs/pricing/car-premium-formulas.md`](../../docs/pricing/car-premium-formulas.md). Keep that file updated; this archive copy is historical.
+Canonical legacy formulas for BrokerSure CAR premium. **Rates come from the database** (Postgres `price_*` tables, migrated from MSSQL `CAR_*`). Only the small constants table below is hardcoded — never invent terrorism / CW / ESL / stamp-duty rates in code.
 
-Source: legacy wholesale/broker CAR product in `legacy-app/`.
+| Rebuild implementation                            | Role                                                 |
+| ------------------------------------------------- | ---------------------------------------------------- |
+| `app/server/pricing/car-calculator.ts`            | Server new-policy calc (matches `CARCalculator`)     |
+| `app/server/pricing/rate-resolver.ts`             | Published schedule lookup by date / postcode / state |
+| `app/lib/premium-workings.ts`                     | UI “how was this calculated?” mirror of server math  |
+| `app/server/pricing/car-adjustment-calculator.ts` | End-of-term adjustment deltas                        |
 
-| Area | Primary files |
-|------|----------------|
-| Server calculator | `InsuranceDemo.BLL/Calculators/CARCalculator2.cs` (class name: `CARCalculator`) |
-| Rate lookups | `InsurnanceDemo.SqlDataProvider/CARPolicyData.cs` |
-| New policy (server + JS) | `WebSite/CAR/CARNewPolicy.aspx.cs`, `CARNewPolicy.aspx` |
-| View/edit policy (JS) | `WebSite/CAR/CARViewPolicy.aspx` |
-| End-of-term adjustment | `WebSite/CAR/CARAdjust.aspx.cs`, `CARAdjust.aspx` |
-| Policy persistence | `InsuranceDemo.BLL/Products/CAR/CARPolicy.cs` |
+| Legacy source            | Primary files                                                       |
+| ------------------------ | ------------------------------------------------------------------- |
+| Server calculator        | `InsuranceDemo.BLL/Calculators/CARCalculator2.cs` (`CARCalculator`) |
+| Rate lookups             | `InsurnanceDemo.SqlDataProvider/CARPolicyData.cs`                   |
+| New policy (server + JS) | `WebSite/CAR/CARNewPolicy.aspx.cs`, `CARNewPolicy.aspx`             |
+| View/edit policy (JS)    | `WebSite/CAR/CARViewPolicy.aspx`                                    |
+| End-of-term adjustment   | `WebSite/CAR/CARAdjust.aspx.cs`, `CARAdjust.aspx`                   |
+
+Historical copy (same content origin): `_archive/specs/CAR_PRICING_FORMULAS.md`.
 
 > **Scope:** Annual CAR broker product only. Owner Builder / Licenced Builder calculators are separate.
+
+### What is hardcoded vs DB-driven
+
+| Kind                       | Examples                                                                                                                               | Source                                                                            |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| Hardcoded constants        | GST `0.10`, terror start `2021-01-01`, plant v2.1 date `2023-01-01`, plant CW band `$2.5M`, referral plant `>$50k`, adjustment 25%/75% | Match legacy `CARCalculator`                                                      |
+| **Never hardcoded**        | CW / liability rates & mins, stamp duty, ESL, plant rate, terrorism τ / tier                                                           | Latest published `price_*` row for certificate date (+ postcode/state for terror) |
+| Manual premium lines       | Display Homes, Existing Structure                                                                                                      | Broker-entered; server leaves `0` (not SI → premium)                              |
+| Missing terrorism postcode | —                                                                                                                                      | Return **no rate** + referral (do **not** invent e.g. `0.01`)                     |
+
+### Taken status premium gate
+
+Before status can move to **Taken**, legacy requires:
+
+| Declared (Limits)             | Required premium line            |
+| ----------------------------- | -------------------------------- |
+| Existing Structures `> 0`     | Existing Structure premium `> 0` |
+| Plant & equipment `> $25,000` | Plant premium `> 0`              |
+
+Rebuild: `app/lib/policy-taken-status.ts` (`getTakenStatusErrors`). Enter the premium on **Premium → click the $0 cell**, then set Taken.
 
 ---
 
 ## 1. Constants
 
-| Symbol | Value | Notes |
-|--------|-------|-------|
-| `GSTRate` | `0.10` (10%) | `CARCalculator2.cs` L76; `Policy.cs` L56 |
-| `TerrorStartDate` | `2021-01-01` | Terrorism levy applies from this certificate date |
-| `Version21StartDate` | `2023-01-01` | Simplified plant formula from this date |
-| `PlantCertificateTurnoverLimit` | `2,500,000` | Used in pre-v2.1 plant banding |
-| Plant referral threshold | `50,000` | Triggers referral, not a formula cap |
-| Adjustment 25% cap | `0.25` | Max base refund per section on adjustment |
-| Adjustment 75% floor | `0.75` | Min retained premium on adjustment finish |
+| Symbol                          | Value        | Notes                                             |
+| ------------------------------- | ------------ | ------------------------------------------------- |
+| `GSTRate`                       | `0.10` (10%) | `CARCalculator2.cs` L76; `Policy.cs` L56          |
+| `TerrorStartDate`               | `2021-01-01` | Terrorism levy applies from this certificate date |
+| `Version21StartDate`            | `2023-01-01` | Simplified plant formula from this date           |
+| `PlantCertificateTurnoverLimit` | `2,500,000`  | Used in pre-v2.1 plant banding                    |
+| Plant referral threshold        | `50,000`     | Triggers referral, not a formula cap              |
+| Adjustment 25% cap              | `0.25`       | Max base refund per section on adjustment         |
+| Adjustment 75% floor            | `0.75`       | Min retained premium on adjustment finish         |
 
-Plant min/max dollar thresholds (`PlantValueMin`, `PlantValueMax`) come from DB (`CAR_PlantRate_Get`), typically ~$25k free band / $50k cap.
+Plant min/max dollar thresholds (`PlantValueMin`, `PlantValueMax`) come from DB (`price_plant` / legacy `CAR_PlantRate_Get`), typically ~$25k free band / $50k cap.
+
+**Terrorism example (not a hardcode):** postcode `2033` NSW → tier **B** → τ = `0.053` from `price_terrorism_rate`.  
+`Terrorism Levy = True Base Premium × τ` (e.g. `$6,700 × 0.053 = $355.10`).
 
 ---
 
@@ -52,11 +81,11 @@ CAR_PlantRate_Get(Date)            → PlantPremiumRate, PlantValueMin, PlantVal
 
 ### Section 2 liability rate (`GetLiabilityRate`)
 
-| `LiabilityLimitBand` | Rate | Min premium |
-|-----------------|------|-------------|
-| `1` (`m10`) — $10M | `Liability10mRate` | `Liability10mMinPremium` |
-| `2` (`m20`) — $20M | `Liability20mRate` | `Liability20mMinPremium` |
-| `3` (`NotInsured`) | `0` | `0` |
+| `LiabilityLimitBand` | Rate               | Min premium              |
+| -------------------- | ------------------ | ------------------------ |
+| `1` (`m10`) — $10M   | `Liability10mRate` | `Liability10mMinPremium` |
+| `2` (`m20`) — $20M   | `Liability20mRate` | `Liability20mMinPremium` |
+| `3` (`NotInsured`)   | `0`                | `0`                      |
 
 Persisted as `PolicyCAR.LiabilityLimitBand` **int** with check `IN (1, 2, 3)`.
 
@@ -65,6 +94,7 @@ Persisted as `PolicyCAR.LiabilityLimitBand` **int** with check `IN (1, 2, 3)`.
 ## 3. Section 1 — Contract Works (server: `CARCalculator`)
 
 Let:
+
 - `T` = `CertificateTurnover` (estimated turnover)
 - `r₁` = `ContractWorksRate`
 - `m₁` = `ContractWorksMinPremium`
@@ -91,11 +121,13 @@ ContractWorksTerrorismPremium = ContractWorksBasePremium × τ
 Let `P` = plant equipment value, `pr` = `PlantPremiumRate`, `pMin` = `PlantValueMin`, `pMax` = `PlantValueMax`, `CW` = `Section1ContractWorksValue`.
 
 **If certificate date ≥ 2023-01-01:**
+
 ```
 ContractWorksPlantPremium = pr × P
 ```
 
 **Else if date < 2021-01-01 OR CW ≤ 2,500,000** (banded — first $25k free):
+
 ```
 if P > pMin:
   if P > pMax:  ContractWorksPlantPremium = pr × (pMax − pMin)
@@ -105,6 +137,7 @@ else:
 ```
 
 **Else** (post-terror, CW > 2.5M):
+
 ```
 if P ≤ 0:       ContractWorksPlantPremium = 0
 elif P > pMax:  ContractWorksPlantPremium = pr × pMax
@@ -273,6 +306,7 @@ CombinedTotal = Section1Total + Section2Total + BrokerFee
 **Legacy simplified model** — excludes plant, display homes, existing structures, and broker fees. Uses **frozen rates** stored on the policy from original policy.
 
 Inputs:
+
 - `T_adj` = adjustment turnover
 - `T_orig` = original estimated turnover
 - `r₁, r₂, m₁, m₂, τ, e, g, s₁, s₂` = stored rates
@@ -388,17 +422,17 @@ LiabilityStampDutyRate = LiabilityStampDuty / (S2Base + ESL + GST)
 
 ## 10. Three Calculation Paths Compared
 
-| Component | New policy (server) | View/edit (JS) | Adjustment |
-|-----------|-------------------|----------------|------------|
-| Rate source | DB lookup | Hidden fields from policy | Frozen stored rates |
-| Plant & equipment | Yes | Yes (JS) | **No** |
-| Display homes / existing structure | No (JS only) | Yes (JS) | **No** |
-| Terrorism on S2 | No | No | No |
-| S2 ESL | Always 0 | Always 0 | Always 0 |
-| Broker fee in total | Yes | Yes | **No** |
-| 75% return rule | UI text only | UI text only | **Enforced** |
-| 25% base refund cap | N/A | N/A | **Enforced** |
-| S2 stamp duty exempt | N/A | N/A | Optional (`StampDutyExempt = Yes`) |
+| Component                          | New policy (server) | View/edit (JS)            | Adjustment                         |
+| ---------------------------------- | ------------------- | ------------------------- | ---------------------------------- |
+| Rate source                        | DB lookup           | Hidden fields from policy | Frozen stored rates                |
+| Plant & equipment                  | Yes                 | Yes (JS)                  | **No**                             |
+| Display homes / existing structure | No (JS only)        | Yes (JS)                  | **No**                             |
+| Terrorism on S2                    | No                  | No                        | No                                 |
+| S2 ESL                             | Always 0            | Always 0                  | Always 0                           |
+| Broker fee in total                | Yes                 | Yes                       | **No**                             |
+| 75% return rule                    | UI text only        | UI text only              | **Enforced**                       |
+| 25% base refund cap                | N/A                 | N/A                       | **Enforced**                       |
+| S2 stamp duty exempt               | N/A                 | N/A                       | Optional (`StampDutyExempt = Yes`) |
 
 ---
 
@@ -415,26 +449,27 @@ LiabilityStampDutyRate = LiabilityStampDuty / (S2Base + ESL + GST)
 
 ## 12. Implementation Notes
 
-1. **`PlantEslRate`** is loaded from DB but plant ESL uses **`ESLRate`** (construction rate) in `CARCalculator2.cs` L291.
-2. **`PlantValueMax` assignment bug** at L341: `PlantValueMin` is assigned twice from `PlantValueMax` column — may affect plant banding.
-3. **Terrorism field semantics:** server stores terror on CW base only; JS merges ES/DH terror into the displayed terrorism field, so stored `TerrorismRate` can diverge after manual edits.
+1. **`PlantEslRate`** is loaded from DB but plant ESL uses **`ESLRate`** (construction rate `e`) in `CARCalculator2.cs` L291 — rebuild matches this in `car-calculator.ts` / `premium-workings.ts`.
+2. **`PlantValueMax` assignment bug** at L341 in legacy: `PlantValueMin` is assigned twice from `PlantValueMax` column — may affect plant banding. Rebuild maps min/max columns correctly from Postgres.
+3. **Terrorism field semantics:** server stores terror on CW base only; legacy JS merges ES/DH terror into the displayed terrorism field after manual edits.
 4. **Adjustment original row** may not equal the policy's true original premium when plant / ES / DH premiums exist on the certificate.
 5. **75% minimum premium** text appears on new policy and view screens but is **not enforced** outside the adjustment wizard.
+6. **Rebuild fidelity:** missing terrorism postcode/state returns `null` (referral), never a hardcoded fallback rate.
 
 ---
 
 ## 13. Variable Glossary
 
-| Variable | Meaning |
-|----------|---------|
-| `T` / `Turnover` | Estimated annual turnover |
-| `r₁` / `ContractWorksRate` | Contract works rate (per dollar of turnover) |
-| `m₁` / `ContractWorksMinPremium` | Contract works minimum premium |
-| `r₂` | Section 2 liability rate |
-| `m₂` | Section 2 minimum premium |
-| `τ` / `TerrorismRate` | Terrorism levy rate |
-| `e` / `ESLRate` | Emergency Services Levy (construction) rate |
-| `g` / `GSTRate` | GST rate (0.10) |
-| `s₁`, `s₂` | Stamp duty rates (section 1 and 2) |
-| `P` | Plant & equipment declared value |
-| `ES`, `DH` | Existing structure / display homes manual premium lines |
+| Variable                         | Meaning                                                 |
+| -------------------------------- | ------------------------------------------------------- |
+| `T` / `Turnover`                 | Estimated annual turnover                               |
+| `r₁` / `ContractWorksRate`       | Contract works rate (per dollar of turnover)            |
+| `m₁` / `ContractWorksMinPremium` | Contract works minimum premium                          |
+| `r₂`                             | Section 2 liability rate                                |
+| `m₂`                             | Section 2 minimum premium                               |
+| `τ` / `TerrorismRate`            | Terrorism levy rate                                     |
+| `e` / `ESLRate`                  | Emergency Services Levy (construction) rate             |
+| `g` / `GSTRate`                  | GST rate (0.10)                                         |
+| `s₁`, `s₂`                       | Stamp duty rates (section 1 and 2)                      |
+| `P`                              | Plant & equipment declared value                        |
+| `ES`, `DH`                       | Existing structure / display homes manual premium lines |
