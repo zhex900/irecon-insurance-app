@@ -63,11 +63,7 @@ export function usePolicyDocuments({
     const previous = documentsRef.current;
     const latestKey = [...previous]
       .reverse()
-      .find(
-        (doc) =>
-          doc.documentTypeCode === "CARSCHED" ||
-          doc.documentTypeCode === "CARRATING",
-      )?.generationKey;
+      .find((doc) => Boolean(doc.templateKey))?.generationKey;
     if (!latestKey) return true;
     // Ignore force suffix if present.
     const baseLatest = latestKey.split("|force|")[0] ?? latestKey;

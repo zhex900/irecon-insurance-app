@@ -392,7 +392,7 @@ export const appFeatureFlag = pgTable("app_feature_flag", {
   updatedBy: varchar("updated_by", { length: 255 }).notNull().default(""),
 });
 
-/** Static CARADDIT library PDFs (Settings → Library documents; bytes in R2). */
+/** Static library PDFs attached to policy packs (Settings → Library documents; bytes in R2). */
 export const libraryDocument = pgTable("library_document", {
   libraryDocumentId: bigint("library_document_id", { mode: "number" })
     .generatedAlwaysAsIdentity()
@@ -452,7 +452,12 @@ export const appDocumentTemplateVersion = pgTable(
     })
       .generatedAlwaysAsIdentity()
       .primaryKey(),
-    slotKey: varchar("slot_key", { length: 64 }).notNull(),
+    documentTemplateKey: varchar("document_template_key", {
+      length: 64,
+    }).notNull(),
+    /** Policy cover 1/2/3; null = included for every cover. */
+    coverTypeId: integer("cover_type_id"),
+    title: varchar("title", { length: 512 }).notNull().default(""),
     versionNumber: integer("version_number").notNull(),
     /** pdfme Template: { basePdf, schemas }. */
     templateJson: jsonb("template_json")

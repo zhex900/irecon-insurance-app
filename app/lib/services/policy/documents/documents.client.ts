@@ -16,6 +16,23 @@ async function fetchLibraryDocumentsClient(): Promise<LibraryDocumentRecord[]> {
   }
 }
 
+async function fetchPublishedTemplatesForCover(
+  coverTypeId: number,
+): Promise<Array<{ key: string; title: string }>> {
+  try {
+    const response = await fetch(
+      `/api/document-templates?coverTypeId=${encodeURIComponent(String(coverTypeId))}`,
+    );
+    if (!response.ok) return [];
+    const data = (await response.json()) as {
+      templates?: Array<{ key: string; title: string }>;
+    };
+    return data.templates ?? [];
+  } catch {
+    return [];
+  }
+}
+
 /** Persist documents on the policy via the app API. */
 export async function savePolicyDocumentsClient(
   policyId: number,
@@ -37,10 +54,14 @@ export async function ensureReviewDocumentsClient(
 ): Promise<PolicyDocument[]> {
   if (!policy.car.premium) return policy.documents ?? [];
   const existing = policy.documents ?? [];
-  const libraryDocs = await fetchLibraryDocumentsClient();
+  const [libraryDocs, templates] = await Promise.all([
+    fetchLibraryDocumentsClient(),
+    fetchPublishedTemplatesForCover(policy.car.coverTypeId),
+  ]);
   const pack = buildReviewDocumentPack(
     policy,
     generatedBy,
+    templates,
     existing,
     libraryDocs,
   );

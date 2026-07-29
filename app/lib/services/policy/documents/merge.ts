@@ -1,26 +1,24 @@
-import type { PolicyDocument, PolicyDocumentTypeCode } from "~/lib/db/types";
+import type { PolicyDocument } from "~/lib/db/types";
 import { nextDocumentId } from "~/lib/services/policy/documents/content";
 
-/** Generated from policy inputs — new versions are appended, never replaced. */
-const VERSIONED_DOCUMENT_CODES = new Set<PolicyDocumentTypeCode>([
-  "CARSCHED",
-  "CARRATING",
-  "CARADJUST",
-]);
-
 function isVersionedDocument(doc: PolicyDocument) {
-  return VERSIONED_DOCUMENT_CODES.has(doc.documentTypeCode);
+  return Boolean(doc.templateKey);
 }
 
 function isFixedDocument(doc: PolicyDocument) {
-  return doc.documentTypeCode === "CARADDIT";
+  return (
+    doc.libraryDocumentId != null || (!doc.templateKey && Boolean(doc.filename))
+  );
+}
+
+function versionIdentity(doc: PolicyDocument) {
+  return doc.templateKey ?? doc.filename;
 }
 
 /**
  * Merge a new Review pack into existing documents:
- * - Versioned docs (Schedule, ROA, Adjustment): append new versions when the
- *   fingerprint changed — previous files are kept with unique names
- * - Fixed library docs (CARADDIT): keep forever; only add ones still missing
+ * - Template-generated docs: append new versions when the fingerprint changed
+ * - Library docs: keep forever; only add ones still missing
  */
 export function mergeReviewDocuments(
   existing: PolicyDocument[] | undefined,
@@ -29,7 +27,9 @@ export function mergeReviewDocuments(
   const current = existing ?? [];
   const key = pack[0]?.generationKey;
   const versionedIncoming = pack.filter(isVersionedDocument);
-  const fixedIncoming = pack.filter(isFixedDocument);
+  const fixedIncoming = pack.filter(
+    (doc) => isFixedDocument(doc) && !isVersionedDocument(doc),
+  );
 
   const versionedUpToDate =
     Boolean(key) &&
@@ -38,17 +38,27 @@ export function mergeReviewDocuments(
       current.some(
         (doc) =>
           isVersionedDocument(doc) &&
-          doc.documentTypeCode === incoming.documentTypeCode &&
+          versionIdentity(doc) === versionIdentity(incoming) &&
           doc.generationKey === key,
       ),
     );
 
-  const existingFixedFilenames = new Set(
-    current.filter(isFixedDocument).map((doc) => doc.filename),
+  const existingFixedKeys = new Set(
+    current
+      .filter((doc) => isFixedDocument(doc) && !isVersionedDocument(doc))
+      .map(
+        (doc) =>
+          (doc.libraryDocumentId != null
+            ? `id:${doc.libraryDocumentId}`
+            : null) ?? `file:${doc.filename}`,
+      ),
   );
-  const missingFixed = fixedIncoming.filter(
-    (doc) => !existingFixedFilenames.has(doc.filename),
-  );
+  const missingFixed = fixedIncoming.filter((doc) => {
+    const identity =
+      (doc.libraryDocumentId != null ? `id:${doc.libraryDocumentId}` : null) ??
+      `file:${doc.filename}`;
+    return !existingFixedKeys.has(identity);
+  });
 
   if (versionedUpToDate && missingFixed.length === 0) {
     return current;
@@ -68,6 +78,5 @@ export function mergeReviewDocuments(
     policyDocumentId: id++,
   }));
 
-  // Keep every previous document; append new versions and any missing fixed files.
   return [...current, ...appendedVersioned, ...addedFixed];
 }

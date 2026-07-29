@@ -17,7 +17,6 @@
     "db:seed:prices": "tsx --env-file=.env scripts/seed-prices.mts",
     "db:seed:faker": "tsx --env-file=.env scripts/seed-faker.mts",
     "db:reset": "supabase db reset --yes && npm run db:seed",
-    "pdf:templates": "node scripts/convert-car-pdf-templates.mjs",
     "deploy": "node --env-file=.env.staging scripts/deploy-staging.mjs",
     "deploy:staging": "node --env-file=.env.staging scripts/deploy-staging.mjs",
     "deploy:secret": "node --env-file=.env.staging scripts/deploy-staging.mjs --secret-only",
@@ -34,8 +33,7 @@
     "test:e2e": "playwright test --project=e2e",
     "test:smoke": "playwright test --project=smoke",
     "verify": "npm run lint && npm run format:check && npm run typecheck && npm run test:unit",
-    "prepare": "husky",
-    "pdf:templates:editable": "node scripts/make-pdf-templates-editable.mjs"
+    "prepare": "husky"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,mjs,cjs}": [

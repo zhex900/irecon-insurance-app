@@ -3,7 +3,6 @@ import {
   redirect,
   useFetcher,
   useNavigate,
-  useParams,
   useRevalidator,
 } from "react-router";
 import { generate } from "@pdfme/generator";
@@ -31,14 +30,14 @@ import { applyFlowPushDown } from "~/lib/pdf/flow-push-down";
 import { invalidatePdfTemplateOverrideCache } from "~/lib/pdf/generate";
 import { pdfmePlugins } from "~/lib/pdf/plugins";
 import { buildSampleMergeInputs } from "~/lib/pdf/sample-merge-inputs";
-import { resolvePdfTemplateByKey } from "~/lib/pdf/templates";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import {
+  deleteDocumentTemplate,
   getEditableDocumentTemplateSlot,
   publishDocumentTemplate,
-  resetDocumentTemplate,
   saveDocumentTemplateDraft,
   undoDocumentTemplatePublish,
+  updateDocumentTemplateMeta,
 } from "~/lib/services/documents/document-templates";
 import { isFeatureEnabled } from "~/lib/services/feature-flags";
 import type { Route } from "./+types/document-templates.$slotKey";
@@ -49,13 +48,7 @@ export function meta() {
 
 /** Title immediately; skeleton only for the designer pane. */
 export function HydrateFallback() {
-  const { slotKey } = useParams();
-  const slot = slotKey
-    ? resolvePdfTemplateByKey(decodeURIComponent(slotKey))
-    : null;
-  return (
-    <DocumentTemplatesEditorShell title={slot?.title ?? "Document Template"} />
-  );
+  return <DocumentTemplatesEditorShell title="Document Template" />;
 }
 
 export async function loader({ request, params }: Route.LoaderArgs) {
@@ -83,6 +76,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     slot: {
       key: slot.key,
       title: slot.title,
+      coverTypeId: slot.coverTypeId,
       versionNumber: slot.versionNumber,
       flowPushDown: slot.flowPushDown ?? null,
       mergeFields: slot.mergeFields,
@@ -113,15 +107,48 @@ export async function action({ request, params }: Route.ActionArgs) {
   const formData = await request.formData();
   const intent = String(formData.get("intent") ?? "draft");
 
+  if (intent === "meta") {
+    try {
+      const coverRaw = String(formData.get("coverTypeId") ?? "");
+      const coverTypeId =
+        coverRaw === "all" || coverRaw === ""
+          ? null
+          : (Number(coverRaw) as 1 | 2 | 3);
+      await updateDocumentTemplateMeta({
+        documentTemplateKey: slotKey,
+        coverTypeId,
+        title: String(formData.get("title") ?? ""),
+      });
+      await writeAuditLog({
+        actor: viewer,
+        action: "settings.document_template_meta",
+        entityType: "document_template",
+        entityId: slotKey,
+        summary: `Updated metadata for document template ${slotKey}`,
+        metadata: { slotKey, coverTypeId },
+        request,
+      });
+      return { ok: true as const, intent: "meta" as const, slotKey };
+    } catch (error) {
+      return {
+        ok: false as const,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to update document template metadata.",
+      };
+    }
+  }
+
   if (intent === "reset") {
     try {
-      await resetDocumentTemplate(slotKey);
+      await deleteDocumentTemplate(slotKey);
       await writeAuditLog({
         actor: viewer,
         action: "settings.document_template_reset",
         entityType: "document_template",
         entityId: slotKey,
-        summary: `Reset document template ${slotKey} to seed`,
+        summary: `Deleted document template ${slotKey}`,
         metadata: { slotKey },
         request,
       });
@@ -132,7 +159,7 @@ export async function action({ request, params }: Route.ActionArgs) {
         error:
           error instanceof Error
             ? error.message
-            : "Failed to reset document template.",
+            : "Failed to delete document template.",
       };
     }
   }
@@ -145,13 +172,13 @@ export async function action({ request, params }: Route.ActionArgs) {
         action: "settings.document_template_undo",
         entityType: "document_template",
         entityId: slotKey,
-        summary: result.usedSeed
-          ? `Undid publish for ${slotKey} (back to seed)`
+        summary: result.unpublished
+          ? `Undid publish for ${slotKey} (nothing published)`
           : `Undid publish for ${slotKey} → v${result.published?.versionNumber}`,
         metadata: {
           slotKey,
           publishedVersionNumber: result.published?.versionNumber ?? null,
-          usedSeed: result.usedSeed,
+          unpublished: result.unpublished,
         },
         request,
       });
@@ -160,7 +187,7 @@ export async function action({ request, params }: Route.ActionArgs) {
         intent: "undo" as const,
         slotKey,
         versionNumber: result.published?.versionNumber ?? null,
-        usedSeed: result.usedSeed,
+        unpublished: result.unpublished,
       };
     } catch (error) {
       return {
@@ -179,7 +206,7 @@ export async function action({ request, params }: Route.ActionArgs) {
   }
 
   const payload = {
-    slotKey,
+    documentTemplateKey: slotKey,
     template: parsed.template,
     flowPushDown: parsed.flowPushDown,
     mergeFields: parsed.mergeFields,
@@ -283,8 +310,13 @@ export default function DocumentTemplateEditorRoute({
     invalidatePdfTemplateOverrideCache(data.slotKey);
 
     if (data.intent === "reset") {
-      toast.success("Template reset to seed");
+      toast.success("Template deleted");
       void navigate("/settings/document-templates");
+      return;
+    }
+    if (data.intent === "meta") {
+      toast.success("Template details saved");
+      revalidator.revalidate();
       return;
     }
     if (data.intent === "publish") {
@@ -294,8 +326,8 @@ export default function DocumentTemplateEditorRoute({
     }
     if (data.intent === "undo") {
       toast.success(
-        data.usedSeed
-          ? "Undid publish — seed is live again"
+        data.unpublished
+          ? "Undid publish — nothing is published for this template"
           : `Undid publish — live is now v${data.versionNumber}`,
       );
       revalidator.revalidate();
@@ -327,7 +359,7 @@ export default function DocumentTemplateEditorRoute({
     if (!canEdit || !loaderData.canUndo) return;
     if (
       !window.confirm(
-        "Undo the current published version? The previous published version (or seed) will become live.",
+        "Undo the current published version? The previous published version will become live, or nothing if none remains.",
       )
     ) {
       return;
@@ -341,7 +373,7 @@ export default function DocumentTemplateEditorRoute({
     if (!canEdit) return;
     if (
       !window.confirm(
-        "Delete all versions for this template and use the seed asset? This cannot be undone.",
+        "Delete all versions for this template? PDF generation for this key will fail until you create/publish again. This cannot be undone.",
       )
     ) {
       return;
@@ -452,7 +484,7 @@ export default function DocumentTemplateEditorRoute({
                   disabled={busy || previewLoading}
                   onClick={handleReset}
                 >
-                  Reset to seed
+                  Delete template
                 </Button>
                 <LoadingButton
                   type="button"
@@ -485,12 +517,55 @@ export default function DocumentTemplateEditorRoute({
       />
 
       <PdfmeDesigner
-        key={`${slot.key}-${loaderData.editingVersionNumber ?? "seed"}-${loaderData.publishedVersionNumber ?? "none"}`}
+        key={`${slot.key}-${loaderData.editingVersionNumber ?? "draft"}-${loaderData.publishedVersionNumber ?? "none"}`}
         ref={designerRef}
         template={slot.template as Template}
         editable={canEdit}
         className="min-h-[70vh] flex-1 overflow-hidden rounded-xl border bg-background"
       />
+
+      {canEdit ? (
+        <fetcher.Form
+          method="post"
+          className="grid gap-3 rounded-xl border p-4 sm:grid-cols-3"
+        >
+          <input type="hidden" name="intent" value="meta" />
+          <div className="space-y-2 sm:col-span-2">
+            <label className="text-sm font-medium" htmlFor="title">
+              Title
+            </label>
+            <input
+              id="title"
+              name="title"
+              defaultValue={slot.title}
+              className="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium" htmlFor="coverTypeId">
+              Cover type
+            </label>
+            <select
+              id="coverTypeId"
+              name="coverTypeId"
+              defaultValue={
+                slot.coverTypeId == null ? "all" : String(slot.coverTypeId)
+              }
+              className="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+            >
+              <option value="1">Annual</option>
+              <option value="2">Single</option>
+              <option value="3">Owner Builder</option>
+              <option value="all">All cover types</option>
+            </select>
+          </div>
+          <div className="sm:col-span-3">
+            <Button type="submit" variant="outline" disabled={busy}>
+              Save details
+            </Button>
+          </div>
+        </fetcher.Form>
+      ) : null}
 
       <PdfPreviewDialog
         open={previewOpen}

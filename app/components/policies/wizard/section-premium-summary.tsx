@@ -79,10 +79,11 @@ export function PremiumSummaryPanel({
     const versionById = new Map<number, number>();
     const groups = new Map<string, PolicyDocument[]>();
     for (const doc of documents) {
-      const key =
-        doc.documentTypeCode === "CARADDIT"
-          ? `fixed:${doc.filename}`
-          : doc.documentTypeCode;
+      const key = doc.templateKey
+        ? `template:${doc.templateKey}`
+        : doc.libraryDocumentId != null
+          ? `library:${doc.libraryDocumentId}`
+          : `fixed:${doc.filename}`;
       const group = groups.get(key) ?? [];
       group.push(doc);
       groups.set(key, group);

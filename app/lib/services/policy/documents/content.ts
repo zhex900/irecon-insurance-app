@@ -1,10 +1,4 @@
-import type {
-  Policy,
-  PolicyDocument,
-  PolicyDocumentTypeCode,
-} from "~/lib/db/types";
-import { policyToMergeInputs } from "~/lib/pdf/merge-fields";
-import { resolvePdfTemplate } from "~/lib/pdf/templates";
+import type { Policy, PolicyDocument } from "~/lib/db/types";
 import { formatCurrency, formatRate } from "~/lib/utils";
 
 function pad2(n: number) {
@@ -19,12 +13,12 @@ export function nextDocumentId(existing: PolicyDocument[]) {
   return Math.max(0, ...existing.map((doc) => doc.policyDocumentId)) + 1;
 }
 
-/** Next amendment index for a document type (0, 1, 2…) so filenames stay unique. */
+/** Next amendment index for a template key (0, 1, 2…) so filenames stay unique. */
 export function nextAmendmentNumber(
   existing: PolicyDocument[],
-  code: PolicyDocumentTypeCode,
+  templateKey: string,
 ) {
-  return existing.filter((doc) => doc.documentTypeCode === code).length;
+  return existing.filter((doc) => doc.templateKey === templateKey).length;
 }
 
 function coverTypeLabel(coverTypeId: number) {
@@ -157,7 +151,6 @@ export function buildAdjustmentContent(policy: Policy): string {
 export function makeDoc(input: {
   id: number;
   policyId: number;
-  code: PolicyDocumentTypeCode;
   name: string;
   filename: string;
   generationKey: string;
@@ -165,27 +158,20 @@ export function makeDoc(input: {
   generatedBy: string;
   generatedWhen: string;
   templateKey?: string;
+  libraryDocumentId?: number;
   mergeInputs?: Record<string, string>;
 }): PolicyDocument {
   return {
     policyDocumentId: input.id,
     policyId: input.policyId,
-    documentTypeCode: input.code,
     name: input.name,
     filename: input.filename,
     generationKey: input.generationKey,
     content: input.content,
     templateKey: input.templateKey,
+    libraryDocumentId: input.libraryDocumentId,
     mergeInputs: input.mergeInputs,
     generatedWhen: input.generatedWhen,
     generatedBy: input.generatedBy,
-  };
-}
-
-export function templateMeta(policy: Policy, code: PolicyDocumentTypeCode) {
-  const slot = resolvePdfTemplate(code, policy.car.coverTypeId);
-  return {
-    templateKey: slot?.key,
-    mergeInputs: code === "CARADDIT" ? undefined : policyToMergeInputs(policy),
   };
 }

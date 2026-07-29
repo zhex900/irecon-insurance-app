@@ -1,29 +1,27 @@
 import { generate } from "@pdfme/generator";
-import type {
-  Policy,
-  PolicyDocument,
-  PolicyDocumentTypeCode,
-} from "~/lib/db/types";
+import type { Policy, PolicyDocument } from "~/lib/db/types";
 import { applyFlowPushDown } from "~/lib/pdf/flow-push-down";
 import { buildLegacyTextPdfBlob } from "~/lib/pdf/legacy-text-pdf";
 import { policyToMergeInputs } from "~/lib/pdf/merge-fields";
 import { pdfmePlugins } from "~/lib/pdf/plugins";
-import { resolvePdfTemplate, type PdfTemplateSlot } from "~/lib/pdf/templates";
+import type { DocumentTemplateSlot } from "~/lib/pdf/templates";
 
 const plugins = pdfmePlugins;
 
-type SlotOverridePayload = {
-  template: PdfTemplateSlot["template"];
-  flowPushDown: PdfTemplateSlot["flowPushDown"];
+type SlotPayload = {
+  template: DocumentTemplateSlot["template"];
+  flowPushDown: DocumentTemplateSlot["flowPushDown"];
   mergeFields: string[];
   versionNumber: number;
+  coverTypeId?: number | null;
+  title?: string;
 };
 
-const clientOverrideCache = new Map<
+const clientTemplateCache = new Map<
   string,
-  { at: number; value: SlotOverridePayload | null }
+  { at: number; value: SlotPayload | null }
 >();
-const CLIENT_OVERRIDE_TTL_MS = 60_000;
+const CLIENT_TEMPLATE_TTL_MS = 60_000;
 
 export function uint8ToBase64(bytes: Uint8Array) {
   let binary = "";
@@ -41,92 +39,87 @@ function base64ToUint8(base64: string) {
   return bytes;
 }
 
-function mergeSlot(
-  base: PdfTemplateSlot,
-  override: SlotOverridePayload,
-): PdfTemplateSlot {
-  return {
-    ...base,
-    template: override.template,
-    flowPushDown: override.flowPushDown ?? base.flowPushDown ?? null,
-    mergeFields:
-      override.mergeFields.length > 0 ? override.mergeFields : base.mergeFields,
-    versionNumber: override.versionNumber,
-  };
-}
-
-async function fetchClientSlotOverride(
-  slotKey: string,
-): Promise<SlotOverridePayload | null> {
-  const cached = clientOverrideCache.get(slotKey);
-  if (cached && Date.now() - cached.at < CLIENT_OVERRIDE_TTL_MS) {
-    return cached.value;
+async function fetchPublishedTemplate(
+  templateKey: string,
+): Promise<DocumentTemplateSlot | null> {
+  const cached = clientTemplateCache.get(templateKey);
+  if (cached && Date.now() - cached.at < CLIENT_TEMPLATE_TTL_MS) {
+    if (!cached.value) return null;
+    return {
+      key: templateKey,
+      coverTypeId: cached.value.coverTypeId ?? null,
+      title: cached.value.title ?? templateKey,
+      versionNumber: cached.value.versionNumber,
+      mergeFields: cached.value.mergeFields,
+      flowPushDown: cached.value.flowPushDown ?? null,
+      template: cached.value.template,
+    };
   }
 
   try {
     const res = await fetch(
-      `/api/document-templates/${encodeURIComponent(slotKey)}`,
+      `/api/document-templates/${encodeURIComponent(templateKey)}`,
     );
-    if (res.status === 204) {
-      clientOverrideCache.set(slotKey, { at: Date.now(), value: null });
+    if (res.status === 404 || res.status === 204) {
+      clientTemplateCache.set(templateKey, { at: Date.now(), value: null });
       return null;
     }
     if (!res.ok) {
-      clientOverrideCache.set(slotKey, { at: Date.now(), value: null });
+      clientTemplateCache.set(templateKey, { at: Date.now(), value: null });
       return null;
     }
-    const data = (await res.json()) as SlotOverridePayload;
-    clientOverrideCache.set(slotKey, { at: Date.now(), value: data });
-    return data;
+    const data = (await res.json()) as SlotPayload;
+    clientTemplateCache.set(templateKey, { at: Date.now(), value: data });
+    return {
+      key: templateKey,
+      coverTypeId: data.coverTypeId ?? null,
+      title: data.title ?? templateKey,
+      versionNumber: data.versionNumber,
+      mergeFields: data.mergeFields,
+      flowPushDown: data.flowPushDown ?? null,
+      template: data.template,
+    };
   } catch {
     return null;
   }
 }
 
-/** Drop cached DB overrides after Settings saves so generation picks up edits. */
+/** Drop cached published templates after Settings saves. */
 export function invalidatePdfTemplateOverrideCache(slotKey?: string) {
   if (slotKey) {
-    clientOverrideCache.delete(slotKey);
+    clientTemplateCache.delete(slotKey);
     return;
   }
-  clientOverrideCache.clear();
+  clientTemplateCache.clear();
 }
 
 async function resolveSlotForGeneration(
-  documentTypeCode: PolicyDocumentTypeCode,
-  coverTypeId: number,
-  slotOverride?: PdfTemplateSlot,
-): Promise<PdfTemplateSlot | null> {
+  templateKey: string,
+  slotOverride?: DocumentTemplateSlot,
+): Promise<DocumentTemplateSlot | null> {
   if (slotOverride) return slotOverride;
 
-  const base = resolvePdfTemplate(documentTypeCode, coverTypeId);
-  if (!base) return null;
-
   if (typeof window === "undefined") {
-    return base;
+    // Server callers must pass slotOverride (or use resolvePublishedPdfTemplate).
+    return null;
   }
 
-  const override = await fetchClientSlotOverride(base.key);
-  return override ? mergeSlot(base, override) : base;
+  return fetchPublishedTemplate(templateKey);
 }
 
 export async function generatePolicyPdf(
-  documentTypeCode: PolicyDocumentTypeCode,
+  templateKey: string,
   policy: Policy,
   mergeInputs?: Record<string, string>,
-  slotOverride?: PdfTemplateSlot,
+  slotOverride?: DocumentTemplateSlot,
 ): Promise<{
   pdf: Uint8Array;
   templateKey: string;
   inputs: Record<string, string>;
 }> {
-  const slot = await resolveSlotForGeneration(
-    documentTypeCode,
-    policy.car.coverTypeId,
-    slotOverride,
-  );
+  const slot = await resolveSlotForGeneration(templateKey, slotOverride);
   if (!slot) {
-    throw new Error(`No pdfme template for ${documentTypeCode}`);
+    throw new Error(`No published pdfme template for ${templateKey}`);
   }
 
   const baseInputs = mergeInputs ?? policyToMergeInputs(policy);
@@ -135,8 +128,6 @@ export async function generatePolicyPdf(
     ...baseInputs,
   };
 
-  // Duplicate placeholders on the Word layout use Name__2, Name__3, …
-  // Static labels (_Label_*, _Static_*) keep schema.content via inputs.
   for (const page of slot.template.schemas) {
     for (const schema of page) {
       const name = schema.name;
@@ -171,23 +162,44 @@ export async function generatePolicyPdf(
 }
 
 export async function buildPdfBlobFromPolicy(
-  documentTypeCode: PolicyDocumentTypeCode,
+  templateKey: string,
   policy: Policy,
 ): Promise<Blob> {
-  const { pdf } = await generatePolicyPdf(documentTypeCode, policy);
-  // Uint8Array is a valid BlobPart; cast for older DOM lib typings.
+  const { pdf } = await generatePolicyPdf(templateKey, policy);
   return new Blob([pdf.buffer as ArrayBuffer], { type: "application/pdf" });
+}
+
+function isLibraryDocument(doc: PolicyDocument) {
+  return doc.libraryDocumentId != null || !doc.templateKey;
 }
 
 export async function buildPdfBlobFromDocument(
   doc: PolicyDocument,
   policy?: Policy,
 ): Promise<Blob> {
-  if (doc.documentTypeCode === "CARADDIT") {
-    const apiPath = `/api/library-documents/file/${encodeURIComponent(doc.filename)}`;
+  if (isLibraryDocument(doc) && !doc.templateKey) {
+    const apiPath =
+      doc.libraryDocumentId != null
+        ? `/api/library-documents/${doc.libraryDocumentId}`
+        : `/api/library-documents/file/${encodeURIComponent(doc.filename)}`;
     try {
       const apiRes = await fetch(apiPath);
-      if (apiRes.ok) return apiRes.blob();
+      if (apiRes.ok) {
+        const contentType = apiRes.headers.get("content-type") ?? "";
+        if (
+          contentType.includes("application/pdf") ||
+          contentType.includes("octet-stream")
+        ) {
+          return apiRes.blob();
+        }
+        // JSON metadata responses are not PDFs — fall through to filename API.
+        if (doc.libraryDocumentId != null) {
+          const fileRes = await fetch(
+            `/api/library-documents/file/${encodeURIComponent(doc.filename)}`,
+          );
+          if (fileRes.ok) return fileRes.blob();
+        }
+      }
     } catch {
       // Fall through to text stub when R2/API is unavailable.
     }
@@ -200,9 +212,14 @@ export async function buildPdfBlobFromDocument(
     });
   }
 
+  const templateKey = doc.templateKey;
+  if (!templateKey) {
+    return buildLegacyTextPdfBlob(doc.name, doc.content);
+  }
+
   if (doc.mergeInputs && policy) {
     const { pdf } = await generatePolicyPdf(
-      doc.documentTypeCode,
+      templateKey,
       policy,
       doc.mergeInputs,
     );
@@ -210,7 +227,7 @@ export async function buildPdfBlobFromDocument(
   }
 
   if (policy) {
-    return buildPdfBlobFromPolicy(doc.documentTypeCode, policy);
+    return buildPdfBlobFromPolicy(templateKey, policy);
   }
 
   return buildLegacyTextPdfBlob(doc.name, doc.content);

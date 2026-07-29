@@ -104,7 +104,7 @@ export function documentTemplateStatusLabel(input: {
     return `Published v${input.publishedVersionNumber}${draftNote}`;
   }
   if (input.editingVersionNumber != null) {
-    return `Draft v${input.editingVersionNumber} (not published — seed is live)`;
+    return `Draft v${input.editingVersionNumber} (not published — generation unavailable)`;
   }
-  return "Seed template (nothing published)";
+  return "No versions";
 }

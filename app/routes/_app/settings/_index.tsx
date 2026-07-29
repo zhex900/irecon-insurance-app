@@ -15,7 +15,6 @@ import {
   DocumentTemplatesEditorShell,
   DocumentTemplatesListShell,
 } from "~/components/settings/document-templates-loading";
-import { resolvePdfTemplateByKey } from "~/lib/pdf/templates";
 import { ThemeModePicker } from "~/components/theme-toggle";
 import {
   Card,
@@ -80,12 +79,7 @@ export default function SettingsIndexRoute({
       /^\/settings\/document-templates\/([^/]+)/,
     );
     if (editorMatch) {
-      const slot = resolvePdfTemplateByKey(decodeURIComponent(editorMatch[1]));
-      return (
-        <DocumentTemplatesEditorShell
-          title={slot?.title ?? "Document Template"}
-        />
-      );
+      return <DocumentTemplatesEditorShell title="Document Template" />;
     }
     return <DocumentTemplatesListShell />;
   }

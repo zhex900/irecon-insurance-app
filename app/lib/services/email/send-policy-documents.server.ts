@@ -3,8 +3,11 @@ import type { Policy, PolicyDocument } from "~/lib/db/types";
 import type { EmailSendRecipient } from "~/lib/email-templates";
 import { generatePolicyPdf, uint8ToBase64 } from "~/lib/pdf/generate";
 import { buildLegacyTextPdfBlob } from "~/lib/pdf/legacy-text-pdf";
-import { resolveActivePdfTemplate } from "~/lib/services/documents/document-templates";
-import { getLibraryDocumentByFilename } from "~/lib/services/documents/library-documents";
+import { resolvePublishedPdfTemplate } from "~/lib/services/documents/document-templates";
+import {
+  getLibraryDocumentByFilename,
+  getLibraryDocumentById,
+} from "~/lib/services/documents/library-documents";
 import { getLibraryDocumentObject } from "~/lib/storage/library-documents.server";
 import {
   sendEmail,
@@ -62,9 +65,12 @@ async function resolveDocumentPdfBytes(
   policy: Policy,
   libraryBucket?: R2BucketLike | null,
 ): Promise<Uint8Array> {
-  if (doc.documentTypeCode === "CARADDIT") {
+  if (!doc.templateKey) {
     if (libraryBucket) {
-      const libraryDoc = await getLibraryDocumentByFilename(doc.filename);
+      const libraryDoc =
+        doc.libraryDocumentId != null
+          ? await getLibraryDocumentById(doc.libraryDocumentId)
+          : await getLibraryDocumentByFilename(doc.filename);
       if (libraryDoc) {
         const object = await getLibraryDocumentObject(
           libraryBucket,
@@ -85,30 +91,17 @@ async function resolveDocumentPdfBytes(
     return bytes;
   }
 
-  if (doc.mergeInputs) {
-    const slot = await resolveActivePdfTemplate(
-      doc.documentTypeCode,
-      policy.car.coverTypeId,
-    );
-    const { pdf } = await generatePolicyPdf(
-      doc.documentTypeCode,
-      policy,
-      doc.mergeInputs,
-      slot ?? undefined,
-    );
-    return pdf;
+  const slot = await resolvePublishedPdfTemplate(doc.templateKey);
+  if (!slot) {
+    return blobToUint8(await buildLegacyTextPdfBlob(doc.name, doc.content));
   }
 
   try {
-    const slot = await resolveActivePdfTemplate(
-      doc.documentTypeCode,
-      policy.car.coverTypeId,
-    );
     const { pdf } = await generatePolicyPdf(
-      doc.documentTypeCode,
+      doc.templateKey,
       policy,
-      undefined,
-      slot ?? undefined,
+      doc.mergeInputs,
+      slot,
     );
     return pdf;
   } catch {

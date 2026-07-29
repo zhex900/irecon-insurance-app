@@ -8,7 +8,7 @@ import { mergeReviewDocuments } from "~/lib/services/policy/documents/merge";
 
 function doc(
   partial: Partial<PolicyDocument> &
-    Pick<PolicyDocument, "policyDocumentId" | "documentTypeCode" | "filename">,
+    Pick<PolicyDocument, "policyDocumentId" | "filename">,
 ): PolicyDocument {
   return {
     policyId: 1,
@@ -28,38 +28,38 @@ describe("document id helpers", () => {
       nextDocumentId([
         doc({
           policyDocumentId: 3,
-          documentTypeCode: "CARSCHED",
           filename: "a.pdf",
+          templateKey: "schedule-annual",
         }),
         doc({
           policyDocumentId: 7,
-          documentTypeCode: "CARRATING",
           filename: "b.pdf",
+          templateKey: "rating-annual",
         }),
       ]),
     ).toBe(8);
   });
 
-  it("nextAmendmentNumber counts by type", () => {
+  it("nextAmendmentNumber counts by template key", () => {
     const existing = [
       doc({
         policyDocumentId: 1,
-        documentTypeCode: "CARSCHED",
         filename: "s1.pdf",
+        templateKey: "schedule-annual",
       }),
       doc({
         policyDocumentId: 2,
-        documentTypeCode: "CARSCHED",
         filename: "s2.pdf",
+        templateKey: "schedule-annual",
       }),
       doc({
         policyDocumentId: 3,
-        documentTypeCode: "CARRATING",
         filename: "r1.pdf",
+        templateKey: "rating-annual",
       }),
     ];
-    expect(nextAmendmentNumber(existing, "CARSCHED")).toBe(2);
-    expect(nextAmendmentNumber(existing, "CARADJUST")).toBe(0);
+    expect(nextAmendmentNumber(existing, "schedule-annual")).toBe(2);
+    expect(nextAmendmentNumber(existing, "adjustment")).toBe(0);
   });
 });
 
@@ -68,28 +68,28 @@ describe("mergeReviewDocuments", () => {
     const existing = [
       doc({
         policyDocumentId: 1,
-        documentTypeCode: "CARSCHED",
         filename: "sched.pdf",
+        templateKey: "schedule-annual",
         generationKey: "same",
       }),
       doc({
         policyDocumentId: 2,
-        documentTypeCode: "CARADDIT",
         filename: "lib.pdf",
+        libraryDocumentId: 9,
         generationKey: "same",
       }),
     ];
     const pack = [
       doc({
         policyDocumentId: 99,
-        documentTypeCode: "CARSCHED",
         filename: "sched-new.pdf",
+        templateKey: "schedule-annual",
         generationKey: "same",
       }),
       doc({
         policyDocumentId: 100,
-        documentTypeCode: "CARADDIT",
         filename: "lib.pdf",
+        libraryDocumentId: 9,
         generationKey: "same",
       }),
     ];
@@ -100,22 +100,22 @@ describe("mergeReviewDocuments", () => {
     const existing = [
       doc({
         policyDocumentId: 1,
-        documentTypeCode: "CARSCHED",
         filename: "sched-v1.pdf",
+        templateKey: "schedule-annual",
         generationKey: "old",
       }),
     ];
     const pack = [
       doc({
         policyDocumentId: 0,
-        documentTypeCode: "CARSCHED",
         filename: "sched-v2.pdf",
+        templateKey: "schedule-annual",
         generationKey: "new",
       }),
       doc({
         policyDocumentId: 0,
-        documentTypeCode: "CARRATING",
         filename: "roa-v1.pdf",
+        templateKey: "rating-annual",
         generationKey: "new",
       }),
     ];
@@ -124,35 +124,35 @@ describe("mergeReviewDocuments", () => {
     expect(merged[0]?.filename).toBe("sched-v1.pdf");
     expect(merged[1]?.filename).toBe("sched-v2.pdf");
     expect(merged[1]?.policyDocumentId).toBe(2);
-    expect(merged[2]?.documentTypeCode).toBe("CARRATING");
+    expect(merged[2]?.templateKey).toBe("rating-annual");
   });
 
   it("adds missing fixed library docs without replacing versioned pack", () => {
     const existing = [
       doc({
         policyDocumentId: 1,
-        documentTypeCode: "CARSCHED",
         filename: "sched.pdf",
+        templateKey: "schedule-annual",
         generationKey: "same",
       }),
     ];
     const pack = [
       doc({
         policyDocumentId: 0,
-        documentTypeCode: "CARSCHED",
         filename: "sched.pdf",
+        templateKey: "schedule-annual",
         generationKey: "same",
       }),
       doc({
         policyDocumentId: 0,
-        documentTypeCode: "CARADDIT",
         filename: "wording.pdf",
+        libraryDocumentId: 3,
         generationKey: "same",
       }),
     ];
     const merged = mergeReviewDocuments(existing, pack);
     expect(merged).toHaveLength(2);
-    expect(merged[1]?.documentTypeCode).toBe("CARADDIT");
+    expect(merged[1]?.libraryDocumentId).toBe(3);
     expect(merged[1]?.filename).toBe("wording.pdf");
   });
 });

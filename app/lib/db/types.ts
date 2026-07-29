@@ -225,21 +225,19 @@ export type CarAdjustmentRecord = {
   adjustedTotalPremium: number;
 };
 
-export type PolicyDocumentTypeCode =
-  "CARSCHED" | "CARRATING" | "CARADJUST" | "CARADDIT";
-
 export type PolicyDocument = {
   policyDocumentId: number;
   policyId: number;
-  documentTypeCode: PolicyDocumentTypeCode;
   name: string;
   filename: string;
   /** Fingerprint of the policy snapshot used to generate this pack. */
   generationKey: string;
   /** Human-readable summary / library placeholder text. */
   content: string;
-  /** pdfme template slot key (e.g. schedule-annual). */
+  /** pdfme template key (generated docs). Absent for library attachments. */
   templateKey?: string;
+  /** Library document id when this row was copied from Library Documents. */
+  libraryDocumentId?: number;
   /** Legacy MERGEFIELD → value map used for generation / regeneration. */
   mergeInputs?: Record<string, string>;
   /** Optional cached PDF (base64) from last generate. */

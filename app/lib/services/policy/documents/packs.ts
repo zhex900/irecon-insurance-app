@@ -3,24 +3,25 @@ import {
   libraryDocumentMatchesPolicy,
   type LibraryDocumentRecord,
 } from "~/lib/library-documents";
+import type { DocumentTemplateSlot } from "~/lib/pdf/templates";
 import {
-  buildAdjustmentContent,
-  buildRatingContent,
-  buildScheduleContent,
   formatDocTimestamp,
   makeDoc,
   nextAmendmentNumber,
-  templateMeta,
 } from "~/lib/services/policy/documents/content";
 import {
   adjustmentDocumentsFingerprint,
   reviewDocumentsFingerprint,
 } from "~/lib/services/policy/documents/fingerprints";
+import { policyToMergeInputs } from "~/lib/pdf/merge-fields";
 
-/** Build the Review-stage document pack from the current policy snapshot. */
+export type PackTemplateMeta = Pick<DocumentTemplateSlot, "key" | "title">;
+
+/** Build the Review-stage document pack from published templates for the cover. */
 export function buildReviewDocumentPack(
   policy: Policy,
   generatedBy: string,
+  templates: PackTemplateMeta[],
   existing: PolicyDocument[] = [],
   libraryDocs?: LibraryDocumentRecord[],
 ): PolicyDocument[] {
@@ -28,58 +29,43 @@ export function buildReviewDocumentPack(
   const when = new Date();
   const stamp = formatDocTimestamp(when);
   const generatedWhen = when.toISOString();
+  const mergeInputs = policyToMergeInputs(policy);
   let nextId = 1;
 
-  const scheduleAmendment = nextAmendmentNumber(existing, "CARSCHED");
-  const scheduleMeta = templateMeta(policy, "CARSCHED");
-  const docs: PolicyDocument[] = [
-    makeDoc({
+  const docs: PolicyDocument[] = templates.map((template) => {
+    const amendment = nextAmendmentNumber(existing, template.key);
+    const safeKey = template.key.replace(/[^a-zA-Z0-9_-]+/g, "_");
+    return makeDoc({
       id: nextId++,
       policyId: policy.policyId,
-      code: "CARSCHED",
-      name: "CAR Schedule",
-      filename: `CAR_Schedule_${policy.policyNumber}_${scheduleAmendment}_${stamp}.pdf`,
+      name: template.title || template.key,
+      filename: `${safeKey}_${policy.policyNumber}_${amendment}_${stamp}.pdf`,
       generationKey,
-      content: buildScheduleContent(policy),
+      content: [
+        template.title || template.key,
+        `Policy number: ${policy.policyNumber}`,
+        `Insured: ${policy.car.insuredName}`,
+      ].join("\n"),
       generatedBy,
       generatedWhen,
-      ...scheduleMeta,
-    }),
-  ];
+      templateKey: template.key,
+      mergeInputs,
+    });
+  });
 
-  if (policy.car.premium) {
-    const ratingAmendment = nextAmendmentNumber(existing, "CARRATING");
-    const ratingMeta = templateMeta(policy, "CARRATING");
-    docs.push(
-      makeDoc({
-        id: nextId++,
-        policyId: policy.policyId,
-        code: "CARRATING",
-        name: "CAR Rating / ROA",
-        filename: `Car_Premium&ROA_${policy.policyNumber}_${ratingAmendment}_${stamp}.pdf`,
-        generationKey,
-        content: buildRatingContent(policy),
-        generatedBy,
-        generatedWhen,
-        ...ratingMeta,
-      }),
-    );
-  }
-
-  // Library attachments (CARADDIT) — fixed filenames; only added once.
   const libraryAttachments = resolveLibraryAttachments(policy, libraryDocs);
   for (const item of libraryAttachments) {
     docs.push(
       makeDoc({
         id: nextId++,
         policyId: policy.policyId,
-        code: "CARADDIT",
         name: item.name,
         filename: item.filename,
         generationKey,
         content: item.content,
         generatedBy,
         generatedWhen,
+        libraryDocumentId: item.libraryDocumentId,
       }),
     );
   }
@@ -91,9 +77,10 @@ type LibraryAttachment = {
   name: string;
   filename: string;
   content: string;
+  libraryDocumentId?: number;
 };
 
-/** Prefer DB library docs; fall back to hardcoded seed filenames. */
+/** Prefer DB library docs; fall back to hardcoded seed filenames (no library ids). */
 export function resolveLibraryAttachments(
   policy: Policy,
   libraryDocs?: LibraryDocumentRecord[],
@@ -104,6 +91,7 @@ export function resolveLibraryAttachments(
       .map((doc) => ({
         name: doc.displayName,
         filename: doc.filename,
+        libraryDocumentId: doc.libraryDocumentId,
         content: [
           doc.displayName,
           `Attached for policy ${policy.policyNumber}.`,
@@ -146,12 +134,12 @@ export function resolveLibraryAttachments(
 
 /**
  * Pack generated when an adjustment is saved:
- * Adjustment PDF + updated Schedule + Rating reflecting effective premium.
- * Previous documents are kept (append-only via mergeReviewDocuments).
+ * all published templates for the cover (typically includes adjustment + schedule + rating).
  */
 export function buildAdjustmentDocumentPack(
   policy: Policy,
   generatedBy: string,
+  templates: PackTemplateMeta[],
   existing: PolicyDocument[] = [],
 ): PolicyDocument[] {
   if (!policy.car.adjustment || !policy.car.premium) return [];
@@ -160,51 +148,27 @@ export function buildAdjustmentDocumentPack(
   const when = new Date();
   const stamp = formatDocTimestamp(when);
   const generatedWhen = when.toISOString();
+  const mergeInputs = policyToMergeInputs(policy);
   let nextId = 1;
 
-  const adjustAmendment = nextAmendmentNumber(existing, "CARADJUST");
-  const scheduleAmendment = nextAmendmentNumber(existing, "CARSCHED");
-  const ratingAmendment = nextAmendmentNumber(existing, "CARRATING");
-  const adjustMeta = templateMeta(policy, "CARADJUST");
-  const scheduleMeta = templateMeta(policy, "CARSCHED");
-  const ratingMeta = templateMeta(policy, "CARRATING");
-
-  return [
-    makeDoc({
+  return templates.map((template) => {
+    const amendment = nextAmendmentNumber(existing, template.key);
+    const safeKey = template.key.replace(/[^a-zA-Z0-9_-]+/g, "_");
+    return makeDoc({
       id: nextId++,
       policyId: policy.policyId,
-      code: "CARADJUST",
-      name: "CAR Adjustment",
-      filename: `CAR_Adjustment_${policy.policyNumber}_${adjustAmendment}_${stamp}.pdf`,
+      name: template.title || template.key,
+      filename: `${safeKey}_${policy.policyNumber}_${amendment}_${stamp}.pdf`,
       generationKey,
-      content: buildAdjustmentContent(policy),
+      content: [
+        template.title || template.key,
+        `Policy number: ${policy.policyNumber}`,
+        `Insured: ${policy.car.insuredName}`,
+      ].join("\n"),
       generatedBy,
       generatedWhen,
-      ...adjustMeta,
-    }),
-    makeDoc({
-      id: nextId,
-      policyId: policy.policyId,
-      code: "CARSCHED",
-      name: "CAR Schedule",
-      filename: `CAR_Schedule_${policy.policyNumber}_${scheduleAmendment}_${stamp}.pdf`,
-      generationKey,
-      content: buildScheduleContent(policy),
-      generatedBy,
-      generatedWhen,
-      ...scheduleMeta,
-    }),
-    makeDoc({
-      id: nextId + 1,
-      policyId: policy.policyId,
-      code: "CARRATING",
-      name: "CAR Rating / ROA",
-      filename: `Car_Premium&ROA_${policy.policyNumber}_${ratingAmendment}_${stamp}.pdf`,
-      generationKey,
-      content: buildRatingContent(policy),
-      generatedBy,
-      generatedWhen,
-      ...ratingMeta,
-    }),
-  ];
+      templateKey: template.key,
+      mergeInputs,
+    });
+  });
 }

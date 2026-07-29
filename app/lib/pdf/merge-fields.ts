@@ -47,7 +47,7 @@ function liabilityLabel(bandId: number) {
 
 /**
  * Map a policy snapshot to legacy Word MERGEFIELD names.
- * Keys match `app/assets/pdf-templates/merge-field-catalogue.json`.
+ * Keys are legacy Word MERGEFIELD names used in pdfme schemas.
  */
 export function policyToMergeInputs(policy: Policy): Record<string, string> {
   const car = policy.car;

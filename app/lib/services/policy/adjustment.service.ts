@@ -9,6 +9,7 @@ import {
   buildAdjustmentDocumentPack,
   mergeReviewDocuments,
 } from "~/lib/services/policy/documents";
+import { listPublishedForCover } from "~/lib/services/documents/document-templates";
 import { getPolicy, savePolicy } from "~/lib/services/policy/data.service";
 
 export class AdjustmentError extends Error {
@@ -111,11 +112,12 @@ export async function submitPolicyAdjustment(
     },
   };
 
-  // Spec §6.7.2: Adjustment saved → CARADJUST + updated Schedule + Rating
-  // (effective premium). Append-only — previous PDFs are kept.
+  // Adjustment saved → all published templates for this cover (append-only).
+  const templates = await listPublishedForCover(policy.car.coverTypeId);
   const pack = buildAdjustmentDocumentPack(
     policy,
     createdBy,
+    templates.map((t) => ({ key: t.key, title: t.title })),
     policy.documents ?? [],
   );
   const documents = mergeReviewDocuments(policy.documents, pack);

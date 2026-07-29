@@ -40,6 +40,7 @@ export default [
     "routes/api/library-documents.file.$filename.tsx",
   ),
   route("api/library-documents/:id", "routes/api/library-documents.$id.tsx"),
+  route("api/document-templates", "routes/api/document-templates.tsx"),
   route(
     "api/document-templates/:slotKey",
     "routes/api/document-templates.$slotKey.tsx",
