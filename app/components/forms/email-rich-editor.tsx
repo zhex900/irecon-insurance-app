@@ -9,8 +9,6 @@ import {
   type ReactNode,
 } from "react";
 import "@react-email/editor/themes/default.css";
-import { EmailPlaceholderExtension } from "~/lib/email/placeholder-editor-extension";
-import { ensureTableSlashCommand } from "~/lib/email/slash-table-command";
 import { cn } from "~/lib/utils";
 
 export type EmailRichEditorHandle = {
@@ -87,6 +85,7 @@ type LoadedModules = {
   StarterKit: { configure: (options?: Record<string, unknown>) => unknown };
   EmailTheming: { configure: (options?: Record<string, unknown>) => unknown };
   Placeholder: { configure: (options?: Record<string, unknown>) => unknown };
+  EmailPlaceholderExtension: unknown;
   InspectorRoot: ComponentType<{ className?: string; children?: ReactNode }>;
   InspectorBreadcrumb: ComponentType;
   InspectorDocument: ComponentType;
@@ -131,12 +130,16 @@ export const EmailRichEditor = forwardRef<
           { StarterKit },
           { EmailTheming },
           { Placeholder },
+          { EmailPlaceholderExtension },
+          { ensureTableSlashCommand },
         ] = await Promise.all([
           import("@react-email/editor"),
           import("@react-email/editor/ui"),
           import("@react-email/editor/extensions"),
           import("@react-email/editor/plugins"),
           import("@tiptap/extension-placeholder"),
+          import("~/lib/email/placeholder-editor-extension"),
+          import("~/lib/email/slash-table-command"),
         ]);
         if (cancelled) return;
         ensureTableSlashCommand(
@@ -148,6 +151,7 @@ export const EmailRichEditor = forwardRef<
           StarterKit: StarterKit as LoadedModules["StarterKit"],
           EmailTheming: EmailTheming as LoadedModules["EmailTheming"],
           Placeholder: Placeholder as LoadedModules["Placeholder"],
+          EmailPlaceholderExtension,
           InspectorRoot: Inspector.Root,
           InspectorBreadcrumb: Inspector.Breadcrumb,
           InspectorDocument: Inspector.Document,
@@ -226,7 +230,8 @@ export const EmailRichEditor = forwardRef<
 
   const extensions = useMemo(() => {
     if (!mods) return undefined;
-    const { StarterKit, EmailTheming, Placeholder } = mods;
+    const { StarterKit, EmailTheming, Placeholder, EmailPlaceholderExtension } =
+      mods;
     return [
       StarterKit.configure(),
       Placeholder.configure({

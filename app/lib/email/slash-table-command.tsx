@@ -1,5 +1,25 @@
 import { createElement, type ComponentType, type ReactNode } from "react";
-import type { SlashCommandItem } from "@react-email/editor/ui";
+
+/** Subset of `@react-email/editor/ui` SlashCommandItem (avoid SSR import). */
+type SlashCommandItem = {
+  title: string;
+  description: string;
+  icon: ReactNode;
+  category: string;
+  searchTerms: string[];
+  command: (input: {
+    editor: {
+      chain: () => {
+        focus: () => {
+          deleteRange: (range: unknown) => {
+            insertContent: (content: unknown) => { run: () => boolean };
+          };
+        };
+      };
+    };
+    range: unknown;
+  }) => void;
+};
 
 const LABEL_STYLE =
   "background:#808080;color:#ffffff;font-weight:700;border:1px solid #808080;padding:4px 8px;width:9rem;vertical-align:top";
