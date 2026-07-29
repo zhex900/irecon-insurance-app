@@ -224,16 +224,17 @@ export function useFieldSaveState(name: string | undefined) {
     dirty,
     attention,
     className: cn(
-      saved &&
-        "border-success ring-2 ring-success/25 transition-[border-color,box-shadow] duration-300",
-      // Yellow attention cue — overrides red invalid while focused from nav.
+      saved && "border-success transition-[border-color] duration-300",
+      // Yellow attention cue — border only (no ring fill).
       attention &&
         !saved &&
-        "border-warning ring-2 ring-warning/25 transition-[border-color,box-shadow] duration-300 aria-invalid:border-warning aria-invalid:ring-warning/25 dark:aria-invalid:border-warning dark:aria-invalid:ring-warning/25",
+        "border-warning transition-[border-color] duration-300 aria-invalid:border-warning dark:aria-invalid:border-warning",
       dirty &&
         !saved &&
         !attention &&
-        "border-warning ring-2 ring-warning/25 transition-[border-color,box-shadow] duration-300",
+        "border-warning transition-[border-color] duration-300",
+      // Never paint a filled ring over invalid fields — red border is enough.
+      "has-[[aria-invalid=true]]:ring-0 aria-invalid:ring-0",
     ),
   };
 }

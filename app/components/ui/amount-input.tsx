@@ -73,6 +73,7 @@ export function AmountInput({
           <InputGroupInput
             id={fieldId}
             inputMode="decimal"
+            autoComplete="off"
             {...inputProps}
             name={field.name}
             ref={(node) => {
