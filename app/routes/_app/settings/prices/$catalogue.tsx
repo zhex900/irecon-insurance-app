@@ -283,7 +283,7 @@ function CarPanel({
   const slug = kindToSlug("car");
   return (
     <ListCard
-      title="CAR price schedules"
+      title="CAR Price Schedules"
       description="Click a row to view turnover bands and rates."
     >
       {catalogue.car.length === 0 ? (
@@ -341,7 +341,7 @@ function StampPanel({
   const slug = kindToSlug("stamp");
   return (
     <ListCard
-      title="Stamp duty schedules"
+      title="Stamp Duty Schedules"
       description="Click a row to view state rates."
     >
       {catalogue.stampDuty.length === 0 ? (
@@ -395,7 +395,7 @@ function EslPanel({
   const slug = kindToSlug("esl");
   return (
     <ListCard
-      title="ESL schedules"
+      title="ESL Schedules"
       description="Click a row to view ESL rates."
     >
       {catalogue.esl.length === 0 ? (
@@ -449,7 +449,7 @@ function PlantPanel({
   const slug = kindToSlug("plant");
   return (
     <ListCard
-      title="Plant rates"
+      title="Plant Rates"
       description="Click a row to view plant rates."
     >
       {catalogue.plant.length === 0 ? (
@@ -511,7 +511,7 @@ function TerrorPanel({
   const slug = kindToSlug("terror");
   return (
     <ListCard
-      title="Terrorism schedules"
+      title="Terrorism Schedules"
       description="price_terrorism → rates → postcodes with state (legacy CAR_Terrorism*)."
     >
       {catalogue.terrorism.length === 0 ? (
@@ -589,7 +589,7 @@ function FeesPanel({
   const slug = kindToSlug("fees");
   return (
     <ListCard
-      title="Broker fee schedules"
+      title="Broker Fee Schedules"
       description="Click a row to view fee lines."
     >
       {catalogue.brokerFees.length === 0 ? (

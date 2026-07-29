@@ -61,7 +61,7 @@ function isEmailTemplateKey(value: string): value is EmailTemplateKey {
 }
 
 export function meta() {
-  return [{ title: pageTitle("Email template") }];
+  return [{ title: pageTitle("Email Template") }];
 }
 
 export async function loader({ request, params }: Route.LoaderArgs) {
@@ -551,7 +551,7 @@ export default function SettingsEmailTemplateEditorRoute({
         breadcrumbs={[
           { label: "Settings", to: "/settings", reloadDocument: true },
           {
-            label: "Email templates",
+            label: "Email Templates",
             to: "/settings/email-templates",
             reloadDocument: true,
           },
@@ -768,7 +768,7 @@ export default function SettingsEmailTemplateEditorRoute({
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
         <DialogContent className="flex max-h-[90vh] w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl">
           <DialogHeader className="gap-1 border-b p-4">
-            <DialogTitle>Email preview</DialogTitle>
+            <DialogTitle>Email Preview</DialogTitle>
           </DialogHeader>
           <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
             <div className="flex flex-col divide-y divide-border rounded-md border border-border">
@@ -800,7 +800,7 @@ export default function SettingsEmailTemplateEditorRoute({
             </div>
             <div className="overflow-auto rounded-lg border bg-white">
               <div
-                title="Email preview"
+                title="Email Preview"
                 className="email-template-preview h-[min(28rem,50vh)] overflow-auto p-4 text-sm text-black [&_img]:h-auto [&_img]:max-w-full"
                 // Preview-only HTML we just built from the editor + sample merge fields.
                 dangerouslySetInnerHTML={{ __html: previewHtml }}

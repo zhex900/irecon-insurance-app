@@ -23,9 +23,9 @@ const FEATURE_CATALOGUE: Record<
   { label: string; description: string; defaultEnabled: boolean }
 > = {
   audit_log: {
-    label: "Audit log",
+    label: "Audit Log",
     description:
-      "When disabled, the Audit log is hidden from everyone except super-admins.",
+      "When disabled, the Audit Log is hidden from everyone except super-admins.",
     defaultEnabled: true,
   },
   prices: {
@@ -35,21 +35,21 @@ const FEATURE_CATALOGUE: Record<
     defaultEnabled: true,
   },
   email_templates: {
-    label: "Email templates",
+    label: "Email Templates",
     description:
-      "When disabled, Email templates is hidden from everyone except super-admins.",
+      "When disabled, Email Templates is hidden from everyone except super-admins.",
     defaultEnabled: true,
   },
   library_documents: {
-    label: "Library documents",
+    label: "Library Documents",
     description:
-      "When disabled, Library documents is hidden from everyone except super-admins.",
+      "When disabled, Library Documents is hidden from everyone except super-admins.",
     defaultEnabled: true,
   },
   document_templates: {
-    label: "Document templates",
+    label: "Document Templates",
     description:
-      "When disabled, Document templates (PDF editor) is hidden from everyone except super-admins.",
+      "When disabled, Document Templates (PDF editor) is hidden from everyone except super-admins.",
     defaultEnabled: true,
   },
 };

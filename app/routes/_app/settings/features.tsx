@@ -7,7 +7,6 @@ import { Checkbox } from "~/components/ui/checkbox";
 import { Label } from "~/components/ui/label";
 import {
   Card,
-  CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
@@ -92,23 +91,27 @@ function FeatureToggleRow({ feature }: { feature: FeatureFlag }) {
 
   return (
     <Card>
-      <CardHeader className="gap-1">
-        <div className="flex items-start gap-3">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <SlidersHorizontalIcon className="size-5" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <CardTitle className="text-base">{feature.label}</CardTitle>
-            <CardDescription>{feature.description}</CardDescription>
-          </div>
+      <CardHeader className="flex flex-row items-center gap-4">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <SlidersHorizontalIcon className="size-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <CardTitle className="text-base">{feature.label}</CardTitle>
+          <CardDescription>{feature.description}</CardDescription>
         </div>
-      </CardHeader>
-      <CardContent>
-        <div className="flex items-center gap-3">
+        <div className="flex shrink-0 items-center gap-2">
+          <Label
+            htmlFor={`feature-${feature.key}`}
+            className="hidden font-normal sm:inline"
+          >
+            {enabled ? "Enabled" : "Disabled"}
+            {busy ? "…" : ""}
+          </Label>
           <Checkbox
             id={`feature-${feature.key}`}
             checked={enabled}
             disabled={busy}
+            aria-label={`${feature.label}: ${enabled ? "enabled" : "disabled"}`}
             onCheckedChange={(checked) => {
               fetcher.submit(
                 {
@@ -119,12 +122,8 @@ function FeatureToggleRow({ feature }: { feature: FeatureFlag }) {
               );
             }}
           />
-          <Label htmlFor={`feature-${feature.key}`} className="font-normal">
-            {enabled ? "Enabled" : "Disabled"}
-            {busy ? "…" : ""}
-          </Label>
         </div>
-      </CardContent>
+      </CardHeader>
     </Card>
   );
 }

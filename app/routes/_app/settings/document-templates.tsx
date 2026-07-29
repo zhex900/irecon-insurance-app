@@ -1,6 +1,10 @@
-import { Link, redirect } from "react-router";
+import { Link, redirect, useNavigation } from "react-router";
 import { ArrowRightIcon, FilePenLineIcon } from "lucide-react";
 import { PageHeader } from "~/components/layout/app-layout";
+import {
+  DocumentTemplatesEditorShell,
+  DocumentTemplatesListShell,
+} from "~/components/settings/document-templates-loading";
 import {
   Card,
   CardDescription,
@@ -10,6 +14,8 @@ import {
 import { requireAuth } from "~/lib/auth/session.server";
 import { isSuperAdmin } from "~/lib/auth/roles";
 import { pageTitle } from "~/lib/brand";
+import { formatDocumentTemplateTitle } from "~/lib/documents/template-title";
+import { resolvePdfTemplateByKey } from "~/lib/pdf/templates";
 import {
   listDocumentTemplates,
   type DocumentTemplateListItem,
@@ -18,7 +24,12 @@ import { isFeatureEnabled } from "~/lib/services/feature-flags";
 import type { Route } from "./+types/document-templates";
 
 export function meta() {
-  return [{ title: pageTitle("Document templates") }];
+  return [{ title: pageTitle("Document Templates") }];
+}
+
+/** Shown immediately while the list (or a template editor) is loading. */
+export function HydrateFallback() {
+  return <DocumentTemplatesListShell />;
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -64,7 +75,9 @@ function TemplateCard({ template }: { template: DocumentTemplateListItem }) {
             </span>
             <ArrowRightIcon className="size-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
           </div>
-          <CardTitle className="text-base">{template.title}</CardTitle>
+          <CardTitle className="text-base">
+            {formatDocumentTemplateTitle(template.title)}
+          </CardTitle>
           <CardDescription>
             {template.documentTypeCode} · {coverTypeLabel(template.coverTypeId)}
           </CardDescription>
@@ -84,18 +97,33 @@ function TemplateCard({ template }: { template: DocumentTemplateListItem }) {
 export default function DocumentTemplatesRoute({
   loaderData,
 }: Route.ComponentProps) {
+  const navigation = useNavigation();
+  const editorMatch = navigation.location?.pathname.match(
+    /^\/settings\/document-templates\/([^/]+)/,
+  );
+  const loadingEditor = navigation.state !== "idle" && Boolean(editorMatch);
+
+  if (loadingEditor && editorMatch) {
+    const slot = resolvePdfTemplateByKey(decodeURIComponent(editorMatch[1]));
+    return (
+      <DocumentTemplatesEditorShell
+        title={slot?.title ?? "Document Template"}
+      />
+    );
+  }
+
   return (
     <div>
       <PageHeader
-        title="Document templates"
+        title="Document Templates"
         description={
           loaderData.documentTemplatesEnabled
             ? "Edit drafts, publish the live version used for PDF generation, and undo to a previous publish."
-            : "Document templates is disabled for other roles. Super-admins can still manage it."
+            : "Document Templates is disabled for other roles. Super-admins can still manage it."
         }
         breadcrumbs={[
           { label: "Settings", to: "/settings" },
-          { label: "Document templates" },
+          { label: "Document Templates" },
         ]}
       />
 

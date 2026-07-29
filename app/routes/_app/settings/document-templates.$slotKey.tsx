@@ -3,6 +3,7 @@ import {
   redirect,
   useFetcher,
   useNavigate,
+  useParams,
   useRevalidator,
 } from "react-router";
 import { generate } from "@pdfme/generator";
@@ -14,6 +15,7 @@ import {
   PdfmeDesigner,
   type PdfmeDesignerHandle,
 } from "~/components/settings/pdfme-designer";
+import { DocumentTemplatesEditorShell } from "~/components/settings/document-templates-loading";
 import { Button } from "~/components/ui/button";
 import { LoadingButton } from "~/components/ui/loading-button";
 import { requireAuth } from "~/lib/auth/session.server";
@@ -24,10 +26,12 @@ import {
   documentTemplateStatusLabel,
   parseTemplateForm,
 } from "~/lib/documents/template-editor-form";
+import { formatDocumentTemplateTitle } from "~/lib/documents/template-title";
 import { applyFlowPushDown } from "~/lib/pdf/flow-push-down";
 import { invalidatePdfTemplateOverrideCache } from "~/lib/pdf/generate";
 import { pdfmePlugins } from "~/lib/pdf/plugins";
 import { buildSampleMergeInputs } from "~/lib/pdf/sample-merge-inputs";
+import { resolvePdfTemplateByKey } from "~/lib/pdf/templates";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import {
   getEditableDocumentTemplateSlot,
@@ -40,7 +44,18 @@ import { isFeatureEnabled } from "~/lib/services/feature-flags";
 import type { Route } from "./+types/document-templates.$slotKey";
 
 export function meta() {
-  return [{ title: pageTitle("Document template") }];
+  return [{ title: pageTitle("Document Template") }];
+}
+
+/** Title immediately; skeleton only for the designer pane. */
+export function HydrateFallback() {
+  const { slotKey } = useParams();
+  const slot = slotKey
+    ? resolvePdfTemplateByKey(decodeURIComponent(slotKey))
+    : null;
+  return (
+    <DocumentTemplatesEditorShell title={slot?.title ?? "Document Template"} />
+  );
 }
 
 export async function loader({ request, params }: Route.LoaderArgs) {
@@ -231,6 +246,7 @@ export default function DocumentTemplateEditorRoute({
   loaderData,
 }: Route.ComponentProps) {
   const { slot, canEdit } = loaderData;
+  const displayTitle = formatDocumentTemplateTitle(slot.title);
   const navigate = useNavigate();
   const revalidator = useRevalidator();
   const fetcher = useFetcher<typeof action>();
@@ -383,7 +399,7 @@ export default function DocumentTemplateEditorRoute({
   return (
     <div className="flex min-h-[calc(100vh-8rem)] flex-col gap-4">
       <PageHeader
-        title={slot.title}
+        title={displayTitle}
         description={
           <div className="space-y-1">
             <p className="font-medium text-foreground">
@@ -397,8 +413,8 @@ export default function DocumentTemplateEditorRoute({
         }
         breadcrumbs={[
           { label: "Settings", to: "/settings" },
-          { label: "Document templates", to: "/settings/document-templates" },
-          { label: slot.title },
+          { label: "Document Templates", to: "/settings/document-templates" },
+          { label: displayTitle },
         ]}
         action={
           <div className="flex flex-wrap gap-2">
@@ -490,7 +506,7 @@ export default function DocumentTemplateEditorRoute({
             setPreviewLoading(false);
           }
         }}
-        title={`${slot.title} — preview`}
+        title={`${displayTitle} — preview`}
         description="Generated with sample policy data (not a real policy)."
         src={previewSrc}
         loading={previewLoading}

@@ -1,5 +1,6 @@
 import { useEffect, useImperativeHandle, useRef, useState } from "react";
 import type { Template } from "@pdfme/common";
+import { DocumentTemplatesEditorSkeleton } from "~/components/settings/document-templates-loading";
 import { pdfmePlugins } from "~/lib/pdf/plugins";
 
 export type PdfmeDesignerHandle = {
@@ -117,8 +118,8 @@ export function PdfmeDesigner({
   return (
     <div className={className} style={{ position: "relative", minHeight: 480 }}>
       {status === "loading" ? (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 text-sm text-muted-foreground">
-          Loading designer…
+        <div className="absolute inset-0 z-10 bg-background">
+          <DocumentTemplatesEditorSkeleton className="h-full min-h-[70vh] rounded-none border-0" />
         </div>
       ) : null}
       {status === "error" ? (

@@ -47,7 +47,7 @@ import type { Route } from "./+types/audit-log";
 import { pageTitle } from "~/lib/brand";
 
 export function meta() {
-  return [{ title: pageTitle("Audit log") }];
+  return [{ title: pageTitle("Audit Log") }];
 }
 
 const PAGE_SIZE = 50;
@@ -143,7 +143,7 @@ export default function SettingsAuditLogRoute({
   return (
     <div>
       <PageHeader
-        title={isAdmin ? "Audit log" : "My activity"}
+        title={isAdmin ? "Audit Log" : "My Activity"}
         description={
           isAdmin
             ? "Material actions across the app — who changed what and when."
@@ -151,7 +151,7 @@ export default function SettingsAuditLogRoute({
         }
         breadcrumbs={[
           { label: "Settings", to: "/settings" },
-          { label: isAdmin ? "Audit log" : "My activity" },
+          { label: isAdmin ? "Audit Log" : "My Activity" },
         ]}
       />
 
@@ -307,7 +307,7 @@ export default function SettingsAuditLogRoute({
       >
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Audit entry</DialogTitle>
+            <DialogTitle>Audit Entry</DialogTitle>
             <DialogDescription>
               {detail ? formatWhen(detail.occurredAt) : null}
             </DialogDescription>

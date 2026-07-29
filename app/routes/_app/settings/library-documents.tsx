@@ -17,7 +17,7 @@ import type { Route } from "./+types/library-documents";
 import { pageTitle } from "~/lib/brand";
 
 export function meta() {
-  return [{ title: pageTitle("Library documents") }];
+  return [{ title: pageTitle("Library Documents") }];
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -187,15 +187,15 @@ export default function SettingsLibraryDocumentsRoute({
   return (
     <div>
       <PageHeader
-        title="Library documents"
+        title="Library Documents"
         description={
           loaderData.libraryDocumentsEnabled
             ? "Static PDFs attached to CAR document packs (stored in R2)."
-            : "Library documents is disabled for other roles. Super-admins can still manage it."
+            : "Library Documents is disabled for other roles. Super-admins can still manage it."
         }
         breadcrumbs={[
           { label: "Settings", to: "/settings" },
-          { label: "Library documents" },
+          { label: "Library Documents" },
         ]}
       />
       <div className="flex items-start gap-3 pb-4 text-sm text-muted-foreground">

@@ -9,7 +9,13 @@ import {
   UserCogIcon,
   UsersIcon,
 } from "lucide-react";
+import { useNavigate, useNavigation } from "react-router";
 import { PageHeader } from "~/components/layout/app-layout";
+import {
+  DocumentTemplatesEditorShell,
+  DocumentTemplatesListShell,
+} from "~/components/settings/document-templates-loading";
+import { resolvePdfTemplateByKey } from "~/lib/pdf/templates";
 import { ThemeModePicker } from "~/components/theme-toggle";
 import {
   Card,
@@ -62,6 +68,28 @@ export async function loader({ request }: Route.LoaderArgs) {
 export default function SettingsIndexRoute({
   loaderData,
 }: Route.ComponentProps) {
+  const navigate = useNavigate();
+  const navigation = useNavigation();
+  const documentTemplatesPath = navigation.location?.pathname ?? "";
+  const loadingDocumentTemplates =
+    navigation.state !== "idle" &&
+    documentTemplatesPath.startsWith("/settings/document-templates");
+
+  if (loadingDocumentTemplates) {
+    const editorMatch = documentTemplatesPath.match(
+      /^\/settings\/document-templates\/([^/]+)/,
+    );
+    if (editorMatch) {
+      const slot = resolvePdfTemplateByKey(decodeURIComponent(editorMatch[1]));
+      return (
+        <DocumentTemplatesEditorShell
+          title={slot?.title ?? "Document Template"}
+        />
+      );
+    }
+    return <DocumentTemplatesListShell />;
+  }
+
   const settingsItems = [
     {
       to: "/settings/users",
@@ -80,10 +108,10 @@ export default function SettingsIndexRoute({
       ? [
           {
             to: "/settings/email-templates",
-            title: "Email templates",
+            title: "Email Templates",
             description: loaderData.emailTemplatesEnabled
               ? "Set broker and insurer document email templates and the insurer address."
-              : "Email templates is disabled for other roles. Super-admins can still view it.",
+              : "Email Templates is disabled for other roles. Super-admins can still view it.",
             icon: MailIcon,
           },
         ]
@@ -92,10 +120,10 @@ export default function SettingsIndexRoute({
       ? [
           {
             to: "/settings/library-documents",
-            title: "Library documents",
+            title: "Library Documents",
             description: loaderData.libraryDocumentsEnabled
               ? "Upload and manage static PDFs attached to CAR document packs."
-              : "Library documents is disabled for other roles. Super-admins can still manage it.",
+              : "Library Documents is disabled for other roles. Super-admins can still manage it.",
             icon: FileStackIcon,
           },
         ]
@@ -104,10 +132,10 @@ export default function SettingsIndexRoute({
       ? [
           {
             to: "/settings/document-templates",
-            title: "Document templates",
+            title: "Document Templates",
             description: loaderData.documentTemplatesEnabled
               ? "Edit pdfme layouts for Schedule, ROA, and Adjustment PDFs."
-              : "Document templates is disabled for other roles. Super-admins can still manage it.",
+              : "Document Templates is disabled for other roles. Super-admins can still manage it.",
             icon: FilePenLineIcon,
           },
         ]
@@ -126,10 +154,10 @@ export default function SettingsIndexRoute({
       ? [
           {
             to: "/settings/audit-log",
-            title: "Audit log",
+            title: "Audit Log",
             description: loaderData.auditLogEnabled
               ? "Trace material actions. Admins see everyone; brokers see their own activity."
-              : "Audit log is disabled for other roles. Super-admins can still view it.",
+              : "Audit Log is disabled for other roles. Super-admins can still view it.",
             icon: ScrollTextIcon,
           },
         ]
@@ -176,9 +204,15 @@ export default function SettingsIndexRoute({
               href={item.to}
               className="group block h-full rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
               onClick={(event) => {
-                // Full page load — client-side transitions to /settings/prices
-                // were not completing from this page (direct URL worked).
                 event.preventDefault();
+                // Document templates: client navigate so we can show a loader
+                // immediately while the route loader/designer bootstraps.
+                if (item.to.startsWith("/settings/document-templates")) {
+                  void navigate(item.to);
+                  return;
+                }
+                // Full page load for other settings — client-side transitions to
+                // /settings/prices were not completing from this page.
                 window.location.assign(item.to);
               }}
             >

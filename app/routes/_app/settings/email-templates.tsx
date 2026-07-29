@@ -36,7 +36,7 @@ import type { Route } from "./+types/email-templates";
 import { pageTitle } from "~/lib/brand";
 
 export function meta() {
-  return [{ title: pageTitle("Email templates") }];
+  return [{ title: pageTitle("Email Templates") }];
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -200,7 +200,7 @@ function EmailFooterCard({
             <ImageIcon className="size-5" />
           </span>
           <div>
-            <CardTitle className="text-base">Email footer image</CardTitle>
+            <CardTitle className="text-base">Email Footer Image</CardTitle>
             <CardDescription>
               Stored in the database as an image blob. Templates use{" "}
               {"{{footerImage}}"} which is filled with this image (no hosted
@@ -266,15 +266,15 @@ export default function SettingsEmailTemplatesRoute({
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Email templates"
+        title="Email Templates"
         description={
           loaderData.emailTemplatesEnabled
             ? "Five templates: insurer plus Annual, Renewal, Single, and Owner Builder broker emails."
-            : "Email templates is disabled for other roles. Super-admins can still view and edit."
+            : "Email Templates is disabled for other roles. Super-admins can still view and edit."
         }
         breadcrumbs={[
           { label: "Settings", to: "/settings" },
-          { label: "Email templates" },
+          { label: "Email Templates" },
         ]}
       />
 

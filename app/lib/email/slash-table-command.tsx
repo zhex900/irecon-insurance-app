@@ -3,10 +3,10 @@ import { createElement, type ComponentType, type ReactNode } from "react";
 /** Subset of `@react-email/editor/ui` SlashCommandItem (avoid SSR import). */
 type SlashCommandItem = {
   title: string;
-  description: string;
+  description?: string;
   icon: ReactNode;
-  category: string;
-  searchTerms: string[];
+  category?: string;
+  searchTerms?: string[];
   command: (input: {
     editor: {
       chain: () => {
@@ -100,9 +100,11 @@ export function createTableSlashCommand(
  * Append Table once so `/` includes it without mounting a second slash menu.
  */
 export function ensureTableSlashCommand(
-  defaultSlashCommands: SlashCommandItem[],
+  defaultSlashCommands: Array<{ title: string }>,
   TableIcon: TableIconComponent,
 ): void {
   if (defaultSlashCommands.some((item) => item.title === "Table")) return;
-  defaultSlashCommands.push(createTableSlashCommand(TableIcon));
+  defaultSlashCommands.push(
+    createTableSlashCommand(TableIcon) as { title: string },
+  );
 }
