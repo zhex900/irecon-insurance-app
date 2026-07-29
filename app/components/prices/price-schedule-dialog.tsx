@@ -1,6 +1,6 @@
 import { type ReactNode, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { Form, useNavigation } from "react-router";
+import { Form, useNavigate, useNavigation } from "react-router";
 import { XIcon } from "lucide-react";
 import { Badge } from "~/components/reui/badge";
 import { Field, FieldLabel } from "~/components/ui/field";
@@ -157,12 +157,25 @@ function DialogShell({
   children: ReactNode;
   footer?: ReactNode;
 }) {
+  const navigate = useNavigate();
+
+  function dismiss() {
+    if (onClose) {
+      onClose();
+      return;
+    }
+    void navigate(closeHref ?? "..");
+  }
+
   const overlay = (
     <div
       className="fixed inset-x-0 top-14 bottom-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 p-4 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-labelledby="price-schedule-title"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) dismiss();
+      }}
     >
       <div className="my-auto flex max-h-[min(90vh,56rem)] w-full max-w-5xl flex-col gap-4 overflow-y-auto rounded-xl bg-popover p-4 text-sm text-popover-foreground shadow-lg ring-1 ring-foreground/10">
         <div className="flex items-start justify-between gap-3">
@@ -177,7 +190,7 @@ function DialogShell({
               <p className="text-sm text-muted-foreground">{description}</p>
             ) : null}
           </div>
-          <CloseControl closeHref={closeHref} onClose={onClose} />
+          <CloseControl closeHref={closeHref} onClose={onClose ?? dismiss} />
         </div>
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
         {children}

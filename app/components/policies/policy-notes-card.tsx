@@ -181,9 +181,13 @@ export function PolicyNotesCard({
                       <span className="line-clamp-2 text-sm text-foreground">
                         {note.description}
                       </span>
-                      <span className="truncate text-xs text-muted-foreground">
-                        {formatRelativeTimeAgo(note.createdWhen)}
-                        {authorText ? ` · ${authorText}` : null}
+                      <span className="flex flex-col gap-0.5 text-xs text-muted-foreground">
+                        <span className="truncate">
+                          {formatRelativeTimeAgo(note.createdWhen)}
+                        </span>
+                        {authorText ? (
+                          <span className="truncate">{authorText}</span>
+                        ) : null}
                       </span>
                     </button>
                   </li>
@@ -356,17 +360,14 @@ function NoteMeta({
 }) {
   const { text, author } = authorLabel(note.createdBy, noteAuthors);
   return (
-    <span className="inline-flex flex-wrap items-center gap-x-1">
+    <span className="flex flex-col gap-0.5">
       <span>{formatRelativeTimeAgo(note.createdWhen)}</span>
       {text ? (
-        <>
-          <span aria-hidden>·</span>
-          {author ? (
-            <UserHoverCard user={author}>{author.fullName}</UserHoverCard>
-          ) : (
-            <span>{text}</span>
-          )}
-        </>
+        author ? (
+          <UserHoverCard user={author}>{author.fullName}</UserHoverCard>
+        ) : (
+          <span>{text}</span>
+        )
       ) : null}
     </span>
   );

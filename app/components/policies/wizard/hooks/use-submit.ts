@@ -31,6 +31,7 @@ export function usePolicySubmit({
   setPremium,
   setReferralReasons,
   regenerateDocumentsIfNeeded,
+  formDataChangedForDocuments,
   goToStep,
   navigateToSection,
   firstIssuePath,
@@ -52,7 +53,9 @@ export function usePolicySubmit({
   regenerateDocumentsIfNeeded: (options?: {
     cancelled?: () => boolean;
     premiumOverride?: PremiumBreakdown;
+    force?: boolean;
   }) => Promise<void>;
+  formDataChangedForDocuments: (premiumOverride?: PremiumBreakdown) => boolean;
   goToStep: (index: number, options?: { unlock?: boolean }) => void;
   navigateToSection: (sectionId: string) => void;
   firstIssuePath: (fieldOrder?: string[]) => string | null;
@@ -208,14 +211,25 @@ export function usePolicySubmit({
       }
     }
 
+    // Detect content changes before flipping status (status alone is not in PDF fields).
+    const premiumOverride = premiumRef.current ?? premium;
+    const formChanged =
+      hasUnsavedChangesRef.current ||
+      formDataChangedForDocuments(premiumOverride);
+
     form.setValue("policyStatusId", statusId, {
       shouldDirty: true,
       shouldValidate: false,
     });
     // Pass status explicitly — getValues() can still see the previous Pending value.
-    // Generate Schedule + ROA (and library docs) with the confirmed status.
+    // On Taken: regenerate Schedule/ROA when form/premium changed (or no review docs yet).
     void (async () => {
-      await regenerateDocumentsIfNeeded();
+      if (statusId === POLICY_STATUS.Taken && formChanged) {
+        await regenerateDocumentsIfNeeded({
+          premiumOverride,
+          force: true,
+        });
+      }
       await savePolicy({ policyStatusId: statusId });
     })();
   }

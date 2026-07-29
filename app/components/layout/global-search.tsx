@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { FileTextIcon, PhoneIcon, SearchIcon, UsersIcon } from "lucide-react";
 import { Badge } from "~/components/reui/badge";
+import { isDigitSearchQuery } from "~/lib/services/shared/list-query";
 import { cn, formatNumber } from "~/lib/utils";
 
 export type GlobalSearchClient = {
@@ -21,6 +22,7 @@ export type GlobalSearchPolicy = {
   policyNumber: string;
   insuredName: string;
   clientName: string;
+  clientTradingName: string;
   clientId: number;
   statusName: string;
 };
@@ -38,11 +40,39 @@ function fieldMatches(value: string, query: string) {
   if (!q || !value) return false;
   const lower = q.toLowerCase();
   if (value.toLowerCase().includes(lower)) return true;
-  const digits = q.replace(/\D/g, "");
-  if (digits.length > 0 && value.replace(/\D/g, "").includes(digits)) {
-    return true;
+  // Only strip formatting for pure numeric queries (e.g. phone / ABN).
+  if (isDigitSearchQuery(q)) {
+    const digits = q.replace(/\D/g, "");
+    if (digits.length > 0 && value.replace(/\D/g, "").includes(digits)) {
+      return true;
+    }
   }
   return false;
+}
+
+/** Only keep rows that can show a yellow highlight in the result UI. */
+function clientHasVisibleMatch(client: GlobalSearchClient, query: string) {
+  return (
+    fieldMatches(client.name, query) ||
+    fieldMatches(client.tradingName, query) ||
+    fieldMatches(client.abn, query) ||
+    fieldMatches(client.phone, query) ||
+    fieldMatches(client.email, query) ||
+    fieldMatches(client.accountManagerName, query) ||
+    fieldMatches(client.arCompanyName, query) ||
+    fieldMatches(client.arName, query)
+  );
+}
+
+function policyHasVisibleMatch(policy: GlobalSearchPolicy, query: string) {
+  return (
+    fieldMatches(policy.policyNumber, query) ||
+    fieldMatches(policy.insuredName, query) ||
+    fieldMatches(policy.clientName, query) ||
+    fieldMatches(policy.clientTradingName, query) ||
+    fieldMatches(policy.statusName, query) ||
+    fieldMatches(String(policy.policyId), query)
+  );
 }
 
 /** Highlight case-insensitive (and digit) matches in yellow. */
@@ -200,8 +230,21 @@ export function GlobalSearch({
   }
 
   const settled = settledQuery === q;
-  const displayClients = settled ? clients : [];
-  const displayPolicies = settled ? policies : [];
+  const displayClients = settled
+    ? clients.filter((client) => clientHasVisibleMatch(client, q))
+    : [];
+  const displayPolicies = settled
+    ? policies.filter((policy) => policyHasVisibleMatch(policy, q))
+    : [];
+  // Server totals may include rows matched on hidden fields — align badge to UI.
+  const displayClientTotal =
+    displayClients.length < clients.length
+      ? displayClients.length
+      : clientTotal;
+  const displayPolicyTotal =
+    displayPolicies.length < policies.length
+      ? displayPolicies.length
+      : policyTotal;
   const hasResults = displayClients.length > 0 || displayPolicies.length > 0;
   const searching = active && !settled;
   const showEmpty = active && settled && !hasResults;
@@ -253,7 +296,7 @@ export function GlobalSearch({
               {displayClients.length > 0 ? (
                 <ResultGroup
                   label="Clients"
-                  count={clientTotal}
+                  count={displayClientTotal}
                   showing={displayClients.length}
                 >
                   {displayClients.map((client) => (
@@ -270,7 +313,7 @@ export function GlobalSearch({
               {displayPolicies.length > 0 ? (
                 <ResultGroup
                   label="Policies"
-                  count={policyTotal}
+                  count={displayPolicyTotal}
                   showing={displayPolicies.length}
                 >
                   {displayPolicies.map((policy) => (
@@ -382,6 +425,10 @@ function PolicyResult({
   onSelect: () => void;
 }) {
   const statusMatches = fieldMatches(policy.statusName, query);
+  const tradingMatches =
+    Boolean(policy.clientTradingName) &&
+    fieldMatches(policy.clientTradingName, query) &&
+    !fieldMatches(policy.clientName, query);
 
   return (
     <button
@@ -413,6 +460,12 @@ function PolicyResult({
           )}
           {" · "}
           <HighlightText text={policy.clientName} query={query} />
+          {tradingMatches ? (
+            <>
+              {" · "}
+              <HighlightText text={policy.clientTradingName} query={query} />
+            </>
+          ) : null}
         </span>
         {fieldMatches(String(policy.policyId), query) &&
         !fieldMatches(policy.policyNumber, query) ? (

@@ -4,6 +4,7 @@ import { getReferenceDataAsync } from "~/lib/services/reference.service";
 import { getDb } from "~/lib/db/client";
 import { client, policy } from "~/lib/db/schema";
 import type { Client } from "~/lib/db/types";
+import { isDigitSearchQuery } from "~/lib/services/shared/list-query";
 import { normalizeClient } from "~/lib/services/clients/normalize";
 
 export { normalizeClient };
@@ -68,6 +69,7 @@ export async function listClients(options?: string | ListClientsOptions) {
 
   const q = filters.search!.toLowerCase().trim();
   const qDigits = q.replace(/\D/g, "");
+  const digitSearch = isDigitSearchQuery(q);
   return clients.filter((item) => {
     const manager = managers.get(item.accountManagerId) ?? "";
     const ar = ars.get(item.authorisedRepresentativeId);
@@ -80,7 +82,8 @@ export async function listClients(options?: string | ListClientsOptions) {
       item.email.toLowerCase().includes(q) ||
       item.abn.toLowerCase().includes(q) ||
       item.phone.toLowerCase().includes(q) ||
-      (qDigits.length > 0 &&
+      (digitSearch &&
+        qDigits.length > 0 &&
         (item.abn.replace(/\D/g, "").includes(qDigits) ||
           item.phone.replace(/\D/g, "").includes(qDigits)))
     );

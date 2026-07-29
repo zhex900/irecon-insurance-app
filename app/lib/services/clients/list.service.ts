@@ -18,12 +18,13 @@ import { authorisedRepresentative, client, policy } from "~/lib/db/schema";
 import type { Client } from "~/lib/db/types";
 import { type PageResult, toPageResult } from "~/lib/pagination";
 import { getReferenceData } from "~/lib/services/reference.service";
-import { likePattern, resolvePage } from "~/lib/services/shared/list-query";
+import {
+  digitsOnly,
+  isDigitSearchQuery,
+  likePattern,
+  resolvePage,
+} from "~/lib/services/shared/list-query";
 import { normalizeClient } from "~/lib/services/clients/normalize";
-
-function digitsOnly(value: string) {
-  return value.replace(/\D/g, "");
-}
 
 export type ClientListItem = Client & { policyCount: number };
 
@@ -81,7 +82,9 @@ function buildClientFilters(input: ListClientsPageInput): SQL[] {
     if (managerIds.length > 0) {
       textOr.push(inArray(client.accountManagerId, managerIds));
     }
-    if (qDigits.length > 0) {
+    // Only strip formatting for pure numeric queries (e.g. "02 1234").
+    // "w018" must not match phones/ABNs that merely contain "018".
+    if (isDigitSearchQuery(q) && qDigits.length > 0) {
       const digitPattern = `%${qDigits}%`;
       textOr.push(
         sql`regexp_replace(${client.abn}, '[^0-9]', '', 'g') like ${digitPattern}`,

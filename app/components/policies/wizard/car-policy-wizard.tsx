@@ -288,14 +288,18 @@ function CarPolicyWizardInner({
     refreshPremiumAfterSave,
   } = premiumCalc;
 
-  const { documents, isGeneratingDocuments, regenerateDocumentsIfNeeded } =
-    usePolicyDocuments({
-      policy,
-      form,
-      premium,
-      referralReasons,
-      rating: fetcher.data?.rating,
-    });
+  const {
+    documents,
+    isGeneratingDocuments,
+    regenerateDocumentsIfNeeded,
+    formDataChangedForDocuments,
+  } = usePolicyDocuments({
+    policy,
+    form,
+    premium,
+    referralReasons,
+    rating: fetcher.data?.rating,
+  });
 
   const draftSave = usePolicyDraftSave({
     policy,
@@ -332,6 +336,7 @@ function CarPolicyWizardInner({
     setPremium,
     setReferralReasons,
     regenerateDocumentsIfNeeded,
+    formDataChangedForDocuments,
     goToStep,
     navigateToSection,
     firstIssuePath,

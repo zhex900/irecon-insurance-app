@@ -1,16 +1,39 @@
 import type { Policy } from "~/lib/db/types";
 
+/** Stable hash of fields that affect Schedule / ROA PDF content. */
 export function reviewDocumentsFingerprint(policy: Policy): string {
   const premium = policy.car.premium;
+  const car = policy.car;
   return [
     policy.policyNumber,
     policy.policyStatusId,
-    policy.car.estimatedTurnover,
-    policy.car.contractWorksSumInsured,
+    policy.dateStart,
+    policy.dateEnd,
     policy.stateId,
+    policy.postcode,
+    policy.insurerCode,
+    car.insuredName,
+    car.siteAddress,
+    car.estimatedTurnover,
+    car.contractWorksSumInsured,
+    car.displayHomes,
+    car.existingStructure,
+    car.plantEquipment,
+    car.liabilityLimitBand,
+    car.businessActivities,
+    car.insuredContracts,
+    car.geographicalScopes,
+    car.maximumConstructionPeriod,
+    car.maximumMaintenancePeriod,
+    JSON.stringify(car.subLimits ?? null),
+    JSON.stringify(car.excesses ?? null),
+    JSON.stringify(car.selectedWordingIds ?? null),
     premium?.originalTotalPremium ?? "none",
     premium?.contractWorksTotalPremium ?? "none",
     premium?.liabilityTotalPremium ?? "none",
+    premium?.contractWorksDisplayHomesPremium ?? "none",
+    premium?.contractWorksExistingStructurePremium ?? "none",
+    premium?.contractWorksBasePremium ?? "none",
   ].join("|");
 }
 

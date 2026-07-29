@@ -3,6 +3,8 @@ import type { UseFormReturn } from "react-hook-form";
 import { toast } from "sonner";
 import type { Policy, PolicyDocument, PremiumBreakdown } from "~/lib/db/types";
 import { ensureReviewDocumentsClient } from "~/lib/services/policy/documents/documents.client";
+import { reviewDocumentsFingerprint } from "~/lib/services/policy/documents/fingerprints";
+import { policySnapshotFromForm } from "~/lib/services/policy/documents/snapshot-from-form";
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
 
 export function usePolicyDocuments({
@@ -34,49 +36,55 @@ export function usePolicyDocuments({
     setDocuments(policy.documents ?? []);
   }, [policy.policyId, policy.documents]);
 
+  function buildDocumentSnapshot(
+    premiumOverride?: PremiumBreakdown,
+  ): Policy | null {
+    const currentPremium = premiumOverride ?? premium ?? policy.car.premium;
+    if (!currentPremium) return null;
+    return policySnapshotFromForm(policy, form.getValues(), {
+      premium: currentPremium,
+      rating: rating ?? policy.car.rating,
+      referralReasons,
+      documents: documentsRef.current,
+    });
+  }
+
+  /** True when live form/premium would produce a different doc generation key. */
+  function formDataChangedForDocuments(premiumOverride?: PremiumBreakdown) {
+    const snapshot = buildDocumentSnapshot(premiumOverride);
+    if (!snapshot) return false;
+    const nextKey = reviewDocumentsFingerprint(snapshot);
+    const previous = documentsRef.current;
+    const latestKey = [...previous]
+      .reverse()
+      .find(
+        (doc) =>
+          doc.documentTypeCode === "CARSCHED" ||
+          doc.documentTypeCode === "CARRATING",
+      )?.generationKey;
+    if (!latestKey) return true;
+    // Ignore force suffix if present.
+    const baseLatest = latestKey.split("|force|")[0] ?? latestKey;
+    return baseLatest !== nextKey;
+  }
+
   async function regenerateDocumentsIfNeeded(options?: {
     cancelled?: () => boolean;
     premiumOverride?: PremiumBreakdown;
+    /** Bypass fingerprint match and always append a new Schedule/ROA version. */
+    force?: boolean;
   }) {
-    const currentPremium =
-      options?.premiumOverride ?? premium ?? policy.car.premium;
-    if (!currentPremium) return;
+    const snapshot = buildDocumentSnapshot(options?.premiumOverride);
+    if (!snapshot) return;
     if (options?.cancelled?.()) return;
 
     setIsGeneratingDocuments(true);
     try {
-      const values = form.getValues();
       const previous = documentsRef.current;
-      const snapshot: Policy = {
-        ...policy,
-        policyStatusId: values.policyStatusId ?? policy.policyStatusId,
-        postcode: values.postcode ?? policy.postcode,
-        stateId: values.stateId ?? policy.stateId,
-        dateStart: values.dateStart ?? policy.dateStart,
-        dateEnd: values.dateEnd ?? policy.dateEnd,
-        insurerCode: values.insurerCode ?? policy.insurerCode,
-        car: {
-          ...policy.car,
-          siteAddress: values.siteAddress ?? policy.car.siteAddress,
-          insuredName: values.insuredName ?? policy.car.insuredName,
-          estimatedTurnover:
-            values.estimatedTurnover ?? policy.car.estimatedTurnover,
-          contractWorksSumInsured:
-            values.contractWorksSumInsured ??
-            policy.car.contractWorksSumInsured,
-          plantEquipment: values.plantEquipment ?? policy.car.plantEquipment,
-          existingStructure:
-            values.existingStructure ?? policy.car.existingStructure,
-          displayHomes: values.displayHomes ?? policy.car.displayHomes,
-          premium: currentPremium,
-          rating: rating ?? policy.car.rating,
-          referralReasons,
-        },
-        documents: previous,
-      };
       const next = await ensureReviewDocumentsClient(
         snapshot,
         policy.createdBy || "broker@demo.local",
+        { force: options?.force },
       );
       if (options?.cancelled?.()) return;
       setDocuments(next);
@@ -97,5 +105,6 @@ export function usePolicyDocuments({
     documents,
     isGeneratingDocuments,
     regenerateDocumentsIfNeeded,
+    formDataChangedForDocuments,
   };
 }

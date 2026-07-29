@@ -1,4 +1,4 @@
-import { Form, useNavigation } from "react-router";
+import { Form, useNavigate, useNavigation } from "react-router";
 import { XIcon } from "lucide-react";
 import { Field, FieldLabel } from "~/components/ui/field";
 import { LoadingButton } from "~/components/ui/loading-button";
@@ -23,11 +23,16 @@ export function PriceEditorDialog({
   json: string;
   error?: string | null;
 }) {
+  const navigate = useNavigate();
   const navigation = useNavigation();
   const saving =
     navigation.state === "submitting" &&
     (navigation.formData?.get("intent") === "create" ||
       navigation.formData?.get("intent") === "update");
+
+  function dismiss() {
+    void navigate(closeHref);
+  }
 
   return (
     <div
@@ -35,6 +40,9 @@ export function PriceEditorDialog({
       role="dialog"
       aria-modal="true"
       aria-labelledby="price-editor-title"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) dismiss();
+      }}
     >
       <div className="my-auto w-full max-w-3xl rounded-xl bg-popover p-4 text-sm text-popover-foreground shadow-lg ring-1 ring-foreground/10">
         <div className="mb-4 flex items-start justify-between gap-3">
@@ -47,13 +55,14 @@ export function PriceEditorDialog({
             </h2>
             <p className="text-sm text-muted-foreground">{description}</p>
           </div>
-          <a
-            href={closeHref}
+          <button
+            type="button"
             aria-label="Close"
             className="inline-flex size-7 items-center justify-center rounded-lg hover:bg-muted"
+            onClick={dismiss}
           >
             <XIcon className="size-4" />
-          </a>
+          </button>
         </div>
 
         {error ? (

@@ -33,6 +33,7 @@ export async function savePolicyDocumentsClient(
 export async function ensureReviewDocumentsClient(
   policy: Policy,
   generatedBy: string,
+  options?: { force?: boolean },
 ): Promise<PolicyDocument[]> {
   if (!policy.car.premium) return policy.documents ?? [];
   const existing = policy.documents ?? [];
@@ -43,7 +44,13 @@ export async function ensureReviewDocumentsClient(
     existing,
     libraryDocs,
   );
-  const merged = mergeReviewDocuments(existing, pack);
+  const nextPack = options?.force
+    ? pack.map((doc) => ({
+        ...doc,
+        generationKey: `${doc.generationKey}|force|${Date.now()}`,
+      }))
+    : pack;
+  const merged = mergeReviewDocuments(existing, nextPack);
   if (merged === existing) return existing;
   return savePolicyDocumentsClient(policy.policyId, merged);
 }

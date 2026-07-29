@@ -29,18 +29,21 @@ export function getAppEnvironment(version = getAppVersion()): AppEnvironment {
   return "prod";
 }
 
-/** Tailwind classes for the environment badge (works on light + dark sidebars). */
+/**
+ * Tailwind classes for the environment badge.
+ * Sidebar is always dark — use light text / bright accents for contrast.
+ */
 export function getAppEnvironmentBadgeClass(env: AppEnvironment): string {
   switch (env) {
     case "local":
-      return "border-info/30 bg-info/15 text-info-foreground";
+      return "border-neutral-300/45 bg-neutral-100/15 text-neutral-100";
     case "pr":
-      return "border-primary/30 bg-primary/15 text-primary";
+      return "border-red-400/50 bg-red-500/25 text-red-200";
     case "staging":
-      return "border-warning/30 bg-warning/15 text-warning-foreground";
+      return "border-amber-300/55 bg-amber-400/25 text-amber-100";
     case "prod":
-      return "border-success/30 bg-success/15 text-success-foreground";
+      return "border-emerald-400/50 bg-emerald-500/25 text-emerald-200";
     default:
-      return "border-border bg-muted text-muted-foreground";
+      return "border-white/25 bg-white/10 text-sidebar-foreground";
   }
 }

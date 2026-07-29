@@ -26,6 +26,7 @@ export type GlobalSearchPolicyHit = {
   policyNumber: string;
   insuredName: string;
   clientName: string;
+  clientTradingName: string;
   clientId: number;
   statusName: string;
 };
@@ -98,6 +99,7 @@ export async function searchGlobal(q: string, limit = 8) {
       policyNumber: p.policyNumber,
       insuredName: p.insuredName,
       clientName: p.clientName,
+      clientTradingName: p.client.tradingName,
       clientId: p.clientId,
       statusName: statuses.get(p.policyStatusId) ?? "—",
     })),
