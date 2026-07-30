@@ -91,8 +91,8 @@ async function resolveDocumentPdfBytes(
     return bytes;
   }
 
-  const slot = await resolvePublishedPdfTemplate(doc.templateKey);
-  if (!slot) {
+  const resolved = await resolvePublishedPdfTemplate(doc.templateKey);
+  if (!resolved) {
     return blobToUint8(await buildLegacyTextPdfBlob(doc.name, doc.content));
   }
 
@@ -101,7 +101,7 @@ async function resolveDocumentPdfBytes(
       doc.templateKey,
       policy,
       doc.mergeInputs,
-      slot,
+      resolved,
     );
     return pdf;
   } catch {

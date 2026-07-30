@@ -10,6 +10,7 @@
   "placement": {
     "mode": "smart",
   },
+  // `limits.cpu_ms` requires a paid Workers plan — omit on Free (API code 100328).
   "vars": {
     "SUPABASE_URL": "https://tjnsygunohylofihoksl.supabase.co",
   },

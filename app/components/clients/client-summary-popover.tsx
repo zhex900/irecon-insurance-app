@@ -46,10 +46,12 @@ function clientInitials(name: string) {
 
 export function ClientSummaryPopover({
   client,
+  side = "bottom",
   className,
   children,
 }: {
   client: ClientSummaryPopoverClient;
+  side?: "top" | "bottom" | "left" | "right" | "inline-end" | "inline-start";
   className?: string;
   children?: ReactNode;
 }) {
@@ -70,14 +72,16 @@ export function ClientSummaryPopover({
         openOnHover
         delay={150}
         closeDelay={120}
+        nativeButton={false}
+        render={<span />}
         className={cn(
-          "cursor-pointer font-medium text-foreground underline-offset-4 hover:text-primary hover:underline",
+          "cursor-pointer font-medium text-current underline-offset-4 hover:text-primary hover:underline",
           className,
         )}
       >
         {label}
       </PopoverTrigger>
-      <PopoverContent align="start" side="bottom" className="w-80 gap-0 p-0">
+      <PopoverContent align="start" side={side} className="w-80 gap-0 p-0">
         <div className="flex items-start gap-3 border-b p-3.5">
           <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-sm font-semibold text-primary-foreground">
             {clientInitials(client.name)}

@@ -1,5 +1,5 @@
 import { useRef, useState, type ComponentType } from "react";
-import { redirect } from "react-router";
+import { Link, redirect } from "react-router";
 import {
   ArrowRightIcon,
   Building2Icon,
@@ -8,6 +8,7 @@ import {
   type LucideProps,
 } from "lucide-react";
 import { toast } from "sonner";
+import { AppErrorPage } from "~/components/app-error-page";
 import { PageHeader } from "~/components/layout/app-layout";
 import { Button } from "~/components/ui/button";
 import { LoadingButton } from "~/components/ui/loading-button";
@@ -22,16 +23,13 @@ import { requireAuth } from "~/lib/auth/session.server";
 import { isSuperAdmin } from "~/lib/auth/roles";
 import {
   DEFAULT_EMAIL_TEMPLATES,
-  EMAIL_TEMPLATE_META,
-} from "~/lib/email-templates";
-import { getEmailFooterDataUri } from "~/lib/services/email/footer-image";
-import { isFeatureEnabled } from "~/lib/services/feature-flags";
-import {
   EMAIL_TEMPLATE_KEYS,
-  listEmailTemplates,
+  EMAIL_TEMPLATE_META,
   type EmailTemplate,
   type EmailTemplateKey,
-} from "~/lib/services/email/templates";
+} from "~/lib/email-templates";
+import { listEmailTemplates } from "~/lib/services/email/templates.server";
+import { isFeatureEnabled } from "~/lib/services/feature-flags";
 import type { Route } from "./+types/email-templates";
 import { pageTitle } from "~/lib/brand";
 
@@ -45,11 +43,13 @@ export async function loader({ request }: Route.LoaderArgs) {
   if (!emailTemplatesEnabled && !isSuperAdmin(viewer)) {
     throw redirect("/settings");
   }
+
+  // Keep this loader light — do not embed the ~200KB footer data URI here.
+  // The footer card loads the image from `/api/email-footer` instead.
   return {
     templates: await listEmailTemplates(),
     canEdit: isSuperAdmin(viewer),
     emailTemplatesEnabled,
-    footerImageDataUri: await getEmailFooterDataUri(),
   };
 }
 
@@ -81,14 +81,9 @@ function TemplateSummaryCard({
   icon: ComponentType<LucideProps>;
 }) {
   return (
-    <a
-      href={href}
+    <Link
+      to={href}
       className="group block h-full rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-      onClick={(event) => {
-        // Full page load — same as Settings index; client transitions can stall here.
-        event.preventDefault();
-        window.location.assign(href);
-      }}
     >
       <Card className="pointer-events-none h-full transition-colors group-hover:border-primary/40 group-hover:bg-muted/30">
         <CardHeader className="gap-3">
@@ -118,20 +113,18 @@ function TemplateSummaryCard({
           ) : null}
         </CardHeader>
       </Card>
-    </a>
+    </Link>
   );
 }
 
-function EmailFooterCard({
-  canEdit,
-  initialDataUri,
-}: {
-  canEdit: boolean;
-  initialDataUri: string;
-}) {
+function EmailFooterCard({ canEdit }: { canEdit: boolean }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [dataUri, setDataUri] = useState(initialDataUri);
+  const [previewSrc, setPreviewSrc] = useState("/api/email-footer");
   const [busy, setBusy] = useState(false);
+
+  function refreshPreview() {
+    setPreviewSrc(`/api/email-footer?t=${Date.now()}`);
+  }
 
   async function upload(file: File) {
     setBusy(true);
@@ -153,7 +146,7 @@ function EmailFooterCard({
       if (!data?.dataUri) {
         throw new Error("Upload did not return an image.");
       }
-      setDataUri(data.dataUri);
+      refreshPreview();
       toast.success("Footer image saved");
     } catch (error) {
       toast.error(
@@ -181,7 +174,7 @@ function EmailFooterCard({
       if (!data?.dataUri) {
         throw new Error("Restore did not return an image.");
       }
-      setDataUri(data.dataUri);
+      refreshPreview();
       toast.success("Restored default footer image");
     } catch (error) {
       toast.error(
@@ -209,13 +202,11 @@ function EmailFooterCard({
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {dataUri ? (
-            <img
-              src={dataUri}
-              alt="Email footer"
-              className="h-12 max-w-[220px] rounded border bg-white object-contain"
-            />
-          ) : null}
+          <img
+            src={previewSrc}
+            alt="Email footer"
+            className="h-12 max-w-[220px] rounded border bg-white object-contain"
+          />
           {canEdit ? (
             <>
               <input
@@ -256,6 +247,11 @@ function EmailFooterCard({
   );
 }
 
+export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+  // Keep the app shell / side nav; only replace this page’s content.
+  return <AppErrorPage error={error} />;
+}
+
 export default function SettingsEmailTemplatesRoute({
   loaderData,
 }: Route.ComponentProps) {
@@ -278,10 +274,7 @@ export default function SettingsEmailTemplatesRoute({
         ]}
       />
 
-      <EmailFooterCard
-        canEdit={loaderData.canEdit}
-        initialDataUri={loaderData.footerImageDataUri}
-      />
+      <EmailFooterCard canEdit={loaderData.canEdit} />
 
       <div className="grid max-w-5xl gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {EMAIL_TEMPLATE_KEYS.map((key) => {

@@ -15,6 +15,18 @@ function versionIdentity(doc: PolicyDocument) {
   return doc.templateKey ?? doc.filename;
 }
 
+/** Match library docs by id and/or filename so fallbacks don't duplicate API rows. */
+function fixedIdentities(doc: PolicyDocument): string[] {
+  const keys: string[] = [];
+  if (doc.libraryDocumentId != null) {
+    keys.push(`id:${doc.libraryDocumentId}`);
+  }
+  if (doc.filename) {
+    keys.push(`file:${doc.filename.trim().toLowerCase()}`);
+  }
+  return keys;
+}
+
 /**
  * Merge a new Review pack into existing documents:
  * - Template-generated docs: append new versions when the fingerprint changed
@@ -46,19 +58,11 @@ export function mergeReviewDocuments(
   const existingFixedKeys = new Set(
     current
       .filter((doc) => isFixedDocument(doc) && !isVersionedDocument(doc))
-      .map(
-        (doc) =>
-          (doc.libraryDocumentId != null
-            ? `id:${doc.libraryDocumentId}`
-            : null) ?? `file:${doc.filename}`,
-      ),
+      .flatMap(fixedIdentities),
   );
-  const missingFixed = fixedIncoming.filter((doc) => {
-    const identity =
-      (doc.libraryDocumentId != null ? `id:${doc.libraryDocumentId}` : null) ??
-      `file:${doc.filename}`;
-    return !existingFixedKeys.has(identity);
-  });
+  const missingFixed = fixedIncoming.filter((doc) =>
+    fixedIdentities(doc).every((identity) => !existingFixedKeys.has(identity)),
+  );
 
   if (versionedUpToDate && missingFixed.length === 0) {
     return current;

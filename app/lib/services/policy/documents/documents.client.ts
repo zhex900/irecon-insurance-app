@@ -1,7 +1,10 @@
 import type { Policy, PolicyDocument } from "~/lib/db/types";
 import type { LibraryDocumentRecord } from "~/lib/library-documents";
 import { mergeReviewDocuments } from "~/lib/services/policy/documents/merge";
-import { buildReviewDocumentPack } from "~/lib/services/policy/documents/packs";
+import {
+  buildReviewDocumentPack,
+  policyHasLibraryDocuments,
+} from "~/lib/services/policy/documents/packs";
 
 async function fetchLibraryDocumentsClient(): Promise<LibraryDocumentRecord[]> {
   try {
@@ -54,8 +57,10 @@ export async function ensureReviewDocumentsClient(
 ): Promise<PolicyDocument[]> {
   if (!policy.car.premium) return policy.documents ?? [];
   const existing = policy.documents ?? [];
+  // Library / static docs attach once. Regenerations only produce templates.
+  const includeLibrary = !policyHasLibraryDocuments(existing);
   const [libraryDocs, templates] = await Promise.all([
-    fetchLibraryDocumentsClient(),
+    includeLibrary ? fetchLibraryDocumentsClient() : Promise.resolve([]),
     fetchPublishedTemplatesForCover(policy.car.coverTypeId),
   ]);
   const pack = buildReviewDocumentPack(
@@ -64,6 +69,7 @@ export async function ensureReviewDocumentsClient(
     templates,
     existing,
     libraryDocs,
+    { includeLibrary },
   );
   const nextPack = options?.force
     ? pack.map((doc) => ({

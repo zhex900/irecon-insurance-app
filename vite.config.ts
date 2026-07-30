@@ -11,6 +11,7 @@ export default defineConfig({
     tailwindcss(),
     reactRouter(),
   ],
+  assetsInclude: ["**/*.ttf"],
   resolve: {
     dedupe: ["react", "react-dom"],
     tsconfigPaths: true,

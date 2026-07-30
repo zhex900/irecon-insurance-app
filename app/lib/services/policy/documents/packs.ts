@@ -3,7 +3,7 @@ import {
   libraryDocumentMatchesPolicy,
   type LibraryDocumentRecord,
 } from "~/lib/library-documents";
-import type { DocumentTemplateSlot } from "~/lib/pdf/templates";
+import type { DocumentTemplate } from "~/lib/pdf/templates";
 import {
   formatDocTimestamp,
   makeDoc,
@@ -15,7 +15,26 @@ import {
 } from "~/lib/services/policy/documents/fingerprints";
 import { policyToMergeInputs } from "~/lib/pdf/merge-fields";
 
-export type PackTemplateMeta = Pick<DocumentTemplateSlot, "key" | "title">;
+export type PackTemplateMeta = Pick<DocumentTemplate, "key" | "title">;
+
+export type BuildReviewDocumentPackOptions = {
+  /**
+   * When false, only published document templates are generated.
+   * Static document-library attachments are omitted (already on the policy).
+   */
+  includeLibrary?: boolean;
+};
+
+/** True when the policy already has static / library attachments. */
+export function policyHasLibraryDocuments(
+  documents: PolicyDocument[] | undefined,
+): boolean {
+  return (documents ?? []).some(
+    (doc) =>
+      doc.libraryDocumentId != null ||
+      (!doc.templateKey && Boolean(doc.filename)),
+  );
+}
 
 /** Build the Review-stage document pack from published templates for the cover. */
 export function buildReviewDocumentPack(
@@ -24,7 +43,9 @@ export function buildReviewDocumentPack(
   templates: PackTemplateMeta[],
   existing: PolicyDocument[] = [],
   libraryDocs?: LibraryDocumentRecord[],
+  options?: BuildReviewDocumentPackOptions,
 ): PolicyDocument[] {
+  const includeLibrary = options?.includeLibrary ?? true;
   const generationKey = reviewDocumentsFingerprint(policy);
   const when = new Date();
   const stamp = formatDocTimestamp(when);
@@ -52,6 +73,8 @@ export function buildReviewDocumentPack(
       mergeInputs,
     });
   });
+
+  if (!includeLibrary) return docs;
 
   const libraryAttachments = resolveLibraryAttachments(policy, libraryDocs);
   for (const item of libraryAttachments) {

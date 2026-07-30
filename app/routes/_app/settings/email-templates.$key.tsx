@@ -30,6 +30,7 @@ import { requireAuth } from "~/lib/auth/session.server";
 import { isSuperAdmin } from "~/lib/auth/roles";
 import { pageTitle } from "~/lib/brand";
 import {
+  EMAIL_TEMPLATE_KEYS,
   EMAIL_TEMPLATE_META,
   EMAIL_TEMPLATE_PLACEHOLDERS,
   applyEmailTemplate,
@@ -40,18 +41,17 @@ import {
   htmlToPlainText,
   injectEmailFooterImage,
   preferEmailHtml,
+  type EmailTemplateKey,
 } from "~/lib/email-templates";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import { sendEmail } from "~/lib/services/email/resend.server";
-import { getEmailFooterDataUri } from "~/lib/services/email/footer-image";
-import { isFeatureEnabled } from "~/lib/services/feature-flags";
+import { getEmailFooterDataUri } from "~/lib/services/email/footer-image.server";
 import {
-  EMAIL_TEMPLATE_KEYS,
   getEmailTemplate,
   resetEmailTemplate,
   saveEmailTemplate,
-  type EmailTemplateKey,
-} from "~/lib/services/email/templates";
+} from "~/lib/services/email/templates.server";
+import { isFeatureEnabled } from "~/lib/services/feature-flags";
 import type { Route } from "./+types/email-templates.$key";
 
 type TemplateSnapshot = { subject: string; body: string };

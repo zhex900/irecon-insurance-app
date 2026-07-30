@@ -38,7 +38,7 @@ function isClientOnlyPackage(id: string): boolean {
 /** Minimal ESM stub so SSR/dynamic-import analysis stays happy. */
 const STUB_SOURCE = `
 export default {};
-export const Designer = class { constructor() {} destroy() {} getTemplate() { return null; } updateTemplate() {} };
+export const Designer = class { constructor() {} destroy() {} getTemplate() { return null; } };
 export const EmailEditor = () => null;
 export const StarterKit = { configure: () => ({}) };
 export const EmailTheming = { configure: () => ({}) };

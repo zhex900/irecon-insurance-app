@@ -34,6 +34,7 @@ When generating or editing code:
 8. **Leave unrelated code untouched.**
 9. **Prefer deleting code** over adding abstractions.
 10. **Self-review** with [docs/code-review.md](docs/code-review.md) before claiming done.
+11. **Prevent bundle balloons** — before adding imports to routes or shared SSR modules, check they won’t pull pdfme/TipTap/WASM into the Worker; use dynamic `import()`, light helper modules, and `vite.stub-client-only.ts` for client-only packages ([docs/performance.md](docs/performance.md) § Bundle & Workers).
 
 ## Decision rule
 
@@ -58,6 +59,7 @@ When multiple solutions exist, choose in this order:
 - No secrets, PII dumps, or `_archive/` imports in the app.
 - URL paths stay stable (`app/routes.ts`).
 - `npm run typecheck` must pass.
+- **Keep Worker/SSR bundles small** — no static `@pdfme/generator` / `@pdfme/ui` (or other heavy) imports in routes; dynamic-import PDF/Designer code; don’t ship full template history in loaders ([docs/performance.md](docs/performance.md) § Bundle & Workers).
 
 ## Before / after
 
@@ -67,13 +69,14 @@ When multiple solutions exist, choose in this order:
 
 ## Skills & MCP
 
-| Resource     | Where                                       |
-| ------------ | ------------------------------------------- |
-| shadcn skill | `.cursor/skills/shadcn/`                    |
-| ReUI skill   | `.cursor/skills/reui/`                      |
-| ReUI rule    | `.cursor/rules/reui.mdc`                    |
-| ReUI MCP     | `.mcp.json` / `.cursor/mcp.json`            |
-| MSSQL MCP    | migration/export only — runtime is Postgres |
+| Resource      | Where                                       |
+| ------------- | ------------------------------------------- |
+| shadcn skill  | `.cursor/skills/shadcn/`                    |
+| ReUI skill    | `.cursor/skills/reui/`                      |
+| ReUI rule     | `.cursor/rules/reui.mdc`                    |
+| Worker bundle | `.cursor/rules/worker-bundle.mdc` (always)  |
+| ReUI MCP      | `.mcp.json` / `.cursor/mcp.json`            |
+| MSSQL MCP     | migration/export only — runtime is Postgres |
 
 ## When unsure
 

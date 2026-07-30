@@ -64,10 +64,12 @@ export async function bufferToDataUri(
   return `data:${contentType};base64,${btoa(binary)}`;
 }
 
-/** Ensure the singleton row exists (seeded from the packaged default PNG). */
-export async function ensureEmailFooterImage(
-  updatedBy = "system",
-): Promise<string> {
+/**
+ * Return the stored footer image, or the packaged default.
+ * Do not seed/insert on the read path — a ~200KB data URI insert can stall
+ * navigations to Email Templates on Workers.
+ */
+export async function getEmailFooterDataUri(): Promise<string> {
   const db = getDb();
   const [row] = await db
     .select({ dataUri: appEmailFooterImage.dataUri })
@@ -75,7 +77,17 @@ export async function ensureEmailFooterImage(
     .where(eq(appEmailFooterImage.id, 1))
     .limit(1);
   if (row?.dataUri?.startsWith("data:")) return row.dataUri;
+  return DEFAULT_EMAIL_FOOTER_DATA_URI;
+}
 
+/** Ensure the singleton row exists (seeded from the packaged default PNG). */
+export async function ensureEmailFooterImage(
+  updatedBy = "system",
+): Promise<string> {
+  const existing = await getEmailFooterDataUri();
+  if (existing !== DEFAULT_EMAIL_FOOTER_DATA_URI) return existing;
+
+  const db = getDb();
   await db
     .insert(appEmailFooterImage)
     .values({
@@ -96,11 +108,6 @@ export async function ensureEmailFooterImage(
     });
 
   return DEFAULT_EMAIL_FOOTER_DATA_URI;
-}
-
-/** Data URI blob for `{{footerImage}}` merge / preview / send. */
-export async function getEmailFooterDataUri(): Promise<string> {
-  return ensureEmailFooterImage();
 }
 
 export async function saveEmailFooterDataUri(

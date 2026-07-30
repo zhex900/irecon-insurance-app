@@ -1,27 +1,24 @@
-import { generate } from "@pdfme/generator";
 import type { Policy, PolicyDocument } from "~/lib/db/types";
+import { isStaticSchemaName } from "~/lib/documents/template-editor-form";
 import { applyFlowPushDown } from "~/lib/pdf/flow-push-down";
+import { getPdfmeFonts } from "~/lib/pdf/fonts";
 import { buildLegacyTextPdfBlob } from "~/lib/pdf/legacy-text-pdf";
-import { policyToMergeInputs } from "~/lib/pdf/merge-fields";
+import {
+  normalizePdfmeTemplateSchemas,
+  policyToMergeInputs,
+  resolveMultiVariableTextInput,
+  resolveTableContentPlaceholders,
+} from "~/lib/pdf/merge-fields";
 import { pdfmePlugins } from "~/lib/pdf/plugins";
-import type { DocumentTemplateSlot } from "~/lib/pdf/templates";
+import type { DocumentTemplate } from "~/lib/pdf/templates";
+import {
+  getCachedPublishedTemplate,
+  invalidatePdfTemplateOverrideCache,
+  setCachedPublishedTemplate,
+  type CachedPublishedTemplate,
+} from "~/lib/pdf/template-override-cache";
 
-const plugins = pdfmePlugins;
-
-type SlotPayload = {
-  template: DocumentTemplateSlot["template"];
-  flowPushDown: DocumentTemplateSlot["flowPushDown"];
-  mergeFields: string[];
-  versionNumber: number;
-  coverTypeId?: number | null;
-  title?: string;
-};
-
-const clientTemplateCache = new Map<
-  string,
-  { at: number; value: SlotPayload | null }
->();
-const CLIENT_TEMPLATE_TTL_MS = 60_000;
+export { invalidatePdfTemplateOverrideCache };
 
 export function uint8ToBase64(bytes: Uint8Array) {
   let binary = "";
@@ -41,9 +38,9 @@ function base64ToUint8(base64: string) {
 
 async function fetchPublishedTemplate(
   templateKey: string,
-): Promise<DocumentTemplateSlot | null> {
-  const cached = clientTemplateCache.get(templateKey);
-  if (cached && Date.now() - cached.at < CLIENT_TEMPLATE_TTL_MS) {
+): Promise<DocumentTemplate | null> {
+  const cached = getCachedPublishedTemplate(templateKey);
+  if (cached) {
     if (!cached.value) return null;
     return {
       key: templateKey,
@@ -61,15 +58,15 @@ async function fetchPublishedTemplate(
       `/api/document-templates/${encodeURIComponent(templateKey)}`,
     );
     if (res.status === 404 || res.status === 204) {
-      clientTemplateCache.set(templateKey, { at: Date.now(), value: null });
+      setCachedPublishedTemplate(templateKey, null);
       return null;
     }
     if (!res.ok) {
-      clientTemplateCache.set(templateKey, { at: Date.now(), value: null });
+      setCachedPublishedTemplate(templateKey, null);
       return null;
     }
-    const data = (await res.json()) as SlotPayload;
-    clientTemplateCache.set(templateKey, { at: Date.now(), value: data });
+    const data = (await res.json()) as CachedPublishedTemplate;
+    setCachedPublishedTemplate(templateKey, data);
     return {
       key: templateKey,
       coverTypeId: data.coverTypeId ?? null,
@@ -84,23 +81,14 @@ async function fetchPublishedTemplate(
   }
 }
 
-/** Drop cached published templates after Settings saves. */
-export function invalidatePdfTemplateOverrideCache(slotKey?: string) {
-  if (slotKey) {
-    clientTemplateCache.delete(slotKey);
-    return;
-  }
-  clientTemplateCache.clear();
-}
-
-async function resolveSlotForGeneration(
+async function resolveTemplateForGeneration(
   templateKey: string,
-  slotOverride?: DocumentTemplateSlot,
-): Promise<DocumentTemplateSlot | null> {
-  if (slotOverride) return slotOverride;
+  templateOverride?: DocumentTemplate,
+): Promise<DocumentTemplate | null> {
+  if (templateOverride) return templateOverride;
 
   if (typeof window === "undefined") {
-    // Server callers must pass slotOverride (or use resolvePublishedPdfTemplate).
+    // Server callers must pass templateOverride (or use resolvePublishedPdfTemplate).
     return null;
   }
 
@@ -111,33 +99,67 @@ export async function generatePolicyPdf(
   templateKey: string,
   policy: Policy,
   mergeInputs?: Record<string, string>,
-  slotOverride?: DocumentTemplateSlot,
+  templateOverride?: DocumentTemplate,
 ): Promise<{
   pdf: Uint8Array;
   templateKey: string;
   inputs: Record<string, string>;
 }> {
-  const slot = await resolveSlotForGeneration(templateKey, slotOverride);
-  if (!slot) {
+  const resolved = await resolveTemplateForGeneration(
+    templateKey,
+    templateOverride,
+  );
+  if (!resolved) {
     throw new Error(`No published pdfme template for ${templateKey}`);
   }
 
   const baseInputs = mergeInputs ?? policyToMergeInputs(policy);
   const inputs: Record<string, string> = {
-    ...Object.fromEntries(slot.mergeFields.map((name) => [name, ""])),
+    ...Object.fromEntries(resolved.mergeFields.map((name) => [name, ""])),
     ...baseInputs,
   };
 
-  for (const page of slot.template.schemas) {
+  const normalizedTemplate = normalizePdfmeTemplateSchemas(
+    resolved.template as unknown as {
+      schemas: Array<Array<Record<string, unknown>>>;
+    },
+  ) as typeof resolved.template;
+
+  for (const page of normalizedTemplate.schemas) {
     for (const schema of page) {
       const name = schema.name;
       if (!name) continue;
-      if (
-        (name.startsWith("_Label_") || name.startsWith("_Static_")) &&
-        typeof schema.content === "string" &&
-        !(name in inputs)
-      ) {
+      if (isStaticSchemaName(name) && typeof schema.content === "string") {
         inputs[name] = schema.content;
+        continue;
+      }
+      // Table / list inputs must be JSON arrays. Resolve `{MergeField}`
+      // placeholders in the schema body from individual merge inputs.
+      if (schema.type === "table" && typeof schema.content === "string") {
+        inputs[name] = resolveTableContentPlaceholders(schema.content, inputs);
+        continue;
+      }
+      if (schema.type === "multiVariableText") {
+        const mvt = resolveMultiVariableTextInput(
+          schema as Record<string, unknown>,
+          inputs,
+        );
+        if (mvt != null) inputs[name] = mvt;
+        continue;
+      }
+      if (schema.type === "list" && typeof schema.content === "string") {
+        const current = inputs[name];
+        if (!current) {
+          inputs[name] = schema.content;
+          continue;
+        }
+        try {
+          if (!Array.isArray(JSON.parse(current))) {
+            inputs[name] = schema.content;
+          }
+        } catch {
+          inputs[name] = schema.content;
+        }
         continue;
       }
       if (name in inputs) continue;
@@ -150,15 +172,25 @@ export async function generatePolicyPdf(
     }
   }
 
-  const template = applyFlowPushDown(slot.template, slot.flowPushDown, inputs);
+  const template = applyFlowPushDown(
+    normalizedTemplate,
+    resolved.flowPushDown,
+    inputs,
+  );
 
+  // Dynamic import keeps @pdfme/generator out of the default Worker SSR graph.
+  const [{ generate }, font] = await Promise.all([
+    import("@pdfme/generator"),
+    getPdfmeFonts(),
+  ]);
   const pdf = await generate({
     template,
     inputs: [inputs],
-    plugins,
+    plugins: pdfmePlugins,
+    options: { font },
   });
 
-  return { pdf, templateKey: slot.key, inputs };
+  return { pdf, templateKey: resolved.key, inputs };
 }
 
 export async function buildPdfBlobFromPolicy(

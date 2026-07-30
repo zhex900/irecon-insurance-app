@@ -5,7 +5,7 @@ import {
   getEmailFooterDataUri,
   restoreDefaultEmailFooterImage,
   saveEmailFooterFile,
-} from "~/lib/services/email/footer-image";
+} from "~/lib/services/email/footer-image.server";
 import type { Route } from "./+types/email-footer";
 
 /** GET — footer image bytes from the database (data URI stored as blob). */

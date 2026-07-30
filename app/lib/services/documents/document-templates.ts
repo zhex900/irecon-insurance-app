@@ -3,12 +3,14 @@ import { and, desc, eq, isNull, lt, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "~/lib/db/client";
 import { appDocumentTemplateVersion } from "~/lib/db/schema";
+import { promoteStaticBackgroundToEditableSchemas } from "~/lib/pdf/extract-base-pdf-rectangles";
 import type { FlowPushDown } from "~/lib/pdf/flow-push-down";
-import type { DocumentTemplateSlot } from "~/lib/pdf/templates";
-
-/** Minimal blank A4 PDF for newly created templates (raw base64, no data-URI prefix). */
-const BLANK_BASE_PDF =
-  "JVBERi0xLjAKMSAwIG9iajw8L1R5cGUvQ2F0YWxvZy9QYWdlcyAyIDAgUj4+ZW5kb2JqCjIgMCBvYmo8PC9UeXBlL1BhZ2VzL0tpZHNbMyAwIFJdL0NvdW50IDE+PmVuZG9iagozIDAgb2JqPDwvVHlwZS9QYWdlL01lZGlhQm94WzAgMCA1OTUgODQyXS9QYXJlbnQgMiAwIFI+PmVuZG9iagp4cmVmCjAgNAowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMDkgMDAwMDAgbiAKMDAwMDAwMDA1MiAwMDAwMCBuIAowMDAwMDAwMTAxIDAwMDAwIG4gCnRyYWlsZXI8PC9TaXplIDQvUm9vdCAxIDAgUj4+CnN0YXJ0eHJlZgoxNzAKJSVFT0YK";
+import {
+  DOCUMENT_TEMPLATE_BLANK_BASE_PDF,
+  withBlankPageBackground,
+  type DocumentTemplate,
+} from "~/lib/pdf/templates";
+import { isBlankPdf } from "@pdfme/common";
 
 const pdfmeTemplateSchema = z.object({
   basePdf: z.union([z.string(), z.record(z.string(), z.unknown())]),
@@ -83,16 +85,10 @@ export type DocumentTemplateListItem = {
 };
 
 export type DocumentTemplateEditorState = {
-  slot: DocumentTemplateSlot;
+  template: DocumentTemplate;
   editingVersionNumber: number | null;
   editingIsPublished: boolean;
   publishedVersionNumber: number | null;
-  versions: Array<{
-    versionNumber: number;
-    isPublished: boolean;
-    createdWhen: string | null;
-    createdBy: string;
-  }>;
   canUndo: boolean;
 };
 
@@ -114,7 +110,7 @@ function rowToVersion(
   };
 }
 
-function versionToSlot(version: DocumentTemplateVersion): DocumentTemplateSlot {
+function versionToTemplate(version: DocumentTemplateVersion): DocumentTemplate {
   return {
     key: version.documentTemplateKey,
     coverTypeId: version.coverTypeId,
@@ -172,6 +168,24 @@ export async function getLatestDocumentTemplate(
   return row ? rowToVersion(row) : null;
 }
 
+export async function getDocumentTemplateVersion(
+  documentTemplateKey: string,
+  versionNumber: number,
+): Promise<DocumentTemplateVersion | null> {
+  const db = getDb();
+  const [row] = await db
+    .select()
+    .from(appDocumentTemplateVersion)
+    .where(
+      and(
+        eq(appDocumentTemplateVersion.documentTemplateKey, documentTemplateKey),
+        eq(appDocumentTemplateVersion.versionNumber, versionNumber),
+      ),
+    )
+    .limit(1);
+  return row ? rowToVersion(row) : null;
+}
+
 /** Published template for PDF generation — null means nothing published (fail closed). */
 export async function getDocumentTemplateOverride(
   documentTemplateKey: string,
@@ -182,7 +196,7 @@ export async function getDocumentTemplateOverride(
 /** Published templates linked to this cover (plus null-cover templates for all covers). */
 export async function listPublishedForCover(
   coverTypeId: number,
-): Promise<DocumentTemplateSlot[]> {
+): Promise<DocumentTemplate[]> {
   const db = getDb();
   const rows = await db
     .select()
@@ -198,7 +212,7 @@ export async function listPublishedForCover(
     )
     .orderBy(appDocumentTemplateVersion.documentTemplateKey);
 
-  return rows.map((row) => versionToSlot(rowToVersion(row)));
+  return rows.map((row) => versionToTemplate(rowToVersion(row)));
 }
 
 export async function listDocumentTemplates(): Promise<
@@ -238,40 +252,61 @@ export async function listDocumentTemplates(): Promise<
     });
   }
 
-  return items.sort((a, b) => a.key.localeCompare(b.key));
+  return items.sort((a, b) => {
+    const coverA = a.coverTypeId ?? Number.POSITIVE_INFINITY;
+    const coverB = b.coverTypeId ?? Number.POSITIVE_INFINITY;
+    if (coverA !== coverB) return coverA - coverB;
+    return a.title.localeCompare(b.title) || a.key.localeCompare(b.key);
+  });
 }
 
 /** Editor state from latest DB version. Returns null if the key has no rows. */
-export async function getEditableDocumentTemplateSlot(
+export async function getEditableDocumentTemplate(
   documentTemplateKey: string,
 ): Promise<DocumentTemplateEditorState | null> {
-  const versions = await listDocumentTemplateVersions(documentTemplateKey);
-  if (versions.length === 0) return null;
-
-  const published = versions.find((v) => v.isPublished) ?? null;
-  const latest = versions[0] ?? null;
+  const [latest, published] = await Promise.all([
+    getLatestDocumentTemplate(documentTemplateKey),
+    getPublishedDocumentTemplate(documentTemplateKey),
+  ]);
   if (!latest) return null;
 
+  // Prefer latest schemas. Keep the latest blank-canvas basePdf (including
+  // landscape) so orientation survives save → reopen. Only borrow an older
+  // string basePdf when the latest version still needs static-PDF promotion.
+  const latestBasePdf = latest.template.basePdf;
+  let basePdfForEditor = latestBasePdf;
+  if (!isBlankPdf(latestBasePdf) && typeof latestBasePdf !== "string") {
+    const versions = await listDocumentTemplateVersions(documentTemplateKey);
+    basePdfForEditor =
+      versions.find((version) => typeof version.template.basePdf === "string")
+        ?.template.basePdf ?? latestBasePdf;
+  } else if (typeof latestBasePdf === "string") {
+    basePdfForEditor = latestBasePdf;
+  }
+
+  const templateForEditor = promoteStaticBackgroundToEditableSchemas({
+    ...latest.template,
+    basePdf: basePdfForEditor,
+    schemas: latest.template.schemas,
+  });
+
   return {
-    slot: versionToSlot(latest),
+    template: {
+      ...versionToTemplate(latest),
+      template: templateForEditor,
+    },
     editingVersionNumber: latest.versionNumber,
     editingIsPublished: Boolean(latest.isPublished),
     publishedVersionNumber: published?.versionNumber ?? null,
-    versions: versions.map((v) => ({
-      versionNumber: v.versionNumber,
-      isPublished: v.isPublished,
-      createdWhen: v.createdWhen,
-      createdBy: v.createdBy,
-    })),
     canUndo: Boolean(published),
   };
 }
 
 export async function resolvePublishedPdfTemplate(
   documentTemplateKey: string,
-): Promise<DocumentTemplateSlot | null> {
+): Promise<DocumentTemplate | null> {
   const published = await getPublishedDocumentTemplate(documentTemplateKey);
-  return published ? versionToSlot(published) : null;
+  return published ? versionToTemplate(published) : null;
 }
 
 async function nextVersionNumber(documentTemplateKey: string): Promise<number> {
@@ -369,7 +404,7 @@ export async function createDocumentTemplate(
     coverTypeId: parsed.coverTypeId,
     title: parsed.title,
     template: {
-      basePdf: BLANK_BASE_PDF,
+      basePdf: DOCUMENT_TEMPLATE_BLANK_BASE_PDF,
       schemas: [[]],
     },
     flowPushDown: null,
@@ -399,6 +434,16 @@ export async function updateDocumentTemplateMeta(
     );
 }
 
+/** Persist templates on a blank A4 canvas (no static PDF background). */
+function templateForStorage(
+  template: z.infer<typeof pdfmeTemplateSchema>,
+): Record<string, unknown> {
+  return withBlankPageBackground(template as Template) as Record<
+    string,
+    unknown
+  >;
+}
+
 /** Save a new draft version (not used for generation until published). */
 export async function saveDocumentTemplateDraft(
   input: z.infer<typeof saveDocumentTemplateInputSchema>,
@@ -412,7 +457,7 @@ export async function saveDocumentTemplateDraft(
     documentTemplateKey: parsed.documentTemplateKey,
     coverTypeId: meta.coverTypeId,
     title: meta.title,
-    template: parsed.template as Record<string, unknown>,
+    template: templateForStorage(parsed.template),
     flowPushDown:
       parsed.flowPushDown === undefined
         ? ((latest?.flowPushDown as Record<string, unknown> | null) ?? null)
@@ -421,6 +466,69 @@ export async function saveDocumentTemplateDraft(
       parsed.mergeFields && parsed.mergeFields.length > 0
         ? parsed.mergeFields
         : (latest?.mergeFields ?? []),
+    isPublished: false,
+    createdBy,
+  });
+}
+
+/**
+ * Autosave: update the latest unpublished draft in place so history is not
+ * flooded. If the latest row is published (or missing), insert a new draft.
+ */
+export async function autosaveDocumentTemplateDraft(
+  input: z.infer<typeof saveDocumentTemplateInputSchema>,
+  createdBy = "",
+): Promise<DocumentTemplateVersion> {
+  const parsed = saveDocumentTemplateInputSchema.parse(input);
+  const meta = await requireKeyMeta(parsed.documentTemplateKey);
+  const latest = await getLatestDocumentTemplate(parsed.documentTemplateKey);
+
+  const flowPushDown =
+    parsed.flowPushDown === undefined
+      ? ((latest?.flowPushDown as Record<string, unknown> | null) ?? null)
+      : (parsed.flowPushDown as Record<string, unknown> | null);
+  const mergeFields =
+    parsed.mergeFields && parsed.mergeFields.length > 0
+      ? parsed.mergeFields
+      : (latest?.mergeFields ?? []);
+  const template = templateForStorage(parsed.template);
+
+  if (latest && !latest.isPublished) {
+    const db = getDb();
+    const [row] = await db
+      .update(appDocumentTemplateVersion)
+      .set({
+        templateJson: template,
+        flowPushDown,
+        mergeFields,
+        createdWhen: new Date(),
+        createdBy,
+      })
+      .where(
+        and(
+          eq(
+            appDocumentTemplateVersion.documentTemplateKey,
+            parsed.documentTemplateKey,
+          ),
+          eq(appDocumentTemplateVersion.versionNumber, latest.versionNumber),
+          eq(appDocumentTemplateVersion.isPublished, false),
+        ),
+      )
+      .returning();
+
+    if (!row) {
+      throw new Error("Failed to autosave document template draft");
+    }
+    return rowToVersion(row);
+  }
+
+  return insertVersion({
+    documentTemplateKey: parsed.documentTemplateKey,
+    coverTypeId: meta.coverTypeId,
+    title: meta.title,
+    template,
+    flowPushDown,
+    mergeFields,
     isPublished: false,
     createdBy,
   });
@@ -439,7 +547,7 @@ export async function publishDocumentTemplate(
     documentTemplateKey: parsed.documentTemplateKey,
     coverTypeId: meta.coverTypeId,
     title: meta.title,
-    template: parsed.template as Record<string, unknown>,
+    template: templateForStorage(parsed.template),
     flowPushDown:
       parsed.flowPushDown === undefined
         ? ((latest?.flowPushDown as Record<string, unknown> | null) ?? null)

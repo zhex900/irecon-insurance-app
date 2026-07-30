@@ -48,6 +48,8 @@
   "dependencies": {
     "@base-ui/react": "^1.6.0",
     "@fontsource-variable/geist": "^5.3.0",
+    "@headless-tree/core": "^1.7.0",
+    "@headless-tree/react": "^1.7.0",
     "@hookform/resolvers": "^5.4.0",
     "@pdfme/common": "^6.1.11",
     "@pdfme/generator": "^6.1.11",

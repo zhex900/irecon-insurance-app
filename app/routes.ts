@@ -42,8 +42,8 @@ export default [
   route("api/library-documents/:id", "routes/api/library-documents.$id.tsx"),
   route("api/document-templates", "routes/api/document-templates.tsx"),
   route(
-    "api/document-templates/:slotKey",
-    "routes/api/document-templates.$slotKey.tsx",
+    "api/document-templates/:templateKey",
+    "routes/api/document-templates.$templateKey.tsx",
   ),
   route("api/audit", "routes/api/audit.tsx"),
   route("api/search", "routes/api/search.tsx"),
@@ -80,8 +80,8 @@ export default [
       "routes/_app/settings/document-templates.tsx",
     ),
     route(
-      "settings/document-templates/:slotKey",
-      "routes/_app/settings/document-templates.$slotKey.tsx",
+      "settings/document-templates/:templateKey",
+      "routes/_app/settings/document-templates.$templateKey.tsx",
     ),
     route("settings/features", "routes/_app/settings/features.tsx"),
     route(

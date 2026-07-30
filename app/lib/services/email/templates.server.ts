@@ -9,23 +9,6 @@ import {
   type EmailTemplateKey,
 } from "~/lib/email-templates";
 
-export {
-  EMAIL_TEMPLATE_KEYS,
-  EMAIL_TEMPLATE_META,
-  EMAIL_RECIPIENT_TYPES,
-  EMAIL_SEND_RECIPIENTS,
-  applyEmailTemplate,
-  resolveBrokerTemplateKey,
-  sendRecipientForTemplate,
-  isBrokerTemplateKey,
-  type EmailTemplateKey,
-  type EmailRecipientType,
-  type EmailSendRecipient,
-  type EmailTemplate,
-  type EmailTemplateVars,
-  type EmailTemplateMeta,
-} from "~/lib/email-templates";
-
 export async function listEmailTemplates(): Promise<EmailTemplate[]> {
   const db = getDb();
   const rows = await db.select().from(appEmailTemplate);

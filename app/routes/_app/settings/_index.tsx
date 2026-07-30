@@ -9,7 +9,7 @@ import {
   UserCogIcon,
   UsersIcon,
 } from "lucide-react";
-import { useNavigate, useNavigation } from "react-router";
+import { Link, useNavigation } from "react-router";
 import { PageHeader } from "~/components/layout/app-layout";
 import {
   DocumentTemplatesEditorShell,
@@ -67,7 +67,6 @@ export async function loader({ request }: Route.LoaderArgs) {
 export default function SettingsIndexRoute({
   loaderData,
 }: Route.ComponentProps) {
-  const navigate = useNavigate();
   const navigation = useNavigation();
   const documentTemplatesPath = navigation.location?.pathname ?? "";
   const loadingDocumentTemplates =
@@ -192,24 +191,8 @@ export default function SettingsIndexRoute({
         </Card>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          {settingsItems.map((item) => (
-            <a
-              key={item.to}
-              href={item.to}
-              className="group block h-full rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-              onClick={(event) => {
-                event.preventDefault();
-                // Document templates: client navigate so we can show a loader
-                // immediately while the route loader/designer bootstraps.
-                if (item.to.startsWith("/settings/document-templates")) {
-                  void navigate(item.to);
-                  return;
-                }
-                // Full page load for other settings — client-side transitions to
-                // /settings/prices were not completing from this page.
-                window.location.assign(item.to);
-              }}
-            >
+          {settingsItems.map((item) => {
+            const card = (
               <Card className="pointer-events-none h-full transition-colors group-hover:border-primary/40 group-hover:bg-muted/30">
                 <CardHeader className="gap-3">
                   <div className="flex items-start justify-between gap-3">
@@ -222,8 +205,36 @@ export default function SettingsIndexRoute({
                   <CardDescription>{item.description}</CardDescription>
                 </CardHeader>
               </Card>
-            </a>
-          ))}
+            );
+
+            // Prices historically stalled on SPA transitions from this page.
+            if (item.to.startsWith("/settings/prices")) {
+              return (
+                <a
+                  key={item.to}
+                  href={item.to}
+                  className="group block h-full rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    window.location.assign(item.to);
+                  }}
+                >
+                  {card}
+                </a>
+              );
+            }
+
+            return (
+              <Link
+                key={item.to}
+                to={item.to}
+                prefetch="intent"
+                className="group block h-full rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+              >
+                {card}
+              </Link>
+            );
+          })}
         </div>
       </div>
     </div>

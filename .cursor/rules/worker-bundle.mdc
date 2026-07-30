@@ -1,0 +1,44 @@
+---
+description: Keep Cloudflare Worker/SSR bundles small — no heavy static imports that balloon builds
+alwaysApply: true
+---
+
+# Worker / SSR bundle size
+
+This app runs on **Cloudflare Workers**. Large static imports cause Error 1102 (resource limits), deploy size failures, and slow cold starts.
+
+## Never statically import in route modules / SSR
+
+These must not appear as top-level `import … from` in route files, loaders, or shared modules that routes pull into the Worker graph:
+
+| Package / area | How to load |
+| -------------- | ----------- |
+| `@pdfme/ui`, `@pdfme/converter` | Client-only dynamic `import()` after mount (already stubbed in SSR via `vite.stub-client-only.ts`) |
+| `@pdfme/generator` | Dynamic `import()` only inside the function that generates a PDF (Preview click, email send, download) |
+| TipTap / `@react-email/editor` / ProseMirror | Client-only dynamic import (SSR-stubbed) |
+| Large WASM / workers (pdfium, clawpdf) | Never pull into the default Worker graph |
+
+## Split light helpers from heavy modules
+
+If a route only needs a small helper (e.g. cache invalidate), put it in a **tiny module** that does **not** import `@pdfme/generator` or other heavy deps.
+
+Example: `~/lib/pdf/template-override-cache.ts` — not `~/lib/pdf/generate.ts`.
+
+## Loader / SSR payloads stay small
+
+- Do **not** return full pdfme `template` JSON for every history version in a loader.
+- Fetch large blobs **on demand** (`api/*` + client fetch) for Preview / Open in editor.
+- Prefer latest + published queries over `SELECT`ing every version row when only meta is needed.
+
+## When adding client-only packages
+
+1. Prefer dynamic `import()` after mount.
+2. Add the package prefix to `CLIENT_ONLY_PREFIXES` in `vite.stub-client-only.ts` so SSR does not emit huge chunks.
+3. Do not “just import” a heavy lib to call one function from a route module.
+
+## Before claiming done
+
+- Confirm no new static `@pdfme/generator` / `@pdfme/ui` imports in `app/routes/**`.
+- Prefer checking that the change did not grow the Worker SSR entry for unrelated pages.
+
+Full detail: [docs/performance.md](../../docs/performance.md) § Bundle & Workers.

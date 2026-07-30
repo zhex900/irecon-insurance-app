@@ -1,5 +1,11 @@
 import type { Template } from "@pdfme/common";
+import { isStaticSchemaName } from "~/lib/documents/template-editor-form";
 import type { FlowPushDown } from "~/lib/pdf/flow-push-down";
+import {
+  normalizeMultiVariableTextSchema,
+  resolveMultiVariableTextInput,
+  resolveTableContentPlaceholders,
+} from "~/lib/pdf/merge-fields";
 
 /** Realistic fake values for template Designer preview. */
 const SAMPLE_BY_FIELD: Record<string, string> = {
@@ -150,6 +156,37 @@ function sampleForField(name: string): string {
   return `Sample ${base}`;
 }
 
+function isJsonArrayString(value: string): boolean {
+  try {
+    return Array.isArray(JSON.parse(value));
+  } catch {
+    return false;
+  }
+}
+
+/** Table / list inputs must be JSON arrays — plain sample strings break generate(). */
+function sampleStructuredContent(
+  type: string | undefined,
+  content: unknown,
+): string | null {
+  if (type === "table") {
+    if (typeof content === "string" && isJsonArrayString(content)) {
+      return content;
+    }
+    return JSON.stringify([
+      ["Alice", "New York", "Sample row"],
+      ["Bob", "Paris", "Sample row"],
+    ]);
+  }
+  if (type === "list") {
+    if (typeof content === "string" && isJsonArrayString(content)) {
+      return content;
+    }
+    return JSON.stringify(["Sample item 1", "Sample item 2"]);
+  }
+  return null;
+}
+
 /**
  * Build pdfme `inputs` for Designer preview — fake policy values + static labels.
  */
@@ -169,10 +206,27 @@ export function buildSampleMergeInputs(
       const name = schema.name;
       if (!name) continue;
 
-      if (
-        (name.startsWith("_Label_") || name.startsWith("_Static_")) &&
-        typeof schema.content === "string"
-      ) {
+      if (schema.type === "multiVariableText") {
+        const normalized = normalizeMultiVariableTextSchema(
+          schema as Record<string, unknown>,
+        );
+        const mvt = resolveMultiVariableTextInput(normalized, inputs);
+        if (mvt != null) inputs[name] = mvt;
+        continue;
+      }
+
+      if (schema.type === "table" && typeof schema.content === "string") {
+        inputs[name] = resolveTableContentPlaceholders(schema.content, inputs);
+        continue;
+      }
+
+      const structured = sampleStructuredContent(schema.type, schema.content);
+      if (structured != null) {
+        inputs[name] = structured;
+        continue;
+      }
+
+      if (isStaticSchemaName(name) && typeof schema.content === "string") {
         inputs[name] = schema.content;
         continue;
       }

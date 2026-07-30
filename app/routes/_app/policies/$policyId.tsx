@@ -51,8 +51,8 @@ import {
   getReferenceDataAsync,
 } from "~/lib/services/reference.service";
 import { getClient } from "~/lib/services/clients/service";
-import { listEmailTemplates } from "~/lib/services/email/templates";
-import { getEmailFooterDataUri } from "~/lib/services/email/footer-image";
+import { listEmailTemplates } from "~/lib/services/email/templates.server";
+import { getEmailFooterDataUri } from "~/lib/services/email/footer-image.server";
 import { listEmailDirectory } from "~/lib/services/email/directory.server";
 import { emailVarsFromAccountManager } from "~/lib/email-templates";
 import { resolveNoteAuthors } from "~/lib/services/users/service";

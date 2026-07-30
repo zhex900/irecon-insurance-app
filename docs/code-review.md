@@ -49,6 +49,14 @@ Authz, secrets, or data-loss fails **block** merge.
 - [ ] Color not the only status indicator
 - [ ] Dialogs have titles; unfinished UI flagged
 
+## Bundle & Workers
+
+- [ ] No new static `@pdfme/generator` / `@pdfme/ui` / TipTap imports in `app/routes/**`
+- [ ] PDF/Designer loaded via dynamic `import()` (or existing client-only path)
+- [ ] Light helpers not pulled from heavy modules (e.g. cache invalidate ≠ `generate.ts`)
+- [ ] Loaders don’t embed full multi-version template JSON; large payloads on demand
+- [ ] New browser-only packages listed in `vite.stub-client-only.ts` when needed
+
 ## Reviewer output (AI)
 
 1. **Verdict:** Approve / Approve with nits / Request changes

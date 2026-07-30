@@ -29,10 +29,31 @@ Measure before optimizing. Readability wins over micro-optimizations without evi
 
 ## Bundle & Workers
 
+This app SSR-renders on **Cloudflare Workers** (≈128 MB isolate, CPU limits). Bundle bloat causes **Error 1102** (`Worker exceeded resource limits`), deploy size failures, and slow cold starts. Prefer **smaller builds** over convenience imports.
+
+### Hard rules
+
 - Don’t import `*.server.ts` from client components (bundle + security).
 - Avoid new heavy client libraries without approval.
 - Prefer existing shadcn/ReUI over custom widget stacks.
-- Be mindful of Worker CPU/size limits — keep pure pricing logic lean.
+- **Never** top-level-import these into route modules or anything the Worker SSR graph always loads:
+  - `@pdfme/ui`, `@pdfme/converter` — Designer only; dynamic `import()` after mount (SSR-stubbed in `vite.stub-client-only.ts`)
+  - `@pdfme/generator` — dynamic `import()` **inside** the PDF-generating function only (Preview, email, download)
+  - TipTap / `@react-email/editor` / ProseMirror — same client-only pattern
+- If a route needs a **light** helper next to a heavy module, **split the helper** into its own file that does not import the heavy package (e.g. `template-override-cache.ts` vs `generate.ts`).
+- When adding another browser-only package, add its prefix to `CLIENT_ONLY_PREFIXES` in `vite.stub-client-only.ts`.
+
+### Loader / response size
+
+- Don’t embed full pdfme templates (or other large JSON) for every history/version row in a loader.
+- Fetch large payloads **on demand** via `api/*` when the user Preview / Open / Download.
+- Prefer latest + published queries over loading every version when only metadata is needed.
+- Resource routes: keep JSON small; return DTOs, not graphs of raw rows.
+- Prefer signed R2 links over embedding large binaries in responses.
+
+### Mentality
+
+Ask before every new import: _“Does the Worker need this on every request to this route?”_ If no → dynamic import, client-only stub, or a separate light module.
 
 ## Email & external I/O
 

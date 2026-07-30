@@ -5,8 +5,8 @@ import {
   useNavigate,
   useNavigation,
 } from "react-router";
-import { useEffect, useRef } from "react";
-import { ArrowRightIcon, FilePenLineIcon } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { FilePenLineIcon, PlusIcon } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "~/components/layout/app-layout";
 import {
@@ -20,8 +20,24 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "~/components/ui/dialog";
+import { Field, FieldGroup, FieldLabel } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
-import { Label } from "~/components/ui/label";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "~/components/ui/table";
 import { requireAuth } from "~/lib/auth/session.server";
 import { isAdminRole, isSuperAdmin } from "~/lib/auth/roles";
 import { pageTitle } from "~/lib/brand";
@@ -34,6 +50,7 @@ import {
   type DocumentTemplateListItem,
 } from "~/lib/services/documents/document-templates";
 import { isFeatureEnabled } from "~/lib/services/feature-flags";
+import { formatDate, formatRelativeTimeAgo } from "~/lib/utils";
 import type { Route } from "./+types/document-templates";
 
 export function meta() {
@@ -126,45 +143,194 @@ function coverTypeLabel(coverTypeId: number | null) {
   return "All cover types";
 }
 
-function TemplateCard({ template }: { template: DocumentTemplateListItem }) {
-  const status = template.hasPublished
-    ? `Published v${template.publishedVersionNumber}`
-    : "Draft only (not published)";
-  const latest =
-    template.latestVersionNumber != null &&
-    template.latestVersionNumber !== template.publishedVersionNumber
-      ? ` · latest draft v${template.latestVersionNumber}`
-      : "";
+function versionLabel(template: DocumentTemplateListItem) {
+  if (template.hasPublished && template.publishedVersionNumber != null) {
+    const draft =
+      template.latestVersionNumber != null &&
+      template.latestVersionNumber !== template.publishedVersionNumber
+        ? ` · draft v${template.latestVersionNumber}`
+        : "";
+    return `v${template.publishedVersionNumber}${draft}`;
+  }
+  if (template.latestVersionNumber != null) {
+    return `Draft v${template.latestVersionNumber}`;
+  }
+  return "Draft";
+}
 
+function templateHref(key: string) {
+  return `/settings/document-templates/${encodeURIComponent(key)}`;
+}
+
+function TemplateIcon() {
+  return (
+    <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+      <FilePenLineIcon className="size-4" />
+    </span>
+  );
+}
+
+function LastUpdatedCell({ updatedWhen }: { updatedWhen: string | null }) {
+  if (!updatedWhen) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span>{formatDate(updatedWhen)}</span>
+      <span className="text-xs text-muted-foreground">
+        {formatRelativeTimeAgo(updatedWhen)}
+      </span>
+    </div>
+  );
+}
+
+function TemplateCard({ template }: { template: DocumentTemplateListItem }) {
   return (
     <Link
-      to={`/settings/document-templates/${encodeURIComponent(template.key)}`}
+      to={templateHref(template.key)}
       className="group block h-full rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
     >
       <Card className="h-full transition-colors group-hover:border-primary/40 group-hover:bg-muted/30">
         <CardHeader className="gap-3">
-          <div className="flex items-start justify-between gap-3">
-            <span className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <FilePenLineIcon className="size-5" />
-            </span>
-            <ArrowRightIcon className="size-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-          </div>
+          <TemplateIcon />
           <CardTitle className="text-base">
             {formatDocumentTemplateTitle(template.title)}
           </CardTitle>
           <CardDescription>
-            {template.key} · {coverTypeLabel(template.coverTypeId)}
+            {coverTypeLabel(template.coverTypeId)} · {versionLabel(template)}
           </CardDescription>
-          <p className="text-xs text-muted-foreground">
-            {status}
-            {latest}
-            {template.updatedWhen
-              ? ` · ${new Date(template.updatedWhen).toLocaleString()}`
-              : ""}
-          </p>
+          {template.updatedWhen ? (
+            <p className="text-xs text-muted-foreground">
+              {formatDate(template.updatedWhen)} ·{" "}
+              {formatRelativeTimeAgo(template.updatedWhen)}
+            </p>
+          ) : null}
         </CardHeader>
       </Card>
     </Link>
+  );
+}
+
+function TemplatesTable({
+  templates,
+  onRowActivate,
+}: {
+  templates: DocumentTemplateListItem[];
+  onRowActivate: (key: string) => void;
+}) {
+  return (
+    <div className="overflow-hidden rounded-xl border bg-card">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-12" aria-label="Icon" />
+            <TableHead>Title</TableHead>
+            <TableHead>Cover type</TableHead>
+            <TableHead>Version</TableHead>
+            <TableHead>Last updated</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {templates.map((template) => {
+            const title = formatDocumentTemplateTitle(template.title);
+            return (
+              <TableRow
+                key={template.key}
+                className="cursor-pointer"
+                tabIndex={0}
+                aria-label={`Open ${title}`}
+                onClick={() => onRowActivate(template.key)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onRowActivate(template.key);
+                  }
+                }}
+              >
+                <TableCell>
+                  <TemplateIcon />
+                </TableCell>
+                <TableCell className="font-medium">{title}</TableCell>
+                <TableCell>{coverTypeLabel(template.coverTypeId)}</TableCell>
+                <TableCell>{versionLabel(template)}</TableCell>
+                <TableCell>
+                  <LastUpdatedCell updatedWhen={template.updatedWhen} />
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
+function NewTemplateDialog({
+  open,
+  onOpenChange,
+  fetcher,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  fetcher: ReturnType<typeof useFetcher<typeof action>>;
+}) {
+  const submitting = fetcher.state !== "idle";
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md" showCloseButton>
+        <DialogHeader>
+          <DialogTitle>New template</DialogTitle>
+          <DialogDescription>
+            A stable template key is generated from the title (not editable
+            later).
+          </DialogDescription>
+        </DialogHeader>
+        <fetcher.Form method="post" className="flex flex-col gap-4">
+          <input type="hidden" name="intent" value="create" />
+          <FieldGroup>
+            <Field>
+              <FieldLabel htmlFor="new-template-title">Title</FieldLabel>
+              <Input
+                id="new-template-title"
+                name="title"
+                placeholder="e.g. Annual Schedule"
+                required
+                disabled={submitting}
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="new-template-cover">Cover type</FieldLabel>
+              <select
+                id="new-template-cover"
+                name="coverTypeId"
+                defaultValue="1"
+                disabled={submitting}
+                className="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="1">Annual</option>
+                <option value="2">Single</option>
+                <option value="3">Owner Builder</option>
+                <option value="all">All cover types</option>
+              </select>
+            </Field>
+          </FieldGroup>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={submitting}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={submitting}>
+              Create template
+            </Button>
+          </DialogFooter>
+        </fetcher.Form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -175,6 +341,7 @@ export default function DocumentTemplatesRoute({
   const navigate = useNavigate();
   const fetcher = useFetcher<typeof action>();
   const handledRef = useRef<typeof fetcher.data>(undefined);
+  const [createOpen, setCreateOpen] = useState(false);
 
   useEffect(() => {
     if (fetcher.state !== "idle" || !fetcher.data) return;
@@ -200,7 +367,7 @@ export default function DocumentTemplatesRoute({
   }
 
   return (
-    <div className="space-y-8">
+    <div>
       <PageHeader
         title="Document Templates"
         description={
@@ -212,48 +379,15 @@ export default function DocumentTemplatesRoute({
           { label: "Settings", to: "/settings" },
           { label: "Document Templates" },
         ]}
-      />
-
-      {loaderData.canEdit ? (
-        <fetcher.Form
-          method="post"
-          className="grid max-w-3xl gap-3 rounded-xl border p-4 sm:grid-cols-2"
-        >
-          <input type="hidden" name="intent" value="create" />
-          <div className="space-y-2">
-            <Label htmlFor="title">Title</Label>
-            <Input
-              id="title"
-              name="title"
-              placeholder="e.g. Annual Schedule"
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="coverTypeId">Cover type</Label>
-            <select
-              id="coverTypeId"
-              name="coverTypeId"
-              defaultValue="1"
-              className="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-            >
-              <option value="1">Annual</option>
-              <option value="2">Single</option>
-              <option value="3">Owner Builder</option>
-              <option value="all">All cover types</option>
-            </select>
-          </div>
-          <p className="text-xs text-muted-foreground sm:col-span-2">
-            A stable template key is generated from the title (not editable
-            later).
-          </p>
-          <div className="sm:col-span-2">
-            <Button type="submit" disabled={fetcher.state !== "idle"}>
-              Create template
+        action={
+          loaderData.canEdit ? (
+            <Button type="button" onClick={() => setCreateOpen(true)}>
+              <PlusIcon data-icon="inline-start" />
+              New template
             </Button>
-          </div>
-        </fetcher.Form>
-      ) : null}
+          ) : null
+        }
+      />
 
       {loaderData.templates.length === 0 ? (
         <p className="text-sm text-muted-foreground">
@@ -261,12 +395,30 @@ export default function DocumentTemplatesRoute({
           and publishing layouts for PDF generation.
         </p>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {loaderData.templates.map((template) => (
-            <TemplateCard key={template.key} template={template} />
-          ))}
-        </div>
+        <>
+          <div className="hidden md:block">
+            <TemplatesTable
+              templates={loaderData.templates}
+              onRowActivate={(key) => {
+                void navigate(templateHref(key));
+              }}
+            />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 md:hidden">
+            {loaderData.templates.map((template) => (
+              <TemplateCard key={template.key} template={template} />
+            ))}
+          </div>
+        </>
       )}
+
+      {loaderData.canEdit ? (
+        <NewTemplateDialog
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          fetcher={fetcher}
+        />
+      ) : null}
     </div>
   );
 }

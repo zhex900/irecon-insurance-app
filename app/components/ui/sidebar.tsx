@@ -26,6 +26,8 @@ import { PanelLeftIcon } from "lucide-react";
 const SIDEBAR_COOKIE_NAME = "sidebar_state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 const SIDEBAR_WIDTH = "11rem";
+/** Temporary width while the sidebar is hovered / focused (long labels). */
+const SIDEBAR_WIDTH_EXPANDED = "16rem";
 const SIDEBAR_WIDTH_MOBILE = "18rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
@@ -131,6 +133,7 @@ function SidebarProvider({
         style={
           {
             "--sidebar-width": SIDEBAR_WIDTH,
+            "--sidebar-width-expanded": SIDEBAR_WIDTH_EXPANDED,
             "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
             ...style,
           } as React.CSSProperties
@@ -216,12 +219,17 @@ function Sidebar({
         data-slot="sidebar-container"
         data-side={side}
         className={cn(
-          // No z-index — a stacking context here can sit over SidebarInset and steal clicks.
-          "hidden h-svh w-(--sidebar-width) flex-col transition-[width] duration-200 ease-linear md:flex",
+          // No resting z-index — a stacking context can sit over SidebarInset and steal clicks.
+          // On hover/focus, peek wider so truncated labels (e.g. Authorised Representatives) fit.
+          "hidden h-svh w-(--sidebar-width) flex-col transition-[width] duration-200 ease-out md:flex",
+          "focus-within:w-(--sidebar-width-expanded) hover:w-(--sidebar-width-expanded)",
+          "focus-within:z-20 hover:z-20",
           "group-data-[collapsible=offcanvas]:w-0 group-data-[collapsible=offcanvas]:overflow-hidden",
           "group-data-[collapsible=icon]:overflow-hidden",
+          "group-data-[collapsible=icon]:focus-within:w-(--sidebar-width-icon) group-data-[collapsible=icon]:hover:w-(--sidebar-width-icon)",
+          "group-data-[collapsible=icon]:focus-within:z-auto group-data-[collapsible=icon]:hover:z-auto",
           variant === "floating" || variant === "inset"
-            ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
+            ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)] group-data-[collapsible=icon]:focus-within:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)] group-data-[collapsible=icon]:hover:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
             : "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l",
           className,
         )}

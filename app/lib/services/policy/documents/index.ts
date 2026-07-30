@@ -7,6 +7,7 @@ export {
 export {
   buildReviewDocumentPack,
   buildAdjustmentDocumentPack,
+  policyHasLibraryDocuments,
   resolveLibraryAttachments,
 } from "~/lib/services/policy/documents/packs";
 export { mergeReviewDocuments } from "~/lib/services/policy/documents/merge";

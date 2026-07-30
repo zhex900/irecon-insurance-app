@@ -1,6 +1,4 @@
 import { Link } from "react-router";
-import { format } from "date-fns";
-import { enAU } from "date-fns/locale";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { AppBreadcrumb } from "~/components/layout/app-breadcrumb";
@@ -17,18 +15,29 @@ export function meta() {
   return [{ title: pageTitle("Dashboard") }];
 }
 
+/** Calendar date in Australia/Sydney — stable across SSR and browser timezones. */
+function formatBusinessToday(now = new Date()) {
+  return new Intl.DateTimeFormat("en-AU", {
+    timeZone: "Australia/Sydney",
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(now);
+}
+
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await requireAuth(request);
   const stats = await getDashboardStats();
   return {
     ...stats,
     broker: toBrokerSession(user),
+    todayLabel: formatBusinessToday(),
   };
 }
 
 export default function DashboardRoute({ loaderData }: Route.ComponentProps) {
   const firstName = loaderData.broker.fullName.split(" ")[0] ?? "there";
-  const today = format(new Date(), "EEEE, d MMMM yyyy", { locale: enAU });
 
   return (
     <div>
@@ -40,7 +49,7 @@ export default function DashboardRoute({ loaderData }: Route.ComponentProps) {
               Good day, {firstName}
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Here&apos;s your operational overview for {today}.
+              Here&apos;s your operational overview for {loaderData.todayLabel}.
             </p>
           </div>
         </div>

@@ -1,5 +1,13 @@
 import type { Template } from "@pdfme/common";
 
+/**
+ * Underscore-prefixed schema names are chrome / fixed labels (not policy merge
+ * fields): `_Label_*`, `_Static_*`, `_SectionTitle_*`, `_HeadLabel_*`, etc.
+ */
+export function isStaticSchemaName(name: string): boolean {
+  return name.startsWith("_");
+}
+
 export type TemplatePayload = {
   basePdf: string | Record<string, unknown>;
   schemas: Record<string, unknown>[][];
@@ -62,24 +70,44 @@ export function collectMergeFields(
   fallback: string[],
 ): string[] {
   const names = new Set<string>(
-    fallback.filter(
-      (name) => !name.startsWith("_Label_") && !name.startsWith("_Static_"),
-    ),
+    fallback.filter((name) => !isStaticSchemaName(name)),
   );
   for (const page of template.schemas) {
     for (const schema of page) {
       const name = schema.name;
-      if (!name || name.startsWith("_Label_") || name.startsWith("_Static_")) {
+      if (!name || isStaticSchemaName(name)) {
         continue;
       }
-      if (schema.type === "text") {
+      if (
+        schema.type === "text" ||
+        schema.type === "table" ||
+        schema.type === "multiVariableText"
+      ) {
         names.add(name);
       }
-      if (
-        schema.type === "multiVariableText" &&
-        typeof schema.content === "string"
-      ) {
+      if (schema.type === "table" && typeof schema.content === "string") {
         for (const match of schema.content.matchAll(/\{([^{}]+)\}/g)) {
+          names.add(match[1]!.trim());
+        }
+      }
+      if (schema.type === "multiVariableText") {
+        const mvt = schema as {
+          variables?: unknown;
+          text?: unknown;
+          content?: unknown;
+        };
+        if (Array.isArray(mvt.variables)) {
+          for (const variable of mvt.variables) {
+            if (typeof variable === "string") names.add(variable);
+          }
+        }
+        const text =
+          typeof mvt.text === "string"
+            ? mvt.text
+            : typeof mvt.content === "string"
+              ? mvt.content
+              : "";
+        for (const match of text.matchAll(/\{([^{}]+)\}/g)) {
           names.add(match[1]!.trim());
         }
       }

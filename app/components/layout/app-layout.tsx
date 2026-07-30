@@ -1,21 +1,6 @@
 import * as React from "react";
-import {
-  Link,
-  NavLink,
-  Outlet,
-  useFetcher,
-  useLocation,
-  useNavigation,
-} from "react-router";
-import {
-  LayoutDashboardIcon,
-  UsersIcon,
-  FileTextIcon,
-  BarChart3Icon,
-  SettingsIcon,
-  LogOutIcon,
-  UserIcon,
-} from "lucide-react";
+import { Link, Outlet, useFetcher, useNavigation } from "react-router";
+import { LogOutIcon, UserIcon } from "lucide-react";
 import { Logo } from "~/components/logo";
 import { UserAvatar } from "~/components/ui/user-avatar";
 import { Toaster } from "~/components/ui/sonner";
@@ -24,6 +9,7 @@ import {
   AppBreadcrumb,
   type AppBreadcrumbItem,
 } from "~/components/layout/app-breadcrumb";
+import { AppSideNav } from "~/components/layout/app-side-nav";
 import { GlobalSearch } from "~/components/layout/global-search";
 import {
   DropdownMenu,
@@ -42,11 +28,9 @@ import {
   SidebarGroupContent,
   SidebarHeader,
   SidebarInset,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
+  useSidebar,
 } from "~/components/ui/sidebar";
 import { ThemeToggle } from "~/components/theme-toggle";
 import { Badge } from "~/components/reui/badge";
@@ -59,47 +43,78 @@ import {
 } from "~/lib/app-version";
 import { APP_NAME } from "~/lib/brand";
 import type { BrokerSession } from "~/lib/db/types";
+import type { SideNavData } from "~/lib/services/navigation/side-nav.service";
 import { cn } from "~/lib/utils";
 
-const navItems = [
-  {
-    to: "/dashboard",
-    label: "Dashboard",
-    icon: LayoutDashboardIcon,
-    match: (path: string) => path === "/dashboard",
-  },
-  {
-    to: "/clients",
-    label: "Clients",
-    icon: UsersIcon,
-    match: (path: string) =>
-      path === "/clients" || path.startsWith("/clients/"),
-  },
-  {
-    to: "/policies",
-    label: "Policies",
-    icon: FileTextIcon,
-    match: (path: string) =>
-      path === "/policies" || path.startsWith("/policies/"),
-  },
-  {
-    to: "/reports",
-    label: "Reports",
-    icon: BarChart3Icon,
-    match: (path: string) =>
-      path === "/reports" || path.startsWith("/reports/"),
-  },
-  {
-    to: "/settings",
-    label: "Settings",
-    icon: SettingsIcon,
-    match: (path: string) =>
-      path === "/settings" || path.startsWith("/settings/"),
-  },
-];
+function SidebarBrandAndTrigger() {
+  const { isMobile, state, toggleSidebar } = useSidebar();
+  const collapsed = !isMobile && state === "collapsed";
 
-export function AppLayout({ broker }: { broker: BrokerSession }) {
-  const location = useLocation();
+  if (isMobile) {
+    return (
+      <>
+        <Link
+          to="/dashboard"
+          className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden px-1"
+          aria-label={`${APP_NAME} dashboard`}
+        >
+          <img
+            src="/favicon.png"
+            alt=""
+            className="size-7 shrink-0 rounded-md object-contain"
+          />
+          <span className="truncate text-sm font-medium text-sidebar-foreground">
+            {APP_NAME}
+          </span>
+        </Link>
+        <SidebarTrigger className="shrink-0" aria-label="Toggle sidebar" />
+      </>
+    );
+  }
+
+  if (collapsed) {
+    return (
+      <button
+        type="button"
+        data-sidebar="trigger"
+        aria-label="Expand sidebar"
+        title="Expand sidebar"
+        className="inline-flex size-8 shrink-0 items-center justify-center rounded-md hover:bg-sidebar-accent"
+        onClick={toggleSidebar}
+      >
+        <img
+          src="/favicon.png"
+          alt=""
+          className="size-7 rounded-md object-contain"
+        />
+      </button>
+    );
+  }
+
+  return (
+    <>
+      <Link
+        to="/dashboard"
+        className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden px-1"
+      >
+        <Logo size="sm" tone="invert" className="min-w-0" />
+        <span className="sr-only">{APP_NAME}</span>
+      </Link>
+      <SidebarTrigger className="shrink-0" aria-label="Toggle sidebar" />
+    </>
+  );
+}
+
+export function AppLayout({
+  broker,
+  sideNav,
+  content,
+}: {
+  broker: BrokerSession;
+  sideNav: SideNavData;
+  /** When set (e.g. layout ErrorBoundary), replace the route Outlet. */
+  content?: React.ReactNode;
+}) {
   const navigation = useNavigation();
   const logoutFetcher = useFetcher();
   const loggingOut =
@@ -115,52 +130,13 @@ export function AppLayout({ broker }: { broker: BrokerSession }) {
       <SidebarProvider>
         <Sidebar collapsible="icon" variant="sidebar">
           <SidebarHeader className="flex h-14 shrink-0 flex-row items-center gap-1 overflow-hidden border-b border-sidebar-border px-2 group-data-[collapsible=icon]:justify-center">
-            <Link
-              to="/dashboard"
-              className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden px-1 group-data-[collapsible=icon]:hidden"
-            >
-              <Logo size="sm" tone="invert" className="min-w-0" />
-              <span className="sr-only">{APP_NAME}</span>
-            </Link>
-            <Link
-              to="/dashboard"
-              className="hidden size-8 items-center justify-center group-data-[collapsible=icon]:flex"
-              aria-label={`${APP_NAME} dashboard`}
-            >
-              <img
-                src="/apple-touch-icon.png"
-                alt=""
-                className="size-7 rounded-md object-contain"
-              />
-            </Link>
-            <SidebarTrigger className="shrink-0" aria-label="Toggle sidebar" />
+            <SidebarBrandAndTrigger />
           </SidebarHeader>
 
           <SidebarContent>
             <SidebarGroup>
               <SidebarGroupContent>
-                <SidebarMenu>
-                  {navItems.map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <SidebarMenuItem key={`${item.label}-${item.to}`}>
-                        <SidebarMenuButton
-                          tooltip={item.label}
-                          isActive={item.match(location.pathname)}
-                          render={
-                            <NavLink
-                              to={item.to}
-                              end={item.to === "/dashboard"}
-                            />
-                          }
-                        >
-                          <Icon />
-                          <span>{item.label}</span>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    );
-                  })}
-                </SidebarMenu>
+                <AppSideNav data={sideNav} />
               </SidebarGroupContent>
             </SidebarGroup>
           </SidebarContent>
@@ -244,7 +220,7 @@ export function AppLayout({ broker }: { broker: BrokerSession }) {
           </header>
 
           <div className="relative z-0 min-w-0 flex-1 p-4 md:p-8">
-            <Outlet />
+            {content ?? <Outlet />}
           </div>
         </SidebarInset>
       </SidebarProvider>
@@ -260,7 +236,7 @@ export function PageHeader({
   action,
   breadcrumbs,
 }: {
-  title: string;
+  title: React.ReactNode;
   /** Shown inline after the title (e.g. a status badge). */
   titleAddon?: React.ReactNode;
   description?: React.ReactNode;
@@ -273,7 +249,11 @@ export function PageHeader({
         <AppBreadcrumb items={breadcrumbs} />
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-2xl font-semibold tracking-tight">{title}</h2>
+            {typeof title === "string" ? (
+              <h2 className="text-2xl font-semibold tracking-tight">{title}</h2>
+            ) : (
+              title
+            )}
             {titleAddon}
           </div>
           {description ? (
