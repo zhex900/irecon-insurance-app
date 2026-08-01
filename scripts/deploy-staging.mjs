@@ -11,7 +11,7 @@
  *   node --env-file=.env.staging scripts/deploy-staging.mjs --secret-only
  */
 import { spawn, execFileSync } from "node:child_process";
-import { readdir, unlink } from "node:fs/promises";
+import { readdir, unlink, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -146,6 +146,31 @@ async function deleteSourceMaps(rootDir) {
   return walk(rootDir);
 }
 
+/**
+ * Route resource stubs / runtime helpers have no Vite .map. Ignore them so
+ * sentry-cli inject/upload stay quiet (gitignore-style patterns).
+ */
+async function writeSentrySourcemapIgnoreFile(clientDir) {
+  const assetsDir = join(clientDir, "assets");
+  let entries = [];
+  try {
+    entries = await readdir(assetsDir);
+  } catch {
+    return null;
+  }
+  const maps = new Set(entries.filter((name) => name.endsWith(".map")));
+  const withoutMap = entries.filter(
+    (name) => name.endsWith(".js") && !maps.has(`${name}.map`),
+  );
+  if (withoutMap.length === 0) return null;
+  const ignorePath = join(clientDir, ".sentry-sourcemaps-ignore");
+  await writeFile(
+    ignorePath,
+    `${withoutMap.map((name) => `**/${name}`).join("\n")}\n`,
+  );
+  return ignorePath;
+}
+
 async function uploadSentrySourceMaps(appVersion) {
   const authToken = process.env.SENTRY_AUTH_TOKEN?.trim();
   const org = process.env.SENTRY_ORG?.trim();
@@ -160,15 +185,22 @@ async function uploadSentrySourceMaps(appVersion) {
       return;
     }
 
+    const ignoreFile = await writeSentrySourcemapIgnoreFile(clientDir);
+    const ignoreArgs = ignoreFile ? ["--ignore-file", ignoreFile] : [];
+
     console.log(`→ Uploading Sentry source maps for release ${appVersion}…`);
-    await run("npx", ["sentry-cli", "sourcemaps", "inject", clientDir], {
-      env: {
-        ...process.env,
-        SENTRY_AUTH_TOKEN: authToken,
-        SENTRY_ORG: org,
-        SENTRY_PROJECT: project,
+    await run(
+      "npx",
+      ["sentry-cli", "sourcemaps", "inject", ...ignoreArgs, clientDir],
+      {
+        env: {
+          ...process.env,
+          SENTRY_AUTH_TOKEN: authToken,
+          SENTRY_ORG: org,
+          SENTRY_PROJECT: project,
+        },
       },
-    });
+    );
     await run(
       "npx",
       [
@@ -177,6 +209,7 @@ async function uploadSentrySourceMaps(appVersion) {
         "upload",
         "--release",
         appVersion,
+        ...ignoreArgs,
         clientDir,
       ],
       {

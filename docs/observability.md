@@ -21,7 +21,7 @@ Production debugging stack for the Irecon CAR broker portal.
 
 Staging: add values to `.env.staging` (see `.env.staging.example`). `npm run deploy:staging` syncs `SENTRY_DSN` and uploads client source maps when the auth token is present.
 
-Builds use Vite `build.sourcemap: "hidden"` (maps on disk, no public `sourceMappingURL` on app chunks). `deploy-staging` uploads `build/client` maps to Sentry, then deletes all `build/**/*.map` so maps are never shipped on the Worker.
+Builds use Vite `build.sourcemap: "hidden"` (maps on disk, no public `sourceMappingURL` on app chunks). `deploy-staging` uploads `build/client` maps to Sentry (skipping empty route stubs / helpers that have no `.map`), then deletes all `build/**/*.map` so maps are never shipped on the Worker.
 
 ## Cloudflare dashboard setup
 
