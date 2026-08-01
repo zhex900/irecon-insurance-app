@@ -1,12 +1,12 @@
-import { useActionData, useNavigation, useSearchParams } from "react-router";
+import { useActionData, useNavigate, useNavigation } from "react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router";
-import { FileTextIcon, Trash2Icon, XIcon } from "lucide-react";
-import { Badge } from "~/components/reui/badge";
+import { FileTextIcon, Trash2Icon } from "lucide-react";
+import { ListSearchField } from "~/components/forms/list-search-field";
 import {
   DeletePoliciesDialog,
   type DeletablePolicyRef,
 } from "~/components/policies/delete-policies-dialog";
+import { Badge } from "~/components/reui/badge";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import {
@@ -16,7 +16,6 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "~/components/ui/empty";
-import { Input } from "~/components/ui/input";
 import { FilterTag, StatusBadge } from "~/components/ui/status-badge";
 import {
   Table,
@@ -32,14 +31,15 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "~/components/ui/tooltip";
-import type { PolicyListItem } from "~/lib/services/policies/list.service";
+import { useActionSuccessToast } from "~/hooks/use-success-toast";
+import { useDebouncedSearchQuery } from "~/hooks/use-debounced-search-query";
 import type { ReferenceData } from "~/lib/db/types";
 import { pageSearchHref, pageSizeSearchHref } from "~/lib/pagination";
-import { HighlightText } from "~/lib/search/highlight";
+import { SearchHighlight } from "~/lib/search/highlight-cell";
 import { fieldMatches } from "~/lib/search/match";
-import { cn, formatCurrency, formatDate } from "~/lib/utils";
+import type { PolicyListItem } from "~/lib/services/policies/list.service";
+import { formatCurrency, formatDate } from "~/lib/utils";
 import { isTerminalStatus } from "~/lib/zod/policy-car";
-import { useActionSuccessToast } from "~/hooks/use-success-toast";
 
 const DEFAULT_PAGE_SIZE = 25;
 
@@ -78,8 +78,14 @@ export function ClientPoliciesTable({
   const navigate = useNavigate();
   const navigation = useNavigation();
   const actionData = useActionData() as PoliciesDeleteActionData | undefined;
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [search, setSearch] = useState(q);
+  const {
+    search,
+    setSearch,
+    clearSearch,
+    searchQuery,
+    searchParams,
+    setSearchParams,
+  } = useDebouncedSearchQuery(q);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>(
     statusFilterProp ?? "all",
   );
@@ -94,7 +100,6 @@ export function ClientPoliciesTable({
     const key = `${q}|${statusFilterProp ?? "all"}|${page}`;
     if (lastSyncKeyRef.current === key) return;
     lastSyncKeyRef.current = key;
-    setSearch(q);
     setStatusFilter(statusFilterProp ?? "all");
     setSelectedIds([]);
   }, [q, statusFilterProp, page]);
@@ -141,36 +146,6 @@ export function ClientPoliciesTable({
     else params.delete("q");
     setSearchParams(params);
   }
-
-  function commitSearch(nextSearch: string) {
-    setSearchParams((prev) => {
-      const params = new URLSearchParams(prev);
-      params.delete("page");
-      const next = nextSearch.trim();
-      if (next) params.set("q", next);
-      else params.delete("q");
-      return params;
-    });
-  }
-
-  // Auto-search as you type (same cadence as policies / clients lists).
-  useEffect(() => {
-    const next = search.trim();
-    const current = q.trim();
-    if (next === current) return;
-    const timer = window.setTimeout(() => {
-      setSearchParams((prev) => {
-        const params = new URLSearchParams(prev);
-        params.delete("page");
-        if (next) params.set("q", next);
-        else params.delete("q");
-        return params;
-      });
-    }, 250);
-    return () => window.clearTimeout(timer);
-  }, [search, q, setSearchParams]);
-
-  const searchQuery = q.trim();
 
   const pageHref = (nextPage: number) => pageSearchHref(searchParams, nextPage);
   const pageSizeHref = (nextPageSize: number) =>
@@ -223,28 +198,14 @@ export function ClientPoliciesTable({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="relative w-full max-w-sm shrink-0">
-          <Input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search policy #, insured, cover…"
-            className={cn("w-full", search.trim() && "pr-9")}
-            aria-label="Search policies"
-          />
-          {search.trim() ? (
-            <button
-              type="button"
-              className="absolute top-1/2 right-2 -translate-y-1/2 rounded p-0.5 text-muted-foreground hover:text-foreground"
-              aria-label="Clear search"
-              onClick={() => {
-                setSearch("");
-                commitSearch("");
-              }}
-            >
-              <XIcon className="size-3.5" />
-            </button>
-          ) : null}
-        </div>
+        <ListSearchField
+          value={search}
+          onChange={setSearch}
+          onClear={clearSearch}
+          placeholder="Search policy #, insured, cover…"
+          aria-label="Search policies"
+          className="max-w-sm shrink-0"
+        />
         <div className="flex flex-wrap items-center justify-end gap-2 lg:ms-auto">
           <FilterTag
             active={statusFilter === "all"}
@@ -371,7 +332,7 @@ export function ClientPoliciesTable({
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-medium">
                           {searchQuery ? (
-                            <HighlightText
+                            <SearchHighlight
                               text={policy.policyNumber}
                               query={searchQuery}
                             />
@@ -393,7 +354,7 @@ export function ClientPoliciesTable({
                       {showInsured ? (
                         <p className="mt-0.5 text-xs text-muted-foreground">
                           {searchQuery ? (
-                            <HighlightText
+                            <SearchHighlight
                               text={policy.insuredName}
                               query={searchQuery}
                             />
@@ -412,7 +373,10 @@ export function ClientPoliciesTable({
                     <TableCell>
                       {coverName ? (
                         searchQuery && fieldMatches(coverName, searchQuery) ? (
-                          <HighlightText text={coverName} query={searchQuery} />
+                          <SearchHighlight
+                            text={coverName}
+                            query={searchQuery}
+                          />
                         ) : (
                           coverName
                         )
@@ -424,7 +388,7 @@ export function ClientPoliciesTable({
                       {categoryName ? (
                         searchQuery &&
                         fieldMatches(categoryName, searchQuery) ? (
-                          <HighlightText
+                          <SearchHighlight
                             text={categoryName}
                             query={searchQuery}
                           />

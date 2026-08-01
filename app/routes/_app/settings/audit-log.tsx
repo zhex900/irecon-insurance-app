@@ -1,9 +1,11 @@
 import { useMemo, useState } from "react";
-import { Form, redirect, useSearchParams } from "react-router";
+import { Form, redirect } from "react-router";
 import { format } from "date-fns";
 import { enAU } from "date-fns/locale";
 import { ScrollTextIcon } from "lucide-react";
+import { ListSearchField } from "~/components/forms/list-search-field";
 import { PageHeader } from "~/components/layout/app-layout";
+import { useDebouncedSearchQuery } from "~/hooks/use-debounced-search-query";
 import { requireAuth } from "~/lib/auth/session.server";
 import { isAdminRole, isSuperAdmin } from "~/lib/auth/roles";
 import { Button } from "~/components/ui/button";
@@ -38,6 +40,8 @@ import {
   pageSizeSearchHref,
   parsePagination,
 } from "~/lib/pagination";
+import { SearchHighlight } from "~/lib/search/highlight-cell";
+import { fieldMatches } from "~/lib/search/match";
 import { AUDIT_ACTIONS } from "~/lib/services/audit/constants";
 import { listAuditLogs } from "~/lib/services/audit/service";
 import { isFeatureEnabled } from "~/lib/services/feature-flags";
@@ -124,7 +128,8 @@ export default function SettingsAuditLogRoute({
   } = loaderData;
   const isAdmin = isAdminRole(viewer);
   const [detail, setDetail] = useState<AuditLogEntry | null>(null);
-  const [searchParams] = useSearchParams();
+  const { search, setSearch, clearSearch, searchQuery, searchParams } =
+    useDebouncedSearchQuery(q);
 
   const pageHref = useMemo(
     () => (nextPage: number) => pageSearchHref(searchParams, nextPage),
@@ -137,7 +142,7 @@ export default function SettingsAuditLogRoute({
   );
 
   const hasSearchFilters = Boolean(
-    q.trim() || action || actorUserId || from || to,
+    searchQuery || action || actorUserId || from || to,
   );
 
   return (
@@ -160,14 +165,18 @@ export default function SettingsAuditLogRoute({
         className="mb-6 grid gap-3 md:grid-cols-2 xl:grid-cols-6"
       >
         <div className="xl:col-span-2">
-          <Label htmlFor="q" className="sr-only">
+          <Label htmlFor="audit-search-q" className="sr-only">
             Search
           </Label>
-          <Input
-            id="q"
-            name="q"
-            defaultValue={q}
+          <input type="hidden" name="q" value={search.trim()} />
+          <ListSearchField
+            id="audit-search-q"
+            value={search}
+            onChange={setSearch}
+            onClear={clearSearch}
             placeholder="Search summary, actor, action…"
+            aria-label="Search audit log"
+            className="max-w-none"
           />
         </div>
         <div>
@@ -228,8 +237,8 @@ export default function SettingsAuditLogRoute({
             </EmptyTitle>
             <EmptyDescription>
               {hasSearchFilters
-                ? q.trim()
-                  ? `No match for “${q.trim()}”.`
+                ? searchQuery
+                  ? `No match for “${searchQuery}”.`
                   : "No audit entries match the current filters."
                 : "Material actions will appear here after login, saves, and settings changes."}
             </EmptyDescription>
@@ -260,17 +269,35 @@ export default function SettingsAuditLogRoute({
                   <TableCell>
                     <div className="flex flex-col">
                       <span className="font-medium">
-                        {row.actorName || row.actorEmail || "—"}
+                        {row.actorName ? (
+                          <SearchHighlight
+                            text={row.actorName}
+                            query={searchQuery}
+                          />
+                        ) : row.actorEmail ? (
+                          <SearchHighlight
+                            text={row.actorEmail}
+                            query={searchQuery}
+                          />
+                        ) : (
+                          "—"
+                        )}
                       </span>
-                      {row.actorName && row.actorEmail ? (
+                      {row.actorName &&
+                      row.actorEmail &&
+                      (!searchQuery ||
+                        fieldMatches(row.actorEmail, searchQuery)) ? (
                         <span className="text-xs text-muted-foreground">
-                          {row.actorEmail}
+                          <SearchHighlight
+                            text={row.actorEmail}
+                            query={searchQuery}
+                          />
                         </span>
                       ) : null}
                     </div>
                   </TableCell>
                   <TableCell className="font-mono text-xs">
-                    {row.action}
+                    <SearchHighlight text={row.action} query={searchQuery} />
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {row.entityType
@@ -278,7 +305,7 @@ export default function SettingsAuditLogRoute({
                       : "—"}
                   </TableCell>
                   <TableCell className="max-w-md truncate">
-                    {row.summary}
+                    <SearchHighlight text={row.summary} query={searchQuery} />
                   </TableCell>
                 </TableRow>
               ))}

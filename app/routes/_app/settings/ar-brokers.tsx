@@ -1,16 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Form,
-  useActionData,
-  useNavigation,
-  useSearchParams,
-  useSubmit,
-} from "react-router";
+import { Form, useActionData, useNavigation, useSubmit } from "react-router";
 import { useForm } from "react-hook-form";
 import { flattenFieldErrors, focusFormIssue } from "~/lib/form-validation-ui";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { BadgeCheckIcon, PlusIcon, Trash2Icon, XIcon } from "lucide-react";
+import { BadgeCheckIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import { ListSearchField } from "~/components/forms/list-search-field";
 import { useActionSuccessToast } from "~/hooks/use-success-toast";
+import { useDebouncedSearchQuery } from "~/hooks/use-debounced-search-query";
 import { PageHeader } from "~/components/layout/app-layout";
 import { Button } from "~/components/ui/button";
 import { LoadingButton } from "~/components/ui/loading-button";
@@ -42,6 +38,7 @@ import {
 import { requireAuth } from "~/lib/auth/session.server";
 import type { WholesaleBroker } from "~/lib/db/types";
 import { writeAuditLog } from "~/lib/services/audit/service";
+import { SearchHighlight } from "~/lib/search/highlight-cell";
 import { TablePagination } from "~/components/ui/table-pagination";
 import {
   pageSearchHref,
@@ -55,7 +52,6 @@ import {
   getAuthorisedRepresentative,
   updateAuthorisedRepresentative,
 } from "~/lib/services/authorised-representatives/service";
-import { cn } from "~/lib/utils";
 import {
   authorisedRepresentativeSchema,
   type AuthorisedRepresentativeFormValues,
@@ -351,49 +347,25 @@ function ArFormDialog({
 export default function SettingsArBrokersRoute({
   loaderData,
 }: Route.ComponentProps) {
-  const [search, setSearch] = useState(loaderData.q);
+  const { search, setSearch, clearSearch, searchQuery, searchParams } =
+    useDebouncedSearchQuery(loaderData.q);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<WholesaleBroker | null>(null);
   const [deleting, setDeleting] = useState<WholesaleBroker | null>(null);
-  const submit = useSubmit();
   const navigation = useNavigation();
   const actionData = useActionData<typeof action>();
-  const [searchParams] = useSearchParams();
   useActionSuccessToast(actionData);
 
   const brokers = loaderData.brokers;
 
   const filteredHint = useMemo(() => {
-    if (!loaderData.q.trim()) return `${loaderData.total} representatives`;
-    return `${loaderData.total} match${loaderData.total === 1 ? "" : "es"} for “${loaderData.q}”`;
-  }, [loaderData.total, loaderData.q]);
+    if (!searchQuery) return `${loaderData.total} representatives`;
+    return `${loaderData.total} match${loaderData.total === 1 ? "" : "es"} for “${searchQuery}”`;
+  }, [loaderData.total, searchQuery]);
 
   const pageHref = (nextPage: number) => pageSearchHref(searchParams, nextPage);
   const pageSizeHref = (nextPageSize: number) =>
     pageSizeSearchHref(searchParams, nextPageSize, PAGE_SIZE);
-
-  const lastQRef = useRef(loaderData.q);
-  useEffect(() => {
-    if (lastQRef.current === loaderData.q) return;
-    lastQRef.current = loaderData.q;
-    setSearch(loaderData.q);
-  }, [loaderData.q]);
-
-  // Debounced server-side search via ?q= (SQL ilike in listAuthorisedRepresentativesPage).
-  useEffect(() => {
-    const trimmed = search.trim();
-    const current = loaderData.q.trim();
-    if (trimmed === current) return;
-
-    const handle = window.setTimeout(() => {
-      const params = new URLSearchParams();
-      if (trimmed) params.set("q", trimmed);
-      // Always reset to page 1 when the query changes.
-      submit(params, { method: "get", replace: true });
-    }, 300);
-
-    return () => window.clearTimeout(handle);
-  }, [search, loaderData.q, submit]);
 
   const handledDeleteActionDataRef = useRef(actionData);
   useEffect(() => {
@@ -415,18 +387,6 @@ export default function SettingsArBrokersRoute({
     setEditorOpen(true);
   }
 
-  function clearSearch() {
-    setSearch("");
-    submit(new URLSearchParams(), { method: "get", replace: true });
-  }
-
-  function applySearch(event: React.FormEvent) {
-    event.preventDefault();
-    const params = new URLSearchParams();
-    if (search.trim()) params.set("q", search.trim());
-    submit(params, { method: "get", replace: true });
-  }
-
   return (
     <div>
       <PageHeader
@@ -444,31 +404,16 @@ export default function SettingsArBrokersRoute({
         }
       />
 
-      <form
-        onSubmit={applySearch}
-        className="mb-4 flex flex-col gap-3 rounded-xl border bg-card p-4 sm:flex-row sm:items-center sm:justify-between"
-      >
-        <div className="relative w-full max-w-md">
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search name, company, AR number, email…"
-            className={cn("w-full", search.trim() && "pr-9")}
-            aria-label="Search authorised representatives"
-          />
-          {search.trim() ? (
-            <button
-              type="button"
-              className="absolute top-1/2 right-2 -translate-y-1/2 rounded p-0.5 text-muted-foreground hover:text-foreground"
-              aria-label="Clear search"
-              onClick={clearSearch}
-            >
-              <XIcon className="size-3.5" />
-            </button>
-          ) : null}
-        </div>
+      <div className="mb-4 flex flex-col gap-3 rounded-xl border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
+        <ListSearchField
+          value={search}
+          onChange={setSearch}
+          onClear={clearSearch}
+          placeholder="Search name, company, AR number, email…"
+          aria-label="Search authorised representatives"
+        />
         <p className="text-sm text-muted-foreground">{filteredHint}</p>
-      </form>
+      </div>
 
       <div className="overflow-hidden rounded-xl border bg-card">
         <Table>
@@ -491,13 +436,13 @@ export default function SettingsArBrokersRoute({
                         <BadgeCheckIcon />
                       </EmptyMedia>
                       <EmptyTitle>
-                        {loaderData.q.trim()
+                        {searchQuery
                           ? "No match"
                           : "No authorised representatives"}
                       </EmptyTitle>
                       <EmptyDescription>
-                        {loaderData.q.trim()
-                          ? `No match for “${loaderData.q.trim()}”.`
+                        {searchQuery
+                          ? `No match for “${searchQuery}”.`
                           : "No authorised representatives found."}
                       </EmptyDescription>
                     </EmptyHeader>
@@ -511,11 +456,20 @@ export default function SettingsArBrokersRoute({
                   className="cursor-pointer"
                   onClick={() => openEdit(ar)}
                 >
-                  <TableCell className="font-medium">{ar.fullName}</TableCell>
-                  <TableCell>{ar.companyName}</TableCell>
-                  <TableCell className="tabular-nums">{ar.arNumber}</TableCell>
+                  <TableCell className="font-medium">
+                    <SearchHighlight text={ar.fullName} query={searchQuery} />
+                  </TableCell>
+                  <TableCell>
+                    <SearchHighlight
+                      text={ar.companyName}
+                      query={searchQuery}
+                    />
+                  </TableCell>
+                  <TableCell className="tabular-nums">
+                    <SearchHighlight text={ar.arNumber} query={searchQuery} />
+                  </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {ar.email}
+                    <SearchHighlight text={ar.email} query={searchQuery} />
                   </TableCell>
                   <TableCell className="text-right">
                     <Button

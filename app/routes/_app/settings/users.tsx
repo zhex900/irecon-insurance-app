@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useActionData, useNavigation, useSearchParams } from "react-router";
+import { useActionData, useNavigation } from "react-router";
 import { PlusIcon } from "lucide-react";
 import { useActionSuccessToast } from "~/hooks/use-success-toast";
+import { useDebouncedSearchQuery } from "~/hooks/use-debounced-search-query";
 import { PageHeader } from "~/components/layout/app-layout";
 import {
   UserDeleteConfirmDialog,
@@ -231,14 +232,20 @@ export async function action({ request, context }: Route.ActionArgs) {
 export default function SettingsUsersRoute({
   loaderData,
 }: Route.ComponentProps) {
-  const [search, setSearch] = useState(loaderData.q);
+  const {
+    search,
+    setSearch,
+    clearSearch,
+    searchQuery,
+    searchParams,
+    setSearchParams,
+  } = useDebouncedSearchQuery(loaderData.q);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<AppUser | null>(null);
   const [toggling, setToggling] = useState<AppUser | null>(null);
   const [deleting, setDeleting] = useState<AppUser | null>(null);
   const navigation = useNavigation();
   const actionData = useActionData<typeof action>();
-  const [searchParams, setSearchParams] = useSearchParams();
   useActionSuccessToast(actionData);
 
   const filteredHint = useMemo(() => {
@@ -308,7 +315,9 @@ export default function SettingsUsersRoute({
       <UsersTable
         users={loaderData.users}
         search={search}
+        searchQuery={searchQuery}
         onSearchChange={setSearch}
+        onClearSearch={clearSearch}
         filteredHint={filteredHint}
         total={loaderData.total}
         page={loaderData.page}

@@ -4,10 +4,12 @@ import {
   useActionData,
   useNavigate,
   useNavigation,
-  useSearchParams,
 } from "react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Trash2Icon, UsersIcon, XIcon } from "lucide-react";
+import { Trash2Icon, UsersIcon } from "lucide-react";
+import { FilterAutocomplete } from "~/components/clients/filter-autocomplete";
+import { ListSearchField } from "~/components/forms/list-search-field";
+import { PageHeader } from "~/components/layout/app-layout";
 import { Button } from "~/components/ui/button";
 import { LoadingButton } from "~/components/ui/loading-button";
 import {
@@ -17,7 +19,6 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "~/components/ui/empty";
-import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { FilterTag } from "~/components/ui/status-badge";
 import {
@@ -42,18 +43,17 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "~/components/ui/tooltip";
-import { PageHeader } from "~/components/layout/app-layout";
-import { FilterAutocomplete } from "~/components/clients/filter-autocomplete";
 import { useActionSuccessToast } from "~/hooks/use-success-toast";
+import { useDebouncedSearchQuery } from "~/hooks/use-debounced-search-query";
 import { requireAuth } from "~/lib/auth/session.server";
-import { HighlightText } from "~/lib/search/highlight";
+import { SearchHighlight } from "~/lib/search/highlight-cell";
 import { fieldMatches } from "~/lib/search/match";
 import {
   pageSearchHref,
   pageSizeSearchHref,
   parsePagination,
 } from "~/lib/pagination";
-import { cn, formatDate } from "~/lib/utils";
+import { formatDate } from "~/lib/utils";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import {
   listClientsPage,
@@ -168,11 +168,17 @@ export async function action({ request }: Route.ActionArgs) {
 export default function ClientsIndexRoute({
   loaderData,
 }: Route.ComponentProps) {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const {
+    search,
+    setSearch,
+    clearSearch,
+    searchQuery,
+    searchParams,
+    setSearchParams,
+  } = useDebouncedSearchQuery(loaderData.filters.search);
   const navigate = useNavigate();
   const navigation = useNavigation();
   const actionData = useActionData<typeof action>();
-  const [search, setSearch] = useState(loaderData.filters.search);
   const [accountManagerId, setAccountManagerId] = useState<number | "">(
     loaderData.filters.accountManagerId ?? "",
   );
@@ -190,7 +196,6 @@ export default function ClientsIndexRoute({
     if (lastFiltersRef.current === loaderData.filters) return;
     lastFiltersRef.current = loaderData.filters;
     const filters = lastFiltersRef.current;
-    setSearch(filters.search);
     setAccountManagerId(filters.accountManagerId ?? "");
     setAuthorisedRepresentativeId(filters.authorisedRepresentativeId ?? "");
     setArCompanyName(filters.arCompanyName);
@@ -277,26 +282,11 @@ export default function ClientsIndexRoute({
     setSearchParams({});
   }
 
-  // Auto-search as you type (same cadence as global / select-client search).
-  useEffect(() => {
-    const next = search.trim();
-    const current = loaderData.filters.search.trim();
-    if (next === current) return;
-    const timer = window.setTimeout(() => {
-      setSearchParams(buildParams({ search: next, page: 1 }));
-    }, 250);
-    return () => window.clearTimeout(timer);
-    // buildParams reads latest filter state from the render that scheduled this effect.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-run on search text changes
-  }, [search, loaderData.filters.search, setSearchParams]);
-
   const hasActiveFilters =
-    Boolean(loaderData.filters.search) ||
+    Boolean(searchQuery) ||
     Boolean(loaderData.filters.accountManagerId) ||
     Boolean(loaderData.filters.authorisedRepresentativeId) ||
     Boolean(loaderData.filters.arCompanyName);
-
-  const searchQuery = loaderData.filters.search.trim();
 
   const pageHref = (nextPage: number) => pageSearchHref(searchParams, nextPage);
   const pageSizeHref = (nextPageSize: number) =>
@@ -328,29 +318,15 @@ export default function ClientsIndexRoute({
       >
         <div className="flex min-w-0 flex-col gap-1.5">
           <Label htmlFor="client-search-q">Search</Label>
-          <div className="relative w-full">
-            <Input
-              id="client-search-q"
-              name="q"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Name, trading name, ABN, phone…"
-              className={cn("w-full", search.trim() && "pr-9")}
-            />
-            {search.trim() ? (
-              <button
-                type="button"
-                className="absolute top-1/2 right-2 -translate-y-1/2 rounded p-0.5 text-muted-foreground hover:text-foreground"
-                aria-label="Clear search"
-                onClick={() => {
-                  setSearch("");
-                  applyFilters({ search: "", page: 1 });
-                }}
-              >
-                <XIcon className="size-3.5" />
-              </button>
-            ) : null}
-          </div>
+          <ListSearchField
+            id="client-search-q"
+            value={search}
+            onChange={setSearch}
+            onClear={clearSearch}
+            placeholder="Name, trading name, ABN, phone…"
+            aria-label="Search clients"
+            className="max-w-none"
+          />
         </div>
         <div className="grid gap-3 md:grid-cols-3">
           <FilterAutocomplete
@@ -490,14 +466,10 @@ export default function ClientsIndexRoute({
                     <TableCell>
                       {nameMatches ? (
                         <p className="font-medium">
-                          {searchQuery ? (
-                            <HighlightText
-                              text={client.name}
-                              query={searchQuery}
-                            />
-                          ) : (
-                            client.name
-                          )}
+                          <SearchHighlight
+                            text={client.name}
+                            query={searchQuery}
+                          />
                         </p>
                       ) : null}
                       {tradingMatches ? (
@@ -508,21 +480,17 @@ export default function ClientsIndexRoute({
                               : "font-medium"
                           }
                         >
-                          {searchQuery ? (
-                            <HighlightText
-                              text={client.tradingName}
-                              query={searchQuery}
-                            />
-                          ) : (
-                            client.tradingName
-                          )}
+                          <SearchHighlight
+                            text={client.tradingName}
+                            query={searchQuery}
+                          />
                         </p>
                       ) : null}
                     </TableCell>
                     <TableCell>
                       {managerName ? (
                         managerMatches ? (
-                          <HighlightText
+                          <SearchHighlight
                             text={managerName}
                             query={searchQuery}
                           />

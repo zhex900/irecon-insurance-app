@@ -1,18 +1,15 @@
-import {
-  useActionData,
-  useNavigate,
-  useNavigation,
-  useSearchParams,
-} from "react-router";
+import { useActionData, useNavigate, useNavigation } from "react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FileTextIcon, Trash2Icon, XIcon } from "lucide-react";
-import { Badge } from "~/components/reui/badge";
+import { FileTextIcon, Trash2Icon } from "lucide-react";
 import { ClientSummaryPopover } from "~/components/clients/client-summary-popover";
+import { ListSearchField } from "~/components/forms/list-search-field";
+import { PageHeader } from "~/components/layout/app-layout";
 import {
   DeletePoliciesDialog,
   type DeletablePolicyRef,
 } from "~/components/policies/delete-policies-dialog";
 import { NewPolicyClientDialog } from "~/components/policies/new-policy-client-dialog";
+import { Badge } from "~/components/reui/badge";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import {
@@ -22,7 +19,6 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "~/components/ui/empty";
-import { Input } from "~/components/ui/input";
 import { FilterTag, StatusBadge } from "~/components/ui/status-badge";
 import {
   Table,
@@ -38,21 +34,21 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "~/components/ui/tooltip";
-import { PageHeader } from "~/components/layout/app-layout";
 import { useActionSuccessToast } from "~/hooks/use-success-toast";
+import { useDebouncedSearchQuery } from "~/hooks/use-debounced-search-query";
 import { requireAuth } from "~/lib/auth/session.server";
 import {
   pageSearchHref,
   pageSizeSearchHref,
   parsePagination,
 } from "~/lib/pagination";
-import { HighlightText } from "~/lib/search/highlight";
+import { SearchHighlight } from "~/lib/search/highlight-cell";
 import { fieldMatches } from "~/lib/search/match";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import { listPoliciesPage } from "~/lib/services/policies/list.service";
 import { deletePolicies } from "~/lib/services/policy/data.service";
 import { getReferenceData } from "~/lib/services/reference.service";
-import { cn, formatCurrency, formatDate } from "~/lib/utils";
+import { formatCurrency, formatDate } from "~/lib/utils";
 import { isTerminalStatus } from "~/lib/zod/policy-car";
 import type { Route } from "./+types/_index";
 import { pageTitle } from "~/lib/brand";
@@ -159,11 +155,17 @@ type StatusFilter = "all" | number;
 export default function PoliciesIndexRoute({
   loaderData,
 }: Route.ComponentProps) {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const {
+    search,
+    setSearch,
+    clearSearch,
+    searchQuery,
+    searchParams,
+    setSearchParams,
+  } = useDebouncedSearchQuery(loaderData.q);
   const navigate = useNavigate();
   const navigation = useNavigation();
   const actionData = useActionData<typeof action>();
-  const [search, setSearch] = useState(loaderData.q);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>(
     loaderData.statusFilter ?? "all",
   );
@@ -178,7 +180,6 @@ export default function PoliciesIndexRoute({
     const key = `${loaderData.q}|${loaderData.statusFilter ?? "all"}|${loaderData.page}`;
     if (lastSyncKeyRef.current === key) return;
     lastSyncKeyRef.current = key;
-    setSearch(loaderData.q);
     setStatusFilter(loaderData.statusFilter ?? "all");
     setSelectedIds([]);
   }, [loaderData.q, loaderData.statusFilter, loaderData.page]);
@@ -227,36 +228,6 @@ export default function PoliciesIndexRoute({
     setSearchParams(params);
   }
 
-  function commitSearch(nextSearch: string) {
-    setSearchParams((prev) => {
-      const params = new URLSearchParams(prev);
-      params.delete("page");
-      const next = nextSearch.trim();
-      if (next) params.set("q", next);
-      else params.delete("q");
-      return params;
-    });
-  }
-
-  // Auto-search as you type (same cadence as global / select-client search).
-  useEffect(() => {
-    const next = search.trim();
-    const current = loaderData.q.trim();
-    if (next === current) return;
-    const timer = window.setTimeout(() => {
-      setSearchParams((prev) => {
-        const params = new URLSearchParams(prev);
-        params.delete("page");
-        if (next) params.set("q", next);
-        else params.delete("q");
-        return params;
-      });
-    }, 250);
-    return () => window.clearTimeout(timer);
-  }, [search, loaderData.q, setSearchParams]);
-
-  const searchQuery = loaderData.q.trim();
-
   const pageHref = (nextPage: number) => pageSearchHref(searchParams, nextPage);
   const pageSizeHref = (nextPageSize: number) =>
     pageSizeSearchHref(searchParams, nextPageSize, PAGE_SIZE);
@@ -301,29 +272,13 @@ export default function PoliciesIndexRoute({
       />
 
       <div className="mb-4 flex flex-col gap-3 rounded-xl border bg-card p-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="relative max-w-md flex-1">
-          <Input
-            name="q"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search policy #, insured, client…"
-            className={cn("w-full", search.trim() && "pr-9")}
-            aria-label="Search policies"
-          />
-          {search.trim() ? (
-            <button
-              type="button"
-              className="absolute top-1/2 right-2 -translate-y-1/2 rounded p-0.5 text-muted-foreground hover:text-foreground"
-              aria-label="Clear search"
-              onClick={() => {
-                setSearch("");
-                commitSearch("");
-              }}
-            >
-              <XIcon className="size-3.5" />
-            </button>
-          ) : null}
-        </div>
+        <ListSearchField
+          value={search}
+          onChange={setSearch}
+          onClear={clearSearch}
+          placeholder="Search policy #, insured, client…"
+          aria-label="Search policies"
+        />
         <p className="text-sm text-muted-foreground">
           {loaderData.total} of {loaderData.allCount} policies
         </p>
@@ -464,7 +419,7 @@ export default function PoliciesIndexRoute({
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-medium">
                           {searchQuery ? (
-                            <HighlightText
+                            <SearchHighlight
                               text={policy.policyNumber}
                               query={searchQuery}
                             />
@@ -481,7 +436,7 @@ export default function PoliciesIndexRoute({
                       {showInsured ? (
                         <p className="mt-0.5 text-xs text-muted-foreground">
                           {searchQuery ? (
-                            <HighlightText
+                            <SearchHighlight
                               text={policy.insuredName}
                               query={searchQuery}
                             />
@@ -505,12 +460,12 @@ export default function PoliciesIndexRoute({
                       >
                         {searchQuery && clientNameMatches ? (
                           fieldMatches(policy.client.name, searchQuery) ? (
-                            <HighlightText
+                            <SearchHighlight
                               text={policy.client.name}
                               query={searchQuery}
                             />
                           ) : (
-                            <HighlightText
+                            <SearchHighlight
                               text={
                                 policy.client.tradingName || policy.client.name
                               }
