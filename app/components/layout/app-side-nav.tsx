@@ -376,10 +376,12 @@ function RecentsSection({
         onClick={onToggle}
         title={iconRail ? "Recents" : undefined}
         className={cn(
-          "relative flex w-full cursor-pointer items-center gap-1.5 rounded-md py-1.5 text-sm text-sidebar-foreground outline-none",
+          // Match TreeItemLabel / SidebarMenuButton icon column (px-2, gap-1.5, h-8).
+          "relative flex h-8 w-full cursor-pointer items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-sidebar-foreground outline-none",
           "hover:bg-sidebar-accent hover:text-primary",
           "focus-visible:ring-2 focus-visible:ring-sidebar-ring",
-          iconRail ? "size-8 justify-center px-0" : "px-2",
+          // Icon rail: same box as SidebarMenuButton `size-8 p-2`.
+          iconRail && "size-8 gap-2 p-2",
         )}
         aria-expanded={listOpen}
       >
@@ -686,8 +688,13 @@ export function AppSideNav({ data }: { data: SideNavData }) {
 
   return (
     <>
-      {/* One Recents control always — never swap under the cursor on hover-expand. */}
-      <nav aria-label="Recents" className="px-1">
+      {/* One Recents control always — never swap under the cursor on hover-expand.
+          Expanded: same `px-1` as the main tree. Icon rail: no extra pad so the
+          clock lines up with CollapsedSideNav / SidebarMenuButton icons. */}
+      <nav
+        aria-label="Recents"
+        className={cn(showExpandedNav ? "px-1" : undefined)}
+      >
         <RecentsSection
           recentRoutes={recentRoutes}
           enteringId={enteringId}

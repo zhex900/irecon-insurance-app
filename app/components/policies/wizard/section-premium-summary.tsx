@@ -11,6 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
+import { Badge } from "~/components/reui/badge";
 import { ScrollArea } from "~/components/ui/scroll-area";
 import {
   Tooltip,
@@ -339,39 +340,57 @@ export function PremiumSummaryPanel({
               {documentRows.map(({ doc, version }) => {
                 const checked = selectedIds.includes(doc.policyDocumentId);
                 const shortName = formatDocumentLabel(doc.name);
-                const label =
-                  hasPreviousVersions || version > 1
-                    ? `v${version} ${shortName}`
-                    : shortName;
+                const showVersion = hasPreviousVersions || version > 1;
                 return (
                   <li key={doc.policyDocumentId}>
-                    <div className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted/60">
+                    <div className="relative flex items-start gap-2 rounded-md px-1 py-1 pe-9 hover:bg-muted/60">
                       <Checkbox
+                        className="mt-0.5"
                         checked={checked}
                         onCheckedChange={(value) =>
                           toggleDoc(doc.policyDocumentId, Boolean(value))
                         }
-                        aria-label={`Select ${label}`}
+                        aria-label={
+                          showVersion
+                            ? `Select ${shortName} version ${version}`
+                            : `Select ${shortName}`
+                        }
                       />
                       <Tooltip>
                         <TooltipTrigger
                           render={
                             <button
                               type="button"
-                              className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                              className="flex min-w-0 flex-1 items-start gap-2 text-left"
                               onClick={() => setPreviewDoc(doc)}
                             />
                           }
                         >
-                          <FileTypeIcon className="size-3.5 shrink-0 text-red-600" />
-                          <span className="truncate font-medium text-foreground underline-offset-2 hover:underline">
-                            {label}
+                          <FileTypeIcon className="mt-0.5 size-3.5 shrink-0 text-red-600" />
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate font-medium text-foreground underline-offset-2 hover:underline">
+                              {shortName}
+                            </span>
+                            {/* Mobile: full filename under the label (wraps; no hover tooltip). */}
+                            <span className="mt-0.5 block text-xs break-all text-muted-foreground xl:hidden">
+                              {doc.filename}
+                            </span>
                           </span>
                         </TooltipTrigger>
                         <TooltipContent side="left" className="max-w-xs">
                           {doc.filename}
                         </TooltipContent>
                       </Tooltip>
+                      {showVersion ? (
+                        <Badge
+                          variant="secondary"
+                          size="xs"
+                          className="absolute top-1 right-1.5"
+                          aria-label={`Version ${version}`}
+                        >
+                          v{version}
+                        </Badge>
+                      ) : null}
                     </div>
                   </li>
                 );
