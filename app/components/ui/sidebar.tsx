@@ -33,13 +33,18 @@ const SIDEBAR_WIDTH_ICON = "3rem";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
 
 type SidebarContextProps = {
+  /** Visual state (includes temporary hover-expand while pinned closed). */
   state: "expanded" | "collapsed";
+  /** Pinned open state (cookie). Unaffected by hover-expand. */
   open: boolean;
   setOpen: (open: boolean) => void;
   openMobile: boolean;
   setOpenMobile: (open: boolean) => void;
   isMobile: boolean;
   toggleSidebar: () => void;
+  /** True while pinned-closed sidebar is hover-expanded. */
+  hoverOpen: boolean;
+  setHoverOpen: (open: boolean) => void;
 };
 
 const SidebarContext = React.createContext<SidebarContextProps | null>(null);
@@ -68,6 +73,7 @@ function SidebarProvider({
 }) {
   const isMobile = useIsMobile();
   const [openMobile, setOpenMobile] = React.useState(false);
+  const [hoverOpen, setHoverOpen] = React.useState(false);
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
@@ -90,8 +96,14 @@ function SidebarProvider({
 
   // Helper to toggle the sidebar.
   const toggleSidebar = React.useCallback(() => {
-    return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open);
-  }, [isMobile, setOpen, setOpenMobile]);
+    if (isMobile) {
+      setOpenMobile((mobileOpen) => !mobileOpen);
+      return;
+    }
+    // Clear hover-expand so a collapse click takes effect immediately.
+    setHoverOpen(false);
+    setOpen((pinnedOpen) => !pinnedOpen);
+  }, [isMobile, setOpen]);
 
   // Adds a keyboard shortcut to toggle the sidebar.
   React.useEffect(() => {
@@ -109,9 +121,9 @@ function SidebarProvider({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [toggleSidebar]);
 
-  // We add a state so that we can do data-state="expanded" or "collapsed".
-  // This makes it easier to style the sidebar with Tailwind classes.
-  const state = open ? "expanded" : "collapsed";
+  // Hover-expand only applies while pinned closed.
+  const effectiveHoverOpen = !open && hoverOpen;
+  const state = open || effectiveHoverOpen ? "expanded" : "collapsed";
 
   const contextValue = React.useMemo<SidebarContextProps>(
     () => ({
@@ -122,8 +134,19 @@ function SidebarProvider({
       openMobile,
       setOpenMobile,
       toggleSidebar,
+      hoverOpen: effectiveHoverOpen,
+      setHoverOpen,
     }),
-    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar],
+    [
+      state,
+      open,
+      setOpen,
+      isMobile,
+      openMobile,
+      setOpenMobile,
+      toggleSidebar,
+      effectiveHoverOpen,
+    ],
   );
 
   return (
@@ -163,7 +186,49 @@ function Sidebar({
   variant?: "sidebar" | "floating" | "inset";
   collapsible?: "offcanvas" | "icon" | "none";
 }) {
-  const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
+  const {
+    isMobile,
+    state,
+    open,
+    openMobile,
+    setOpenMobile,
+    hoverOpen,
+    setHoverOpen,
+  } = useSidebar();
+  const hoverLeaveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+
+  React.useEffect(
+    () => () => {
+      if (hoverLeaveTimerRef.current !== null) {
+        clearTimeout(hoverLeaveTimerRef.current);
+      }
+    },
+    [],
+  );
+
+  const handleMouseEnter = React.useCallback(() => {
+    if (hoverLeaveTimerRef.current !== null) {
+      clearTimeout(hoverLeaveTimerRef.current);
+      hoverLeaveTimerRef.current = null;
+    }
+    // Only hover-expand when pinned closed (icon mode).
+    if (!open && collapsible === "icon") {
+      setHoverOpen(true);
+    }
+  }, [open, collapsible, setHoverOpen]);
+
+  const handleMouseLeave = React.useCallback(() => {
+    if (hoverLeaveTimerRef.current !== null) {
+      clearTimeout(hoverLeaveTimerRef.current);
+    }
+    // Small delay avoids flicker when moving between sidebar chrome.
+    hoverLeaveTimerRef.current = setTimeout(() => {
+      setHoverOpen(false);
+      hoverLeaveTimerRef.current = null;
+    }, 120);
+  }, [setHoverOpen]);
 
   if (collapsible === "none") {
     return (
@@ -206,43 +271,90 @@ function Sidebar({
     );
   }
 
+  // Pinned-closed keeps icon rail width in layout; hover-expand overlays full nav.
+  const pinnedCollapsed = !open && collapsible === "icon";
+  const isFloating = variant === "floating" || variant === "inset";
+
   return (
     <div
-      className="group peer hidden h-svh text-sidebar-foreground md:block"
+      className="group peer relative hidden h-svh text-sidebar-foreground md:block"
       data-state={state}
-      data-collapsible={state === "collapsed" ? collapsible : ""}
+      // Keep icon-mode styles only while pinned closed and not hover-expanded.
+      data-collapsible={pinnedCollapsed && !hoverOpen ? collapsible : ""}
+      data-hover-expand={hoverOpen && pinnedCollapsed ? "true" : undefined}
       data-variant={variant}
       data-side={side}
       data-slot="sidebar"
     >
-      <div
-        data-slot="sidebar-container"
-        data-side={side}
-        className={cn(
-          // No resting z-index — a stacking context can sit over SidebarInset and steal clicks.
-          // On hover/focus, peek wider so truncated labels (e.g. Authorised Representatives) fit.
-          "hidden h-svh w-(--sidebar-width) flex-col transition-[width] duration-200 ease-out md:flex",
-          "focus-within:w-(--sidebar-width-expanded) hover:w-(--sidebar-width-expanded)",
-          "focus-within:z-20 hover:z-20",
-          "group-data-[collapsible=offcanvas]:w-0 group-data-[collapsible=offcanvas]:overflow-hidden",
-          "group-data-[collapsible=icon]:overflow-hidden",
-          "group-data-[collapsible=icon]:focus-within:w-(--sidebar-width-icon) group-data-[collapsible=icon]:hover:w-(--sidebar-width-icon)",
-          "group-data-[collapsible=icon]:focus-within:z-auto group-data-[collapsible=icon]:hover:z-auto",
-          variant === "floating" || variant === "inset"
-            ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)] group-data-[collapsible=icon]:focus-within:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)] group-data-[collapsible=icon]:hover:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
-            : "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l",
-          className,
-        )}
-        {...props}
-      >
+      {pinnedCollapsed ? (
+        <>
+          {/* Reserve icon-rail space so the page does not jump on hover-expand. */}
+          <div
+            aria-hidden
+            className={cn(
+              "hidden h-svh shrink-0 md:block",
+              isFloating
+                ? "w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
+                : "w-(--sidebar-width-icon)",
+            )}
+          />
+          <div
+            data-slot="sidebar-container"
+            data-side={side}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+            className={cn(
+              "absolute inset-y-0 z-30 flex h-svh flex-col overflow-hidden transition-[width] duration-200 ease-out",
+              side === "right" ? "end-0" : "start-0",
+              hoverOpen
+                ? cn(
+                    isFloating
+                      ? "w-[calc(var(--sidebar-width)+(--spacing(4))+2px)] p-2"
+                      : "w-(--sidebar-width)",
+                    "shadow-lg",
+                  )
+                : isFloating
+                  ? "w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)] p-2"
+                  : "w-(--sidebar-width-icon)",
+              !isFloating &&
+                "border-sidebar-border group-data-[side=left]:border-r group-data-[side=right]:border-l",
+              className,
+            )}
+            {...props}
+          >
+            <div
+              data-sidebar="sidebar"
+              data-slot="sidebar-inner"
+              className="flex h-full min-h-0 w-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-sidebar-border"
+            >
+              {children}
+            </div>
+          </div>
+        </>
+      ) : (
         <div
-          data-sidebar="sidebar"
-          data-slot="sidebar-inner"
-          className="flex h-full min-h-0 w-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-sidebar-border"
+          data-slot="sidebar-container"
+          data-side={side}
+          className={cn(
+            // On hover/focus while pinned open, peek wider so truncated labels fit.
+            "hidden h-svh w-(--sidebar-width) flex-col transition-[width] duration-200 ease-out md:flex",
+            "focus-within:z-20 focus-within:w-(--sidebar-width-expanded) hover:z-20 hover:w-(--sidebar-width-expanded)",
+            isFloating
+              ? "p-2 focus-within:w-[calc(var(--sidebar-width-expanded)+(--spacing(4))+2px)] hover:w-[calc(var(--sidebar-width-expanded)+(--spacing(4))+2px)]"
+              : "group-data-[side=left]:border-r group-data-[side=right]:border-l",
+            className,
+          )}
+          {...props}
         >
-          {children}
+          <div
+            data-sidebar="sidebar"
+            data-slot="sidebar-inner"
+            className="flex h-full min-h-0 w-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-sidebar-border"
+          >
+            {children}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

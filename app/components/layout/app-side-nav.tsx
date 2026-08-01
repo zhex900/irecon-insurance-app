@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Link, NavLink, useLocation } from "react-router";
+import { Link, NavLink, useLocation, useNavigate } from "react-router";
 import {
   LayoutDashboardIcon,
   UsersIcon,
@@ -18,19 +18,26 @@ import {
   ChevronRightIcon,
   type LucideIcon,
 } from "lucide-react";
+import { hotkeysCoreFeature, syncDataLoaderFeature } from "@headless-tree/core";
+import { useTree } from "@headless-tree/react";
+import { Tree, TreeItem, TreeItemLabel } from "~/components/reui/tree";
 import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
 } from "~/components/ui/sidebar";
-import type {
-  SideNavData,
-  SideNavLink,
-} from "~/lib/services/navigation/side-nav.service";
+import type { SideNavData } from "~/lib/services/navigation/side-nav.service";
 import { cn } from "~/lib/utils";
 
 type SectionId = "reports" | "settings";
+
+type NavItem = {
+  name: string;
+  href?: string;
+  icon?: LucideIcon;
+  children?: string[];
+};
 
 const CHILD_ICONS: Record<string, LucideIcon> = {
   "report-clients": UsersIcon,
@@ -47,27 +54,37 @@ const CHILD_ICONS: Record<string, LucideIcon> = {
 };
 
 const TOP_LINKS: {
+  id: string;
   to: string;
   label: string;
   icon: LucideIcon;
   section?: SectionId;
 }[] = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboardIcon },
-  { to: "/clients", label: "Clients", icon: UsersIcon },
-  { to: "/policies", label: "Policies", icon: FileTextIcon },
   {
+    id: "dashboard",
+    to: "/dashboard",
+    label: "Dashboard",
+    icon: LayoutDashboardIcon,
+  },
+  { id: "clients", to: "/clients", label: "Clients", icon: UsersIcon },
+  { id: "policies", to: "/policies", label: "Policies", icon: FileTextIcon },
+  {
+    id: "reports",
     to: "/reports",
     label: "Reports",
     icon: BarChart3Icon,
     section: "reports",
   },
   {
+    id: "settings",
     to: "/settings",
     label: "Settings",
     icon: SettingsIcon,
     section: "settings",
   },
 ];
+
+const indent = 16;
 
 function sectionFromPath(pathname: string): SectionId | null {
   if (pathname === "/reports" || pathname.startsWith("/reports/")) {
@@ -79,97 +96,230 @@ function sectionFromPath(pathname: string): SectionId | null {
   return null;
 }
 
-function NavRow({
-  to,
-  label,
-  icon: Icon,
-}: {
-  to: string;
-  label: string;
-  icon: LucideIcon;
-}) {
+function pathMatches(pathname: string, href: string, end = false): boolean {
+  if (end || href === "/dashboard") {
+    return pathname === href;
+  }
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function buildNavItems(data: SideNavData): Record<string, NavItem> {
+  const items: Record<string, NavItem> = {
+    root: {
+      name: "Navigation",
+      children: TOP_LINKS.map((link) => link.id),
+    },
+  };
+
+  for (const link of TOP_LINKS) {
+    if (link.section === "reports") {
+      items[link.id] = {
+        name: link.label,
+        href: link.to,
+        icon: link.icon,
+        children: data.reports.map((child) => child.id),
+      };
+      for (const child of data.reports) {
+        items[child.id] = {
+          name: child.label,
+          href: child.href,
+          icon: CHILD_ICONS[child.id] ?? FileTextIcon,
+        };
+      }
+      continue;
+    }
+
+    if (link.section === "settings") {
+      items[link.id] = {
+        name: link.label,
+        href: link.to,
+        icon: link.icon,
+        children: data.settings.map((child) => child.id),
+      };
+      for (const child of data.settings) {
+        items[child.id] = {
+          name: child.label,
+          href: child.href,
+          icon: CHILD_ICONS[child.id] ?? FileTextIcon,
+        };
+      }
+      continue;
+    }
+
+    items[link.id] = {
+      name: link.label,
+      href: link.to,
+      icon: link.icon,
+    };
+  }
+
+  return items;
+}
+
+function collectActiveIds(
+  pathname: string,
+  items: Record<string, NavItem>,
+): string[] {
+  const active = new Set<string>();
+  let bestLeaf: { id: string; href: string } | null = null;
+
+  for (const [id, item] of Object.entries(items)) {
+    if (id === "root" || !item.href) continue;
+    const isFolder = (item.children?.length ?? 0) > 0;
+    if (isFolder) continue;
+    if (!pathMatches(pathname, item.href)) continue;
+    if (!bestLeaf || item.href.length > bestLeaf.href.length) {
+      bestLeaf = { id, href: item.href };
+    }
+  }
+
+  if (bestLeaf) {
+    active.add(bestLeaf.id);
+  }
+
+  const section = sectionFromPath(pathname);
+  if (section) {
+    active.add(section);
+  }
+
+  if (!bestLeaf && !section) {
+    for (const link of TOP_LINKS) {
+      if (link.section) continue;
+      if (pathMatches(pathname, link.to, link.to === "/dashboard")) {
+        active.add(link.id);
+      }
+    }
+  }
+
+  return [...active];
+}
+
+function CollapsedSideNav({ pathname }: { pathname: string }) {
   return (
-    <Link
-      to={to}
-      className={cn(
-        "flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-sidebar-foreground transition-colors",
-        "hover:bg-sidebar-accent hover:text-primary",
-      )}
-    >
-      <Icon className="size-4 shrink-0" />
-      <span className="min-w-0 flex-1 truncate">{label}</span>
-    </Link>
+    <SidebarMenu>
+      {TOP_LINKS.map((item) => {
+        const Icon = item.icon;
+        const isActive = item.section
+          ? sectionFromPath(pathname) === item.section
+          : pathMatches(pathname, item.to, item.to === "/dashboard");
+        return (
+          <SidebarMenuItem key={item.to}>
+            <SidebarMenuButton
+              tooltip={item.label}
+              isActive={isActive}
+              render={<NavLink to={item.to} end={item.to === "/dashboard"} />}
+            >
+              <Icon />
+              <span>{item.label}</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        );
+      })}
+    </SidebarMenu>
   );
 }
 
-function SectionBlock({
-  to,
-  label,
-  icon: Icon,
-  childrenLinks,
-  open,
-  onToggle,
+function SideNavTree({
+  data,
+  pathname,
 }: {
-  to: string;
-  label: string;
-  icon: LucideIcon;
-  childrenLinks: SideNavLink[];
-  open: boolean;
-  onToggle: () => void;
+  data: SideNavData;
+  pathname: string;
 }) {
-  return (
-    <div className="flex flex-col">
-      <div className="flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-primary">
-        <Link
-          to={to}
-          className="flex min-w-0 flex-1 items-center gap-1.5 text-inherit"
-        >
-          <Icon className="size-4 shrink-0" />
-          <span className="min-w-0 flex-1 truncate">{label}</span>
-        </Link>
-        <button
-          type="button"
-          data-tree-toggle
-          aria-label={open ? `Collapse ${label}` : `Expand ${label}`}
-          aria-expanded={open}
-          className="inline-flex size-4 shrink-0 items-center justify-center rounded-sm text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-primary"
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            onToggle();
-          }}
-        >
-          <ChevronRightIcon
-            className={cn(
-              "size-3.5 transition-transform duration-200 ease-out",
-              open && "rotate-90",
-            )}
-          />
-        </button>
-      </div>
+  const navigate = useNavigate();
+  const items = React.useMemo(() => buildNavItems(data), [data]);
+  const activeIds = React.useMemo(
+    () => collectActiveIds(pathname, items),
+    [pathname, items],
+  );
+  const activeSection = sectionFromPath(pathname);
 
-      {open ? (
-        <div className="flex animate-in flex-col pb-0.5 duration-150 fade-in-0 slide-in-from-top-1">
-          {childrenLinks.map((child) => {
-            const ChildIcon = CHILD_ICONS[child.id] ?? FileTextIcon;
-            return (
-              <Link
-                key={child.id}
-                to={child.href}
-                prefetch="intent"
-                className={cn(
-                  "flex w-full items-center gap-1.5 rounded-md py-1.5 ps-6 pe-2 text-sm text-sidebar-foreground transition-colors",
-                  "hover:bg-sidebar-accent hover:text-primary",
-                )}
-              >
-                <ChildIcon className="size-4 shrink-0" />
-                <span className="min-w-0 flex-1 truncate">{child.label}</span>
-              </Link>
-            );
-          })}
-        </div>
-      ) : null}
-    </div>
+  const [expandedItems, setExpandedItems] = React.useState<string[]>(() =>
+    activeSection ? [activeSection] : [],
+  );
+  const [lastActiveSection, setLastActiveSection] =
+    React.useState(activeSection);
+
+  // Keep the active section open when moving between its pages.
+  if (activeSection !== lastActiveSection) {
+    setLastActiveSection(activeSection);
+    if (activeSection && !expandedItems.includes(activeSection)) {
+      setExpandedItems([...expandedItems, activeSection]);
+    }
+  }
+
+  const tree = useTree<NavItem>({
+    state: { expandedItems },
+    setExpandedItems,
+    indent,
+    rootItemId: "root",
+    getItemName: (item) => item.getItemData().name,
+    isItemFolder: (item) => (item.getItemData()?.children?.length ?? 0) > 0,
+    onPrimaryAction: (item) => {
+      const href = item.getItemData().href;
+      if (!href || !item.isFolder()) return;
+      // Clicking an open section should only collapse — navigating would
+      // change the route and the active-section sync would re-expand it.
+      if (item.isExpanded()) return;
+      if (!pathMatches(pathname, href)) {
+        void navigate(href);
+      }
+    },
+    dataLoader: {
+      getItem: (itemId) => items[itemId],
+      getChildren: (itemId) => items[itemId]?.children ?? [],
+    },
+    features: [syncDataLoaderFeature, hotkeysCoreFeature],
+  });
+
+  return (
+    <Tree indent={indent} tree={tree} toggleIconType="chevron">
+      {tree.getItems().map((item) => {
+        const navItem = item.getItemData();
+        const Icon = navItem.icon ?? FileTextIcon;
+        const isFolder = item.isFolder();
+        const href = navItem.href;
+        const isActive = activeIds.includes(item.getId());
+
+        return (
+          <TreeItem
+            key={item.getId()}
+            item={item}
+            data-active={isActive || undefined}
+            render={
+              !isFolder && href ? (
+                <Link to={href} prefetch="intent" />
+              ) : undefined
+            }
+          >
+            <TreeItemLabel
+              showToggleIcon={false}
+              className={cn(
+                "relative w-full gap-1.5 text-sidebar-foreground before:absolute before:inset-x-0 before:-inset-y-0.5 before:-z-10 before:rounded-md",
+                "hover:bg-sidebar-accent hover:text-primary hover:before:bg-sidebar-accent",
+                "in-focus-visible:ring-sidebar-ring",
+                isActive
+                  ? "bg-sidebar-accent font-medium text-primary before:bg-sidebar-accent"
+                  : "bg-transparent before:bg-sidebar",
+              )}
+            >
+              <Icon className="size-4 shrink-0" />
+              <span className="min-w-0 flex-1 truncate text-start">
+                {navItem.name}
+              </span>
+              {isFolder ? (
+                <ChevronRightIcon
+                  className={cn(
+                    "size-3.5 shrink-0 text-sidebar-foreground/70 transition-transform duration-200",
+                    item.isExpanded() && "rotate-90",
+                  )}
+                />
+              ) : null}
+            </TreeItemLabel>
+          </TreeItem>
+        );
+      })}
+    </Tree>
   );
 }
 
@@ -177,95 +327,14 @@ export function AppSideNav({ data }: { data: SideNavData }) {
   const location = useLocation();
   const { state, isMobile } = useSidebar();
   const collapsed = state === "collapsed" && !isMobile;
-  const activeSection = sectionFromPath(location.pathname);
-
-  const [openSections, setOpenSections] = React.useState<
-    Record<SectionId, boolean>
-  >(() => ({
-    reports: activeSection === "reports",
-    settings: activeSection === "settings",
-  }));
-  const [lastActiveSection, setLastActiveSection] =
-    React.useState(activeSection);
-
-  // Keep the active section open when moving between its pages.
-  // Adjust during render (React-supported) instead of an effect.
-  if (activeSection !== lastActiveSection) {
-    setLastActiveSection(activeSection);
-    if (activeSection && !openSections[activeSection]) {
-      setOpenSections({ ...openSections, [activeSection]: true });
-    }
-  }
-
-  const toggleSection = React.useCallback((section: SectionId) => {
-    setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }));
-  }, []);
 
   if (collapsed) {
-    return (
-      <SidebarMenu>
-        {TOP_LINKS.map((item) => {
-          const Icon = item.icon;
-          return (
-            <SidebarMenuItem key={item.to}>
-              <SidebarMenuButton
-                tooltip={item.label}
-                isActive={
-                  item.to === "/dashboard"
-                    ? location.pathname === "/dashboard"
-                    : location.pathname === item.to ||
-                      location.pathname.startsWith(`${item.to}/`)
-                }
-                render={<NavLink to={item.to} end={item.to === "/dashboard"} />}
-              >
-                <Icon />
-                <span>{item.label}</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          );
-        })}
-      </SidebarMenu>
-    );
+    return <CollapsedSideNav pathname={location.pathname} />;
   }
 
   return (
-    <nav className="flex flex-col gap-0.5 px-1">
-      {TOP_LINKS.map((item) => {
-        if (item.section === "reports") {
-          return (
-            <SectionBlock
-              key={item.to}
-              to={item.to}
-              label={item.label}
-              icon={item.icon}
-              childrenLinks={data.reports}
-              open={openSections.reports}
-              onToggle={() => toggleSection("reports")}
-            />
-          );
-        }
-        if (item.section === "settings") {
-          return (
-            <SectionBlock
-              key={item.to}
-              to={item.to}
-              label={item.label}
-              icon={item.icon}
-              childrenLinks={data.settings}
-              open={openSections.settings}
-              onToggle={() => toggleSection("settings")}
-            />
-          );
-        }
-        return (
-          <NavRow
-            key={item.to}
-            to={item.to}
-            label={item.label}
-            icon={item.icon}
-          />
-        );
-      })}
+    <nav aria-label="Main" className="px-1">
+      <SideNavTree data={data} pathname={location.pathname} />
     </nav>
   );
 }

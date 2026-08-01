@@ -1,6 +1,11 @@
 import * as React from "react";
 import { Link, Outlet, useFetcher, useNavigation } from "react-router";
-import { LogOutIcon, UserIcon } from "lucide-react";
+import {
+  LogOutIcon,
+  PanelLeftCloseIcon,
+  PanelLeftOpenIcon,
+  UserIcon,
+} from "lucide-react";
 import { Logo } from "~/components/logo";
 import { UserAvatar } from "~/components/ui/user-avatar";
 import { Toaster } from "~/components/ui/sonner";
@@ -34,8 +39,14 @@ import {
 } from "~/components/ui/sidebar";
 import { ThemeToggle } from "~/components/theme-toggle";
 import { Badge } from "~/components/reui/badge";
+import { Button } from "~/components/ui/button";
 import { Spinner } from "~/components/ui/spinner";
-import { TooltipProvider } from "~/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "~/components/ui/tooltip";
 import {
   getAppEnvironment,
   getAppEnvironmentBadgeClass,
@@ -46,8 +57,8 @@ import type { BrokerSession } from "~/lib/db/types";
 import type { SideNavData } from "~/lib/services/navigation/side-nav.service";
 import { cn } from "~/lib/utils";
 
-function SidebarBrandAndTrigger() {
-  const { isMobile, state, toggleSidebar } = useSidebar();
+function SidebarBrand() {
+  const { isMobile, state } = useSidebar();
   const collapsed = !isMobile && state === "collapsed";
 
   if (isMobile) {
@@ -74,34 +85,58 @@ function SidebarBrandAndTrigger() {
 
   if (collapsed) {
     return (
-      <button
-        type="button"
-        data-sidebar="trigger"
-        aria-label="Expand sidebar"
-        title="Expand sidebar"
+      <Link
+        to="/dashboard"
         className="inline-flex size-8 shrink-0 items-center justify-center rounded-md hover:bg-sidebar-accent"
-        onClick={toggleSidebar}
+        aria-label={`${APP_NAME} dashboard`}
       >
         <img
           src="/favicon.png"
           alt=""
           className="size-7 rounded-md object-contain"
         />
-      </button>
+      </Link>
     );
   }
 
   return (
-    <>
-      <Link
-        to="/dashboard"
-        className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden px-1"
+    <Link
+      to="/dashboard"
+      className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden px-1"
+    >
+      <Logo size="sm" tone="invert" className="min-w-0" />
+      <span className="sr-only">{APP_NAME}</span>
+    </Link>
+  );
+}
+
+function SidebarCollapseToggle() {
+  // Use pinned `open` (not visual `state`) so hover-expand does not flip the icon.
+  const { open, isMobile, toggleSidebar } = useSidebar();
+  if (isMobile) return null;
+
+  const label = open ? "Collapse sidebar" : "Expand sidebar";
+  const Icon = open ? PanelLeftCloseIcon : PanelLeftOpenIcon;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Button
+            type="button"
+            data-sidebar="trigger"
+            variant="ghost"
+            size="icon-sm"
+            className="shrink-0 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            aria-label={label}
+            onClick={toggleSidebar}
+          />
+        }
       >
-        <Logo size="sm" tone="invert" className="min-w-0" />
-        <span className="sr-only">{APP_NAME}</span>
-      </Link>
-      <SidebarTrigger className="shrink-0" aria-label="Toggle sidebar" />
-    </>
+        <Icon className="size-4" />
+      </TooltipTrigger>
+      <TooltipContent side="right">{label}</TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -130,7 +165,7 @@ export function AppLayout({
       <SidebarProvider>
         <Sidebar collapsible="icon" variant="sidebar">
           <SidebarHeader className="flex h-14 shrink-0 flex-row items-center gap-1 overflow-hidden border-b border-sidebar-border px-2 group-data-[collapsible=icon]:justify-center">
-            <SidebarBrandAndTrigger />
+            <SidebarBrand />
           </SidebarHeader>
 
           <SidebarContent>
@@ -141,25 +176,26 @@ export function AppLayout({
             </SidebarGroup>
           </SidebarContent>
 
-          <SidebarFooter className="border-t border-sidebar-border group-data-[collapsible=icon]:hidden">
-            <div className="px-2 py-1">
+          <SidebarFooter className="border-t border-sidebar-border">
+            <div className="flex items-center justify-between gap-2 px-2 py-1 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
               <Badge
                 variant="outline"
                 className={cn(
-                  "max-w-full truncate font-mono text-[10px] tabular-nums",
+                  "max-w-full truncate font-mono text-[10px] tabular-nums group-data-[collapsible=icon]:hidden",
                   getAppEnvironmentBadgeClass(appEnv),
                 )}
                 title={`App version ${appVersion}`}
               >
                 {appVersion}
               </Badge>
+              <SidebarCollapseToggle />
             </div>
           </SidebarFooter>
         </Sidebar>
 
         <SidebarInset className="relative z-0 min-w-0 overflow-x-hidden">
           <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-card px-4 md:px-6">
-            {/* Mobile: open sheet. Desktop toggle lives in the sidebar header. */}
+            {/* Mobile: open sheet. Desktop toggle lives in the sidebar footer. */}
             <SidebarTrigger className="md:hidden" aria-label="Open menu" />
             <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
             <div className="ml-auto flex min-w-0 items-center gap-3">
