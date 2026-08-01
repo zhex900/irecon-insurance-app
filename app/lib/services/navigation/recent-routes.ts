@@ -25,7 +25,8 @@ export function normalizeRecentPath(raw: string): string | null {
   let path = trimmed.split("?")[0]?.split("#")[0] ?? trimmed;
   if (path.length > 1 && path.endsWith("/")) path = path.slice(0, -1);
   if (path.length === 0 || path.length > 512) return null;
-  if (path === "/") return "/dashboard";
+  // Home / dashboard are not useful in Recents.
+  if (path === "/" || path === "/dashboard") return null;
   for (const prefix of SKIP_PREFIXES) {
     if (path === prefix.replace(/\/$/, "") || path.startsWith(prefix)) {
       return null;

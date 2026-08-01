@@ -18,7 +18,6 @@ export {
 } from "~/lib/services/navigation/recent-routes";
 
 const STATIC_LABELS: Record<string, string> = {
-  "/dashboard": "Dashboard",
   "/clients": "Clients",
   "/policies": "Policies",
   "/reports": "Reports",
@@ -112,9 +111,9 @@ export async function listRecentRoutes(
     .orderBy(desc(appUserRecentRoute.visitedWhen))
     .limit(limit);
 
-  return rows.map((row) =>
-    toSideNavLink(row.path, row.label.trim() || row.path),
-  );
+  return rows
+    .filter((row) => normalizeRecentPath(row.path) !== null)
+    .map((row) => toSideNavLink(row.path, row.label.trim() || row.path));
 }
 
 /**
