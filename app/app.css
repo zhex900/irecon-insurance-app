@@ -172,7 +172,7 @@
   }
 }
 
-/* React Email editor — isolate TipTap canvas from Tailwind preflight quirks */
+/* React Email TipTap chrome — document send look stays in Preview iframe */
 .email-rich-editor {
   --re-bg: var(--background);
   --re-border: var(--border);
@@ -186,45 +186,25 @@
   --re-radius-sm: var(--radius-md);
 }
 
+/* Keep in sync with EMAIL_DOCUMENT_*_CSS in email-templates.ts (Preview iframe). */
 .email-rich-editor .email-rich-editor-canvas.tiptap,
 .email-rich-editor .tiptap {
   min-height: 100%;
-  color: var(--foreground);
+  background: #fff;
+  color: #000;
   font-family: Arial, Helvetica, sans-serif;
-  font-size: 15px;
-  line-height: 1.5;
-}
-
-.email-rich-editor .tiptap > * + * {
-  margin-top: 0.75rem;
+  font-size: 10pt;
+  line-height: normal;
 }
 
 .email-rich-editor .tiptap p {
   margin: 0;
 }
 
-.email-rich-editor .tiptap h1,
-.email-rich-editor .tiptap h2,
-.email-rich-editor .tiptap h3 {
-  font-weight: 700;
-  line-height: 1.25;
-  margin: 0;
-}
-
-.email-rich-editor .tiptap h1 {
-  font-size: 1.5rem;
-}
-.email-rich-editor .tiptap h2 {
-  font-size: 1.25rem;
-}
-.email-rich-editor .tiptap h3 {
-  font-size: 1.1rem;
-}
-
 .email-rich-editor .tiptap ul,
 .email-rich-editor .tiptap ol {
   margin: 0;
-  padding-left: 1.5rem;
+  padding-left: 1.5em;
   list-style-position: outside;
 }
 
@@ -236,44 +216,19 @@
   list-style-type: decimal;
 }
 
-.email-rich-editor .tiptap li + li {
-  margin-top: 0.25rem;
-}
-
 .email-rich-editor .tiptap a {
-  color: var(--primary);
+  color: #0670db;
   text-decoration: underline;
-}
-
-.email-rich-editor .tiptap blockquote {
-  margin: 0;
-  border-left: 4px solid #ffc000;
-  background: #ffffcc;
-  padding: 0.75rem 1rem;
-  border-radius: 0.25rem;
 }
 
 .email-rich-editor .tiptap table {
   border-collapse: collapse;
-  width: 100%;
-  max-width: 36rem;
-  table-layout: fixed;
 }
 
 .email-rich-editor .tiptap th,
 .email-rich-editor .tiptap td {
-  /* Borders come from inline styles so inspector changes persist on save. */
-  padding: 0.4rem 0.55rem;
+  padding: revert-layer;
   vertical-align: top;
-  text-align: left;
-  font-size: 0.9rem;
-}
-
-.email-rich-editor .tiptap th {
-  background: #808080;
-  color: #fff;
-  font-weight: 700;
-  width: 9rem;
 }
 
 .email-rich-editor .tiptap img {
@@ -282,71 +237,7 @@
   display: inline-block;
 }
 
-.email-rich-editor .tiptap hr {
-  border: none;
-  border-top: 1px solid var(--border);
-  margin: 1rem 0;
-}
-
-.dark .email-rich-editor .tiptap blockquote {
-  color: #141414;
-}
-
-.dark .email-rich-editor .tiptap th {
-  color: #fff;
-}
-
-/* In-app email preview — render outbound HTML only (no invented table chrome) */
-.email-template-preview {
-  font-family: Arial, Helvetica, sans-serif;
-  font-size: 15px;
-  line-height: 1.5;
-  color: #000;
-}
-
-.email-template-preview > * + * {
-  margin-top: 0.75rem;
-}
-
-.email-template-preview p {
-  margin: 0;
-}
-
-.email-template-preview ul,
-.email-template-preview ol {
-  margin: 0;
-  padding-left: 1.5rem;
-  list-style-position: outside;
-}
-
-.email-template-preview ul {
-  list-style-type: disc;
-}
-
-.email-template-preview ol {
-  list-style-type: decimal;
-}
-
-.email-template-preview li + li {
-  margin-top: 0.25rem;
-}
-
-.email-template-preview a {
-  color: #0670db;
-  text-decoration: underline;
-}
-
-.email-template-preview table {
-  border-collapse: collapse;
-}
-
-.email-template-preview img {
-  max-width: 100%;
-  height: auto;
-  display: inline-block;
-}
-
-/* Merge-field tokens — tag look without changing document text */
+/* Merge-field tokens in TipTap compose editor */
 .email-rich-editor .tiptap .email-placeholder-tag {
   display: inline;
   border-radius: 9999px;

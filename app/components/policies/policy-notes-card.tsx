@@ -127,6 +127,7 @@ export function PolicyNotesCard({
     <>
       <Card
         size="sm"
+        data-policy-notes
         className={cn(
           "flex h-fit max-h-full min-h-0 w-full flex-col gap-0 overflow-hidden",
           className,

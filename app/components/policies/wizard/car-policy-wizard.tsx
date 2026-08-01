@@ -115,6 +115,7 @@ type CarPolicyWizardProps = {
   emailTemplates?: EmailTemplate[];
   emailDirectory?: EmailDirectoryEntry[];
   emailTemplateVars?: EmailTemplateVars;
+  footerImageWidth?: number;
   headerActions?: ReactNode;
 };
 
@@ -132,6 +133,7 @@ export function CarPolicyWizard({
   emailTemplates = [],
   emailDirectory = [],
   emailTemplateVars,
+  footerImageWidth,
   headerActions,
 }: CarPolicyWizardProps) {
   const form = useForm<CarPolicyFormValues>({
@@ -177,6 +179,7 @@ export function CarPolicyWizard({
           emailTemplates={emailTemplates}
           emailDirectory={emailDirectory}
           emailTemplateVars={emailTemplateVars}
+          footerImageWidth={footerImageWidth}
           headerActions={headerActions}
         />
       </JustSavedProvider>
@@ -198,6 +201,7 @@ function CarPolicyWizardInner({
   emailTemplates = [],
   emailDirectory = [],
   emailTemplateVars,
+  footerImageWidth,
   headerActions,
 }: CarPolicyWizardProps) {
   const form = useFormContext<CarPolicyFormValues>();
@@ -523,7 +527,7 @@ function CarPolicyWizardInner({
         </div>
       </div>
 
-      <div className="grid min-h-0 flex-1 gap-6 px-4 pb-4 md:px-8 xl:grid-cols-[200px_minmax(0,1fr)_280px] xl:overflow-hidden xl:pb-4">
+      <div className="grid min-h-0 flex-1 gap-6 px-4 pb-4 md:px-8 xl:grid-cols-[200px_minmax(0,1fr)_300px] xl:overflow-hidden xl:pb-4">
         <aside className="hidden min-h-0 xl:flex xl:h-full xl:flex-col xl:gap-4 xl:overflow-hidden">
           <div className="shrink-0">
             <PolicySectionNav
@@ -541,7 +545,7 @@ function CarPolicyWizardInner({
               className={wizardModeCardBorderClass(wizardMode)}
             />
           </div>
-          {!isNew && (notes?.length ?? 0) > 0 ? (
+          {!isNew ? (
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
               <PolicyNotesCard
                 notes={notes}
@@ -623,7 +627,26 @@ function CarPolicyWizardInner({
             className={wizardModeCardBorderClass(wizardMode)}
           />
 
-          {!isNew && (notes?.length ?? 0) > 0 ? (
+          <div className="xl:hidden">
+            <PremiumSummaryPanel
+              documentsOnly
+              premium={premium}
+              documents={documents}
+              isGeneratingDocuments={isGeneratingDocuments}
+              policyNumber={policy.policyNumber}
+              clientName={clientName}
+              brokerName={brokerName}
+              brokerEmail={brokerEmail}
+              emailTemplates={emailTemplates}
+              emailDirectory={emailDirectory}
+              emailTemplateVars={emailTemplateVars}
+              footerImageWidth={footerImageWidth}
+              policy={policy}
+              className={wizardModeCardBorderClass(wizardMode)}
+            />
+          </div>
+
+          {!isNew ? (
             <div className="xl:hidden">
               <PolicyNotesCard
                 notes={notes}
@@ -689,6 +712,7 @@ function CarPolicyWizardInner({
             emailTemplates={emailTemplates}
             emailDirectory={emailDirectory}
             emailTemplateVars={emailTemplateVars}
+            footerImageWidth={footerImageWidth}
             policy={policy}
             adjustment={policy.car.adjusted ? policy.car.adjustment : undefined}
             className={wizardModeCardBorderClass(wizardMode)}

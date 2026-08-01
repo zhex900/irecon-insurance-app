@@ -52,7 +52,7 @@ import {
 } from "~/lib/services/reference.service";
 import { getClient } from "~/lib/services/clients/service";
 import { listEmailTemplates } from "~/lib/services/email/templates.server";
-import { getEmailFooterDataUri } from "~/lib/services/email/footer-image.server";
+import { getEmailFooterImage } from "~/lib/services/email/footer-image.server";
 import { listEmailDirectory } from "~/lib/services/email/directory.server";
 import { emailVarsFromAccountManager } from "~/lib/email-templates";
 import { resolveNoteAuthors } from "~/lib/services/users/service";
@@ -75,7 +75,7 @@ export async function loader({ params }: Route.LoaderArgs) {
     noteAuthors,
     reference,
     carWording,
-    footerImageDataUri,
+    footerImage,
     emailDirectory,
   ] = await Promise.all([
     getAuthorisedRepresentative(client.authorisedRepresentativeId),
@@ -83,7 +83,7 @@ export async function loader({ params }: Route.LoaderArgs) {
     resolveNoteAuthors((policy.notes ?? []).map((note) => note.createdBy)),
     getReferenceDataAsync(policy.dateStart),
     getCarWording(),
-    getEmailFooterDataUri(),
+    getEmailFooterImage(),
     listEmailDirectory(),
   ]);
 
@@ -95,7 +95,8 @@ export async function loader({ params }: Route.LoaderArgs) {
     noteAuthors,
     reference,
     carWording,
-    footerImageDataUri,
+    footerImageDataUri: footerImage.dataUri,
+    footerImageWidth: footerImage.displayWidth,
     emailDirectory,
   };
 }
@@ -491,6 +492,7 @@ export default function PolicyDetailRoute({
           ),
           footerImage: loaderData.footerImageDataUri,
         }}
+        footerImageWidth={loaderData.footerImageWidth}
         headerActions={headerActions}
       />
       <DeletePoliciesDialog

@@ -241,6 +241,8 @@ Rebuild: combined fee is **derived** from `PolicyFee` lines (`sum(Fee) + sum(Fee
 
 Used when broker manually edits premium fields on the pricing step. Logic in `CARNewPolicy.aspx` L1094–1354 and `CARViewPolicy.aspx` L1060–1299.
 
+**Rebuild:** `app/lib/premium-manual-recalc.ts` (`applyManualPremiumEdit`), wired from Premium Breakdown click-to-edit.
+
 ### Additional Section 1 variables
 
 ```

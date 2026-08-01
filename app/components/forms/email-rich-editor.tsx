@@ -304,7 +304,7 @@ export const EmailRichEditor = forwardRef<
         editable={editable}
         theme="basic"
         extensions={extensions}
-        className="email-rich-editor-canvas min-h-0 min-w-0 flex-1 overflow-y-auto p-4 text-sm outline-none"
+        className="email-rich-editor-canvas min-h-0 min-w-0 flex-1 overflow-y-auto p-4 outline-none"
         onReady={(instance) => {
           const editor = instance.editor;
           if (!editor) return;

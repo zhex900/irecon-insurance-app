@@ -4,7 +4,6 @@ import { appEmailTemplate } from "~/lib/db/schema";
 import {
   DEFAULT_EMAIL_TEMPLATES,
   EMAIL_TEMPLATE_KEYS,
-  ensureEmailTableBorders,
   type EmailTemplate,
   type EmailTemplateKey,
 } from "~/lib/email-templates";
@@ -41,15 +40,8 @@ function coerceTipTapEmailBody(
 ) {
   if (!body.trim()) return fallback;
 
-  // Drop legacy binder copy that still mentions iAnyware / ATCF.
-  if (/iAnyware|\bATCF\b/i.test(body)) return fallback;
-
-  const looksLikeLegacyTable =
-    /quotation number|policy number/i.test(body) &&
-    /<table[\s>]/i.test(body) &&
-    !/<tbody[\s>]/i.test(body);
-  if (looksLikeLegacyTable) return fallback;
-
+  // Only replace the old plain-text starter bodies — never discard authored HTML
+  // (ASCX tables often omit <tbody> and intentionally mention iAnyware / ATCF).
   if (
     recipientType.startsWith("broker_") &&
     body.startsWith("Dear {{brokerName}}")
@@ -81,8 +73,8 @@ export async function saveEmailTemplate(
 ): Promise<EmailTemplate> {
   const db = getDb();
   const subject = input.subject.trim();
-  // Persist inspector formatting as-authored; only normalize zero/orphan borders.
-  const body = ensureEmailTableBorders(input.body.trim());
+  // Persist authored ASCX HTML as-is (no TipTap / outbound rewrites).
+  const body = input.body.trim();
   const toEmail = input.recipientType === "insurer" ? input.toEmail.trim() : "";
 
   await db

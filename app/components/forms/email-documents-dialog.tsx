@@ -21,7 +21,9 @@ import { EmailRecipientsInput } from "~/components/forms/email-recipients-input"
 import type { PolicyDocument } from "~/lib/db/types";
 import { Badge } from "~/components/reui/badge";
 import type { EmailDirectoryEntry } from "~/lib/email/directory";
+import { EMAIL_FOOTER_DISPLAY_WIDTH_DEFAULT } from "~/lib/email/footer-display";
 import {
+  applyEmailFooterImageWidth,
   applyEmailTemplate,
   EMAIL_TEMPLATE_META,
   ensureEmailEditorHtml,
@@ -50,6 +52,7 @@ export function EmailDocumentsDialog({
   defaultTo = "",
   templateVars,
   footerImageDataUri = "",
+  footerImageWidth,
   emailDirectory = [],
 }: {
   open: boolean;
@@ -67,9 +70,12 @@ export function EmailDocumentsDialog({
   templateVars?: EmailTemplateVars;
   /** DB-stored footer image data URI (blob). */
   footerImageDataUri?: string;
+  /** Logo width in px (Settings → Email Footer Image scale). */
+  footerImageWidth?: number;
   /** Users, ARs, and clients for To/Cc autocomplete. */
   emailDirectory?: EmailDirectoryEntry[];
 }) {
+  const logoWidth = footerImageWidth ?? EMAIL_FOOTER_DISPLAY_WIDTH_DEFAULT;
   const vars: EmailTemplateVars = {
     clientName,
     policyNumber,
@@ -83,7 +89,11 @@ export function EmailDocumentsDialog({
     applyEmailTemplate(template.subject, vars),
   );
   const [editorContent, setEditorContent] = useState(() =>
-    applyEmailTemplate(ensureEmailEditorHtml(template.body), vars),
+    applyEmailFooterImageWidth(
+      applyEmailTemplate(ensureEmailEditorHtml(template.body), vars),
+      logoWidth,
+      vars.footerImage,
+    ),
   );
   const [editorKey, setEditorKey] = useState(0);
   const [attachments, setAttachments] = useState(documents);
@@ -124,7 +134,11 @@ export function EmailDocumentsDialog({
     setCc("");
     setSubject(applyEmailTemplate(template.subject, nextVars));
     setEditorContent(
-      applyEmailTemplate(ensureEmailEditorHtml(template.body), nextVars),
+      applyEmailFooterImageWidth(
+        applyEmailTemplate(ensureEmailEditorHtml(template.body), nextVars),
+        logoWidth,
+        nextVars.footerImage,
+      ),
     );
     setEditorKey((key) => key + 1);
     setAttachments(documents);
@@ -140,6 +154,7 @@ export function EmailDocumentsDialog({
     template.body,
     templateVars,
     footerImageDataUri,
+    logoWidth,
   ]);
 
   function removeAttachment(id: number) {
@@ -170,6 +185,7 @@ export function EmailDocumentsDialog({
         documentHtml,
         exportedHtml: exported?.html,
         footerImageDataUri: vars.footerImage,
+        footerImageWidth: logoWidth,
       });
       const text = exported?.text?.trim() || "";
       if (!html) {

@@ -46,6 +46,7 @@ import {
   combinedTrueBasePremium,
   rollupPremiumTotals,
 } from "~/lib/premium-totals";
+import { applyManualPremiumEdit } from "~/lib/premium-manual-recalc";
 
 export function PricingDeclarationConfirmedStep({
   premium,
@@ -78,6 +79,7 @@ export function PricingDeclarationConfirmedStep({
   const contractWorksSumInsured = Number(watch("contractWorksSumInsured") || 0);
   const dateStart = String(watch("dateStart") || "");
   const [manualKeys, setManualKeys] = useState<Set<string>>(() => new Set());
+  const [manualTaxOverride, setManualTaxOverride] = useState(false);
   const [working, setWorking] = useState<PremiumLineWorking | null>(null);
 
   const workingInputs = useMemo<PremiumWorkingInputs>(
@@ -117,7 +119,17 @@ export function PricingDeclarationConfirmedStep({
       next.add(key);
       return next;
     });
-    onPremiumChange(rollupPremiumTotals({ ...currentPremium, [key]: value }));
+    // Legacy CalculatePremium: editing True Base (and other drivers) recalcs
+    // terrorism / ESL / GST / SD / section + combined totals from frozen rates.
+    const result = applyManualPremiumEdit({
+      premium: currentPremium,
+      rating,
+      key,
+      value,
+      manualTaxOverride,
+    });
+    setManualTaxOverride(result.manualTaxOverride);
+    onPremiumChange(result.premium);
   }
 
   function openWorking(title: string, key: keyof PremiumBreakdown) {
@@ -154,6 +166,7 @@ export function PricingDeclarationConfirmedStep({
                       disabled={isCalculating}
                       onClick={() => {
                         setManualKeys(new Set());
+                        setManualTaxOverride(false);
                         setWorking(null);
                         onRecalculatePremium();
                       }}
@@ -176,13 +189,13 @@ export function PricingDeclarationConfirmedStep({
             <thead>
               <tr className="border-b border-border text-left text-muted-foreground">
                 <th className="w-full py-2 pr-2">Component</th>
-                <th className="py-2 pl-2 text-right whitespace-nowrap">
-                  Contract Works
+                <th className="py-2 pl-6 text-right whitespace-nowrap">
+                  Contract works
                 </th>
-                <th className="py-2 pl-2 text-right whitespace-nowrap">
-                  Legal Liability
+                <th className="py-2 pl-6 text-right whitespace-nowrap">
+                  Legal liability
                 </th>
-                <th className="py-2 pl-2 text-right whitespace-nowrap">
+                <th className="py-2 pl-6 text-right whitespace-nowrap">
                   Combined
                 </th>
               </tr>
@@ -337,9 +350,9 @@ export function PricingDeclarationConfirmedStep({
                       </PremiumExplainTrigger>
                     </span>
                   </td>
-                  <td className="py-2 pl-2" />
-                  <td className="py-2 pl-2" />
-                  <td className="py-2 pl-2 text-right whitespace-nowrap tabular-nums">
+                  <td className="py-2 pl-6" />
+                  <td className="py-2 pl-6" />
+                  <td className="py-2 pl-6 text-right whitespace-nowrap tabular-nums">
                     {formatCurrency(fee.fee + fee.feeGst)}
                   </td>
                 </tr>
@@ -613,7 +626,7 @@ function PremiumValueCell({
   const [draft, setDraft] = useState("");
 
   if (value == null) {
-    return <td className="py-2 pl-2 text-right whitespace-nowrap" />;
+    return <td className="py-2 pl-6 text-right whitespace-nowrap" />;
   }
 
   const valueClass = cn(
@@ -624,7 +637,7 @@ function PremiumValueCell({
 
   if (!editable || !onChange) {
     return (
-      <td className={cn("py-2 pl-2 text-right", valueClass)}>
+      <td className={cn("py-2 pl-6 text-right", valueClass)}>
         {formatCurrency(value)}
       </td>
     );
@@ -632,7 +645,7 @@ function PremiumValueCell({
 
   if (editing) {
     return (
-      <td className="py-1 pl-2 text-right">
+      <td className="py-1 pl-6 text-right">
         <Input
           autoFocus
           type="text"
@@ -662,7 +675,7 @@ function PremiumValueCell({
   }
 
   return (
-    <td className="py-2 pl-2 text-right">
+    <td className="py-2 pl-6 text-right">
       <button
         type="button"
         className={cn(

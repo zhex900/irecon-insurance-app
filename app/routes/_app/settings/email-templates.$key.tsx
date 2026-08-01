@@ -1,12 +1,18 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { redirect, useFetcher } from "react-router";
-import { EyeIcon, Redo2Icon, SendIcon, Undo2Icon } from "lucide-react";
+import {
+  CodeIcon,
+  EyeIcon,
+  PencilIcon,
+  Redo2Icon,
+  RotateCcwIcon,
+  SendIcon,
+  Undo2Icon,
+} from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "~/components/layout/app-layout";
-import {
-  EmailRichEditor,
-  type EmailRichEditorHandle,
-} from "~/components/forms/email-rich-editor";
+import { EmailDocumentFrame } from "~/components/forms/email-document-frame";
+import { EmailHtmlCodeEditor } from "~/components/forms/email-html-code-editor";
 import { Badge } from "~/components/reui/badge";
 import { Button } from "~/components/ui/button";
 import {
@@ -35,17 +41,18 @@ import {
   EMAIL_TEMPLATE_PLACEHOLDERS,
   applyEmailTemplate,
   emailTemplatePreviewVars,
-  ensureEmailEditorHtml,
-  ensureEmailTableBorders,
   extractEmailFooterImage,
   htmlToPlainText,
+  applyEmailFooterImageWidth,
   injectEmailFooterImage,
-  preferEmailHtml,
+  materializeEmailTableAttrs,
+  unwrapEmailPlaceholderTags,
+  wrapEmailPlaceholderTags,
   type EmailTemplateKey,
 } from "~/lib/email-templates";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import { sendEmail } from "~/lib/services/email/resend.server";
-import { getEmailFooterDataUri } from "~/lib/services/email/footer-image.server";
+import { getEmailFooterImage } from "~/lib/services/email/footer-image.server";
 import {
   getEmailTemplate,
   resetEmailTemplate,
@@ -78,6 +85,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 
   const template = await getEmailTemplate(key);
   const meta = EMAIL_TEMPLATE_META[key];
+  const footer = await getEmailFooterImage();
 
   return {
     template,
@@ -85,7 +93,8 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     canEdit: isSuperAdmin(viewer),
     emailTemplatesEnabled,
     viewerEmail: viewer.email,
-    footerImageDataUri: await getEmailFooterDataUri(),
+    footerImageDataUri: footer.dataUri,
+    footerImageWidth: footer.displayWidth,
   };
 }
 
@@ -224,11 +233,16 @@ export async function action({ request, params }: Route.ActionArgs) {
 export default function SettingsEmailTemplateEditorRoute({
   loaderData,
 }: Route.ComponentProps) {
-  const { template, meta, canEdit, viewerEmail, footerImageDataUri } =
-    loaderData;
+  const {
+    template,
+    meta,
+    canEdit,
+    viewerEmail,
+    footerImageDataUri,
+    footerImageWidth,
+  } = loaderData;
   const fetcher = useFetcher<typeof action>();
   const handledDataRef = useRef<typeof fetcher.data>(undefined);
-  const editorRef = useRef<EmailRichEditorHandle>(null);
   const subjectInputRef = useRef<HTMLInputElement>(null);
   const subjectSelectionRef = useRef<{ start: number; end: number } | null>(
     null,
@@ -239,18 +253,15 @@ export default function SettingsEmailTemplateEditorRoute({
   const historyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [subject, setSubject] = useState(template.subject);
-  const [editorContent, setEditorContent] = useState(() =>
-    ensureEmailEditorHtml(
-      injectEmailFooterImage(template.body, footerImageDataUri),
-    ),
+  const [codeHtml, setCodeHtml] = useState(() =>
+    injectEmailFooterImage(template.body, footerImageDataUri, footerImageWidth),
   );
-  const [editorKey, setEditorKey] = useState(0);
+  const [editorMode, setEditorMode] = useState<"visual" | "code">("visual");
+  const [frameKey, setFrameKey] = useState(0);
   const [toEmail, setToEmail] = useState(template.toEmail);
   const [insertTarget, setInsertTarget] = useState<"subject" | "body">("body");
   const [canUndoHistory, setCanUndoHistory] = useState(false);
   const [canRedoHistory, setCanRedoHistory] = useState(false);
-  const [canUndoEditor, setCanUndoEditor] = useState(false);
-  const [canRedoEditor, setCanRedoEditor] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewSubject, setPreviewSubject] = useState("");
   const [previewHtml, setPreviewHtml] = useState("");
@@ -259,20 +270,46 @@ export default function SettingsEmailTemplateEditorRoute({
   const busy = fetcher.state !== "idle";
   const sendingPreview =
     busy && String(fetcher.formData?.get("intent") ?? "") === "send-preview";
+  const resetting =
+    busy && String(fetcher.formData?.get("intent") ?? "") === "reset";
   const showToEmail = template.recipientType === "insurer";
+
+  const sampleVars = useMemo(
+    () => emailTemplatePreviewVars({ footerImageDataUri }),
+    [footerImageDataUri],
+  );
+
+  /** Visual: keep {{placeholders}} as yellow tags. */
+  const viewHtml = useMemo(
+    () =>
+      wrapEmailPlaceholderTags(
+        applyEmailFooterImageWidth(
+          materializeEmailTableAttrs(codeHtml),
+          footerImageWidth,
+          footerImageDataUri,
+        ),
+      ),
+    [codeHtml, footerImageWidth, footerImageDataUri],
+  );
+
+  /** Preview / send: merge fields filled with sample data. */
+  const previewFilledHtml = useMemo(
+    () =>
+      applyEmailFooterImageWidth(
+        materializeEmailTableAttrs(applyEmailTemplate(codeHtml, sampleVars)),
+        footerImageWidth,
+        footerImageDataUri,
+      ),
+    [codeHtml, sampleVars, footerImageWidth, footerImageDataUri],
+  );
 
   function syncHistoryButtons() {
     setCanUndoHistory(historyIndexRef.current > 0);
     setCanRedoHistory(historyIndexRef.current < historyRef.current.length - 1);
-    setCanUndoEditor(Boolean(editorRef.current?.canUndo()));
-    setCanRedoEditor(Boolean(editorRef.current?.canRedo()));
   }
 
   function currentSnapshot(): TemplateSnapshot {
-    return {
-      subject,
-      body: editorRef.current?.getDocumentHtml() ?? editorContent,
-    };
+    return { subject, body: codeHtml };
   }
 
   function pushHistory(snapshot?: TemplateSnapshot) {
@@ -288,7 +325,6 @@ export default function SettingsEmailTemplateEditorRoute({
     }
     const truncated = historyRef.current.slice(0, historyIndexRef.current + 1);
     truncated.push(next);
-    // Cap history length.
     if (truncated.length > 50) truncated.shift();
     historyRef.current = truncated;
     historyIndexRef.current = truncated.length - 1;
@@ -306,8 +342,8 @@ export default function SettingsEmailTemplateEditorRoute({
   function applySnapshot(snapshot: TemplateSnapshot) {
     skipHistoryRef.current = true;
     setSubject(snapshot.subject);
-    setEditorContent(ensureEmailEditorHtml(snapshot.body));
-    setEditorKey((key) => key + 1);
+    setCodeHtml(snapshot.body);
+    setFrameKey((key) => key + 1);
     requestAnimationFrame(() => {
       skipHistoryRef.current = false;
       syncHistoryButtons();
@@ -315,14 +351,7 @@ export default function SettingsEmailTemplateEditorRoute({
   }
 
   function handleUndo() {
-    if (!canEdit) return;
-    if (editorRef.current?.undo()) {
-      scheduleHistoryPush();
-      syncHistoryButtons();
-      return;
-    }
-    if (historyIndexRef.current <= 0) return;
-    // Capture live state before stepping back if we're at the tip.
+    if (!canEdit || historyIndexRef.current <= 0) return;
     if (historyIndexRef.current === historyRef.current.length - 1) {
       pushHistory();
     }
@@ -332,16 +361,19 @@ export default function SettingsEmailTemplateEditorRoute({
   }
 
   function handleRedo() {
-    if (!canEdit) return;
-    if (editorRef.current?.redo()) {
-      scheduleHistoryPush();
-      syncHistoryButtons();
+    if (!canEdit || historyIndexRef.current >= historyRef.current.length - 1) {
       return;
     }
-    if (historyIndexRef.current >= historyRef.current.length - 1) return;
     historyIndexRef.current += 1;
     const snapshot = historyRef.current[historyIndexRef.current];
     if (snapshot) applySnapshot(snapshot);
+  }
+
+  function handleVisualHtmlChange(nextHtml: string) {
+    if (!canEdit) return;
+    const next = unwrapEmailPlaceholderTags(nextHtml);
+    setCodeHtml(next);
+    scheduleHistoryPush();
   }
 
   function insertPlaceholder(token: string, key: string) {
@@ -349,7 +381,7 @@ export default function SettingsEmailTemplateEditorRoute({
     pushHistory();
     const content =
       key === "footerImage" && footerImageDataUri
-        ? `<img src="${footerImageDataUri}" alt="Irecon Advisernet Logo" width="390">`
+        ? `<img src="${footerImageDataUri}" alt="Irecon Advisernet Logo" width="${footerImageWidth}" style="display:block;width:${footerImageWidth}px;max-width:100%;height:auto">`
         : token;
     if (insertTarget === "subject") {
       if (key === "footerImage") {
@@ -381,45 +413,20 @@ export default function SettingsEmailTemplateEditorRoute({
       scheduleHistoryPush();
       return;
     }
-    editorRef.current?.insertContent(content);
+    setCodeHtml((prev) => `${prev}${content}`);
+    setFrameKey((k) => k + 1);
     scheduleHistoryPush();
   }
 
-  async function openPreview() {
-    const vars = emailTemplatePreviewVars({
-      footerImageDataUri,
-    });
-    const sourceHtml =
-      editorRef.current?.getDocumentHtml().trim() || editorContent;
-    const fromDoc = applyEmailTemplate(sourceHtml, vars);
-    let emailHtml = preferEmailHtml({
-      documentHtml: fromDoc,
-      footerImageDataUri,
-    });
-    let emailText = htmlToPlainText(emailHtml);
-    try {
-      const rendered = await editorRef.current?.getEmail();
-      if (rendered?.html?.trim()) {
-        emailHtml = preferEmailHtml({
-          documentHtml: fromDoc,
-          exportedHtml: applyEmailTemplate(rendered.html, vars),
-          footerImageDataUri,
-        });
-        emailText = rendered.text
-          ? applyEmailTemplate(rendered.text, vars)
-          : htmlToPlainText(emailHtml);
-      }
-    } catch {
-      // Fall back to TipTap document HTML.
-    }
-    setPreviewSubject(applyEmailTemplate(subject, vars));
-    setPreviewHtml(emailHtml);
-    setPreviewText(emailText);
+  function openPreview() {
+    setPreviewSubject(applyEmailTemplate(subject, sampleVars));
+    setPreviewHtml(previewFilledHtml);
+    setPreviewText(htmlToPlainText(previewFilledHtml));
     setPreviewTo(viewerEmail);
     setPreviewOpen(true);
   }
 
-  async function sendPreviewEmail() {
+  function sendPreviewEmail() {
     const formData = new FormData();
     formData.set("intent", "send-preview");
     formData.set("to", previewTo);
@@ -429,23 +436,26 @@ export default function SettingsEmailTemplateEditorRoute({
     fetcher.submit(formData, { method: "post" });
   }
 
+  function handleReset() {
+    if (!canEdit) return;
+    const formData = new FormData();
+    formData.set("intent", "reset");
+    fetcher.submit(formData, { method: "post" });
+  }
+
   useEffect(() => {
-    const body = ensureEmailEditorHtml(
-      injectEmailFooterImage(template.body, footerImageDataUri),
+    const injected = injectEmailFooterImage(
+      template.body,
+      footerImageDataUri,
+      footerImageWidth,
     );
-    historyRef.current = [
-      {
-        subject: template.subject,
-        body,
-      },
-    ];
+    historyRef.current = [{ subject: template.subject, body: injected }];
     historyIndexRef.current = 0;
-    // Defer so we don't cascade setState synchronously inside the effect.
     queueMicrotask(() => {
       setSubject(template.subject);
-      setEditorContent(body);
-      setEditorKey((key) => key + 1);
+      setCodeHtml(injected);
       setToEmail(template.toEmail);
+      setFrameKey((key) => key + 1);
       syncHistoryButtons();
     });
   }, [
@@ -454,6 +464,7 @@ export default function SettingsEmailTemplateEditorRoute({
     template.body,
     template.toEmail,
     footerImageDataUri,
+    footerImageWidth,
   ]);
 
   useEffect(() => {
@@ -470,17 +481,19 @@ export default function SettingsEmailTemplateEditorRoute({
       }
       if (!("template" in data) || !data.template) return;
       const saved = data.template;
+      const injected = injectEmailFooterImage(
+        saved.body,
+        footerImageDataUri,
+        footerImageWidth,
+      );
+      setSubject(saved.subject);
+      setCodeHtml(injected);
+      setToEmail(saved.toEmail);
+      setFrameKey((key) => key + 1);
+      historyRef.current = [{ subject: saved.subject, body: injected }];
+      historyIndexRef.current = 0;
+      syncHistoryButtons();
       if (data.reset) {
-        const body = ensureEmailEditorHtml(
-          injectEmailFooterImage(saved.body, footerImageDataUri),
-        );
-        setSubject(saved.subject);
-        setEditorContent(body);
-        setEditorKey((key) => key + 1);
-        setToEmail(saved.toEmail);
-        historyRef.current = [{ subject: saved.subject, body }];
-        historyIndexRef.current = 0;
-        syncHistoryButtons();
         toast.success(
           meta.sourceAscx
             ? `Loaded ${meta.sourceAscx}`
@@ -488,21 +501,7 @@ export default function SettingsEmailTemplateEditorRoute({
         );
         return;
       }
-      // Sync editor to what was persisted (normalized borders / formatting).
-      setSubject(saved.subject);
-      setToEmail(saved.toEmail);
-      const body = ensureEmailEditorHtml(
-        injectEmailFooterImage(saved.body, footerImageDataUri),
-      );
-      setEditorContent(body);
-      setEditorKey((key) => key + 1);
-      historyRef.current = [{ subject: saved.subject, body }];
-      historyIndexRef.current = 0;
-      syncHistoryButtons();
-      toast.success(`${meta.title} saved`, {
-        description:
-          "Subject, body, and formatting (including borders) were saved.",
-      });
+      toast.success(`${meta.title} saved`);
     } else if ("error" in data) {
       toast.error(data.error);
     }
@@ -512,6 +511,7 @@ export default function SettingsEmailTemplateEditorRoute({
     meta.title,
     meta.sourceAscx,
     footerImageDataUri,
+    footerImageWidth,
   ]);
 
   useEffect(() => {
@@ -523,9 +523,9 @@ export default function SettingsEmailTemplateEditorRoute({
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!canEdit) return;
-    const rawBody = editorRef.current?.getDocumentHtml().trim() ?? "";
-    const body = ensureEmailTableBorders(
-      extractEmailFooterImage(rawBody, footerImageDataUri),
+    const body = extractEmailFooterImage(
+      codeHtml.trim(),
+      footerImageDataUri,
     ).trim();
     if (!subject.trim()) {
       toast.error("Subject is required.");
@@ -623,7 +623,7 @@ export default function SettingsEmailTemplateEditorRoute({
                       variant="outline"
                       size="sm"
                       onClick={handleUndo}
-                      disabled={!canUndoHistory && !canUndoEditor}
+                      disabled={!canUndoHistory}
                       title="Undo"
                     >
                       <Undo2Icon data-icon="inline-start" />
@@ -634,7 +634,7 @@ export default function SettingsEmailTemplateEditorRoute({
                       variant="outline"
                       size="sm"
                       onClick={handleRedo}
-                      disabled={!canRedoHistory && !canRedoEditor}
+                      disabled={!canRedoHistory}
                       title="Redo"
                     >
                       <Redo2Icon data-icon="inline-start" />
@@ -644,11 +644,28 @@ export default function SettingsEmailTemplateEditorRoute({
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => void openPreview()}
+                      onClick={openPreview}
                     >
                       <EyeIcon data-icon="inline-start" />
                       Preview
                     </Button>
+                    <LoadingButton
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      loading={resetting}
+                      loadingLabel="Resetting…"
+                      onClick={handleReset}
+                      disabled={busy}
+                      title={
+                        meta.sourceAscx
+                          ? `Reload from ${meta.sourceAscx}`
+                          : "Reset to default"
+                      }
+                    >
+                      <RotateCcwIcon data-icon="inline-start" />
+                      Reset
+                    </LoadingButton>
                     <Button
                       type="button"
                       variant="outline"
@@ -663,7 +680,7 @@ export default function SettingsEmailTemplateEditorRoute({
                     <LoadingButton
                       type="submit"
                       size="sm"
-                      loading={busy && !sendingPreview}
+                      loading={busy && !sendingPreview && !resetting}
                       loadingLabel="Saving…"
                     >
                       Save
@@ -675,7 +692,7 @@ export default function SettingsEmailTemplateEditorRoute({
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => void openPreview()}
+                      onClick={openPreview}
                     >
                       <EyeIcon data-icon="inline-start" />
                       Preview
@@ -694,24 +711,66 @@ export default function SettingsEmailTemplateEditorRoute({
                 )}
               </div>
             </div>
-            {/* Keeps Placeholders on the same row as the editor on large screens. */}
             <div className="hidden lg:block" aria-hidden />
 
             <div
+              className="flex flex-col gap-2"
               onFocusCapture={() => setInsertTarget("body")}
               onMouseDown={() => setInsertTarget("body")}
             >
-              <EmailRichEditor
-                ref={editorRef}
-                content={editorContent}
-                contentKey={`${template.recipientType}-${editorKey}`}
-                editable={canEdit}
-                heightClassName="h-[min(36rem,65vh)]"
-                onDocumentUpdate={() => {
-                  scheduleHistoryPush();
-                  syncHistoryButtons();
-                }}
-              />
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-1">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={editorMode === "visual" ? "secondary" : "outline"}
+                    onClick={() => {
+                      setFrameKey((k) => k + 1);
+                      setEditorMode("visual");
+                    }}
+                  >
+                    <PencilIcon data-icon="inline-start" />
+                    Visual
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={editorMode === "code" ? "secondary" : "outline"}
+                    onClick={() => setEditorMode("code")}
+                  >
+                    <CodeIcon data-icon="inline-start" />
+                    Code
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {editorMode === "code"
+                    ? "Edit ASCX HTML. Visual shows {{placeholders}}; Preview fills sample data."
+                    : "{{placeholders}} as tags here. Preview shows sample merge values."}
+                </p>
+              </div>
+              {editorMode === "code" ? (
+                <EmailHtmlCodeEditor
+                  value={codeHtml}
+                  readOnly={!canEdit}
+                  onChange={(next) => {
+                    if (!canEdit) return;
+                    setCodeHtml(next);
+                    scheduleHistoryPush();
+                  }}
+                  aria-label="Email HTML source"
+                />
+              ) : (
+                <div className="overflow-hidden rounded-lg border bg-white">
+                  <EmailDocumentFrame
+                    title="Email Visual"
+                    html={viewHtml}
+                    editable={canEdit}
+                    reloadKey={frameKey}
+                    onHtmlChange={handleVisualHtmlChange}
+                    className="h-[min(36rem,65vh)]"
+                  />
+                </div>
+              )}
             </div>
 
             <Card
@@ -738,7 +797,6 @@ export default function SettingsEmailTemplateEditorRoute({
                           type="button"
                           disabled={!canEdit}
                           onMouseDown={(event) => {
-                            // Keep subject/editor selection when clicking tags.
                             event.preventDefault();
                           }}
                           onClick={() => insertPlaceholder(token, key)}
@@ -798,12 +856,11 @@ export default function SettingsEmailTemplateEditorRoute({
                 </p>
               </div>
             </div>
-            <div className="overflow-auto rounded-lg border bg-white">
-              <div
+            <div className="overflow-hidden rounded-lg border bg-white">
+              <EmailDocumentFrame
                 title="Email Preview"
-                className="email-template-preview h-[min(28rem,50vh)] overflow-auto p-4 text-sm text-black [&_img]:h-auto [&_img]:max-w-full"
-                // Preview-only HTML we just built from the editor + sample merge fields.
-                dangerouslySetInnerHTML={{ __html: previewHtml }}
+                html={previewHtml}
+                className="h-[min(28rem,50vh)]"
               />
             </div>
           </div>

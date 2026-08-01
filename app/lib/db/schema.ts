@@ -437,6 +437,8 @@ export const appEmailFooterImage = pgTable("app_email_footer_image", {
     .default("image/png"),
   /** Full data URI: `data:image/png;base64,...` */
   dataUri: text("data_uri").notNull(),
+  /** Render width in email HTML (px). */
+  displayWidth: integer("display_width").notNull().default(520),
   updatedWhen: timestamp("updated_when", { withTimezone: true })
     .notNull()
     .defaultNow(),

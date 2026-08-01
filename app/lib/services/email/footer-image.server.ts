@@ -2,9 +2,18 @@ import { eq } from "drizzle-orm";
 import { getDb } from "~/lib/db/client";
 import { appEmailFooterImage } from "~/lib/db/schema";
 import { DEFAULT_EMAIL_FOOTER_DATA_URI } from "~/lib/email/default-footer-data-uri";
+import {
+  clampEmailFooterDisplayWidth,
+  EMAIL_FOOTER_DISPLAY_WIDTH_DEFAULT,
+} from "~/lib/email/footer-display";
 
 const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 const MAX_BYTES = 3 * 1024 * 1024;
+
+export type EmailFooterImage = {
+  dataUri: string;
+  displayWidth: number;
+};
 
 function parseDataUri(dataUri: string): {
   contentType: string;
@@ -65,27 +74,46 @@ export async function bufferToDataUri(
 }
 
 /**
- * Return the stored footer image, or the packaged default.
+ * Return the stored footer image + display width, or packaged defaults.
  * Do not seed/insert on the read path — a ~200KB data URI insert can stall
  * navigations to Email Templates on Workers.
  */
-export async function getEmailFooterDataUri(): Promise<string> {
+export async function getEmailFooterImage(): Promise<EmailFooterImage> {
   const db = getDb();
   const [row] = await db
-    .select({ dataUri: appEmailFooterImage.dataUri })
+    .select({
+      dataUri: appEmailFooterImage.dataUri,
+      displayWidth: appEmailFooterImage.displayWidth,
+    })
     .from(appEmailFooterImage)
     .where(eq(appEmailFooterImage.id, 1))
     .limit(1);
-  if (row?.dataUri?.startsWith("data:")) return row.dataUri;
-  return DEFAULT_EMAIL_FOOTER_DATA_URI;
+
+  const dataUri = row?.dataUri?.startsWith("data:")
+    ? row.dataUri
+    : DEFAULT_EMAIL_FOOTER_DATA_URI;
+  const displayWidth = clampEmailFooterDisplayWidth(
+    row?.displayWidth ?? EMAIL_FOOTER_DISPLAY_WIDTH_DEFAULT,
+  );
+  return { dataUri, displayWidth };
+}
+
+export async function getEmailFooterDataUri(): Promise<string> {
+  return (await getEmailFooterImage()).dataUri;
+}
+
+export async function getEmailFooterDisplayWidth(): Promise<number> {
+  return (await getEmailFooterImage()).displayWidth;
 }
 
 /** Ensure the singleton row exists (seeded from the packaged default PNG). */
 export async function ensureEmailFooterImage(
   updatedBy = "system",
 ): Promise<string> {
-  const existing = await getEmailFooterDataUri();
-  if (existing !== DEFAULT_EMAIL_FOOTER_DATA_URI) return existing;
+  const existing = await getEmailFooterImage();
+  if (existing.dataUri !== DEFAULT_EMAIL_FOOTER_DATA_URI) {
+    return existing.dataUri;
+  }
 
   const db = getDb();
   await db
@@ -94,6 +122,7 @@ export async function ensureEmailFooterImage(
       id: 1,
       contentType: "image/png",
       dataUri: DEFAULT_EMAIL_FOOTER_DATA_URI,
+      displayWidth: existing.displayWidth,
       updatedBy,
       updatedWhen: new Date(),
     })
@@ -123,6 +152,7 @@ export async function saveEmailFooterDataUri(
     throw new Error("Footer image must be between 1 byte and 3 MB.");
   }
 
+  const current = await getEmailFooterImage();
   const db = getDb();
   await db
     .insert(appEmailFooterImage)
@@ -130,6 +160,7 @@ export async function saveEmailFooterDataUri(
       id: 1,
       contentType,
       dataUri,
+      displayWidth: current.displayWidth,
       updatedBy,
       updatedWhen: new Date(),
     })
@@ -154,7 +185,36 @@ export async function saveEmailFooterFile(
   return saveEmailFooterDataUri(dataUri, updatedBy);
 }
 
-/** Restore packaged default PNG into the database. */
+/** Persist logo render width (px) used in Visual / Preview / outbound mail. */
+export async function saveEmailFooterDisplayWidth(
+  widthPx: number,
+  updatedBy: string,
+): Promise<number> {
+  const displayWidth = clampEmailFooterDisplayWidth(widthPx);
+  const current = await getEmailFooterImage();
+  const db = getDb();
+  await db
+    .insert(appEmailFooterImage)
+    .values({
+      id: 1,
+      contentType: "image/png",
+      dataUri: current.dataUri,
+      displayWidth,
+      updatedBy,
+      updatedWhen: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: appEmailFooterImage.id,
+      set: {
+        displayWidth,
+        updatedBy,
+        updatedWhen: new Date(),
+      },
+    });
+  return displayWidth;
+}
+
+/** Restore packaged default PNG into the database (keeps current display width). */
 export async function restoreDefaultEmailFooterImage(
   updatedBy: string,
 ): Promise<string> {
