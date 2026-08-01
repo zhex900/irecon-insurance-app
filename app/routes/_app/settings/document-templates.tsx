@@ -252,7 +252,7 @@ function TemplatesTable({
                   <TemplateIcon />
                 </TableCell>
                 <TableCell className="font-medium">{title}</TableCell>
-                <TableCell className="font-mono text-sm">
+                <TableCell className="text-sm">
                   {template.label || "—"}
                 </TableCell>
                 <TableCell>{coverTypeLabel(template.coverTypeId)}</TableCell>

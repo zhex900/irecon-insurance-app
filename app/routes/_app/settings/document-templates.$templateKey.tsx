@@ -967,7 +967,7 @@ export default function DocumentTemplateEditorRoute({
                   maxLength={DOCUMENT_LABEL_MAX_LENGTH}
                   aria-label="Document label"
                   disabled={busy || previewLoading}
-                  className="h-8 w-44 font-mono text-sm"
+                  className="h-8 w-44 text-sm"
                   onChange={(event) => setLabelValue(event.target.value)}
                   onBlur={() => {
                     const next = labelValue.trim();
@@ -1009,7 +1009,7 @@ export default function DocumentTemplateEditorRoute({
             </>
           ) : (
             <span
-              className="rounded-md border border-border px-2 py-1 font-mono text-xs text-muted-foreground"
+              className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground"
               title="Document label"
             >
               {labelValue || "—"}

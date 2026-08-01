@@ -434,6 +434,21 @@ export const libraryDocument = pgTable("library_document", {
   updatedBy: varchar("updated_by", { length: 255 }).notNull().default(""),
 });
 
+/**
+ * Cover types a library PDF attaches to.
+ * No rows for a document = not attached to any cover type.
+ */
+export const libraryDocumentCoverType = pgTable(
+  "library_document_cover_type",
+  {
+    libraryDocumentId: bigint("library_document_id", {
+      mode: "number",
+    }).notNull(),
+    coverTypeId: integer("cover_type_id").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.libraryDocumentId, t.coverTypeId] })],
+);
+
 /** Document email compose templates (Settings → Email templates, super-admin). */
 export const appEmailTemplate = pgTable("app_email_template", {
   recipientType: varchar("recipient_type", { length: 32 }).primaryKey(),

@@ -25,6 +25,8 @@ export const AUDIT_ACTIONS = [
   "settings.email_template",
   "settings.library_document_upload",
   "settings.library_document_delete",
+  "settings.library_document_label",
+  "settings.library_document_cover_types",
   "price.create",
   "price.update",
   "price.delete",

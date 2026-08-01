@@ -10,9 +10,11 @@ import { isFeatureEnabled } from "~/lib/services/feature-flags";
 import {
   deleteLibraryDocument,
   listLibraryDocuments,
+  updateLibraryDocumentCoverTypes,
   updateLibraryDocumentLabel,
   uploadLibraryDocument,
 } from "~/lib/services/documents/library-documents";
+import { referenceData } from "~/lib/reference-data";
 import type { Route } from "./+types/library-documents";
 import { pageTitle } from "~/lib/brand";
 
@@ -28,6 +30,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   }
   return {
     documents: await listLibraryDocuments(),
+    coverTypes: referenceData.coverTypes,
     canEdit: isAdminRole(viewer),
     libraryDocumentsEnabled: enabled,
   };
@@ -183,6 +186,48 @@ export async function action({ request, context }: Route.ActionArgs) {
     }
   }
 
+  if (intent === "update-cover-types") {
+    const id = Number(formData.get("id"));
+    if (!Number.isFinite(id) || id <= 0) {
+      return { ok: false as const, error: "Invalid document." };
+    }
+    const coverTypeIds = formData
+      .getAll("coverTypeId")
+      .map((value) => Number(value))
+      .filter((value) => Number.isFinite(value) && value > 0);
+    try {
+      const document = await updateLibraryDocumentCoverTypes(
+        { id, coverTypeIds },
+        viewer.email,
+      );
+      if (!document) {
+        return { ok: false as const, error: "Document not found." };
+      }
+      await writeAuditLog({
+        actor: viewer,
+        action: "settings.library_document_cover_types",
+        entityType: "library_document",
+        entityId: String(id),
+        summary: `Updated cover types for library document ${document.filename}`,
+        metadata: {
+          filename: document.filename,
+          coverTypeIds: document.coverTypeIds,
+        },
+        request,
+      });
+      return {
+        ok: true as const,
+        intent: "update-cover-types" as const,
+        document,
+      };
+    } catch (error) {
+      return {
+        ok: false as const,
+        error: error instanceof Error ? error.message : "Update failed.",
+      };
+    }
+  }
+
   return { ok: false as const, error: "Unknown action." };
 }
 
@@ -209,6 +254,7 @@ export default function SettingsLibraryDocumentsRoute({
       </div>
       <LibraryDocumentsManager
         documents={loaderData.documents}
+        coverTypes={loaderData.coverTypes}
         canEdit={loaderData.canEdit}
       />
     </div>

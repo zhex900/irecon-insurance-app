@@ -15,7 +15,17 @@ import { PdfPreviewDialog } from "~/components/pdf-preview-dialog";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Badge } from "~/components/reui/badge";
 import { Button } from "~/components/ui/button";
+import { Checkbox } from "~/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "~/components/ui/dialog";
 import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
 import { Spinner } from "~/components/ui/spinner";
 import {
   Table,
@@ -35,11 +45,16 @@ import {
   DOCUMENT_LABEL_MAX_LENGTH,
   normalizeDocumentLabel,
 } from "~/lib/documents/document-label";
-import { cn, formatDate } from "~/lib/utils";
 import {
   libraryDocumentPublicPath,
   type LibraryDocumentRecord,
 } from "~/lib/library-documents";
+import { cn, formatDate } from "~/lib/utils";
+
+type CoverTypeOption = {
+  coverTypeId: number;
+  name: string;
+};
 
 type UploadItem = FileWithPreview & {
   status: "uploading" | "completed" | "error";
@@ -58,6 +73,11 @@ type ActionData =
   | {
       ok: true;
       intent: "update-label";
+      document: LibraryDocumentRecord;
+    }
+  | {
+      ok: true;
+      intent: "update-cover-types";
       document: LibraryDocumentRecord;
     }
   | { ok: false; error: string; clientId?: string };
@@ -103,17 +123,31 @@ function completedItem(doc: LibraryDocumentRecord): UploadItem {
   };
 }
 
+function coverTypeLabel(
+  coverTypeIds: number[],
+  coverTypes: CoverTypeOption[],
+): string {
+  if (coverTypeIds.length === 0) return "None";
+  return coverTypes
+    .filter((cover) => coverTypeIds.includes(cover.coverTypeId))
+    .map((cover) => cover.name)
+    .join(", ");
+}
+
 export function LibraryDocumentsManager({
   documents,
+  coverTypes,
   canEdit,
 }: {
   documents: LibraryDocumentRecord[];
+  coverTypes: CoverTypeOption[];
   canEdit: boolean;
 }) {
   const revalidator = useRevalidator();
   const uploadFetcher = useFetcher<ActionData>();
   const deleteFetcher = useFetcher<ActionData>();
   const labelFetcher = useFetcher<ActionData>();
+  const coverFetcher = useFetcher<ActionData>();
 
   const [uploadFiles, setUploadFiles] = useState<UploadItem[]>(() =>
     toUploadItems(documents),
@@ -126,6 +160,9 @@ export function LibraryDocumentsManager({
   );
   const [editingLabelId, setEditingLabelId] = useState<number | null>(null);
   const [labelDraft, setLabelDraft] = useState("");
+  const [coverEditDoc, setCoverEditDoc] =
+    useState<LibraryDocumentRecord | null>(null);
+  const [coverDraftIds, setCoverDraftIds] = useState<number[]>([]);
 
   /** Upload queue — drained one-at-a-time via kickUpload. */
   const queueRef = useRef<Array<{ clientId: string; file: File }>>([]);
@@ -138,6 +175,7 @@ export function LibraryDocumentsManager({
   const lastUploadKeyRef = useRef<string | null>(null);
   const lastDeleteKeyRef = useRef<string | null>(null);
   const lastLabelKeyRef = useRef<string | null>(null);
+  const lastCoverKeyRef = useRef<string | null>(null);
   const handledUploadDataRef = useRef<ActionData | undefined>(undefined);
   const handledDeleteDataRef = useRef<ActionData | undefined>(undefined);
   const lastDocumentsRef = useRef(documents);
@@ -273,6 +311,23 @@ export function LibraryDocumentsManager({
     }
   }, [labelFetcher.state, labelFetcher.data, revalidator]);
 
+  useEffect(() => {
+    if (coverFetcher.state !== "idle" || !coverFetcher.data) return;
+    const key = JSON.stringify(coverFetcher.data);
+    if (lastCoverKeyRef.current === key) return;
+    lastCoverKeyRef.current = key;
+
+    const data = coverFetcher.data;
+    if (data.ok && data.intent === "update-cover-types") {
+      toast.success("Cover types updated");
+      revalidator.revalidate();
+      return;
+    }
+    if (!data.ok) {
+      toast.error(data.error);
+    }
+  }, [coverFetcher.state, coverFetcher.data, revalidator]);
+
   const [
     { isDragging, errors },
     {
@@ -332,6 +387,7 @@ export function LibraryDocumentsManager({
     uploadFetcher.formData?.get("clientId") ?? "",
   );
   const labelBusy = labelFetcher.state !== "idle";
+  const coverBusy = coverFetcher.state !== "idle";
 
   function startEditLabel(doc: LibraryDocumentRecord) {
     setEditingLabelId(doc.libraryDocumentId);
@@ -353,6 +409,34 @@ export function LibraryDocumentsManager({
     data.set("id", String(doc.libraryDocumentId));
     data.set("label", displayName);
     void labelFetcher.submit(data, { method: "post" });
+  }
+
+  function openCoverTypesDialog(doc: LibraryDocumentRecord) {
+    setCoverEditDoc(doc);
+    setCoverDraftIds([...doc.coverTypeIds]);
+  }
+
+  function toggleCoverDraft(coverTypeId: number, checked: boolean) {
+    setCoverDraftIds((prev) => {
+      if (checked) {
+        if (prev.includes(coverTypeId)) return prev;
+        return [...prev, coverTypeId].sort((a, b) => a - b);
+      }
+      return prev.filter((id) => id !== coverTypeId);
+    });
+  }
+
+  function saveCoverTypes() {
+    if (!coverEditDoc) return;
+    const data = new FormData();
+    data.set("intent", "update-cover-types");
+    data.set("id", String(coverEditDoc.libraryDocumentId));
+    for (const coverTypeId of coverDraftIds) {
+      data.append("coverTypeId", String(coverTypeId));
+    }
+    // Close immediately; table refreshes via revalidate on success.
+    setCoverEditDoc(null);
+    void coverFetcher.submit(data, { method: "post" });
   }
 
   return (
@@ -402,7 +486,8 @@ export function LibraryDocumentsManager({
           <CircleAlertIcon />
           <AlertTitle>View only</AlertTitle>
           <AlertDescription>
-            Only admins can upload, edit labels, or delete library documents.
+            Only admins can upload, edit labels, cover types, or delete library
+            documents.
           </AlertDescription>
         </Alert>
       )}
@@ -427,6 +512,7 @@ export function LibraryDocumentsManager({
                 <TableRow className="text-xs">
                   <TableHead className="h-9 ps-4">File</TableHead>
                   <TableHead className="h-9 w-48">Label</TableHead>
+                  <TableHead className="h-9 min-w-40">Cover type</TableHead>
                   <TableHead className="h-9">Size</TableHead>
                   <TableHead className="h-9">Created</TableHead>
                   {canEdit ? (
@@ -500,7 +586,7 @@ export function LibraryDocumentsManager({
                               maxLength={DOCUMENT_LABEL_MAX_LENGTH}
                               aria-label="Document label"
                               disabled={labelBusy}
-                              className="h-8 font-mono text-sm"
+                              className="h-8 text-sm"
                               autoFocus
                               onChange={(event) =>
                                 setLabelDraft(event.target.value)
@@ -559,6 +645,58 @@ export function LibraryDocumentsManager({
                                 className="size-7 shrink-0"
                                 aria-label={`Edit label for ${doc.filename}`}
                                 onClick={() => startEditLabel(doc)}
+                              >
+                                <PencilIcon className="size-3.5" />
+                              </Button>
+                            ) : null}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell
+                        className="py-2"
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        {doc == null ? (
+                          <span className="text-sm text-muted-foreground">
+                            —
+                          </span>
+                        ) : (
+                          <div className="flex items-center gap-1">
+                            <div className="flex min-w-0 flex-wrap gap-1">
+                              {doc.coverTypeIds.length === 0 ? (
+                                <span className="text-sm text-muted-foreground">
+                                  None
+                                </span>
+                              ) : (
+                                coverTypes
+                                  .filter((cover) =>
+                                    doc.coverTypeIds.includes(
+                                      cover.coverTypeId,
+                                    ),
+                                  )
+                                  .map((cover) => (
+                                    <Badge
+                                      key={cover.coverTypeId}
+                                      variant="secondary"
+                                      size="sm"
+                                    >
+                                      {cover.name}
+                                    </Badge>
+                                  ))
+                              )}
+                            </div>
+                            {canEdit ? (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="size-7 shrink-0"
+                                aria-label={`Edit cover types for ${doc.filename}`}
+                                title={coverTypeLabel(
+                                  doc.coverTypeIds,
+                                  coverTypes,
+                                )}
+                                onClick={() => openCoverTypesDialog(doc)}
                               >
                                 <PencilIcon className="size-3.5" />
                               </Button>
@@ -635,6 +773,70 @@ export function LibraryDocumentsManager({
             : null
         }
       />
+
+      <Dialog
+        open={coverEditDoc != null}
+        onOpenChange={(open) => {
+          if (!open && !coverBusy) setCoverEditDoc(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md" showCloseButton={!coverBusy}>
+          <DialogHeader>
+            <DialogTitle>Cover types</DialogTitle>
+            <DialogDescription>
+              Choose which cover types include{" "}
+              <span className="font-medium text-foreground">
+                {coverEditDoc?.displayName ?? "this document"}
+              </span>
+              .
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 py-2">
+            {coverTypes.map((cover) => {
+              const checked = coverDraftIds.includes(cover.coverTypeId);
+              const checkboxId = `cover-type-${cover.coverTypeId}`;
+              return (
+                <div
+                  key={cover.coverTypeId}
+                  className="flex items-center gap-2"
+                >
+                  <Checkbox
+                    id={checkboxId}
+                    checked={checked}
+                    disabled={coverBusy}
+                    onCheckedChange={(value) =>
+                      toggleCoverDraft(cover.coverTypeId, value === true)
+                    }
+                  />
+                  <Label htmlFor={checkboxId} className="cursor-pointer">
+                    {cover.name}
+                  </Label>
+                </div>
+              );
+            })}
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={coverBusy}
+              onClick={() => setCoverEditDoc(null)}
+            >
+              Cancel
+            </Button>
+            <Button type="button" disabled={coverBusy} onClick={saveCoverTypes}>
+              {coverBusy ? (
+                <>
+                  <Spinner className="size-3.5" />
+                  Saving…
+                </>
+              ) : (
+                "Save"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
