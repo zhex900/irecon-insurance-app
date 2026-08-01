@@ -1,4 +1,4 @@
-import { escapeRegExp } from "~/lib/search/match";
+import { highlightSegments } from "~/lib/search/match";
 
 /** Highlight case-insensitive (and digit) matches in yellow. */
 export function HighlightText({
@@ -8,48 +8,24 @@ export function HighlightText({
   text: string;
   query: string;
 }) {
-  const q = query.trim();
   if (!text) return null;
-  if (!q) return <>{text}</>;
-
-  const digits = q.replace(/\D/g, "");
-  // Prefer text match; for pure digit queries also match digit runs in display values.
-  let pattern = escapeRegExp(q);
-  if (digits.length >= 2 && digits === q.replace(/\s/g, "")) {
-    pattern = digits.split("").map(escapeRegExp).join("[\\s-]*");
-  }
-
-  let parts: string[] | null;
-  let matchRe: RegExp | null;
-  try {
-    const splitRe = new RegExp(`(${pattern})`, "gi");
-    matchRe = new RegExp(`^${pattern}$`, "i");
-    parts = text.split(splitRe);
-  } catch {
-    parts = null;
-    matchRe = null;
-  }
-
-  if (!parts || parts.length <= 1 || !matchRe) return <>{text}</>;
-  const finalMatchRe = matchRe;
+  const segments = highlightSegments(text, query);
+  if (!segments) return <>{text}</>;
 
   return (
     <>
-      {parts.map((part, index) => {
-        if (!part) return null;
-        if (finalMatchRe.test(part)) {
-          return (
-            <mark
-              key={`${index}-${part}`}
-              className="rounded-sm bg-warning/30 text-inherit"
-              style={{ padding: 0, margin: 0 }}
-            >
-              {part}
-            </mark>
-          );
-        }
-        return <span key={`${index}-${part}`}>{part}</span>;
-      })}
+      {segments.map((segment, index) =>
+        segment.match ? (
+          <mark
+            key={`${index}-${segment.text}`}
+            className="m-0 rounded-sm bg-warning/30 p-0 text-inherit"
+          >
+            {segment.text}
+          </mark>
+        ) : (
+          <span key={`${index}-${segment.text}`}>{segment.text}</span>
+        ),
+      )}
     </>
   );
 }

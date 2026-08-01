@@ -445,18 +445,29 @@ export default function ClientsIndexRoute({
                 const manager = loaderData.reference.accountManagers.find(
                   (item) => item.accountManagerId === client.accountManagerId,
                 );
+                const ar = loaderData.reference.wholesaleBrokers.find(
+                  (item) =>
+                    item.authorisedRepresentativeId ===
+                    client.authorisedRepresentativeId,
+                );
                 const canDelete = client.policyCount === 0;
-                const nameMatches =
-                  !searchQuery || fieldMatches(client.name, searchQuery);
-                const tradingMatches =
-                  Boolean(client.tradingName) &&
-                  (!searchQuery ||
-                    fieldMatches(client.tradingName, searchQuery));
                 const managerName = manager?.fullName ?? "";
-                const managerMatches =
-                  Boolean(managerName) &&
-                  searchQuery &&
-                  fieldMatches(managerName, searchQuery);
+                // Fields searchable but not shown as their own columns — surface
+                // the matched value under the name so the hit is visible.
+                const offColumnMatches = searchQuery
+                  ? (
+                      [
+                        { label: "ABN", value: client.abn },
+                        { label: "Phone", value: client.phone },
+                        { label: "Email", value: client.email },
+                        { label: "AR Name", value: ar?.fullName ?? "" },
+                        {
+                          label: "AR Company",
+                          value: ar?.companyName ?? "",
+                        },
+                      ] as const
+                    ).filter((field) => fieldMatches(field.value, searchQuery))
+                  : [];
                 return (
                   <TableRow
                     key={client.clientId}
@@ -464,39 +475,45 @@ export default function ClientsIndexRoute({
                     onClick={() => navigate(`/clients/${client.clientId}`)}
                   >
                     <TableCell>
-                      {nameMatches ? (
-                        <p className="font-medium">
-                          <SearchHighlight
-                            text={client.name}
-                            query={searchQuery}
-                          />
-                        </p>
-                      ) : null}
-                      {tradingMatches ? (
-                        <p
-                          className={
-                            nameMatches
-                              ? "text-xs text-muted-foreground"
-                              : "font-medium"
-                          }
-                        >
+                      <p className="font-medium">
+                        <SearchHighlight
+                          text={client.name || "—"}
+                          query={searchQuery}
+                        />
+                      </p>
+                      {client.tradingName ? (
+                        <p className="text-xs text-muted-foreground">
                           <SearchHighlight
                             text={client.tradingName}
                             query={searchQuery}
                           />
                         </p>
                       ) : null}
+                      {offColumnMatches.length > 0 ? (
+                        <div className="mt-0.5 flex min-w-0 flex-col gap-0.5">
+                          {offColumnMatches.map((field) => (
+                            <p
+                              key={field.label}
+                              className="truncate text-xs text-muted-foreground"
+                            >
+                              <span className="font-medium text-foreground/70">
+                                {field.label}:{" "}
+                              </span>
+                              <SearchHighlight
+                                text={field.value}
+                                query={searchQuery}
+                              />
+                            </p>
+                          ))}
+                        </div>
+                      ) : null}
                     </TableCell>
                     <TableCell>
                       {managerName ? (
-                        managerMatches ? (
-                          <SearchHighlight
-                            text={managerName}
-                            query={searchQuery}
-                          />
-                        ) : (
-                          managerName
-                        )
+                        <SearchHighlight
+                          text={managerName}
+                          query={searchQuery}
+                        />
                       ) : (
                         "—"
                       )}

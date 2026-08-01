@@ -1,10 +1,12 @@
 import { requireAuth } from "~/lib/auth/session.server";
-import { listClientsPage } from "~/lib/services/clients/list.service";
 import {
   filtersForCarSearchStatus,
   listReportPoliciesPage,
 } from "~/lib/services/reports/list.service";
-import { searchGlobal } from "~/lib/services/search/global-search.service";
+import {
+  searchClients,
+  searchGlobal,
+} from "~/lib/services/search/global-search.service";
 import type { CarSearchStatus } from "~/lib/services/reports/service";
 import type { Route } from "./+types/search";
 
@@ -24,18 +26,8 @@ export async function loader({ request }: Route.LoaderArgs) {
   );
 
   if (type === "clients") {
-    const page = await listClientsPage({
-      search: q,
-      limit: Math.min(limit, 50),
-      offset: 0,
-    });
-    return Response.json({
-      clients: page.rows.map((c) => ({
-        clientId: c.clientId,
-        name: c.name,
-        tradingName: c.tradingName,
-      })),
-    });
+    const results = await searchClients(q, Math.min(limit, 50));
+    return Response.json(results);
   }
 
   if (type === "report-detail") {

@@ -31,6 +31,61 @@ export type GlobalSearchPolicyHit = {
   statusName: string;
 };
 
+async function toClientHits(
+  rows: Awaited<ReturnType<typeof listClientsPage>>["rows"],
+): Promise<GlobalSearchClientHit[]> {
+  const reference = getReferenceData();
+  const managers = new Map(
+    reference.accountManagers.map((m) => [m.accountManagerId, m.fullName]),
+  );
+
+  const db = getDb();
+  const arIds = [...new Set(rows.map((c) => c.authorisedRepresentativeId))];
+  const arRows =
+    arIds.length > 0
+      ? await db
+          .select()
+          .from(authorisedRepresentative)
+          .where(
+            inArray(authorisedRepresentative.authorisedRepresentativeId, arIds),
+          )
+      : [];
+  const arById = new Map(
+    arRows.map((ar) => [
+      ar.authorisedRepresentativeId,
+      normalizeAuthorisedRepresentative(ar),
+    ]),
+  );
+
+  return rows.map((c) => {
+    const ar = arById.get(c.authorisedRepresentativeId);
+    return {
+      clientId: c.clientId,
+      name: c.name,
+      tradingName: c.tradingName,
+      abn: c.abn,
+      phone: c.phone,
+      email: c.email,
+      accountManagerName: managers.get(c.accountManagerId) ?? "",
+      arName: ar?.fullName ?? "",
+      arCompanyName: ar?.companyName ?? "",
+    };
+  });
+}
+
+/** Client-only search (picker / typeahead) — same fields as global client hits. */
+export async function searchClients(q: string, limit = 25) {
+  const trimmed = q.trim();
+  if (!trimmed) {
+    return { clients: [] as GlobalSearchClientHit[], total: 0 };
+  }
+  const page = await listClientsPage({ search: trimmed, limit, offset: 0 });
+  return {
+    clients: await toClientHits(page.rows),
+    total: page.total,
+  };
+}
+
 export async function searchGlobal(q: string, limit = 8) {
   const trimmed = q.trim();
   if (!trimmed) {
@@ -49,51 +104,16 @@ export async function searchGlobal(q: string, limit = 8) {
   ]);
 
   const reference = getReferenceData();
-  const managers = new Map(
-    reference.accountManagers.map((m) => [m.accountManagerId, m.fullName]),
-  );
   const statuses = new Map(
     reference.policyStatuses.map((s) => [s.policyStatusId, s.name]),
   );
 
-  const db = getDb();
-  const arIds = [
-    ...new Set(clientsPage.rows.map((c) => c.authorisedRepresentativeId)),
-  ];
-  const arRows =
-    arIds.length > 0
-      ? await db
-          .select()
-          .from(authorisedRepresentative)
-          .where(
-            inArray(authorisedRepresentative.authorisedRepresentativeId, arIds),
-          )
-      : [];
-  const arById = new Map(
-    arRows.map((ar) => [
-      ar.authorisedRepresentativeId,
-      normalizeAuthorisedRepresentative(ar),
-    ]),
-  );
-
+  const clients = await toClientHits(clientsPage.rows);
   const clientTotal = clientsPage.total;
   const policyTotal = policiesPage.total;
 
   return {
-    clients: clientsPage.rows.map((c) => {
-      const ar = arById.get(c.authorisedRepresentativeId);
-      return {
-        clientId: c.clientId,
-        name: c.name,
-        tradingName: c.tradingName,
-        abn: c.abn,
-        phone: c.phone,
-        email: c.email,
-        accountManagerName: managers.get(c.accountManagerId) ?? "",
-        arName: ar?.fullName ?? "",
-        arCompanyName: ar?.companyName ?? "",
-      };
-    }),
+    clients,
     policies: policiesPage.rows.map((p) => ({
       policyId: p.policyId,
       policyNumber: p.policyNumber,

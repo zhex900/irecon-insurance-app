@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useNavigation } from "react-router";
-import { SearchIcon } from "lucide-react";
+import { PhoneIcon, SearchIcon } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Spinner } from "~/components/ui/spinner";
 import {
@@ -12,27 +12,23 @@ import {
   DialogTrigger,
 } from "~/components/ui/dialog";
 import { Input } from "~/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "~/components/ui/table";
 import { HighlightText } from "~/lib/search/highlight";
 import { fieldMatches } from "~/lib/search/match";
+import type { GlobalSearchClientHit } from "~/lib/services/search/global-search.service";
 import { cn } from "~/lib/utils";
 
-type ClientHit = {
-  clientId: number;
-  name: string;
-  tradingName: string;
-};
+type ClientHit = GlobalSearchClientHit;
 
 function clientHasVisibleMatch(client: ClientHit, query: string) {
   return (
-    fieldMatches(client.name, query) || fieldMatches(client.tradingName, query)
+    fieldMatches(client.name, query) ||
+    fieldMatches(client.tradingName, query) ||
+    fieldMatches(client.abn, query) ||
+    fieldMatches(client.phone, query) ||
+    fieldMatches(client.email, query) ||
+    fieldMatches(client.accountManagerName, query) ||
+    fieldMatches(client.arCompanyName, query) ||
+    fieldMatches(client.arName, query)
   );
 }
 
@@ -136,86 +132,47 @@ export function NewPolicyClientDialog({
           <Input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search by name or trading name…"
+            placeholder="Search by name, ABN, phone, email…"
             className="pl-8"
             autoFocus
           />
         </div>
 
-        <div className="max-h-80 overflow-auto rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Client</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {!active ? (
-                <TableRow>
-                  <TableCell className="py-8 text-center text-muted-foreground">
-                    Type to search clients…
-                  </TableCell>
-                </TableRow>
-              ) : searching || (loading && displayClients.length === 0) ? (
-                <TableRow>
-                  <TableCell className="py-8 text-center text-muted-foreground">
-                    Searching…
-                  </TableCell>
-                </TableRow>
-              ) : showEmpty ? (
-                <TableRow>
-                  <TableCell className="py-8 text-center text-muted-foreground">
-                    No match for “{q}”.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                displayClients.map((client) => {
-                  const nameMatches = fieldMatches(client.name, q);
-                  const tradingMatches = fieldMatches(client.tradingName, q);
-                  return (
-                    <TableRow
-                      key={client.clientId}
-                      className={creating ? "opacity-60" : "cursor-pointer"}
-                      aria-disabled={creating || undefined}
-                      onClick={() => {
-                        if (creating) return;
-                        selectClient(client.clientId);
-                      }}
-                    >
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {creatingClientId === client.clientId ? (
-                            <Spinner className="size-3.5" />
-                          ) : null}
-                          <div className="min-w-0">
-                            {nameMatches ? (
-                              <p className="font-medium">
-                                <HighlightText text={client.name} query={q} />
-                              </p>
-                            ) : null}
-                            {tradingMatches ? (
-                              <p
-                                className={cn(
-                                  nameMatches
-                                    ? "text-xs text-muted-foreground"
-                                    : "font-medium",
-                                )}
-                              >
-                                <HighlightText
-                                  text={client.tradingName}
-                                  query={q}
-                                />
-                              </p>
-                            ) : null}
-                          </div>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
+        <div className="flex h-80 flex-col gap-0.5 overflow-auto rounded-lg border p-1">
+          {!active ? (
+            <p className="px-2.5 py-8 text-center text-sm text-muted-foreground">
+              Type to search clients…
+            </p>
+          ) : searching || (loading && displayClients.length === 0) ? (
+            <p className="px-2.5 py-8 text-center text-sm text-muted-foreground">
+              Searching…
+            </p>
+          ) : showEmpty ? (
+            <p className="px-2.5 py-8 text-center text-sm text-muted-foreground">
+              No match for “{q}”.
+            </p>
+          ) : (
+            displayClients.map((client) => (
+              <button
+                key={client.clientId}
+                type="button"
+                disabled={creating}
+                className={cn(
+                  "flex w-full items-start gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-muted",
+                  creating && "opacity-60",
+                )}
+                onClick={() => {
+                  if (creating) return;
+                  selectClient(client.clientId);
+                }}
+              >
+                {creatingClientId === client.clientId ? (
+                  <Spinner className="mt-0.5 size-3.5 shrink-0" />
+                ) : null}
+                <ClientResultDetails client={client} query={q} />
+              </button>
+            ))
+          )}
         </div>
 
         <p className="text-xs text-muted-foreground">
@@ -225,5 +182,71 @@ export function NewPolicyClientDialog({
         </p>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function ClientResultDetails({
+  client,
+  query,
+}: {
+  client: ClientHit;
+  query: string;
+}) {
+  const showTrading = Boolean(client.tradingName);
+  const showAbn = Boolean(client.abn);
+  const showPhone = Boolean(client.phone);
+
+  const matchedFields = (
+    [
+      { label: "Email", value: client.email },
+      { label: "Account Manager", value: client.accountManagerName },
+      { label: "AR Company Name", value: client.arCompanyName },
+      { label: "AR Name", value: client.arName },
+    ] as const
+  ).filter((field) => fieldMatches(field.value, query));
+
+  return (
+    <span className="min-w-0 flex-1">
+      <span className="block truncate font-medium">
+        <HighlightText text={client.name} query={query} />
+      </span>
+      <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-muted-foreground">
+        {showTrading ? (
+          <span className="truncate">
+            <HighlightText text={client.tradingName} query={query} />
+          </span>
+        ) : null}
+        {showTrading && (showAbn || showPhone) ? (
+          <span aria-hidden>·</span>
+        ) : null}
+        {showAbn ? (
+          <span className="shrink-0">
+            ABN <HighlightText text={client.abn} query={query} />
+          </span>
+        ) : null}
+        {showAbn && showPhone ? <span aria-hidden>·</span> : null}
+        {showPhone ? (
+          <span className="inline-flex shrink-0 items-center gap-1">
+            <PhoneIcon className="size-3" aria-hidden />
+            <HighlightText text={client.phone} query={query} />
+          </span>
+        ) : null}
+        {!showTrading && !showAbn && !showPhone && matchedFields.length === 0
+          ? "—"
+          : null}
+      </span>
+      {matchedFields.length > 0 ? (
+        <span className="mt-1 flex min-w-0 flex-col gap-0.5 text-xs">
+          {matchedFields.map((field) => (
+            <span key={field.label} className="truncate text-muted-foreground">
+              <span className="font-medium text-foreground/70">
+                {field.label}:{" "}
+              </span>
+              <HighlightText text={field.value} query={query} />
+            </span>
+          ))}
+        </span>
+      ) : null}
+    </span>
   );
 }

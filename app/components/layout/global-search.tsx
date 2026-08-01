@@ -278,12 +278,11 @@ function ClientResult({
   query: string;
   onSelect: () => void;
 }) {
-  const nameMatches = fieldMatches(client.name, query);
-  const showTrading = fieldMatches(client.tradingName, query);
-  const showAbn = fieldMatches(client.abn, query);
-  const showPhone = fieldMatches(client.phone, query);
+  const showTrading = Boolean(client.tradingName);
+  const showAbn = Boolean(client.abn);
+  const showPhone = Boolean(client.phone);
 
-  // Show when the query matches these (not already on the primary lines).
+  // Extra detail rows when the query hits fields not already on the primary lines.
   const matchedFields = (
     [
       { label: "Email", value: client.email },
@@ -292,8 +291,6 @@ function ClientResult({
       { label: "AR Name", value: client.arName },
     ] as const
   ).filter((field) => fieldMatches(field.value, query));
-
-  const hasSecondary = showTrading || showAbn || showPhone;
 
   return (
     <button
@@ -305,40 +302,34 @@ function ClientResult({
     >
       <UsersIcon className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
       <span className="min-w-0 flex-1">
-        {nameMatches ? (
-          <span className="block truncate font-medium">
-            <HighlightText text={client.name} query={query} />
-          </span>
-        ) : null}
-        {hasSecondary ? (
-          <span
-            className={cn(
-              "flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-muted-foreground",
-              !nameMatches && "font-medium text-foreground",
-            )}
-          >
-            {showTrading ? (
-              <span className="truncate">
-                <HighlightText text={client.tradingName} query={query} />
-              </span>
-            ) : null}
-            {showTrading && (showAbn || showPhone) ? (
-              <span aria-hidden>·</span>
-            ) : null}
-            {showAbn ? (
-              <span className="shrink-0">
-                ABN <HighlightText text={client.abn} query={query} />
-              </span>
-            ) : null}
-            {showAbn && showPhone ? <span aria-hidden>·</span> : null}
-            {showPhone ? (
-              <span className="inline-flex shrink-0 items-center gap-1">
-                <PhoneIcon className="size-3" aria-hidden />
-                <HighlightText text={client.phone} query={query} />
-              </span>
-            ) : null}
-          </span>
-        ) : null}
+        <span className="block truncate font-medium">
+          <HighlightText text={client.name} query={query} />
+        </span>
+        <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-muted-foreground">
+          {showTrading ? (
+            <span className="truncate">
+              <HighlightText text={client.tradingName} query={query} />
+            </span>
+          ) : null}
+          {showTrading && (showAbn || showPhone) ? (
+            <span aria-hidden>·</span>
+          ) : null}
+          {showAbn ? (
+            <span className="shrink-0">
+              ABN <HighlightText text={client.abn} query={query} />
+            </span>
+          ) : null}
+          {showAbn && showPhone ? <span aria-hidden>·</span> : null}
+          {showPhone ? (
+            <span className="inline-flex shrink-0 items-center gap-1">
+              <PhoneIcon className="size-3" aria-hidden />
+              <HighlightText text={client.phone} query={query} />
+            </span>
+          ) : null}
+          {!showTrading && !showAbn && !showPhone && matchedFields.length === 0
+            ? "—"
+            : null}
+        </span>
         {matchedFields.length > 0 ? (
           <span className="mt-1 flex min-w-0 flex-col gap-0.5 text-xs">
             {matchedFields.map((field) => (
