@@ -49,6 +49,7 @@ import {
   collectMergeFields,
   parseTemplateForm,
 } from "~/lib/documents/template-editor-form";
+import { DOCUMENT_LABEL_MAX_LENGTH } from "~/lib/documents/document-label";
 import { formatDocumentTemplateTitle } from "~/lib/documents/template-title";
 import { applyFlowPushDown } from "~/lib/pdf/flow-push-down";
 import { normalizePdfmeTemplateSchemas } from "~/lib/pdf/merge-fields";
@@ -119,6 +120,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     template: {
       key: editable.key,
       title: editable.title,
+      label: editable.label,
       coverTypeId: editable.coverTypeId,
       versionNumber: editable.versionNumber,
       flowPushDown: editable.flowPushDown ?? null,
@@ -161,6 +163,7 @@ export async function action({ request, params }: Route.ActionArgs) {
         documentTemplateKey: templateKey,
         coverTypeId,
         title: String(formData.get("title") ?? ""),
+        label: String(formData.get("label") ?? ""),
       });
       await writeAuditLog({
         actor: viewer,
@@ -168,7 +171,11 @@ export async function action({ request, params }: Route.ActionArgs) {
         entityType: "document_template",
         entityId: templateKey,
         summary: `Updated metadata for document template ${templateKey}`,
-        metadata: { templateKey, coverTypeId },
+        metadata: {
+          templateKey,
+          coverTypeId,
+          label: String(formData.get("label") ?? ""),
+        },
         request,
       });
       return { ok: true as const, intent: "meta" as const, templateKey };
@@ -399,6 +406,7 @@ export default function DocumentTemplateEditorRoute({
   );
   const [previewTitle, setPreviewTitle] = useState(displayTitle);
   const [titleValue, setTitleValue] = useState(docTemplate.title);
+  const [labelValue, setLabelValue] = useState(docTemplate.label);
   const [coverTypeValue, setCoverTypeValue] = useState(
     docTemplate.coverTypeId == null ? "all" : String(docTemplate.coverTypeId),
   );
@@ -421,6 +429,7 @@ export default function DocumentTemplateEditorRoute({
   if (docTemplate.key !== prevTemplateKey) {
     setPrevTemplateKey(docTemplate.key);
     setTitleValue(docTemplate.title);
+    setLabelValue(docTemplate.label);
     setCoverTypeValue(
       docTemplate.coverTypeId == null ? "all" : String(docTemplate.coverTypeId),
     );
@@ -689,11 +698,16 @@ export default function DocumentTemplateEditorRoute({
     });
   }
 
-  function submitMeta(next: { title?: string; coverTypeId?: string }) {
+  function submitMeta(next: {
+    title?: string;
+    label?: string;
+    coverTypeId?: string;
+  }) {
     if (!canEdit) return;
     const formData = new FormData();
     formData.set("intent", "meta");
     formData.set("title", next.title ?? titleValue);
+    formData.set("label", next.label ?? labelValue);
     formData.set("coverTypeId", next.coverTypeId ?? coverTypeValue);
     fetcher.submit(formData, { method: "post" });
   }
@@ -945,26 +959,62 @@ export default function DocumentTemplateEditorRoute({
       <div className="flex min-h-0 flex-1 flex-col gap-2">
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
           {canEdit ? (
-            <NativeSelect
-              size="sm"
-              aria-label="Cover type"
-              value={coverTypeValue}
-              disabled={busy || previewLoading}
-              onChange={(event) => {
-                const next = event.target.value;
-                setCoverTypeValue(next);
-                submitMeta({ coverTypeId: next });
-              }}
-              className="min-w-36"
+            <>
+              <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                Label
+                <Input
+                  value={labelValue}
+                  maxLength={DOCUMENT_LABEL_MAX_LENGTH}
+                  aria-label="Document label"
+                  disabled={busy || previewLoading}
+                  className="h-8 w-44 font-mono text-sm"
+                  onChange={(event) => setLabelValue(event.target.value)}
+                  onBlur={() => {
+                    const next = labelValue.trim();
+                    if (next === docTemplate.label) return;
+                    setLabelValue(next);
+                    submitMeta({ label: next });
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      (event.target as HTMLInputElement).blur();
+                    }
+                    if (event.key === "Escape") {
+                      event.preventDefault();
+                      setLabelValue(docTemplate.label);
+                    }
+                  }}
+                />
+              </label>
+              <NativeSelect
+                size="sm"
+                aria-label="Cover type"
+                value={coverTypeValue}
+                disabled={busy || previewLoading}
+                onChange={(event) => {
+                  const next = event.target.value;
+                  setCoverTypeValue(next);
+                  submitMeta({ coverTypeId: next });
+                }}
+                className="min-w-36"
+              >
+                <NativeSelectOption value="1">Annual</NativeSelectOption>
+                <NativeSelectOption value="2">Single</NativeSelectOption>
+                <NativeSelectOption value="3">Owner Builder</NativeSelectOption>
+                <NativeSelectOption value="all">
+                  All cover types
+                </NativeSelectOption>
+              </NativeSelect>
+            </>
+          ) : (
+            <span
+              className="rounded-md border border-border px-2 py-1 font-mono text-xs text-muted-foreground"
+              title="Document label"
             >
-              <NativeSelectOption value="1">Annual</NativeSelectOption>
-              <NativeSelectOption value="2">Single</NativeSelectOption>
-              <NativeSelectOption value="3">Owner Builder</NativeSelectOption>
-              <NativeSelectOption value="all">
-                All cover types
-              </NativeSelectOption>
-            </NativeSelect>
-          ) : null}
+              {labelValue || "—"}
+            </span>
+          )}
           <Button
             type="button"
             variant="outline"

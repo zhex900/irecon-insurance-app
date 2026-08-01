@@ -1,5 +1,11 @@
 /** Shared Recents path helpers (safe for client + server). */
 
+import {
+  EMAIL_TEMPLATE_KEYS,
+  EMAIL_TEMPLATE_META,
+  type EmailTemplateKey,
+} from "~/lib/email-templates";
+
 export const RECENT_ROUTES_MAX = 5;
 
 const SKIP_PREFIXES = [
@@ -17,6 +23,15 @@ export type RecentRouteLink = {
   href: string;
   caption?: string;
 };
+
+function isEmailTemplateKey(value: string): value is EmailTemplateKey {
+  return (EMAIL_TEMPLATE_KEYS as readonly string[]).includes(value);
+}
+
+/** Pretty-print a template key when the real title is not available yet. */
+export function recentTemplateNameFromKey(key: string): string {
+  return decodeURIComponent(key).replace(/[-_]/g, " ").trim() || key;
+}
 
 /** Normalize and validate a path for the recents stack. */
 export function normalizeRecentPath(raw: string): string | null {
@@ -39,10 +54,26 @@ export function recentIdForPath(path: string): string {
   return `recent-${encodeURIComponent(path)}`;
 }
 
-/** Caption under Recents rows for entity pages. */
+/**
+ * Caption under Recents rows.
+ * Client/Policy → type. Email/Document template editors → template name.
+ */
 export function recentCaptionForPath(path: string): string | undefined {
   if (/^\/clients\/\d+(?:\/|$)/.test(path)) return "Client";
   if (/^\/policies\/\d+(?:\/|$)/.test(path)) return "Policy";
+
+  const emailMatch = /^\/settings\/email-templates\/([^/]+)$/.exec(path);
+  if (emailMatch) {
+    const key = decodeURIComponent(emailMatch[1] ?? "");
+    if (isEmailTemplateKey(key)) return EMAIL_TEMPLATE_META[key].title;
+    return recentTemplateNameFromKey(key);
+  }
+
+  const docMatch = /^\/settings\/document-templates\/([^/]+)$/.exec(path);
+  if (docMatch) {
+    return recentTemplateNameFromKey(docMatch[1] ?? "");
+  }
+
   return undefined;
 }
 
@@ -54,6 +85,12 @@ export function recentLabelFallback(path: string, previous?: string): string {
   }
   if (/^\/policies\/\d+(?:\/|$)/.test(path)) {
     return `Policy ${path.split("/")[2] ?? ""}`.trim();
+  }
+  if (/^\/settings\/email-templates\/[^/]+$/.test(path)) {
+    return "Email Template";
+  }
+  if (/^\/settings\/document-templates\/[^/]+$/.test(path)) {
+    return "Document Template";
   }
   const segment = path.split("/").filter(Boolean).pop() ?? path;
   return decodeURIComponent(segment).replace(/[-_]/g, " ");

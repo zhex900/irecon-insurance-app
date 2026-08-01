@@ -8,6 +8,7 @@ import {
 import {
   buildAdjustmentDocumentPack,
   mergeReviewDocuments,
+  syncPolicyDocumentLabels,
 } from "~/lib/services/policy/documents";
 import { listPublishedForCover } from "~/lib/services/documents/document-templates";
 import { getPolicy, savePolicy } from "~/lib/services/policy/data.service";
@@ -114,13 +115,21 @@ export async function submitPolicyAdjustment(
 
   // Adjustment saved → all published templates for this cover (append-only).
   const templates = await listPublishedForCover(policy.car.coverTypeId);
+  const templateMeta = templates.map((t) => ({
+    key: t.key,
+    title: t.title,
+    label: t.label,
+  }));
   const pack = buildAdjustmentDocumentPack(
     policy,
     createdBy,
-    templates.map((t) => ({ key: t.key, title: t.title })),
+    templateMeta,
     policy.documents ?? [],
   );
-  const documents = mergeReviewDocuments(policy.documents, pack);
+  const merged = mergeReviewDocuments(policy.documents, pack);
+  const documents = syncPolicyDocumentLabels(merged, {
+    templates: templateMeta,
+  });
 
   return savePolicy({ ...policy, documents });
 }

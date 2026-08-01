@@ -36,6 +36,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
       versionNumber: version.versionNumber,
       coverTypeId: version.coverTypeId,
       title: version.title,
+      label: version.label,
     });
   }
 
@@ -54,5 +55,6 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     versionNumber: published.versionNumber,
     coverTypeId: published.coverTypeId,
     title: published.title,
+    label: published.label,
   });
 }

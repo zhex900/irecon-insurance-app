@@ -225,6 +225,7 @@ function TemplatesTable({
           <TableRow>
             <TableHead className="w-12" aria-label="Icon" />
             <TableHead>Title</TableHead>
+            <TableHead className="w-44">Label</TableHead>
             <TableHead>Cover type</TableHead>
             <TableHead>Version</TableHead>
             <TableHead>Last updated</TableHead>
@@ -251,6 +252,9 @@ function TemplatesTable({
                   <TemplateIcon />
                 </TableCell>
                 <TableCell className="font-medium">{title}</TableCell>
+                <TableCell className="font-mono text-sm">
+                  {template.label || "—"}
+                </TableCell>
                 <TableCell>{coverTypeLabel(template.coverTypeId)}</TableCell>
                 <TableCell>{versionLabel(template)}</TableCell>
                 <TableCell>

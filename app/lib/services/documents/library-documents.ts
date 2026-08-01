@@ -1,7 +1,13 @@
 import { asc, eq } from "drizzle-orm";
+import { z } from "zod";
 import type { R2BucketLike } from "~/lib/cloudflare.server";
 import { getDb } from "~/lib/db/client";
 import { libraryDocument } from "~/lib/db/schema";
+import {
+  DOCUMENT_LABEL_MAX_LENGTH,
+  documentLabelFromFilename,
+  normalizeDocumentLabel,
+} from "~/lib/documents/document-label";
 import type { LibraryDocumentRecord } from "~/lib/library-documents";
 import {
   deleteLibraryDocumentPdf,
@@ -32,9 +38,10 @@ function mapRow(
   };
 }
 
-function displayNameFromFilename(filename: string) {
-  return filename.replace(/\.pdf$/i, "").trim() || filename;
-}
+export const updateLibraryDocumentLabelInputSchema = z.object({
+  id: z.number().int().positive(),
+  label: z.string().max(DOCUMENT_LABEL_MAX_LENGTH),
+});
 
 export async function listLibraryDocuments(): Promise<LibraryDocumentRecord[]> {
   const db = getDb();
@@ -87,7 +94,7 @@ export async function uploadLibraryDocument(
 
   const r2Key = await putLibraryDocumentPdf(bucket, filename, file);
   const now = new Date();
-  const displayName = displayNameFromFilename(filename);
+  const displayName = documentLabelFromFilename(filename);
   const db = getDb();
 
   const existing = await getLibraryDocumentByFilename(filename);
@@ -95,7 +102,7 @@ export async function uploadLibraryDocument(
     const [row] = await db
       .update(libraryDocument)
       .set({
-        displayName,
+        // Keep an existing custom label on replace.
         r2Key,
         contentType: "application/pdf",
         sizeBytes: file.size,
@@ -124,6 +131,28 @@ export async function uploadLibraryDocument(
     })
     .returning();
   return mapRow(row);
+}
+
+export async function updateLibraryDocumentLabel(
+  input: z.infer<typeof updateLibraryDocumentLabelInputSchema>,
+  actorEmail: string,
+): Promise<LibraryDocumentRecord | null> {
+  const parsed = updateLibraryDocumentLabelInputSchema.parse(input);
+  const existing = await getLibraryDocumentById(parsed.id);
+  if (!existing) return null;
+
+  const displayName = normalizeDocumentLabel(parsed.label, existing.filename);
+  const db = getDb();
+  const [row] = await db
+    .update(libraryDocument)
+    .set({
+      displayName,
+      updatedWhen: new Date(),
+      updatedBy: actorEmail,
+    })
+    .where(eq(libraryDocument.libraryDocumentId, parsed.id))
+    .returning();
+  return row ? mapRow(row) : null;
 }
 
 export async function deleteLibraryDocument(

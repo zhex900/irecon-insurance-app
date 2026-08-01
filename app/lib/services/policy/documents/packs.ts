@@ -1,4 +1,5 @@
 import type { Policy, PolicyDocument } from "~/lib/db/types";
+import { formatDocumentLabel } from "~/lib/documents/document-label";
 import {
   libraryDocumentMatchesPolicy,
   type LibraryDocumentRecord,
@@ -15,7 +16,62 @@ import {
 } from "~/lib/services/policy/documents/fingerprints";
 import { policyToMergeInputs } from "~/lib/pdf/merge-fields";
 
-export type PackTemplateMeta = Pick<DocumentTemplate, "key" | "title">;
+export type PackTemplateMeta = Pick<
+  DocumentTemplate,
+  "key" | "title" | "label"
+>;
+
+function packTemplateLabel(template: PackTemplateMeta): string {
+  return (
+    formatDocumentLabel(template.label) ||
+    formatDocumentLabel(template.title) ||
+    template.key
+  );
+}
+
+/**
+ * Refresh stored document names from current library / template labels.
+ * Returns the same array reference when nothing changed.
+ */
+export function syncPolicyDocumentLabels(
+  documents: PolicyDocument[],
+  options: {
+    libraryDocs?: LibraryDocumentRecord[];
+    templates?: PackTemplateMeta[];
+  },
+): PolicyDocument[] {
+  if (documents.length === 0) return documents;
+
+  const libraryById = new Map<number, LibraryDocumentRecord>();
+  const libraryByFile = new Map<string, LibraryDocumentRecord>();
+  for (const doc of options.libraryDocs ?? []) {
+    libraryById.set(doc.libraryDocumentId, doc);
+    libraryByFile.set(doc.filename.trim().toLowerCase(), doc);
+  }
+  const templateByKey = new Map(
+    (options.templates ?? []).map((template) => [template.key, template]),
+  );
+
+  let changed = false;
+  const next = documents.map((doc) => {
+    let name: string | undefined;
+    if (doc.libraryDocumentId != null) {
+      const library = libraryById.get(doc.libraryDocumentId);
+      if (library) name = formatDocumentLabel(library.displayName);
+    } else if (doc.templateKey) {
+      const template = templateByKey.get(doc.templateKey);
+      if (template) name = packTemplateLabel(template);
+    } else if (doc.filename) {
+      const library = libraryByFile.get(doc.filename.trim().toLowerCase());
+      if (library) name = formatDocumentLabel(library.displayName);
+    }
+    if (name == null || name === doc.name) return doc;
+    changed = true;
+    return { ...doc, name };
+  });
+
+  return changed ? next : documents;
+}
 
 export type BuildReviewDocumentPackOptions = {
   /**
@@ -56,10 +112,11 @@ export function buildReviewDocumentPack(
   const docs: PolicyDocument[] = templates.map((template) => {
     const amendment = nextAmendmentNumber(existing, template.key);
     const safeKey = template.key.replace(/[^a-zA-Z0-9_-]+/g, "_");
+    const name = packTemplateLabel(template);
     return makeDoc({
       id: nextId++,
       policyId: policy.policyId,
-      name: template.title || template.key,
+      name,
       filename: `${safeKey}_${policy.policyNumber}_${amendment}_${stamp}.pdf`,
       generationKey,
       content: [
@@ -112,7 +169,7 @@ export function resolveLibraryAttachments(
     return libraryDocs
       .filter((doc) => libraryDocumentMatchesPolicy(doc, policy))
       .map((doc) => ({
-        name: doc.displayName,
+        name: formatDocumentLabel(doc.displayName),
         filename: doc.filename,
         libraryDocumentId: doc.libraryDocumentId,
         content: [
@@ -125,7 +182,7 @@ export function resolveLibraryAttachments(
   const items: LibraryAttachment[] = [];
   if (policy.stateId === 2) {
     items.push({
-      name: "ATC Stamp duty Exemption",
+      name: "ATC Stamp Duty Exemp",
       filename: "ATC Stamp duty Exemption.pdf",
       content: [
         "ATC Stamp Duty Exemption",
@@ -144,7 +201,7 @@ export function resolveLibraryAttachments(
       ].join("\n"),
     },
     {
-      name: "IA Annual CAR TPL Wording",
+      name: "IA Annual CAR TPL Wor",
       filename: "IA Annual CAR TPL Wording (eff Jan 2026) - Sample.pdf",
       content: [
         "IA Annual CAR TPL Wording (effective January 2026)",
@@ -177,10 +234,11 @@ export function buildAdjustmentDocumentPack(
   return templates.map((template) => {
     const amendment = nextAmendmentNumber(existing, template.key);
     const safeKey = template.key.replace(/[^a-zA-Z0-9_-]+/g, "_");
+    const name = packTemplateLabel(template);
     return makeDoc({
       id: nextId++,
       policyId: policy.policyId,
-      name: template.title || template.key,
+      name,
       filename: `${safeKey}_${policy.policyNumber}_${amendment}_${stamp}.pdf`,
       generationKey,
       content: [

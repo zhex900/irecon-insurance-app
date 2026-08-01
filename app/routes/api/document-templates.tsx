@@ -19,6 +19,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     templates: templates.map((t) => ({
       key: t.key,
       title: t.title,
+      label: t.label,
       coverTypeId: t.coverTypeId,
       versionNumber: t.versionNumber,
     })),

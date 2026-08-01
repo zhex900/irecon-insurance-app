@@ -280,9 +280,9 @@ function collectActiveIds(
 }
 
 const RECENTS_ENTER_MS = 320;
-/** Single-line recent (no Client/Policy caption). */
+/** Single-line recent (no caption). */
 const RECENT_ROW_PLAIN_PX = 32;
-/** Client / policy recent with caption under the label. */
+/** Recent with caption under the label (client/policy/template). */
 const RECENT_ROW_CAPTION_PX = 48;
 /** Empty-state line when there are no recents. */
 const RECENT_EMPTY_PX = 32;

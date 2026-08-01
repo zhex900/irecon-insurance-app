@@ -7,6 +7,7 @@ type CachedPublishedTemplate = {
   versionNumber: number;
   coverTypeId?: number | null;
   title?: string;
+  label?: string;
 };
 
 const clientTemplateCache = new Map<

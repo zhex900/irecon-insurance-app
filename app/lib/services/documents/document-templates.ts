@@ -6,6 +6,11 @@ import { appDocumentTemplateVersion } from "~/lib/db/schema";
 import { promoteStaticBackgroundToEditableSchemas } from "~/lib/pdf/extract-base-pdf-rectangles";
 import type { FlowPushDown } from "~/lib/pdf/flow-push-down";
 import {
+  DOCUMENT_LABEL_MAX_LENGTH,
+  documentLabelFromFilename,
+  normalizeDocumentLabel,
+} from "~/lib/documents/document-label";
+import {
   DOCUMENT_TEMPLATE_BLANK_BASE_PDF,
   withBlankPageBackground,
   type DocumentTemplate,
@@ -38,12 +43,14 @@ export const saveDocumentTemplateInputSchema = z.object({
 export const createDocumentTemplateInputSchema = z.object({
   coverTypeId: z.union([z.literal(1), z.literal(2), z.literal(3), z.null()]),
   title: z.string().trim().min(1, "Title is required").max(512),
+  label: z.string().max(DOCUMENT_LABEL_MAX_LENGTH).optional(),
 });
 
 export const updateDocumentTemplateMetaInputSchema = z.object({
   documentTemplateKey: z.string().min(1).max(64),
   coverTypeId: z.union([z.literal(1), z.literal(2), z.literal(3), z.null()]),
   title: z.string().max(512),
+  label: z.string().max(DOCUMENT_LABEL_MAX_LENGTH),
 });
 
 /** Slugify a title into a document_template_key (lowercase, hyphens, max 64). */
@@ -64,6 +71,7 @@ export type DocumentTemplateVersion = {
   documentTemplateKey: string;
   coverTypeId: number | null;
   title: string;
+  label: string;
   template: Template;
   flowPushDown: FlowPushDown | null;
   mergeFields: string[];
@@ -77,6 +85,7 @@ export type DocumentTemplateListItem = {
   key: string;
   coverTypeId: number | null;
   title: string;
+  label: string;
   hasPublished: boolean;
   publishedVersionNumber: number | null;
   latestVersionNumber: number | null;
@@ -100,6 +109,9 @@ function rowToVersion(
     documentTemplateKey: row.documentTemplateKey,
     coverTypeId: row.coverTypeId ?? null,
     title: row.title ?? "",
+    label:
+      row.label?.trim() ||
+      documentLabelFromFilename(row.title ?? row.documentTemplateKey),
     template: row.templateJson as Template,
     flowPushDown: (row.flowPushDown as FlowPushDown | null) ?? null,
     mergeFields: Array.isArray(row.mergeFields) ? row.mergeFields : [],
@@ -115,6 +127,7 @@ function versionToTemplate(version: DocumentTemplateVersion): DocumentTemplate {
     key: version.documentTemplateKey,
     coverTypeId: version.coverTypeId,
     title: version.title,
+    label: version.label,
     versionNumber: version.versionNumber,
     mergeFields: version.mergeFields,
     flowPushDown: version.flowPushDown,
@@ -241,6 +254,7 @@ export async function listDocumentTemplates(): Promise<
       key,
       coverTypeId: meta.coverTypeId ?? null,
       title: meta.title || key,
+      label: meta.label?.trim() || documentLabelFromFilename(meta.title || key),
       hasPublished: Boolean(published),
       publishedVersionNumber: published?.versionNumber ?? null,
       latestVersionNumber: latest?.versionNumber ?? null,
@@ -326,6 +340,7 @@ async function insertVersion(input: {
   documentTemplateKey: string;
   coverTypeId: number | null;
   title: string;
+  label: string;
   template: Record<string, unknown>;
   flowPushDown: Record<string, unknown> | null;
   mergeFields: string[];
@@ -356,6 +371,7 @@ async function insertVersion(input: {
       documentTemplateKey: input.documentTemplateKey,
       coverTypeId: input.coverTypeId,
       title: input.title,
+      label: input.label,
       versionNumber,
       templateJson: input.template,
       flowPushDown: input.flowPushDown,
@@ -373,12 +389,17 @@ async function insertVersion(input: {
 async function requireKeyMeta(documentTemplateKey: string): Promise<{
   coverTypeId: number | null;
   title: string;
+  label: string;
 }> {
   const latest = await getLatestDocumentTemplate(documentTemplateKey);
   if (!latest) {
     throw new Error(`Unknown document template: ${documentTemplateKey}`);
   }
-  return { coverTypeId: latest.coverTypeId, title: latest.title };
+  return {
+    coverTypeId: latest.coverTypeId,
+    title: latest.title,
+    label: latest.label,
+  };
 }
 
 /** Create a new template; key is auto-generated from the title. */
@@ -399,10 +420,13 @@ export async function createDocumentTemplate(
     }
   }
 
+  const label = normalizeDocumentLabel(parsed.label ?? "", parsed.title);
+
   return insertVersion({
     documentTemplateKey,
     coverTypeId: parsed.coverTypeId,
     title: parsed.title,
+    label,
     template: {
       basePdf: DOCUMENT_TEMPLATE_BLANK_BASE_PDF,
       schemas: [[]],
@@ -414,17 +438,19 @@ export async function createDocumentTemplate(
   });
 }
 
-/** Update cover type + title on every version row for a key. */
+/** Update cover type + title + label on every version row for a key. */
 export async function updateDocumentTemplateMeta(
   input: z.infer<typeof updateDocumentTemplateMetaInputSchema>,
 ): Promise<void> {
   const parsed = updateDocumentTemplateMetaInputSchema.parse(input);
+  const label = normalizeDocumentLabel(parsed.label, parsed.title);
   const db = getDb();
   await db
     .update(appDocumentTemplateVersion)
     .set({
       coverTypeId: parsed.coverTypeId,
       title: parsed.title,
+      label,
     })
     .where(
       eq(
@@ -457,6 +483,7 @@ export async function saveDocumentTemplateDraft(
     documentTemplateKey: parsed.documentTemplateKey,
     coverTypeId: meta.coverTypeId,
     title: meta.title,
+    label: meta.label,
     template: templateForStorage(parsed.template),
     flowPushDown:
       parsed.flowPushDown === undefined
@@ -526,6 +553,7 @@ export async function autosaveDocumentTemplateDraft(
     documentTemplateKey: parsed.documentTemplateKey,
     coverTypeId: meta.coverTypeId,
     title: meta.title,
+    label: meta.label,
     template,
     flowPushDown,
     mergeFields,
@@ -547,6 +575,7 @@ export async function publishDocumentTemplate(
     documentTemplateKey: parsed.documentTemplateKey,
     coverTypeId: meta.coverTypeId,
     title: meta.title,
+    label: meta.label,
     template: templateForStorage(parsed.template),
     flowPushDown:
       parsed.flowPushDown === undefined

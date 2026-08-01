@@ -415,6 +415,7 @@ export const libraryDocument = pgTable("library_document", {
     .generatedAlwaysAsIdentity()
     .primaryKey(),
   filename: varchar("filename", { length: 512 }).notNull(),
+  /** Label for policy documents side card (app max: DOCUMENT_LABEL_MAX_LENGTH). */
   displayName: varchar("display_name", { length: 255 }).notNull(),
   r2Key: varchar("r2_key", { length: 512 }).notNull(),
   contentType: varchar("content_type", { length: 128 })
@@ -477,6 +478,8 @@ export const appDocumentTemplateVersion = pgTable(
     /** Policy cover 1/2/3; null = included for every cover. */
     coverTypeId: integer("cover_type_id"),
     title: varchar("title", { length: 512 }).notNull().default(""),
+    /** Label for policy documents side card (app max: DOCUMENT_LABEL_MAX_LENGTH). */
+    label: varchar("label", { length: 255 }).notNull().default(""),
     versionNumber: integer("version_number").notNull(),
     /** pdfme Template: { basePdf, schemas }. */
     templateJson: jsonb("template_json")

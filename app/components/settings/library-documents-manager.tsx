@@ -1,17 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 import { useFetcher, useRevalidator } from "react-router";
 import {
+  CheckIcon,
   CircleAlertIcon,
   CloudUploadIcon,
-  FileTextIcon,
+  FileTypeIcon,
+  PencilIcon,
   Trash2Icon,
   UploadIcon,
+  XIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { PdfPreviewDialog } from "~/components/pdf-preview-dialog";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Badge } from "~/components/reui/badge";
 import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
 import { Spinner } from "~/components/ui/spinner";
 import {
   Table,
@@ -27,6 +31,10 @@ import {
   type FileMetadata,
   type FileWithPreview,
 } from "~/hooks/use-file-upload";
+import {
+  DOCUMENT_LABEL_MAX_LENGTH,
+  normalizeDocumentLabel,
+} from "~/lib/documents/document-label";
 import { cn, formatDate } from "~/lib/utils";
 import {
   libraryDocumentPublicPath,
@@ -47,6 +55,11 @@ type ActionData =
       document: LibraryDocumentRecord;
     }
   | { ok: true; intent: "delete"; id: number }
+  | {
+      ok: true;
+      intent: "update-label";
+      document: LibraryDocumentRecord;
+    }
   | { ok: false; error: string; clientId?: string };
 
 const MAX_SIZE = 50 * 1024 * 1024;
@@ -100,6 +113,7 @@ export function LibraryDocumentsManager({
   const revalidator = useRevalidator();
   const uploadFetcher = useFetcher<ActionData>();
   const deleteFetcher = useFetcher<ActionData>();
+  const labelFetcher = useFetcher<ActionData>();
 
   const [uploadFiles, setUploadFiles] = useState<UploadItem[]>(() =>
     toUploadItems(documents),
@@ -110,6 +124,8 @@ export function LibraryDocumentsManager({
   const [docsById, setDocsById] = useState(
     () => new Map(documents.map((d) => [String(d.libraryDocumentId), d])),
   );
+  const [editingLabelId, setEditingLabelId] = useState<number | null>(null);
+  const [labelDraft, setLabelDraft] = useState("");
 
   /** Upload queue — drained one-at-a-time via kickUpload. */
   const queueRef = useRef<Array<{ clientId: string; file: File }>>([]);
@@ -121,6 +137,7 @@ export function LibraryDocumentsManager({
 
   const lastUploadKeyRef = useRef<string | null>(null);
   const lastDeleteKeyRef = useRef<string | null>(null);
+  const lastLabelKeyRef = useRef<string | null>(null);
   const handledUploadDataRef = useRef<ActionData | undefined>(undefined);
   const handledDeleteDataRef = useRef<ActionData | undefined>(undefined);
   const lastDocumentsRef = useRef(documents);
@@ -238,6 +255,24 @@ export function LibraryDocumentsManager({
     if (!data.ok) toast.error(data.error);
   }, [deleteFetcher.state, deleteFetcher.data, revalidator]);
 
+  useEffect(() => {
+    if (labelFetcher.state !== "idle" || !labelFetcher.data) return;
+    const key = JSON.stringify(labelFetcher.data);
+    if (lastLabelKeyRef.current === key) return;
+    lastLabelKeyRef.current = key;
+
+    const data = labelFetcher.data;
+    if (data.ok && data.intent === "update-label") {
+      toast.success("Label updated");
+      revalidator.revalidate();
+      return;
+    }
+    if (!data.ok) {
+      toast.error(data.error);
+      revalidator.revalidate();
+    }
+  }, [labelFetcher.state, labelFetcher.data, revalidator]);
+
   const [
     { isDragging, errors },
     {
@@ -296,6 +331,29 @@ export function LibraryDocumentsManager({
   const uploadingClientId = String(
     uploadFetcher.formData?.get("clientId") ?? "",
   );
+  const labelBusy = labelFetcher.state !== "idle";
+
+  function startEditLabel(doc: LibraryDocumentRecord) {
+    setEditingLabelId(doc.libraryDocumentId);
+    setLabelDraft(doc.displayName);
+  }
+
+  function saveLabel(doc: LibraryDocumentRecord) {
+    const displayName = normalizeDocumentLabel(labelDraft, doc.filename);
+    setDocsById((prev) => {
+      const next = new Map(prev);
+      next.set(String(doc.libraryDocumentId), { ...doc, displayName });
+      return next;
+    });
+    setEditingLabelId(null);
+    setLabelDraft(displayName);
+
+    const data = new FormData();
+    data.set("intent", "update-label");
+    data.set("id", String(doc.libraryDocumentId));
+    data.set("label", displayName);
+    void labelFetcher.submit(data, { method: "post" });
+  }
 
   return (
     <div className="flex w-full flex-col gap-4">
@@ -344,7 +402,7 @@ export function LibraryDocumentsManager({
           <CircleAlertIcon />
           <AlertTitle>View only</AlertTitle>
           <AlertDescription>
-            Only admins can upload or delete library documents.
+            Only admins can upload, edit labels, or delete library documents.
           </AlertDescription>
         </Alert>
       )}
@@ -367,7 +425,8 @@ export function LibraryDocumentsManager({
             <Table>
               <TableHeader>
                 <TableRow className="text-xs">
-                  <TableHead className="h-9 ps-4">Name</TableHead>
+                  <TableHead className="h-9 ps-4">File</TableHead>
+                  <TableHead className="h-9 w-48">Label</TableHead>
                   <TableHead className="h-9">Size</TableHead>
                   <TableHead className="h-9">Created</TableHead>
                   {canEdit ? (
@@ -391,25 +450,32 @@ export function LibraryDocumentsManager({
                   const isUploading =
                     fileItem.status === "uploading" ||
                     uploadingClientId === fileItem.id;
+                  const isEditingLabel =
+                    doc != null && editingLabelId === doc.libraryDocumentId;
 
                   return (
                     <TableRow
                       key={fileItem.id}
                       className={canPreview ? "cursor-pointer" : undefined}
                       onClick={() => {
-                        if (canPreview && doc) setPreviewDoc(doc);
+                        if (canPreview && doc && !isEditingLabel) {
+                          setPreviewDoc(doc);
+                        }
                       }}
                     >
                       <TableCell className="py-2 ps-1.5">
                         <div className="flex items-center gap-2">
-                          <div className="flex size-8 shrink-0 items-center justify-center text-muted-foreground/80">
+                          <div className="flex size-8 shrink-0 items-center justify-center text-red-600/90">
                             {isUploading ? (
                               <Spinner className="size-4" />
                             ) : (
-                              <FileTextIcon className="size-4" />
+                              <FileTypeIcon className="size-4" />
                             )}
                           </div>
-                          <p className="truncate text-sm font-medium">
+                          <p
+                            className="truncate text-sm font-medium"
+                            title={fileItem.file.name}
+                          >
                             {fileItem.file.name}
                           </p>
                           {fileItem.status === "error" ? (
@@ -418,6 +484,87 @@ export function LibraryDocumentsManager({
                             </Badge>
                           ) : null}
                         </div>
+                      </TableCell>
+                      <TableCell
+                        className="py-2"
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        {doc == null ? (
+                          <span className="text-sm text-muted-foreground">
+                            —
+                          </span>
+                        ) : isEditingLabel ? (
+                          <div className="flex items-center gap-1">
+                            <Input
+                              value={labelDraft}
+                              maxLength={DOCUMENT_LABEL_MAX_LENGTH}
+                              aria-label="Document label"
+                              disabled={labelBusy}
+                              className="h-8 font-mono text-sm"
+                              autoFocus
+                              onChange={(event) =>
+                                setLabelDraft(event.target.value)
+                              }
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter") {
+                                  event.preventDefault();
+                                  saveLabel(doc);
+                                }
+                                if (event.key === "Escape") {
+                                  event.preventDefault();
+                                  setEditingLabelId(null);
+                                }
+                              }}
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="size-8 shrink-0"
+                              disabled={labelBusy}
+                              aria-label="Save label"
+                              onClick={() => saveLabel(doc)}
+                            >
+                              {labelBusy ? (
+                                <Spinner className="size-3.5" />
+                              ) : (
+                                <CheckIcon className="size-3.5" />
+                              )}
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="size-8 shrink-0"
+                              disabled={labelBusy}
+                              aria-label="Cancel label edit"
+                              onClick={() => setEditingLabelId(null)}
+                            >
+                              <XIcon className="size-3.5" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1">
+                            <span
+                              className="truncate text-sm font-medium"
+                              title={doc.displayName}
+                            >
+                              {doc.displayName}
+                            </span>
+                            {canEdit ? (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="size-7 shrink-0"
+                                aria-label={`Edit label for ${doc.filename}`}
+                                onClick={() => startEditLabel(doc)}
+                              >
+                                <PencilIcon className="size-3.5" />
+                              </Button>
+                            ) : null}
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell className="py-2 text-sm text-muted-foreground">
                         {formatBytes(fileItem.file.size)}

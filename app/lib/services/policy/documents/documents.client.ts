@@ -4,6 +4,7 @@ import { mergeReviewDocuments } from "~/lib/services/policy/documents/merge";
 import {
   buildReviewDocumentPack,
   policyHasLibraryDocuments,
+  syncPolicyDocumentLabels,
 } from "~/lib/services/policy/documents/packs";
 
 async function fetchLibraryDocumentsClient(): Promise<LibraryDocumentRecord[]> {
@@ -21,16 +22,20 @@ async function fetchLibraryDocumentsClient(): Promise<LibraryDocumentRecord[]> {
 
 async function fetchPublishedTemplatesForCover(
   coverTypeId: number,
-): Promise<Array<{ key: string; title: string }>> {
+): Promise<Array<{ key: string; title: string; label: string }>> {
   try {
     const response = await fetch(
       `/api/document-templates?coverTypeId=${encodeURIComponent(String(coverTypeId))}`,
     );
     if (!response.ok) return [];
     const data = (await response.json()) as {
-      templates?: Array<{ key: string; title: string }>;
+      templates?: Array<{ key: string; title: string; label?: string }>;
     };
-    return data.templates ?? [];
+    return (data.templates ?? []).map((t) => ({
+      key: t.key,
+      title: t.title,
+      label: t.label ?? "",
+    }));
   } catch {
     return [];
   }
@@ -50,6 +55,28 @@ export async function savePolicyDocumentsClient(
   return (await response.json()) as PolicyDocument[];
 }
 
+/**
+ * Pull current library / template labels onto stored policy documents.
+ * No-op (same array) when labels already match.
+ */
+export async function syncPolicyDocumentLabelsClient(
+  policy: Policy,
+  documents: PolicyDocument[] = policy.documents ?? [],
+): Promise<PolicyDocument[]> {
+  if (documents.length === 0) return documents;
+
+  const [libraryDocs, templates] = await Promise.all([
+    fetchLibraryDocumentsClient(),
+    fetchPublishedTemplatesForCover(policy.car.coverTypeId),
+  ]);
+  const synced = syncPolicyDocumentLabels(documents, {
+    libraryDocs,
+    templates,
+  });
+  if (synced === documents) return documents;
+  return savePolicyDocumentsClient(policy.policyId, synced);
+}
+
 export async function ensureReviewDocumentsClient(
   policy: Policy,
   generatedBy: string,
@@ -59,8 +86,9 @@ export async function ensureReviewDocumentsClient(
   const existing = policy.documents ?? [];
   // Library / static docs attach once. Regenerations only produce templates.
   const includeLibrary = !policyHasLibraryDocuments(existing);
+  // Always fetch library docs so label edits refresh onto existing attachments.
   const [libraryDocs, templates] = await Promise.all([
-    includeLibrary ? fetchLibraryDocumentsClient() : Promise.resolve([]),
+    fetchLibraryDocumentsClient(),
     fetchPublishedTemplatesForCover(policy.car.coverTypeId),
   ]);
   const pack = buildReviewDocumentPack(
@@ -78,6 +106,10 @@ export async function ensureReviewDocumentsClient(
       }))
     : pack;
   const merged = mergeReviewDocuments(existing, nextPack);
-  if (merged === existing) return existing;
-  return savePolicyDocumentsClient(policy.policyId, merged);
+  const synced = syncPolicyDocumentLabels(merged, {
+    libraryDocs,
+    templates,
+  });
+  if (synced === existing) return existing;
+  return savePolicyDocumentsClient(policy.policyId, synced);
 }

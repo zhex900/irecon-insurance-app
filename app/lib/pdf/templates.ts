@@ -64,6 +64,8 @@ export type DocumentTemplate = {
   key: string;
   coverTypeId: number | null;
   title: string;
+  /** Short label for policy documents side card (max 20). */
+  label: string;
   versionNumber: number;
   mergeFields: string[];
   flowPushDown?: FlowPushDown | null;

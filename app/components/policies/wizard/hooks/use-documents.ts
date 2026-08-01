@@ -3,7 +3,10 @@ import type { UseFormReturn } from "react-hook-form";
 import { useRouteLoaderData } from "react-router";
 import { toast } from "sonner";
 import type { Policy, PolicyDocument, PremiumBreakdown } from "~/lib/db/types";
-import { ensureReviewDocumentsClient } from "~/lib/services/policy/documents/documents.client";
+import {
+  ensureReviewDocumentsClient,
+  syncPolicyDocumentLabelsClient,
+} from "~/lib/services/policy/documents/documents.client";
 import { reviewDocumentsFingerprint } from "~/lib/services/policy/documents/fingerprints";
 import { policySnapshotFromForm } from "~/lib/services/policy/documents/snapshot-from-form";
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
@@ -31,8 +34,10 @@ export function usePolicyDocuments({
   );
   const [isGeneratingDocuments, setIsGeneratingDocuments] = useState(false);
   const documentsRef = useRef(documents);
+  const policyRef = useRef(policy);
   useEffect(() => {
     documentsRef.current = documents;
+    policyRef.current = policy;
   });
 
   const lastPolicyIdRef = useRef(policy.policyId);
@@ -41,6 +46,27 @@ export function usePolicyDocuments({
     lastPolicyIdRef.current = policy.policyId;
     setDocuments(policy.documents ?? []);
   }, [policy.policyId, policy.documents]);
+
+  // Settings label edits are snapshotted onto packs — refresh names when opening a policy.
+  useEffect(() => {
+    let cancelled = false;
+    const currentPolicy = policyRef.current;
+    const current = currentPolicy.documents ?? [];
+    if (current.length === 0) return;
+
+    void syncPolicyDocumentLabelsClient(currentPolicy, current)
+      .then((next) => {
+        if (cancelled || next === current) return;
+        setDocuments(next);
+      })
+      .catch(() => {
+        // Keep stored labels if refresh fails.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [policy.policyId]);
 
   function buildDocumentSnapshot(
     premiumOverride?: PremiumBreakdown,

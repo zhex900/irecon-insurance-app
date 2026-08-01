@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDownIcon, FileTextIcon, MailIcon } from "lucide-react";
+import { ChevronDownIcon, FileTypeIcon, MailIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Button } from "~/components/ui/button";
@@ -12,12 +12,18 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
 import { ScrollArea } from "~/components/ui/scroll-area";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "~/components/ui/tooltip";
 import type {
   CarAdjustmentRecord,
   PolicyDocument,
   PremiumBreakdown,
   Policy,
 } from "~/lib/db/types";
+import { formatDocumentLabel } from "~/lib/documents/document-label";
 import { formatCurrency } from "~/lib/utils";
 import { PdfPreviewDialog } from "~/components/pdf-preview-dialog";
 import { buildPdfBlobFromDocument } from "~/lib/pdf/generate";
@@ -332,36 +338,40 @@ export function PremiumSummaryPanel({
             <ul className="flex flex-col gap-1 p-2">
               {documentRows.map(({ doc, version }) => {
                 const checked = selectedIds.includes(doc.policyDocumentId);
+                const shortName = formatDocumentLabel(doc.name);
                 const label =
                   hasPreviousVersions || version > 1
-                    ? `v${version} ${doc.name}`
-                    : doc.name;
+                    ? `v${version} ${shortName}`
+                    : shortName;
                 return (
                   <li key={doc.policyDocumentId}>
-                    <div className="flex items-start gap-2 rounded-md px-2 py-1.5 hover:bg-muted/60">
+                    <div className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted/60">
                       <Checkbox
-                        className="mt-0.5"
                         checked={checked}
                         onCheckedChange={(value) =>
                           toggleDoc(doc.policyDocumentId, Boolean(value))
                         }
                         aria-label={`Select ${label}`}
                       />
-                      <button
-                        type="button"
-                        className="flex min-w-0 flex-1 items-start gap-2 text-left"
-                        onClick={() => setPreviewDoc(doc)}
-                      >
-                        <FileTextIcon className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate font-medium text-foreground underline-offset-2 hover:underline">
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <button
+                              type="button"
+                              className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                              onClick={() => setPreviewDoc(doc)}
+                            />
+                          }
+                        >
+                          <FileTypeIcon className="size-3.5 shrink-0 text-red-600" />
+                          <span className="truncate font-medium text-foreground underline-offset-2 hover:underline">
                             {label}
                           </span>
-                          <span className="block truncate text-xs text-muted-foreground">
-                            {doc.filename}
-                          </span>
-                        </span>
-                      </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="left" className="max-w-xs">
+                          {doc.filename}
+                        </TooltipContent>
+                      </Tooltip>
                     </div>
                   </li>
                 );

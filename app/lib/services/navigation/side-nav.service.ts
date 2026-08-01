@@ -14,7 +14,7 @@ export type SideNavLink = {
   id: string;
   label: string;
   href: string;
-  /** Secondary line under the label (e.g. Recents → "Client" / "Policy"). */
+  /** Secondary line under the label (Client/Policy type, or template name). */
   caption?: string;
 };
 

@@ -10,6 +10,7 @@ import { isFeatureEnabled } from "~/lib/services/feature-flags";
 import {
   deleteLibraryDocument,
   listLibraryDocuments,
+  updateLibraryDocumentLabel,
   uploadLibraryDocument,
 } from "~/lib/services/documents/library-documents";
 import type { Route } from "./+types/library-documents";
@@ -142,6 +143,42 @@ export async function action({ request, context }: Route.ActionArgs) {
       return {
         ok: false as const,
         error: error instanceof Error ? error.message : "Delete failed.",
+      };
+    }
+  }
+
+  if (intent === "update-label") {
+    const id = Number(formData.get("id"));
+    const label = String(formData.get("label") ?? "");
+    if (!Number.isFinite(id) || id <= 0) {
+      return { ok: false as const, error: "Invalid document." };
+    }
+    try {
+      const document = await updateLibraryDocumentLabel(
+        { id, label },
+        viewer.email,
+      );
+      if (!document) {
+        return { ok: false as const, error: "Document not found." };
+      }
+      await writeAuditLog({
+        actor: viewer,
+        action: "settings.library_document_label",
+        entityType: "library_document",
+        entityId: String(id),
+        summary: `Updated library document label for ${document.filename}`,
+        metadata: { filename: document.filename, label: document.displayName },
+        request,
+      });
+      return {
+        ok: true as const,
+        intent: "update-label" as const,
+        document,
+      };
+    } catch (error) {
+      return {
+        ok: false as const,
+        error: error instanceof Error ? error.message : "Update failed.",
       };
     }
   }
