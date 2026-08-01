@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FileTextIcon, MailIcon, PaperclipIcon, XIcon } from "lucide-react";
 import { toast } from "sonner";
+import { EmailDocumentFrame } from "~/components/forms/email-document-frame";
 import {
   EmailRichEditor,
   type EmailRichEditorHandle,
@@ -23,10 +24,12 @@ import { Badge } from "~/components/reui/badge";
 import type { EmailDirectoryEntry } from "~/lib/email/directory";
 import { EMAIL_FOOTER_DISPLAY_WIDTH_DEFAULT } from "~/lib/email/footer-display";
 import {
-  applyEmailFooterImageWidth,
   applyEmailTemplate,
+  buildOutboundTemplateHtml,
   EMAIL_TEMPLATE_META,
   ensureEmailEditorHtml,
+  htmlToPlainText,
+  isEmailHtmlBody,
   preferEmailHtml,
   type EmailSendRecipient,
   type EmailTemplate,
@@ -37,6 +40,17 @@ import {
   useFileUpload,
   type FileWithPreview,
 } from "~/hooks/use-file-upload";
+
+function filledTemplateBody(
+  body: string,
+  vars: EmailTemplateVars,
+  logoWidth: number,
+): string {
+  return buildOutboundTemplateHtml(applyEmailTemplate(body, vars), {
+    footerImageWidth: logoWidth,
+    footerImageDataUri: vars.footerImage,
+  });
+}
 
 const RECIPIENT_LABELS: Record<EmailSendRecipient, string> = {
   broker: "broker",
@@ -101,6 +115,7 @@ export function EmailDocumentsDialog({
   emailDirectory?: EmailDirectoryEntry[];
 }) {
   const logoWidth = footerImageWidth ?? EMAIL_FOOTER_DISPLAY_WIDTH_DEFAULT;
+  const useTemplateHtml = isEmailHtmlBody(template.body);
   const vars: EmailTemplateVars = {
     clientName,
     policyNumber,
@@ -114,11 +129,9 @@ export function EmailDocumentsDialog({
     applyEmailTemplate(template.subject, vars),
   );
   const [editorContent, setEditorContent] = useState(() =>
-    applyEmailFooterImageWidth(
-      applyEmailTemplate(ensureEmailEditorHtml(template.body), vars),
-      logoWidth,
-      vars.footerImage,
-    ),
+    useTemplateHtml
+      ? filledTemplateBody(template.body, vars, logoWidth)
+      : ensureEmailEditorHtml(applyEmailTemplate(template.body, vars)),
   );
   const [editorKey, setEditorKey] = useState(0);
   const [attachments, setAttachments] = useState(documents);
@@ -184,11 +197,9 @@ export function EmailDocumentsDialog({
     setCc("");
     setSubject(applyEmailTemplate(template.subject, nextVars));
     setEditorContent(
-      applyEmailFooterImageWidth(
-        applyEmailTemplate(ensureEmailEditorHtml(template.body), nextVars),
-        logoWidth,
-        nextVars.footerImage,
-      ),
+      isEmailHtmlBody(template.body)
+        ? filledTemplateBody(template.body, nextVars, logoWidth)
+        : ensureEmailEditorHtml(applyEmailTemplate(template.body, nextVars)),
     );
     setEditorKey((key) => key + 1);
     setAttachments(documents);
@@ -232,16 +243,27 @@ export function EmailDocumentsDialog({
 
     setSending(true);
     try {
-      const exported = await editorHandleRef.current?.getEmail();
-      const documentHtml =
-        editorHandleRef.current?.getDocumentHtml().trim() || editorContent;
-      const html = preferEmailHtml({
-        documentHtml,
-        exportedHtml: exported?.html,
-        footerImageDataUri: vars.footerImage,
-        footerImageWidth: logoWidth,
-      });
-      const text = exported?.text?.trim() || "";
+      let html: string;
+      let text: string;
+      if (useTemplateHtml) {
+        // Match Settings → Email templates Preview (preserve ASCX styling).
+        html = buildOutboundTemplateHtml(editorContent, {
+          footerImageDataUri: vars.footerImage,
+          footerImageWidth: logoWidth,
+        });
+        text = htmlToPlainText(html);
+      } else {
+        const exported = await editorHandleRef.current?.getEmail();
+        const documentHtml =
+          editorHandleRef.current?.getDocumentHtml().trim() || editorContent;
+        html = preferEmailHtml({
+          documentHtml,
+          exportedHtml: exported?.html,
+          footerImageDataUri: vars.footerImage,
+          footerImageWidth: logoWidth,
+        });
+        text = exported?.text?.trim() || htmlToPlainText(html);
+      }
       if (!html) {
         throw new Error("Message body is empty.");
       }
@@ -377,13 +399,26 @@ export function EmailDocumentsDialog({
           <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_16rem]">
             <div className="flex min-w-0 flex-col gap-2">
               <FieldLabel>Message</FieldLabel>
-              <EmailRichEditor
-                ref={editorHandleRef}
-                content={editorContent}
-                contentKey={`compose-${recipientType}-${editorKey}`}
-                heightClassName="h-[min(28rem,50vh)]"
-                showInspector={false}
-              />
+              {useTemplateHtml ? (
+                <div className="h-[min(28rem,50vh)] overflow-hidden rounded-md border border-border bg-white">
+                  <EmailDocumentFrame
+                    title="Email message"
+                    html={editorContent}
+                    editable
+                    reloadKey={editorKey}
+                    onHtmlChange={setEditorContent}
+                    className="h-full min-h-[min(28rem,50vh)]"
+                  />
+                </div>
+              ) : (
+                <EmailRichEditor
+                  ref={editorHandleRef}
+                  content={editorContent}
+                  contentKey={`compose-${recipientType}-${editorKey}`}
+                  heightClassName="h-[min(28rem,50vh)]"
+                  showInspector={false}
+                />
+              )}
             </div>
 
             <div className="flex min-w-0 flex-col gap-2">
@@ -489,8 +524,14 @@ export function EmailDocumentsDialog({
 
         <DialogFooter className="sm:items-center sm:justify-between">
           <DialogDescription className="text-left text-xs sm:max-w-[55%]">
-            Type <kbd className="rounded border px-1 text-[0.7rem]">/</kbd> to
-            insert blocks; select text for formatting.
+            {useTemplateHtml ? (
+              "Message uses the email template styling. Edit text in place; To, Cc, and Subject stay editable above."
+            ) : (
+              <>
+                Type <kbd className="rounded border px-1 text-[0.7rem]">/</kbd>{" "}
+                to insert blocks; select text for formatting.
+              </>
+            )}
           </DialogDescription>
           <div className="flex flex-col-reverse gap-2 sm:flex-row">
             <Button

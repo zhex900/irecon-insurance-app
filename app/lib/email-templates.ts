@@ -716,6 +716,24 @@ export function buildEditorMatchedPreviewHtml(
 }
 
 /**
+ * Outbound / Preview HTML for authored ASCX templates.
+ * Same light path as Settings → Preview (no TipTap / preferEmailHtml rewrites).
+ */
+export function buildOutboundTemplateHtml(
+  bodyHtml: string,
+  options?: {
+    footerImageDataUri?: string;
+    footerImageWidth?: number;
+  },
+): string {
+  return applyEmailFooterImageWidth(
+    materializeEmailTableAttrs(bodyHtml.trim()),
+    options?.footerImageWidth ?? EMAIL_FOOTER_DISPLAY_WIDTH_DEFAULT,
+    options?.footerImageDataUri ?? "",
+  );
+}
+
+/**
  * Normalize borders for save / preview / send without overriding the author's
  * choices. Preserves dotted/dashed (legacy ASCX / notice callouts). Only
  * collapses TipTap zero-width orphan borders to explicit `border: none`.

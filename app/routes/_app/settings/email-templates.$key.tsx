@@ -43,9 +43,8 @@ import {
   emailTemplatePreviewVars,
   extractEmailFooterImage,
   htmlToPlainText,
-  applyEmailFooterImageWidth,
+  buildOutboundTemplateHtml,
   injectEmailFooterImage,
-  materializeEmailTableAttrs,
   unwrapEmailPlaceholderTags,
   wrapEmailPlaceholderTags,
   type EmailTemplateKey,
@@ -283,11 +282,10 @@ export default function SettingsEmailTemplateEditorRoute({
   const viewHtml = useMemo(
     () =>
       wrapEmailPlaceholderTags(
-        applyEmailFooterImageWidth(
-          materializeEmailTableAttrs(codeHtml),
+        buildOutboundTemplateHtml(codeHtml, {
           footerImageWidth,
           footerImageDataUri,
-        ),
+        }),
       ),
     [codeHtml, footerImageWidth, footerImageDataUri],
   );
@@ -295,11 +293,10 @@ export default function SettingsEmailTemplateEditorRoute({
   /** Preview / send: merge fields filled with sample data. */
   const previewFilledHtml = useMemo(
     () =>
-      applyEmailFooterImageWidth(
-        materializeEmailTableAttrs(applyEmailTemplate(codeHtml, sampleVars)),
+      buildOutboundTemplateHtml(applyEmailTemplate(codeHtml, sampleVars), {
         footerImageWidth,
         footerImageDataUri,
-      ),
+      }),
     [codeHtml, sampleVars, footerImageWidth, footerImageDataUri],
   );
 

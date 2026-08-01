@@ -425,10 +425,14 @@ export function PremiumSummaryPanel({
                 }
               />
             </ButtonGroup>
-            <DropdownMenuContent align="start" className="w-48">
+            <DropdownMenuContent align="start" className="max-w-80 min-w-48">
               <DropdownMenuItem onClick={() => openEmail("broker")}>
                 <MailIcon />
-                Broker
+                <span className="truncate">
+                  {brokerName.trim()
+                    ? `Broker: ${brokerName.trim()}`
+                    : "Broker"}
+                </span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => openEmail("insurer")}>
                 <MailIcon />
