@@ -289,9 +289,19 @@ function Sidebar({
     : "w-(--sidebar-width)";
 
   if (iconCollapsible) {
+    // In-flow width on the flex item (not an absolute overlay) so SidebarInset
+    // pushes when the rail expands — hover, pin, or peek.
+    const peekExpandedRail = isFloating
+      ? "focus-within:w-[calc(var(--sidebar-width-expanded)+(--spacing(4))+2px)] hover:w-[calc(var(--sidebar-width-expanded)+(--spacing(4))+2px)]"
+      : "focus-within:w-(--sidebar-width-expanded) hover:w-(--sidebar-width-expanded)";
+
     return (
       <div
-        className="group peer relative hidden h-svh text-sidebar-foreground md:block"
+        className={cn(
+          "group peer relative hidden h-svh shrink-0 text-sidebar-foreground transition-[width] duration-200 ease-out md:block",
+          panelExpanded ? fullRail : iconRail,
+          open && peekExpandedRail,
+        )}
         data-state={state}
         data-collapsible={!panelExpanded ? collapsible : ""}
         data-hover-expand={!open && hoverOpen ? "true" : undefined}
@@ -299,30 +309,14 @@ function Sidebar({
         data-side={side}
         data-slot="sidebar"
       >
-        {/* Layout gap: icon while pinned closed, full while pinned open. */}
-        <div
-          aria-hidden
-          className={cn(
-            "hidden h-svh shrink-0 transition-[width] duration-200 ease-out md:block",
-            open ? fullRail : iconRail,
-          )}
-        />
         <div
           data-slot="sidebar-container"
           data-side={side}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
           className={cn(
-            "absolute inset-y-0 z-30 flex h-svh flex-col overflow-hidden transition-[width] duration-200 ease-out",
-            side === "right" ? "end-0" : "start-0",
+            "relative z-30 flex h-full w-full flex-col overflow-hidden",
             isFloating && "p-2",
-            panelExpanded ? fullRail : iconRail,
-            !open && hoverOpen && "shadow-lg",
-            // Peek wider when pinned open (overlay; spacer stays full width).
-            open &&
-              (isFloating
-                ? "focus-within:z-40 focus-within:w-[calc(var(--sidebar-width-expanded)+(--spacing(4))+2px)] hover:z-40 hover:w-[calc(var(--sidebar-width-expanded)+(--spacing(4))+2px)]"
-                : "focus-within:z-40 focus-within:w-(--sidebar-width-expanded) hover:z-40 hover:w-(--sidebar-width-expanded)"),
             !isFloating &&
               "border-sidebar-border group-data-[side=left]:border-r group-data-[side=right]:border-l",
             className,
