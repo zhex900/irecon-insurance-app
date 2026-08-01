@@ -10,7 +10,7 @@ import {
   mergeReviewDocuments,
   syncPolicyDocumentLabels,
 } from "~/lib/services/policy/documents";
-import { listPublishedForCover } from "~/lib/services/documents/document-templates";
+import { listPublishedForAdjustment } from "~/lib/services/documents/document-templates";
 import { getPolicy, savePolicy } from "~/lib/services/policy/data.service";
 
 export class AdjustmentError extends Error {
@@ -113,8 +113,8 @@ export async function submitPolicyAdjustment(
     },
   };
 
-  // Adjustment saved → all published templates for this cover (append-only).
-  const templates = await listPublishedForCover(policy.car.coverTypeId);
+  // Adjustment saved → cover templates + adjustment (append-only).
+  const templates = await listPublishedForAdjustment(policy.car.coverTypeId);
   const templateMeta = templates.map((t) => ({
     key: t.key,
     title: t.title,

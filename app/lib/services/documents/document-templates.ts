@@ -206,8 +206,10 @@ export async function getDocumentTemplateOverride(
   return getPublishedDocumentTemplate(documentTemplateKey);
 }
 
-/** Published templates linked to this cover (plus null-cover templates for all covers). */
-export async function listPublishedForCover(
+/** Seeded key for the CAR adjustment PDF — review packs must not include it. */
+export const ADJUSTMENT_DOCUMENT_TEMPLATE_KEY = "adjustment";
+
+async function listPublishedMatchingCover(
   coverTypeId: number,
 ): Promise<DocumentTemplate[]> {
   const db = getDb();
@@ -226,6 +228,27 @@ export async function listPublishedForCover(
     .orderBy(appDocumentTemplateVersion.documentTemplateKey);
 
   return rows.map((row) => versionToTemplate(rowToVersion(row)));
+}
+
+/**
+ * Published templates for review / quote packs.
+ * Null-cover templates are included for every cover, except the adjustment
+ * template which is adjustment-pack only.
+ */
+export async function listPublishedForCover(
+  coverTypeId: number,
+): Promise<DocumentTemplate[]> {
+  const rows = await listPublishedMatchingCover(coverTypeId);
+  return rows.filter((t) => t.key !== ADJUSTMENT_DOCUMENT_TEMPLATE_KEY);
+}
+
+/**
+ * Published templates when an adjustment is saved (cover-linked + adjustment).
+ */
+export async function listPublishedForAdjustment(
+  coverTypeId: number,
+): Promise<DocumentTemplate[]> {
+  return listPublishedMatchingCover(coverTypeId);
 }
 
 export async function listDocumentTemplates(): Promise<

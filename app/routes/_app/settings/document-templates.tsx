@@ -136,7 +136,8 @@ export async function action({ request }: Route.ActionArgs) {
   }
 }
 
-function coverTypeLabel(coverTypeId: number | null) {
+function coverTypeLabel(coverTypeId: number | null, templateKey?: string) {
+  if (templateKey === "adjustment") return "Adjustment only";
   if (coverTypeId === 1) return "Annual";
   if (coverTypeId === 2) return "Single";
   if (coverTypeId === 3) return "Owner Builder";
@@ -197,7 +198,8 @@ function TemplateCard({ template }: { template: DocumentTemplateListItem }) {
             {formatDocumentTemplateTitle(template.title)}
           </CardTitle>
           <CardDescription>
-            {coverTypeLabel(template.coverTypeId)} · {versionLabel(template)}
+            {coverTypeLabel(template.coverTypeId, template.key)} ·{" "}
+            {versionLabel(template)}
           </CardDescription>
           {template.updatedWhen ? (
             <p className="text-xs text-muted-foreground">
@@ -255,7 +257,9 @@ function TemplatesTable({
                 <TableCell className="text-sm">
                   {template.label || "—"}
                 </TableCell>
-                <TableCell>{coverTypeLabel(template.coverTypeId)}</TableCell>
+                <TableCell>
+                  {coverTypeLabel(template.coverTypeId, template.key)}
+                </TableCell>
                 <TableCell>{versionLabel(template)}</TableCell>
                 <TableCell>
                   <LastUpdatedCell updatedWhen={template.updatedWhen} />

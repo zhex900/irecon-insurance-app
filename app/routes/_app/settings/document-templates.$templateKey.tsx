@@ -1003,7 +1003,9 @@ export default function DocumentTemplateEditorRoute({
                 <NativeSelectOption value="2">Single</NativeSelectOption>
                 <NativeSelectOption value="3">Owner Builder</NativeSelectOption>
                 <NativeSelectOption value="all">
-                  All cover types
+                  {docTemplate.key === "adjustment"
+                    ? "Adjustment only"
+                    : "All cover types"}
                 </NativeSelectOption>
               </NativeSelect>
             </>

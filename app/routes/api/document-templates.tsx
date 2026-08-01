@@ -2,7 +2,7 @@ import { requireAuth } from "~/lib/auth/session.server";
 import { listPublishedForCover } from "~/lib/services/documents/document-templates";
 import type { Route } from "./+types/document-templates";
 
-/** Published templates for a cover type (pack building). */
+/** Published templates for a cover type (review pack building; excludes adjustment). */
 export async function loader({ request }: Route.LoaderArgs) {
   await requireAuth(request);
   const url = new URL(request.url);

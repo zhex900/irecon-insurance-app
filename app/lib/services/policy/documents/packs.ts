@@ -214,7 +214,7 @@ export function resolveLibraryAttachments(
 
 /**
  * Pack generated when an adjustment is saved:
- * all published templates for the cover (typically includes adjustment + schedule + rating).
+ * cover-linked templates plus the adjustment template (review packs omit adjustment).
  */
 export function buildAdjustmentDocumentPack(
   policy: Policy,
