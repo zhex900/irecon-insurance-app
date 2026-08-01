@@ -242,13 +242,26 @@ export async function listPublishedForCover(
   return rows.filter((t) => t.key !== ADJUSTMENT_DOCUMENT_TEMPLATE_KEY);
 }
 
-/**
- * Published templates when an adjustment is saved (cover-linked + adjustment).
- */
-export async function listPublishedForAdjustment(
-  coverTypeId: number,
-): Promise<DocumentTemplate[]> {
-  return listPublishedMatchingCover(coverTypeId);
+/** Published adjustment template only (no schedule/rating/library pack docs). */
+export async function listPublishedForAdjustment(): Promise<
+  DocumentTemplate[]
+> {
+  const db = getDb();
+  const rows = await db
+    .select()
+    .from(appDocumentTemplateVersion)
+    .where(
+      and(
+        eq(appDocumentTemplateVersion.isPublished, true),
+        eq(
+          appDocumentTemplateVersion.documentTemplateKey,
+          ADJUSTMENT_DOCUMENT_TEMPLATE_KEY,
+        ),
+      ),
+    )
+    .orderBy(appDocumentTemplateVersion.documentTemplateKey);
+
+  return rows.map((row) => versionToTemplate(rowToVersion(row)));
 }
 
 export async function listDocumentTemplates(): Promise<

@@ -113,8 +113,8 @@ export async function submitPolicyAdjustment(
     },
   };
 
-  // Adjustment saved → cover templates + adjustment (append-only).
-  const templates = await listPublishedForAdjustment(policy.car.coverTypeId);
+  // Adjustment saved → adjustment document only (append-only).
+  const templates = await listPublishedForAdjustment();
   const templateMeta = templates.map((t) => ({
     key: t.key,
     title: t.title,

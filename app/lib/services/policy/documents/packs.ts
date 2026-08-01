@@ -213,8 +213,7 @@ export function resolveLibraryAttachments(
 }
 
 /**
- * Pack generated when an adjustment is saved:
- * cover-linked templates plus the adjustment template (review packs omit adjustment).
+ * Pack generated when an adjustment is saved: adjustment template only.
  */
 export function buildAdjustmentDocumentPack(
   policy: Policy,
