@@ -1,17 +1,11 @@
-import {
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Input } from "~/components/ui/input";
 import {
   EMAIL_DIRECTORY_KIND_LABEL,
   type EmailDirectoryEntry,
 } from "~/lib/email/directory";
+import { HighlightText } from "~/lib/search/highlight";
 import { cn } from "~/lib/utils";
 
 type ListPosition = {
@@ -35,36 +29,6 @@ function replaceDraftWithEmail(value: string, email: string): string {
   const prefix = head.trimEnd();
   if (!prefix) return `${email}; `;
   return `${prefix} ${email}; `;
-}
-
-/** Highlight case-insensitive matches of `query` in yellow. */
-function HighlightMatch({ text, query }: { text: string; query: string }) {
-  if (!query || !text) return <>{text}</>;
-  const lower = text.toLowerCase();
-  const q = query.toLowerCase();
-  const parts: ReactNode[] = [];
-  let start = 0;
-  let index = lower.indexOf(q, start);
-  let key = 0;
-  while (index >= 0) {
-    if (index > start) {
-      parts.push(text.slice(start, index));
-    }
-    parts.push(
-      <mark
-        key={key++}
-        className="rounded-sm bg-warning/35 px-0.5 text-foreground"
-      >
-        {text.slice(index, index + q.length)}
-      </mark>,
-    );
-    start = index + q.length;
-    index = lower.indexOf(q, start);
-  }
-  if (start < text.length) {
-    parts.push(text.slice(start));
-  }
-  return <>{parts}</>;
 }
 
 export function EmailRecipientsInput({
@@ -167,12 +131,12 @@ export function EmailRecipientsInput({
                     onClick={() => selectEntry(item)}
                   >
                     <span className="font-medium">
-                      <HighlightMatch text={item.email} query={draftLower} />
+                      <HighlightText text={item.email} query={draftLower} />
                     </span>
                     <span className="text-xs text-muted-foreground">
                       {item.name ? (
                         <>
-                          <HighlightMatch text={item.name} query={draftLower} />
+                          <HighlightText text={item.name} query={draftLower} />
                           {" · "}
                           {EMAIL_DIRECTORY_KIND_LABEL[item.kind]}
                         </>

@@ -1,12 +1,7 @@
-import {
-  Form,
-  useActionData,
-  useNavigation,
-  useSearchParams,
-} from "react-router";
+import { useActionData, useNavigation, useSearchParams } from "react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-import { FileTextIcon, Trash2Icon } from "lucide-react";
+import { FileTextIcon, Trash2Icon, XIcon } from "lucide-react";
 import { Badge } from "~/components/reui/badge";
 import {
   DeletePoliciesDialog,
@@ -40,7 +35,9 @@ import {
 import type { PolicyListItem } from "~/lib/services/policies/list.service";
 import type { ReferenceData } from "~/lib/db/types";
 import { pageSearchHref, pageSizeSearchHref } from "~/lib/pagination";
-import { formatCurrency, formatDate } from "~/lib/utils";
+import { HighlightText } from "~/lib/search/highlight";
+import { fieldMatches } from "~/lib/search/match";
+import { cn, formatCurrency, formatDate } from "~/lib/utils";
 import { isTerminalStatus } from "~/lib/zod/policy-car";
 import { useActionSuccessToast } from "~/hooks/use-success-toast";
 
@@ -145,14 +142,35 @@ export function ClientPoliciesTable({
     setSearchParams(params);
   }
 
-  function applySearch(event: React.FormEvent) {
-    event.preventDefault();
-    const params = new URLSearchParams(searchParams);
-    params.delete("page");
-    if (search.trim()) params.set("q", search.trim());
-    else params.delete("q");
-    setSearchParams(params);
+  function commitSearch(nextSearch: string) {
+    setSearchParams((prev) => {
+      const params = new URLSearchParams(prev);
+      params.delete("page");
+      const next = nextSearch.trim();
+      if (next) params.set("q", next);
+      else params.delete("q");
+      return params;
+    });
   }
+
+  // Auto-search as you type (same cadence as policies / clients lists).
+  useEffect(() => {
+    const next = search.trim();
+    const current = q.trim();
+    if (next === current) return;
+    const timer = window.setTimeout(() => {
+      setSearchParams((prev) => {
+        const params = new URLSearchParams(prev);
+        params.delete("page");
+        if (next) params.set("q", next);
+        else params.delete("q");
+        return params;
+      });
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [search, q, setSearchParams]);
+
+  const searchQuery = q.trim();
 
   const pageHref = (nextPage: number) => pageSearchHref(searchParams, nextPage);
   const pageSizeHref = (nextPageSize: number) =>
@@ -205,7 +223,29 @@ export function ClientPoliciesTable({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="relative w-full max-w-sm shrink-0">
+          <Input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search policy #, insured, cover…"
+            className={cn("w-full", search.trim() && "pr-9")}
+            aria-label="Search policies"
+          />
+          {search.trim() ? (
+            <button
+              type="button"
+              className="absolute top-1/2 right-2 -translate-y-1/2 rounded p-0.5 text-muted-foreground hover:text-foreground"
+              aria-label="Clear search"
+              onClick={() => {
+                setSearch("");
+                commitSearch("");
+              }}
+            >
+              <XIcon className="size-3.5" />
+            </button>
+          ) : null}
+        </div>
+        <div className="flex flex-wrap items-center justify-end gap-2 lg:ms-auto">
           <FilterTag
             active={statusFilter === "all"}
             onClick={() => applyStatus("all")}
@@ -222,15 +262,6 @@ export function ClientPoliciesTable({
             </FilterTag>
           ))}
         </div>
-        <Form method="get" onSubmit={applySearch}>
-          <Input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search policy #, insured, cover…"
-            className="max-w-sm"
-            aria-label="Search policies"
-          />
-        </Form>
       </div>
 
       {selectedIds.length > 0 ? (
@@ -314,6 +345,12 @@ export function ClientPoliciesTable({
                 );
                 const canDelete = !isTerminalStatus(policy.policyStatusId);
                 const checked = selectedIds.includes(policy.policyId);
+                const showInsured =
+                  Boolean(policy.insuredName) &&
+                  (!searchQuery ||
+                    fieldMatches(policy.insuredName, searchQuery));
+                const coverName = cover?.name ?? "";
+                const categoryName = category?.name ?? "";
                 return (
                   <TableRow
                     key={policy.policyId}
@@ -333,7 +370,14 @@ export function ClientPoliciesTable({
                     <TableCell>
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-medium">
-                          {policy.policyNumber}
+                          {searchQuery ? (
+                            <HighlightText
+                              text={policy.policyNumber}
+                              query={searchQuery}
+                            />
+                          ) : (
+                            policy.policyNumber
+                          )}
                         </span>
                         {policy.adjusted ? (
                           <Badge variant="info-light" size="sm">
@@ -346,9 +390,16 @@ export function ClientPoliciesTable({
                           </Badge>
                         ) : null}
                       </div>
-                      {policy.insuredName ? (
+                      {showInsured ? (
                         <p className="mt-0.5 text-xs text-muted-foreground">
-                          {policy.insuredName}
+                          {searchQuery ? (
+                            <HighlightText
+                              text={policy.insuredName}
+                              query={searchQuery}
+                            />
+                          ) : (
+                            policy.insuredName
+                          )}
                         </p>
                       ) : null}
                     </TableCell>
@@ -358,8 +409,32 @@ export function ClientPoliciesTable({
                         name={status?.name ?? "—"}
                       />
                     </TableCell>
-                    <TableCell>{cover?.name ?? "—"}</TableCell>
-                    <TableCell>{category?.name ?? "—"}</TableCell>
+                    <TableCell>
+                      {coverName ? (
+                        searchQuery && fieldMatches(coverName, searchQuery) ? (
+                          <HighlightText text={coverName} query={searchQuery} />
+                        ) : (
+                          coverName
+                        )
+                      ) : (
+                        "—"
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {categoryName ? (
+                        searchQuery &&
+                        fieldMatches(categoryName, searchQuery) ? (
+                          <HighlightText
+                            text={categoryName}
+                            query={searchQuery}
+                          />
+                        ) : (
+                          categoryName
+                        )
+                      ) : (
+                        "—"
+                      )}
+                    </TableCell>
                     <TableCell>{formatDate(policy.dateStart)}</TableCell>
                     <TableCell>{formatDate(policy.dateEnd)}</TableCell>
                     <TableCell className="text-right font-medium">

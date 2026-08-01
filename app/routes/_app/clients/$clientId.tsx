@@ -281,7 +281,7 @@ export default function ClientDetailRoute({
 
         <Card>
           <CardHeader>
-            <CardTitle>Policies Portfolio</CardTitle>
+            <CardTitle>Policies</CardTitle>
           </CardHeader>
           <CardContent>
             <ClientPoliciesTable

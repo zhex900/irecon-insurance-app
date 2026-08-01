@@ -1,5 +1,4 @@
 import {
-  Form,
   useActionData,
   useNavigate,
   useNavigation,
@@ -47,6 +46,8 @@ import {
   pageSizeSearchHref,
   parsePagination,
 } from "~/lib/pagination";
+import { HighlightText } from "~/lib/search/highlight";
+import { fieldMatches } from "~/lib/search/match";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import { listPoliciesPage } from "~/lib/services/policies/list.service";
 import { deletePolicies } from "~/lib/services/policy/data.service";
@@ -226,14 +227,35 @@ export default function PoliciesIndexRoute({
     setSearchParams(params);
   }
 
-  function applySearch(event: React.FormEvent) {
-    event.preventDefault();
-    const params = new URLSearchParams(searchParams);
-    params.delete("page");
-    if (search.trim()) params.set("q", search.trim());
-    else params.delete("q");
-    setSearchParams(params);
+  function commitSearch(nextSearch: string) {
+    setSearchParams((prev) => {
+      const params = new URLSearchParams(prev);
+      params.delete("page");
+      const next = nextSearch.trim();
+      if (next) params.set("q", next);
+      else params.delete("q");
+      return params;
+    });
   }
+
+  // Auto-search as you type (same cadence as global / select-client search).
+  useEffect(() => {
+    const next = search.trim();
+    const current = loaderData.q.trim();
+    if (next === current) return;
+    const timer = window.setTimeout(() => {
+      setSearchParams((prev) => {
+        const params = new URLSearchParams(prev);
+        params.delete("page");
+        if (next) params.set("q", next);
+        else params.delete("q");
+        return params;
+      });
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [search, loaderData.q, setSearchParams]);
+
+  const searchQuery = loaderData.q.trim();
 
   const pageHref = (nextPage: number) => pageSearchHref(searchParams, nextPage);
   const pageSizeHref = (nextPageSize: number) =>
@@ -278,11 +300,7 @@ export default function PoliciesIndexRoute({
         action={<NewPolicyClientDialog />}
       />
 
-      <Form
-        method="get"
-        onSubmit={applySearch}
-        className="mb-4 flex flex-col gap-3 rounded-xl border bg-card p-4 lg:flex-row lg:items-center lg:justify-between"
-      >
+      <div className="mb-4 flex flex-col gap-3 rounded-xl border bg-card p-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="relative max-w-md flex-1">
           <Input
             name="q"
@@ -299,10 +317,7 @@ export default function PoliciesIndexRoute({
               aria-label="Clear search"
               onClick={() => {
                 setSearch("");
-                const params = new URLSearchParams(searchParams);
-                params.delete("q");
-                params.delete("page");
-                setSearchParams(params);
+                commitSearch("");
               }}
             >
               <XIcon className="size-3.5" />
@@ -312,7 +327,7 @@ export default function PoliciesIndexRoute({
         <p className="text-sm text-muted-foreground">
           {loaderData.total} of {loaderData.allCount} policies
         </p>
-      </Form>
+      </div>
 
       <div className="mb-4 flex flex-wrap gap-2">
         <FilterTag
@@ -421,6 +436,14 @@ export default function PoliciesIndexRoute({
                 );
                 const canDelete = !isTerminalStatus(policy.policyStatusId);
                 const checked = selectedIds.includes(policy.policyId);
+                const showInsured =
+                  Boolean(policy.insuredName) &&
+                  (!searchQuery ||
+                    fieldMatches(policy.insuredName, searchQuery));
+                const clientNameMatches =
+                  !searchQuery ||
+                  fieldMatches(policy.client.name, searchQuery) ||
+                  fieldMatches(policy.client.tradingName ?? "", searchQuery);
                 return (
                   <TableRow
                     key={policy.policyId}
@@ -440,7 +463,14 @@ export default function PoliciesIndexRoute({
                     <TableCell>
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-medium">
-                          {policy.policyNumber}
+                          {searchQuery ? (
+                            <HighlightText
+                              text={policy.policyNumber}
+                              query={searchQuery}
+                            />
+                          ) : (
+                            policy.policyNumber
+                          )}
                         </span>
                         {policy.adjusted ? (
                           <Badge variant="info-light" size="sm">
@@ -448,9 +478,16 @@ export default function PoliciesIndexRoute({
                           </Badge>
                         ) : null}
                       </div>
-                      {policy.insuredName ? (
+                      {showInsured ? (
                         <p className="mt-0.5 text-xs text-muted-foreground">
-                          {policy.insuredName}
+                          {searchQuery ? (
+                            <HighlightText
+                              text={policy.insuredName}
+                              query={searchQuery}
+                            />
+                          ) : (
+                            policy.insuredName
+                          )}
                         </p>
                       ) : null}
                     </TableCell>
@@ -465,7 +502,25 @@ export default function PoliciesIndexRoute({
                                 policy.client.accountManagerId,
                             )?.fullName,
                         }}
-                      />
+                      >
+                        {searchQuery && clientNameMatches ? (
+                          fieldMatches(policy.client.name, searchQuery) ? (
+                            <HighlightText
+                              text={policy.client.name}
+                              query={searchQuery}
+                            />
+                          ) : (
+                            <HighlightText
+                              text={
+                                policy.client.tradingName || policy.client.name
+                              }
+                              query={searchQuery}
+                            />
+                          )
+                        ) : (
+                          policy.client.name || "—"
+                        )}
+                      </ClientSummaryPopover>
                     </TableCell>
                     <TableCell>
                       <StatusBadge

@@ -46,6 +46,8 @@ import { PageHeader } from "~/components/layout/app-layout";
 import { FilterAutocomplete } from "~/components/clients/filter-autocomplete";
 import { useActionSuccessToast } from "~/hooks/use-success-toast";
 import { requireAuth } from "~/lib/auth/session.server";
+import { HighlightText } from "~/lib/search/highlight";
+import { fieldMatches } from "~/lib/search/match";
 import {
   pageSearchHref,
   pageSizeSearchHref,
@@ -275,11 +277,26 @@ export default function ClientsIndexRoute({
     setSearchParams({});
   }
 
+  // Auto-search as you type (same cadence as global / select-client search).
+  useEffect(() => {
+    const next = search.trim();
+    const current = loaderData.filters.search.trim();
+    if (next === current) return;
+    const timer = window.setTimeout(() => {
+      setSearchParams(buildParams({ search: next, page: 1 }));
+    }, 250);
+    return () => window.clearTimeout(timer);
+    // buildParams reads latest filter state from the render that scheduled this effect.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-run on search text changes
+  }, [search, loaderData.filters.search, setSearchParams]);
+
   const hasActiveFilters =
     Boolean(loaderData.filters.search) ||
     Boolean(loaderData.filters.accountManagerId) ||
     Boolean(loaderData.filters.authorisedRepresentativeId) ||
     Boolean(loaderData.filters.arCompanyName);
+
+  const searchQuery = loaderData.filters.search.trim();
 
   const pageHref = (nextPage: number) => pageSearchHref(searchParams, nextPage);
   const pageSizeHref = (nextPageSize: number) =>
@@ -375,7 +392,6 @@ export default function ClientsIndexRoute({
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap gap-2">
-            <Button type="submit">Search</Button>
             {hasActiveFilters ? (
               <Button type="button" variant="outline" onClick={clearFilters}>
                 Clear filters
@@ -454,6 +470,17 @@ export default function ClientsIndexRoute({
                   (item) => item.accountManagerId === client.accountManagerId,
                 );
                 const canDelete = client.policyCount === 0;
+                const nameMatches =
+                  !searchQuery || fieldMatches(client.name, searchQuery);
+                const tradingMatches =
+                  Boolean(client.tradingName) &&
+                  (!searchQuery ||
+                    fieldMatches(client.tradingName, searchQuery));
+                const managerName = manager?.fullName ?? "";
+                const managerMatches =
+                  Boolean(managerName) &&
+                  searchQuery &&
+                  fieldMatches(managerName, searchQuery);
                 return (
                   <TableRow
                     key={client.clientId}
@@ -461,12 +488,51 @@ export default function ClientsIndexRoute({
                     onClick={() => navigate(`/clients/${client.clientId}`)}
                   >
                     <TableCell>
-                      <p className="font-medium">{client.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {client.tradingName}
-                      </p>
+                      {nameMatches ? (
+                        <p className="font-medium">
+                          {searchQuery ? (
+                            <HighlightText
+                              text={client.name}
+                              query={searchQuery}
+                            />
+                          ) : (
+                            client.name
+                          )}
+                        </p>
+                      ) : null}
+                      {tradingMatches ? (
+                        <p
+                          className={
+                            nameMatches
+                              ? "text-xs text-muted-foreground"
+                              : "font-medium"
+                          }
+                        >
+                          {searchQuery ? (
+                            <HighlightText
+                              text={client.tradingName}
+                              query={searchQuery}
+                            />
+                          ) : (
+                            client.tradingName
+                          )}
+                        </p>
+                      ) : null}
                     </TableCell>
-                    <TableCell>{manager?.fullName ?? "—"}</TableCell>
+                    <TableCell>
+                      {managerName ? (
+                        managerMatches ? (
+                          <HighlightText
+                            text={managerName}
+                            query={searchQuery}
+                          />
+                        ) : (
+                          managerName
+                        )
+                      ) : (
+                        "—"
+                      )}
+                    </TableCell>
                     <TableCell>{client.policyCount}</TableCell>
                     <TableCell>{formatDate(client.createdWhen)}</TableCell>
                     <TableCell

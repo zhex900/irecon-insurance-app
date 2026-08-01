@@ -46,7 +46,7 @@ export default function DashboardRoute({ loaderData }: Route.ComponentProps) {
           <AppBreadcrumb items={[{ label: "Dashboard" }]} />
           <div>
             <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-              Good day, {firstName}
+              G'day, {firstName}
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Here&apos;s your operational overview for {loaderData.todayLabel}.

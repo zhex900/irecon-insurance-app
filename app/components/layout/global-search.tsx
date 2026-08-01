@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { FileTextIcon, PhoneIcon, SearchIcon, UsersIcon } from "lucide-react";
 import { Badge } from "~/components/reui/badge";
-import { isDigitSearchQuery } from "~/lib/services/shared/list-query";
+import { HighlightText } from "~/lib/search/highlight";
+import { fieldMatches } from "~/lib/search/match";
 import { cn, formatNumber } from "~/lib/utils";
 
 export type GlobalSearchClient = {
@@ -31,25 +32,6 @@ type ResultRow =
   | { kind: "client"; client: GlobalSearchClient }
   | { kind: "policy"; policy: GlobalSearchPolicy };
 
-function escapeRegExp(value: string) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function fieldMatches(value: string, query: string) {
-  const q = query.trim();
-  if (!q || !value) return false;
-  const lower = q.toLowerCase();
-  if (value.toLowerCase().includes(lower)) return true;
-  // Only strip formatting for pure numeric queries (e.g. phone / ABN).
-  if (isDigitSearchQuery(q)) {
-    const digits = q.replace(/\D/g, "");
-    if (digits.length > 0 && value.replace(/\D/g, "").includes(digits)) {
-      return true;
-    }
-  }
-  return false;
-}
-
 /** Only keep rows that can show a yellow highlight in the result UI. */
 function clientHasVisibleMatch(client: GlobalSearchClient, query: string) {
   return (
@@ -72,53 +54,6 @@ function policyHasVisibleMatch(policy: GlobalSearchPolicy, query: string) {
     fieldMatches(policy.clientTradingName, query) ||
     fieldMatches(policy.statusName, query) ||
     fieldMatches(String(policy.policyId), query)
-  );
-}
-
-/** Highlight case-insensitive (and digit) matches in yellow. */
-function HighlightText({ text, query }: { text: string; query: string }) {
-  const q = query.trim();
-  if (!text) return null;
-  if (!q) return <>{text}</>;
-
-  const digits = q.replace(/\D/g, "");
-  // Prefer text match; for pure digit queries also match digit runs in display values.
-  let pattern = escapeRegExp(q);
-  if (digits.length >= 2 && digits === q.replace(/\s/g, "")) {
-    pattern = digits.split("").map(escapeRegExp).join("[\\s-]*");
-  }
-
-  let parts: string[] | null;
-  let matchRe: RegExp | null;
-  try {
-    const splitRe = new RegExp(`(${pattern})`, "gi");
-    matchRe = new RegExp(`^${pattern}$`, "i");
-    parts = text.split(splitRe);
-  } catch {
-    parts = null;
-    matchRe = null;
-  }
-
-  if (!parts || parts.length <= 1 || !matchRe) return <>{text}</>;
-  const finalMatchRe = matchRe;
-
-  return (
-    <>
-      {parts.map((part, index) => {
-        if (!part) return null;
-        if (finalMatchRe.test(part)) {
-          return (
-            <mark
-              key={`${index}-${part}`}
-              className="rounded-sm bg-warning/30 px-0.5 text-inherit"
-            >
-              {part}
-            </mark>
-          );
-        }
-        return <span key={`${index}-${part}`}>{part}</span>;
-      })}
-    </>
   );
 }
 
@@ -343,9 +278,10 @@ function ClientResult({
   query: string;
   onSelect: () => void;
 }) {
-  const showTrading = Boolean(client.tradingName);
-  const showAbn = Boolean(client.abn);
-  const showPhone = Boolean(client.phone);
+  const nameMatches = fieldMatches(client.name, query);
+  const showTrading = fieldMatches(client.tradingName, query);
+  const showAbn = fieldMatches(client.abn, query);
+  const showPhone = fieldMatches(client.phone, query);
 
   // Show when the query matches these (not already on the primary lines).
   const matchedFields = (
@@ -357,6 +293,8 @@ function ClientResult({
     ] as const
   ).filter((field) => fieldMatches(field.value, query));
 
+  const hasSecondary = showTrading || showAbn || showPhone;
+
   return (
     <button
       type="button"
@@ -367,34 +305,40 @@ function ClientResult({
     >
       <UsersIcon className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
       <span className="min-w-0 flex-1">
-        <span className="block truncate font-medium">
-          <HighlightText text={client.name} query={query} />
-        </span>
-        <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-muted-foreground">
-          {showTrading ? (
-            <span className="truncate">
-              <HighlightText text={client.tradingName} query={query} />
-            </span>
-          ) : null}
-          {showTrading && (showAbn || showPhone) ? (
-            <span aria-hidden>·</span>
-          ) : null}
-          {showAbn ? (
-            <span className="shrink-0">
-              ABN <HighlightText text={client.abn} query={query} />
-            </span>
-          ) : null}
-          {showAbn && showPhone ? <span aria-hidden>·</span> : null}
-          {showPhone ? (
-            <span className="inline-flex shrink-0 items-center gap-1">
-              <PhoneIcon className="size-3" aria-hidden />
-              <HighlightText text={client.phone} query={query} />
-            </span>
-          ) : null}
-          {!showTrading && !showAbn && !showPhone && matchedFields.length === 0
-            ? "—"
-            : null}
-        </span>
+        {nameMatches ? (
+          <span className="block truncate font-medium">
+            <HighlightText text={client.name} query={query} />
+          </span>
+        ) : null}
+        {hasSecondary ? (
+          <span
+            className={cn(
+              "flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-muted-foreground",
+              !nameMatches && "font-medium text-foreground",
+            )}
+          >
+            {showTrading ? (
+              <span className="truncate">
+                <HighlightText text={client.tradingName} query={query} />
+              </span>
+            ) : null}
+            {showTrading && (showAbn || showPhone) ? (
+              <span aria-hidden>·</span>
+            ) : null}
+            {showAbn ? (
+              <span className="shrink-0">
+                ABN <HighlightText text={client.abn} query={query} />
+              </span>
+            ) : null}
+            {showAbn && showPhone ? <span aria-hidden>·</span> : null}
+            {showPhone ? (
+              <span className="inline-flex shrink-0 items-center gap-1">
+                <PhoneIcon className="size-3" aria-hidden />
+                <HighlightText text={client.phone} query={query} />
+              </span>
+            ) : null}
+          </span>
+        ) : null}
         {matchedFields.length > 0 ? (
           <span className="mt-1 flex min-w-0 flex-col gap-0.5 text-xs">
             {matchedFields.map((field) => (

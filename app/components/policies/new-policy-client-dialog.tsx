@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useNavigation } from "react-router";
 import { SearchIcon } from "lucide-react";
 import { Button } from "~/components/ui/button";
@@ -20,12 +20,21 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table";
+import { HighlightText } from "~/lib/search/highlight";
+import { fieldMatches } from "~/lib/search/match";
+import { cn } from "~/lib/utils";
 
 type ClientHit = {
   clientId: number;
   name: string;
   tradingName: string;
 };
+
+function clientHasVisibleMatch(client: ClientHit, query: string) {
+  return (
+    fieldMatches(client.name, query) || fieldMatches(client.tradingName, query)
+  );
+}
 
 export function NewPolicyClientDialog({
   triggerLabel = "+ New Policy",
@@ -40,14 +49,18 @@ export function NewPolicyClientDialog({
   const [search, setSearch] = useState("");
   const [clients, setClients] = useState<ClientHit[]>([]);
   const [loading, setLoading] = useState(false);
+  const [settledQuery, setSettledQuery] = useState<string | null>(null);
   const [creatingClientId, setCreatingClientId] = useState<number | null>(null);
   const creating =
     creatingClientId != null &&
     navigation.state !== "idle" &&
     navigation.location?.pathname === "/policies/new";
 
+  const q = search.trim();
+  const active = open && q.length > 0;
+
   useEffect(() => {
-    if (!open) return;
+    if (!active) return;
 
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
@@ -56,17 +69,19 @@ export function NewPolicyClientDialog({
         const params = new URLSearchParams({
           type: "clients",
           limit: "25",
+          q,
         });
-        if (search.trim()) params.set("q", search.trim());
         const response = await fetch(`/api/search?${params}`, {
           signal: controller.signal,
         });
         if (!response.ok) throw new Error("Search failed");
         const data = (await response.json()) as { clients: ClientHit[] };
         setClients(data.clients ?? []);
+        setSettledQuery(q);
       } catch (error) {
         if ((error as Error).name === "AbortError") return;
         setClients([]);
+        setSettledQuery(q);
       } finally {
         setLoading(false);
       }
@@ -76,7 +91,16 @@ export function NewPolicyClientDialog({
       controller.abort();
       window.clearTimeout(timer);
     };
-  }, [open, search]);
+  }, [active, q]);
+
+  const displayClients = useMemo(() => {
+    if (!active || settledQuery !== q) return [];
+    return clients.filter((client) => clientHasVisibleMatch(client, q));
+  }, [active, clients, q, settledQuery]);
+
+  const searching = active && (loading || settledQuery !== q);
+  const showEmpty =
+    active && !searching && settledQuery === q && displayClients.length === 0;
 
   function selectClient(clientId: number) {
     setCreatingClientId(clientId);
@@ -91,6 +115,7 @@ export function NewPolicyClientDialog({
         if (!next) {
           setSearch("");
           setClients([]);
+          setSettledQuery(null);
           setCreatingClientId(null);
         }
       }}
@@ -125,51 +150,78 @@ export function NewPolicyClientDialog({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading && clients.length === 0 ? (
+              {!active ? (
                 <TableRow>
                   <TableCell className="py-8 text-center text-muted-foreground">
-                    Loading…
+                    Type to search clients…
                   </TableCell>
                 </TableRow>
-              ) : clients.length === 0 ? (
+              ) : searching || (loading && displayClients.length === 0) ? (
                 <TableRow>
                   <TableCell className="py-8 text-center text-muted-foreground">
-                    No match.
+                    Searching…
+                  </TableCell>
+                </TableRow>
+              ) : showEmpty ? (
+                <TableRow>
+                  <TableCell className="py-8 text-center text-muted-foreground">
+                    No match for “{q}”.
                   </TableCell>
                 </TableRow>
               ) : (
-                clients.map((client) => (
-                  <TableRow
-                    key={client.clientId}
-                    className={creating ? "opacity-60" : "cursor-pointer"}
-                    aria-disabled={creating || undefined}
-                    onClick={() => {
-                      if (creating) return;
-                      selectClient(client.clientId);
-                    }}
-                  >
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {creatingClientId === client.clientId ? (
-                          <Spinner className="size-3.5" />
-                        ) : null}
-                        <div className="min-w-0">
-                          <p className="font-medium">{client.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {client.tradingName}
-                          </p>
+                displayClients.map((client) => {
+                  const nameMatches = fieldMatches(client.name, q);
+                  const tradingMatches = fieldMatches(client.tradingName, q);
+                  return (
+                    <TableRow
+                      key={client.clientId}
+                      className={creating ? "opacity-60" : "cursor-pointer"}
+                      aria-disabled={creating || undefined}
+                      onClick={() => {
+                        if (creating) return;
+                        selectClient(client.clientId);
+                      }}
+                    >
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {creatingClientId === client.clientId ? (
+                            <Spinner className="size-3.5" />
+                          ) : null}
+                          <div className="min-w-0">
+                            {nameMatches ? (
+                              <p className="font-medium">
+                                <HighlightText text={client.name} query={q} />
+                              </p>
+                            ) : null}
+                            {tradingMatches ? (
+                              <p
+                                className={cn(
+                                  nameMatches
+                                    ? "text-xs text-muted-foreground"
+                                    : "font-medium",
+                                )}
+                              >
+                                <HighlightText
+                                  text={client.tradingName}
+                                  query={q}
+                                />
+                              </p>
+                            ) : null}
+                          </div>
                         </div>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
         </div>
 
         <p className="text-xs text-muted-foreground">
-          Showing up to 25 matching clients
+          {active
+            ? "Matching clients only · up to 25"
+            : "Start typing to find a client"}
         </p>
       </DialogContent>
     </Dialog>
