@@ -1,5 +1,5 @@
 import type { ReactNode, MouseEvent } from "react";
-import { Outlet, redirect } from "react-router";
+import { Link, Outlet, redirect, useNavigate } from "react-router";
 import { PlusIcon, Trash2Icon } from "lucide-react";
 import { PageHeader } from "~/components/layout/app-layout";
 import { Badge } from "~/components/reui/badge";
@@ -127,9 +127,9 @@ export default function SettingsPricesCatalogueRoute({
           {PRICE_CATALOGUE_SLUGS.map((item) => {
             const href = pricesListHref(item);
             return (
-              <a
+              <Link
                 key={item}
-                href={href}
+                to={href}
                 role="tab"
                 aria-selected={slug === item}
                 className={cn(
@@ -140,18 +140,18 @@ export default function SettingsPricesCatalogueRoute({
                 )}
               >
                 {slugLabel(item)}
-              </a>
+              </Link>
             );
           })}
         </div>
         {canEdit ? (
-          <a
-            href={pricesNewHref(slug)}
+          <Link
+            to={pricesNewHref(slug)}
             className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg bg-primary px-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/80"
           >
             <PlusIcon className="size-4" />
             Add schedule
-          </a>
+          </Link>
         ) : null}
       </div>
 
@@ -206,32 +206,34 @@ function ClickableScheduleRow({
   id: number;
   children: ReactNode;
 }) {
+  const navigate = useNavigate();
+
   function onRowClick(event: MouseEvent<HTMLTableRowElement>) {
     if ((event.target as HTMLElement).closest("a, button")) return;
-    window.location.assign(href);
+    void navigate(href);
   }
 
   return (
     <TableRow className="cursor-pointer hover:bg-muted/50" onClick={onRowClick}>
       <TableCell className="text-foreground tabular-nums">
-        <a
-          href={href}
+        <Link
+          to={href}
           className="font-medium text-foreground hover:underline"
           aria-label={`View schedule ${id}`}
         >
           {id}
-        </a>
+        </Link>
       </TableCell>
       {children}
       {canEdit ? (
         <TableCell className="w-12 text-right">
-          <a
-            href={deleteHref}
+          <Link
+            to={deleteHref}
             aria-label={deleteLabel}
             className="inline-flex size-7 items-center justify-center rounded-lg text-destructive hover:bg-destructive/10"
           >
             <Trash2Icon className="size-4" />
-          </a>
+          </Link>
         </TableCell>
       ) : null}
     </TableRow>

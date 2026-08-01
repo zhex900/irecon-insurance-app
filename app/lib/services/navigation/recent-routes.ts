@@ -5,6 +5,7 @@ import {
   EMAIL_TEMPLATE_META,
   type EmailTemplateKey,
 } from "~/lib/email-templates";
+import { isPriceCatalogueSlug, slugLabel } from "~/lib/prices/settings-shared";
 
 export const RECENT_ROUTES_MAX = 5;
 
@@ -24,13 +25,83 @@ export type RecentRouteLink = {
   caption?: string;
 };
 
+/**
+ * Leaf page under a root nav item.
+ * Recents row: **label** = find/leaf page, **caption** = root nav label.
+ *
+ * Add an entry when a new nested menu should appear this way in Recents.
+ */
+export type RecentLeafSection = {
+  /** Root nav path, e.g. `/settings/email-templates`. */
+  rootPath: string;
+  /** Side-nav root label used as Recents subtext. */
+  rootLabel: string;
+  /**
+   * Extract the leaf id from a path under `rootPath`.
+   * Return null for the root itself or non-matching paths.
+   * Default: first path segment after `rootPath`.
+   */
+  matchLeaf?: (path: string) => string | null;
+  /** Sync leaf label (optimistic client + server when no async lookup). */
+  leafLabel: (leafId: string) => string;
+};
+
 function isEmailTemplateKey(value: string): value is EmailTemplateKey {
   return (EMAIL_TEMPLATE_KEYS as readonly string[]).includes(value);
 }
 
-/** Pretty-print a template key when the real title is not available yet. */
+/** Pretty-print a slug/key when the real title is not available yet. */
 export function recentTemplateNameFromKey(key: string): string {
   return decodeURIComponent(key).replace(/[-_]/g, " ").trim() || key;
+}
+
+function defaultMatchLeaf(rootPath: string, path: string): string | null {
+  if (path === rootPath) return null;
+  const prefix = `${rootPath}/`;
+  if (!path.startsWith(prefix)) return null;
+  const leaf = path.slice(prefix.length).split("/")[0];
+  if (!leaf) return null;
+  return decodeURIComponent(leaf);
+}
+
+/**
+ * Nested menus that use leaf-as-label / root-as-caption in Recents.
+ * Keep `rootLabel` in sync with the side nav item label.
+ */
+export const RECENT_LEAF_SECTIONS: readonly RecentLeafSection[] = [
+  {
+    rootPath: "/settings/email-templates",
+    rootLabel: "Email Templates",
+    leafLabel: (key) =>
+      isEmailTemplateKey(key)
+        ? EMAIL_TEMPLATE_META[key].title
+        : recentTemplateNameFromKey(key),
+  },
+  {
+    rootPath: "/settings/document-templates",
+    rootLabel: "Document Templates",
+    leafLabel: (key) => recentTemplateNameFromKey(key),
+  },
+  {
+    rootPath: "/settings/prices",
+    rootLabel: "Prices",
+    leafLabel: (slug) =>
+      isPriceCatalogueSlug(slug)
+        ? slugLabel(slug)
+        : recentTemplateNameFromKey(slug),
+  },
+];
+
+export function matchRecentLeafSection(
+  path: string,
+): { section: RecentLeafSection; leafId: string } | null {
+  for (const section of RECENT_LEAF_SECTIONS) {
+    const leafId = (
+      section.matchLeaf ?? ((p) => defaultMatchLeaf(section.rootPath, p))
+    )(path);
+    if (leafId) return { section, leafId };
+  }
+  return null;
 }
 
 /** Normalize and validate a path for the recents stack. */
@@ -56,41 +127,41 @@ export function recentIdForPath(path: string): string {
 
 /**
  * Caption under Recents rows.
- * Client/Policy → type. Email/Document template editors → template name.
+ * Leaf sections → root nav label. Client/Policy → entity type.
  */
 export function recentCaptionForPath(path: string): string | undefined {
+  const leaf = matchRecentLeafSection(path);
+  if (leaf) return leaf.section.rootLabel;
+
   if (/^\/clients\/\d+(?:\/|$)/.test(path)) return "Client";
   if (/^\/policies\/\d+(?:\/|$)/.test(path)) return "Policy";
-
-  const emailMatch = /^\/settings\/email-templates\/([^/]+)$/.exec(path);
-  if (emailMatch) {
-    const key = decodeURIComponent(emailMatch[1] ?? "");
-    if (isEmailTemplateKey(key)) return EMAIL_TEMPLATE_META[key].title;
-    return recentTemplateNameFromKey(key);
-  }
-
-  const docMatch = /^\/settings\/document-templates\/([^/]+)$/.exec(path);
-  if (docMatch) {
-    return recentTemplateNameFromKey(docMatch[1] ?? "");
-  }
 
   return undefined;
 }
 
 /** Optimistic client-side label until the API resolves the real one. */
 export function recentLabelFallback(path: string, previous?: string): string {
+  const leaf = matchRecentLeafSection(path);
+  if (leaf) {
+    const prev = previous?.trim();
+    // Keep a previously resolved leaf title; drop stale parent/type labels.
+    if (
+      prev &&
+      prev !== leaf.section.rootLabel &&
+      prev !== "Email Template" &&
+      prev !== "Document Template"
+    ) {
+      return prev;
+    }
+    return leaf.section.leafLabel(leaf.leafId);
+  }
+
   if (previous?.trim()) return previous.trim();
   if (/^\/clients\/\d+(?:\/|$)/.test(path)) {
     return `Client ${path.split("/")[2] ?? ""}`.trim();
   }
   if (/^\/policies\/\d+(?:\/|$)/.test(path)) {
     return `Policy ${path.split("/")[2] ?? ""}`.trim();
-  }
-  if (/^\/settings\/email-templates\/[^/]+$/.test(path)) {
-    return "Email Template";
-  }
-  if (/^\/settings\/document-templates\/[^/]+$/.test(path)) {
-    return "Document Template";
   }
   const segment = path.split("/").filter(Boolean).pop() ?? path;
   return decodeURIComponent(segment).replace(/[-_]/g, " ");

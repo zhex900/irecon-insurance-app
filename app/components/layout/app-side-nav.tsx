@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useFetcher, useLocation, useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import {
   LayoutDashboardIcon,
   UsersIcon,
@@ -49,6 +49,7 @@ type NavItem = {
 };
 
 const RECENTS_OPEN_KEY = "irecon.side-nav.recents-open";
+const RECENTS_OPEN_EVENT = "irecon-side-nav-recents-open";
 
 function readRecentsOpen(): boolean {
   try {
@@ -61,9 +62,19 @@ function readRecentsOpen(): boolean {
 function writeRecentsOpen(open: boolean) {
   try {
     sessionStorage.setItem(RECENTS_OPEN_KEY, open ? "1" : "0");
+    window.dispatchEvent(new Event(RECENTS_OPEN_EVENT));
   } catch {
     // ignore quota / private mode
   }
+}
+
+function subscribeRecentsOpen(onStoreChange: () => void) {
+  window.addEventListener("storage", onStoreChange);
+  window.addEventListener(RECENTS_OPEN_EVENT, onStoreChange);
+  return () => {
+    window.removeEventListener("storage", onStoreChange);
+    window.removeEventListener(RECENTS_OPEN_EVENT, onStoreChange);
+  };
 }
 
 const CHILD_ICONS: Record<string, LucideIcon> = {
@@ -573,27 +584,21 @@ function SideNavTree({
   );
 }
 
-type RecentRoutesActionData = {
-  ok?: boolean;
-  routes?: SideNavLink[];
-  error?: string;
-};
-
 export function AppSideNav({ data }: { data: SideNavData }) {
   const location = useLocation();
   const { open, hoverOpen, isMobile, setOpen } = useSidebar();
   // Visual rail width (includes temporary hover-expand). Keep main nav trees
   // mounted so hover does not remount. Recents uses one stable control above.
   const showExpandedNav = open || hoverOpen || isMobile;
-  const fetcher = useFetcher<RecentRoutesActionData>();
   const lastRecordedPathRef = React.useRef("");
   const recentRoutesRef = React.useRef(data.recentRoutes);
   const enterClearTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
+  const recordAbortRef = React.useRef<AbortController | null>(null);
 
   const loaderRoutesKey = data.recentRoutes
-    .map((r) => `${r.href}:${r.label}`)
+    .map((r) => `${r.href}:${r.label}:${r.caption ?? ""}`)
     .join("|");
   const [loaderKey, setLoaderKey] = React.useState(loaderRoutesKey);
   const [recentRoutes, setRecentRoutes] = React.useState(data.recentRoutes);
@@ -601,10 +606,13 @@ export function AppSideNav({ data }: { data: SideNavData }) {
   const [spilledRoute, setSpilledRoute] = React.useState<SideNavLink | null>(
     null,
   );
-  const [recentsOpen, setRecentsOpen] = React.useState(readRecentsOpen);
+  const recentsOpen = React.useSyncExternalStore(
+    subscribeRecentsOpen,
+    readRecentsOpen,
+    () => false,
+  );
 
   function handleRecentsOpenChange(next: boolean) {
-    setRecentsOpen(next);
     writeRecentsOpen(next);
   }
 
@@ -628,29 +636,12 @@ export function AppSideNav({ data }: { data: SideNavData }) {
     setSpilledRoute(null);
   }
 
-  // Prefer the latest API stack when the fetcher returns (render-time sync).
-  // Ignore stale responses that no longer match the current path.
-  const currentRecentPath = normalizeRecentPath(location.pathname);
-  const apiRoutes = fetcher.data?.routes;
-  const apiTop = apiRoutes?.[0]?.href ?? "";
-  const apiRoutesKey = apiRoutes?.map((r) => `${r.href}:${r.label}`).join("|");
-  const [appliedApiKey, setAppliedApiKey] = React.useState<string | null>(null);
-  if (
-    apiRoutes &&
-    apiRoutesKey &&
-    apiRoutesKey !== appliedApiKey &&
-    (!currentRecentPath || apiTop === currentRecentPath)
-  ) {
-    setAppliedApiKey(apiRoutesKey);
-    setRecentRoutes(apiRoutes);
-    // Keep spilledRoute until the enter timer clears so the list does not jump up.
-  }
-
   React.useEffect(
     () => () => {
       if (enterClearTimerRef.current !== null) {
         clearTimeout(enterClearTimerRef.current);
       }
+      recordAbortRef.current?.abort();
     },
     [],
   );
@@ -677,13 +668,34 @@ export function AppSideNav({ data }: { data: SideNavData }) {
       enterClearTimerRef.current = null;
     }, RECENTS_ENTER_MS + 40);
 
+    // Use fetch (not useFetcher) so recording a recent does not revalidate
+    // the active page loaders — that was remounting/flickering the side nav
+    // on heavy routes like Settings → Prices.
+    recordAbortRef.current?.abort();
+    const abort = new AbortController();
+    recordAbortRef.current = abort;
     const formData = new FormData();
     formData.set("path", path);
-    fetcher.submit(formData, {
-      method: "post",
-      action: "/api/recent-routes",
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- record once per path; fetcher identity is unstable
+    void fetch("/api/recent-routes", {
+      method: "POST",
+      body: formData,
+      signal: abort.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) return;
+        const payload = (await response.json()) as {
+          routes?: SideNavLink[];
+        };
+        const apiRoutes = payload.routes;
+        if (!apiRoutes?.length) return;
+        if (abort.signal.aborted) return;
+        if (lastRecordedPathRef.current !== path) return;
+        if (apiRoutes[0]?.href !== path) return;
+        setRecentRoutes(apiRoutes);
+      })
+      .catch(() => {
+        // Ignore abort / network errors; optimistic list already updated.
+      });
   }, [location.pathname]);
 
   return (

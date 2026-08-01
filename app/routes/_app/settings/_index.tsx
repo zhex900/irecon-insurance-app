@@ -191,8 +191,13 @@ export default function SettingsIndexRoute({
         </Card>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          {settingsItems.map((item) => {
-            const card = (
+          {settingsItems.map((item) => (
+            <Link
+              key={item.to}
+              to={item.to}
+              prefetch="intent"
+              className="group block h-full rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+            >
               <Card className="pointer-events-none h-full transition-colors group-hover:border-primary/40 group-hover:bg-muted/30">
                 <CardHeader className="gap-3">
                   <div className="flex items-start justify-between gap-3">
@@ -205,36 +210,8 @@ export default function SettingsIndexRoute({
                   <CardDescription>{item.description}</CardDescription>
                 </CardHeader>
               </Card>
-            );
-
-            // Prices historically stalled on SPA transitions from this page.
-            if (item.to.startsWith("/settings/prices")) {
-              return (
-                <a
-                  key={item.to}
-                  href={item.to}
-                  className="group block h-full rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-                  onClick={(event) => {
-                    event.preventDefault();
-                    window.location.assign(item.to);
-                  }}
-                >
-                  {card}
-                </a>
-              );
-            }
-
-            return (
-              <Link
-                key={item.to}
-                to={item.to}
-                prefetch="intent"
-                className="group block h-full rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-              >
-                {card}
-              </Link>
-            );
-          })}
+            </Link>
+          ))}
         </div>
       </div>
     </div>
