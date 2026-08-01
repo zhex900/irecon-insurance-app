@@ -11,6 +11,7 @@
  *   node --env-file=.env.staging scripts/deploy-staging.mjs --secret-only
  */
 import { spawn, execFileSync } from "node:child_process";
+import { readdir, unlink } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -121,40 +122,81 @@ async function syncWorkerSecrets() {
   }
 }
 
+/** Remove *.map under a build tree so maps are never shipped with the Worker. */
+async function deleteSourceMaps(rootDir) {
+  async function walk(dir) {
+    let entries;
+    try {
+      entries = await readdir(dir, { withFileTypes: true });
+    } catch {
+      return 0;
+    }
+    let removed = 0;
+    for (const entry of entries) {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        removed += await walk(path);
+      } else if (entry.name.endsWith(".map")) {
+        await unlink(path);
+        removed += 1;
+      }
+    }
+    return removed;
+  }
+  return walk(rootDir);
+}
+
 async function uploadSentrySourceMaps(appVersion) {
   const authToken = process.env.SENTRY_AUTH_TOKEN?.trim();
   const org = process.env.SENTRY_ORG?.trim();
   const project = process.env.SENTRY_PROJECT?.trim();
-  if (!authToken || !org || !project) {
-    console.warn(
-      "Warning: SENTRY_AUTH_TOKEN / SENTRY_ORG / SENTRY_PROJECT missing — skipping source map upload.",
-    );
-    return;
-  }
-
   const clientDir = join(webRoot, "build/client");
-  console.log(`→ Uploading Sentry source maps for release ${appVersion}…`);
-  await run("npx", ["sentry-cli", "sourcemaps", "inject", clientDir], {
-    env: {
-      ...process.env,
-      SENTRY_AUTH_TOKEN: authToken,
-      SENTRY_ORG: org,
-      SENTRY_PROJECT: project,
-    },
-  });
-  await run(
-    "npx",
-    ["sentry-cli", "sourcemaps", "upload", "--release", appVersion, clientDir],
-    {
+
+  try {
+    if (!authToken || !org || !project) {
+      console.warn(
+        "Warning: SENTRY_AUTH_TOKEN / SENTRY_ORG / SENTRY_PROJECT missing — skipping source map upload.",
+      );
+      return;
+    }
+
+    console.log(`→ Uploading Sentry source maps for release ${appVersion}…`);
+    await run("npx", ["sentry-cli", "sourcemaps", "inject", clientDir], {
       env: {
         ...process.env,
         SENTRY_AUTH_TOKEN: authToken,
         SENTRY_ORG: org,
         SENTRY_PROJECT: project,
       },
-    },
-  );
-  console.log("✓ Sentry source maps uploaded");
+    });
+    await run(
+      "npx",
+      [
+        "sentry-cli",
+        "sourcemaps",
+        "upload",
+        "--release",
+        appVersion,
+        clientDir,
+      ],
+      {
+        env: {
+          ...process.env,
+          SENTRY_AUTH_TOKEN: authToken,
+          SENTRY_ORG: org,
+          SENTRY_PROJECT: project,
+        },
+      },
+    );
+    console.log("✓ Sentry source maps uploaded");
+  } finally {
+    // Never ship .map files with the Worker (upload may have failed).
+    // Client maps go to Sentry; server maps are build-only and would bloat deploy.
+    const removed = await deleteSourceMaps(join(webRoot, "build"));
+    if (removed > 0) {
+      console.log(`✓ Removed ${removed} source map(s) before deploy`);
+    }
+  }
 }
 
 async function main() {

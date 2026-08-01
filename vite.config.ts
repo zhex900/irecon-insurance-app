@@ -11,6 +11,11 @@ export default defineConfig({
     tailwindcss(),
     reactRouter(),
   ],
+  // Emit .map for Sentry; omit //# sourceMappingURL so maps are not public.
+  // deploy-staging deletes *.map after upload (before wrangler deploy).
+  build: {
+    sourcemap: "hidden",
+  },
   assetsInclude: ["**/*.ttf"],
   resolve: {
     dedupe: ["react", "react-dom"],
