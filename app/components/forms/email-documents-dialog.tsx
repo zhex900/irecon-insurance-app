@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FileTextIcon, MailIcon, XIcon } from "lucide-react";
+import { FileTextIcon, MailIcon, PaperclipIcon, XIcon } from "lucide-react";
 import { toast } from "sonner";
 import {
   EmailRichEditor,
@@ -32,11 +32,36 @@ import {
   type EmailTemplate,
   type EmailTemplateVars,
 } from "~/lib/email-templates";
+import {
+  formatBytes,
+  useFileUpload,
+  type FileWithPreview,
+} from "~/hooks/use-file-upload";
 
 const RECIPIENT_LABELS: Record<EmailSendRecipient, string> = {
   broker: "broker",
   insurer: "insurer",
 };
+
+const EXTRA_ACCEPT =
+  ".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,.csv,.txt,application/pdf,image/png,image/jpeg";
+const EXTRA_MAX_FILES = 10;
+const EXTRA_MAX_SIZE = 5 * 1024 * 1024;
+
+async function fileToBase64(file: File): Promise<string> {
+  const buffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+}
+
+function isBrowserFile(file: FileWithPreview["file"]): file is File {
+  return typeof File !== "undefined" && file instanceof File;
+}
 
 export function EmailDocumentsDialog({
   open,
@@ -100,6 +125,29 @@ export function EmailDocumentsDialog({
   const [sending, setSending] = useState(false);
   const editorHandleRef = useRef<EmailRichEditorHandle>(null);
 
+  const [
+    { files: extraFiles, isDragging },
+    {
+      removeFile,
+      clearFiles,
+      clearErrors,
+      openFileDialog,
+      getInputProps,
+      handleDragEnter,
+      handleDragLeave,
+      handleDragOver,
+      handleDrop,
+    },
+  ] = useFileUpload({
+    multiple: true,
+    maxFiles: EXTRA_MAX_FILES,
+    maxSize: EXTRA_MAX_SIZE,
+    accept: EXTRA_ACCEPT,
+    onError: (errors) => {
+      if (errors[0]) toast.error(errors[0]);
+    },
+  });
+
   const directoryOptions = useMemo(() => {
     const extras: EmailDirectoryEntry[] = [];
     const seen = new Set(
@@ -117,6 +165,8 @@ export function EmailDocumentsDialog({
     }
     return [...extras, ...emailDirectory];
   }, [emailDirectory, defaultTo, brokerEmail, brokerName, template.toEmail]);
+
+  const attachmentCount = attachments.length + extraFiles.length;
 
   const wasOpenRef = useRef(false);
   useEffect(() => {
@@ -143,6 +193,8 @@ export function EmailDocumentsDialog({
     setEditorKey((key) => key + 1);
     setAttachments(documents);
     setSending(false);
+    clearFiles();
+    clearErrors();
   }, [
     open,
     defaultTo,
@@ -155,6 +207,8 @@ export function EmailDocumentsDialog({
     templateVars,
     footerImageDataUri,
     logoWidth,
+    clearFiles,
+    clearErrors,
   ]);
 
   function removeAttachment(id: number) {
@@ -167,7 +221,7 @@ export function EmailDocumentsDialog({
       toast.error("Enter at least one recipient email.");
       return;
     }
-    if (attachments.length === 0) {
+    if (attachmentCount === 0) {
       toast.error("Attach at least one document.");
       return;
     }
@@ -192,6 +246,20 @@ export function EmailDocumentsDialog({
         throw new Error("Message body is empty.");
       }
 
+      const extraAttachments: Array<{
+        filename: string;
+        contentBase64: string;
+        contentType?: string;
+      }> = [];
+      for (const item of extraFiles) {
+        if (!isBrowserFile(item.file)) continue;
+        extraAttachments.push({
+          filename: item.file.name,
+          contentBase64: await fileToBase64(item.file),
+          contentType: item.file.type || undefined,
+        });
+      }
+
       const response = await fetch(
         `/api/policies/${policyId}/email-documents`,
         {
@@ -200,6 +268,7 @@ export function EmailDocumentsDialog({
           credentials: "same-origin",
           body: JSON.stringify({
             documentIds: attachments.map((doc) => doc.policyDocumentId),
+            extraAttachments,
             to: recipient,
             cc: cc.trim() || undefined,
             subject: subject.trim(),
@@ -219,7 +288,7 @@ export function EmailDocumentsDialog({
       onOpenChange(false);
       window.setTimeout(() => {
         toast.success("Email sent", {
-          description: `Sent to ${recipient} · ${attachments.length} attachment${attachments.length === 1 ? "" : "s"} (${RECIPIENT_LABELS[recipientType]})`,
+          description: `Sent to ${recipient} · ${attachmentCount} attachment${attachmentCount === 1 ? "" : "s"} (${RECIPIENT_LABELS[recipientType]})`,
           duration: 5000,
         });
       }, 0);
@@ -318,13 +387,13 @@ export function EmailDocumentsDialog({
             </div>
 
             <div className="flex min-w-0 flex-col gap-2">
-              <FieldLabel>Attachments ({attachments.length})</FieldLabel>
+              <FieldLabel>Attachments ({attachmentCount})</FieldLabel>
               <div className="flex h-[min(28rem,50vh)] flex-col overflow-hidden rounded-md border border-border bg-muted/20">
                 <div className="min-h-0 flex-1 overflow-y-auto p-2">
-                  {attachments.length === 0 ? (
+                  {attachmentCount === 0 ? (
                     <p className="px-1 py-2 text-sm text-muted-foreground">
-                      No documents attached. Select documents on the policy
-                      before emailing.
+                      No documents attached. Select policy documents or add
+                      files below.
                     </p>
                   ) : (
                     <ul className="flex flex-col gap-1">
@@ -351,8 +420,67 @@ export function EmailDocumentsDialog({
                           </Button>
                         </li>
                       ))}
+                      {extraFiles.map((item) => {
+                        const name = item.file.name;
+                        const size =
+                          "size" in item.file ? item.file.size : undefined;
+                        return (
+                          <li
+                            key={item.id}
+                            className="flex items-start gap-2 rounded-md bg-background px-2 py-1.5 text-sm ring-1 ring-foreground/10"
+                          >
+                            <PaperclipIcon className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+                            <span className="min-w-0 flex-1 break-words">
+                              <span className="block">{name}</span>
+                              {typeof size === "number" ? (
+                                <span className="text-xs text-muted-foreground">
+                                  {formatBytes(size)}
+                                </span>
+                              ) : null}
+                            </span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon-xs"
+                              className="shrink-0"
+                              aria-label={`Remove ${name}`}
+                              onClick={() => removeFile(item.id)}
+                            >
+                              <XIcon />
+                            </Button>
+                          </li>
+                        );
+                      })}
                     </ul>
                   )}
+                </div>
+                <div
+                  className={
+                    isDragging
+                      ? "border-t border-primary/40 bg-primary/5 p-2"
+                      : "border-t border-border p-2"
+                  }
+                  onDragEnter={handleDragEnter}
+                  onDragLeave={handleDragLeave}
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                >
+                  <input {...getInputProps()} className="sr-only" />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={openFileDialog}
+                    disabled={sending || extraFiles.length >= EXTRA_MAX_FILES}
+                  >
+                    <PaperclipIcon data-icon="inline-start" />
+                    Add files
+                  </Button>
+                  <p className="mt-1.5 text-center text-[0.7rem] text-muted-foreground">
+                    PDF, images, Office · max {EXTRA_MAX_FILES} ·{" "}
+                    {formatBytes(EXTRA_MAX_SIZE)} each
+                  </p>
                 </div>
               </div>
             </div>

@@ -17,9 +17,18 @@ import {
 /** Soft cap before we refuse oversized packs (Resend limit is 40MB encoded). */
 const MAX_ATTACHMENTS_BYTES = 12 * 1024 * 1024;
 
+/** Extra files chosen in the composer (already base64-encoded). */
+export type ExtraEmailAttachment = {
+  filename: string;
+  contentBase64: string;
+  contentType?: string;
+};
+
 export type SendPolicyDocumentsInput = {
   policy: Policy;
   documents: PolicyDocument[];
+  /** Optional composer uploads beyond policy documents. */
+  extraAttachments?: ExtraEmailAttachment[];
   to: string;
   cc?: string;
   subject: string;
@@ -109,6 +118,23 @@ async function resolveDocumentPdfBytes(
   }
 }
 
+function sanitizeAttachmentFilename(raw: string): string {
+  const base = raw.replace(/[/\\]/g, "").trim() || "attachment";
+  return base.slice(0, 255);
+}
+
+function decodeBase64Bytes(contentBase64: string): Uint8Array {
+  const normalized = contentBase64.replace(/\s+/g, "");
+  try {
+    const binary = atob(normalized);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes;
+  } catch {
+    throw new Error("One of the extra attachments could not be read.");
+  }
+}
+
 /**
  * Build PDF attachments and send via Resend.
  * Policy PDFs are attached (typically small). Prefer signed R2 links later for very large packs.
@@ -120,7 +146,8 @@ export async function sendPolicyDocumentsEmail(
   if (toList.length === 0) {
     throw new Error("Enter at least one recipient email.");
   }
-  if (input.documents.length === 0) {
+  const extras = input.extraAttachments ?? [];
+  if (input.documents.length === 0 && extras.length === 0) {
     throw new Error("Attach at least one document.");
   }
 
@@ -145,6 +172,21 @@ export async function sendPolicyDocumentsEmail(
         : `${doc.filename}.pdf`,
       content: uint8ToBase64(bytes),
       contentType: "application/pdf",
+    });
+  }
+
+  for (const extra of extras) {
+    const bytes = decodeBase64Bytes(extra.contentBase64);
+    totalBytes += bytes.byteLength;
+    if (totalBytes > MAX_ATTACHMENTS_BYTES) {
+      throw new Error(
+        "Selected documents are too large to email as attachments. Select fewer files and try again.",
+      );
+    }
+    attachments.push({
+      filename: sanitizeAttachmentFilename(extra.filename),
+      content: uint8ToBase64(bytes),
+      contentType: extra.contentType?.trim() || "application/octet-stream",
     });
   }
 

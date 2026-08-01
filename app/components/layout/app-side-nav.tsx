@@ -1,11 +1,5 @@
 import * as React from "react";
-import {
-  Link,
-  NavLink,
-  useFetcher,
-  useLocation,
-  useNavigate,
-} from "react-router";
+import { useFetcher, useLocation, useNavigate } from "react-router";
 import {
   LayoutDashboardIcon,
   UsersIcon,
@@ -28,12 +22,6 @@ import {
 import { hotkeysCoreFeature, syncDataLoaderFeature } from "@headless-tree/core";
 import { useTree } from "@headless-tree/react";
 import { Tree, TreeItem, TreeItemLabel } from "~/components/reui/tree";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "~/components/ui/dropdown-menu";
 import {
   SidebarMenu,
   SidebarMenuButton,
@@ -304,6 +292,7 @@ function RecentRouteRow({
   route: SideNavLink;
   isEntering: boolean;
 }) {
+  const navigate = useNavigate();
   const routeIcon = iconForRecentPath(route.href);
   const rowHeightPx = recentRowHeightPx(route);
 
@@ -313,11 +302,13 @@ function RecentRouteRow({
       style={isEntering ? undefined : { height: rowHeightPx }}
     >
       <div className="min-h-0" style={{ minHeight: rowHeightPx }}>
-        <Link
-          to={route.href}
-          prefetch="intent"
+        <button
+          type="button"
+          onClick={() => {
+            void navigate(route.href);
+          }}
           className={cn(
-            "relative flex h-full w-full items-start gap-1.5 rounded-md py-1 pe-2 text-sm text-sidebar-foreground outline-none",
+            "relative flex h-full w-full cursor-pointer items-start gap-1.5 rounded-md py-1 pe-2 text-sm text-sidebar-foreground outline-none",
             submenuStartClass,
             "hover:bg-sidebar-accent hover:text-primary",
             "focus-visible:ring-2 focus-visible:ring-sidebar-ring",
@@ -335,7 +326,7 @@ function RecentRouteRow({
               </span>
             ) : null}
           </span>
-        </Link>
+        </button>
       </div>
     </li>
   );
@@ -345,14 +336,19 @@ function RecentsSection({
   recentRoutes,
   enteringId,
   spilledRoute,
+  open,
+  iconRail,
+  onToggle,
 }: {
   recentRoutes: SideNavLink[];
   enteringId: string | null;
   /** Dropped bottom row kept mounted during insert so the list does not jump up. */
   spilledRoute: SideNavLink | null;
+  open: boolean;
+  /** Narrow icon rail — same button, icon-only chrome (avoids tree-swap click loss). */
+  iconRail: boolean;
+  onToggle: () => void;
 }) {
-  const [open, setOpen] = React.useState(readRecentsOpen);
-
   const displayRoutes = React.useMemo(() => {
     if (!spilledRoute || !enteringId) return recentRoutes;
     if (recentRoutes.some((route) => route.id === spilledRoute.id)) {
@@ -364,14 +360,7 @@ function RecentsSection({
   // Use the committed stack (excludes spilled) so unmounting the spilled row
   // after the insert animation does not change the box height.
   const listHeightPx = recentsListHeightPx(recentRoutes);
-
-  function toggleOpen() {
-    setOpen((prev) => {
-      const next = !prev;
-      writeRecentsOpen(next);
-      return next;
-    });
-  }
+  const listOpen = open && !iconRail;
 
   return (
     <div
@@ -384,28 +373,39 @@ function RecentsSection({
     >
       <button
         type="button"
-        onClick={toggleOpen}
+        onClick={onToggle}
+        title={iconRail ? "Recents" : undefined}
         className={cn(
-          "relative flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-sidebar-foreground outline-none",
+          "relative flex w-full cursor-pointer items-center gap-1.5 rounded-md py-1.5 text-sm text-sidebar-foreground outline-none",
           "hover:bg-sidebar-accent hover:text-primary",
           "focus-visible:ring-2 focus-visible:ring-sidebar-ring",
+          iconRail ? "size-8 justify-center px-0" : "px-2",
         )}
-        aria-expanded={open}
+        aria-expanded={listOpen}
       >
         <ClockIcon className="size-4 shrink-0" />
-        <span className="min-w-0 flex-1 truncate text-start">Recents</span>
-        <ChevronRightIcon
+        <span
           className={cn(
-            "size-3.5 shrink-0 text-sidebar-foreground/70 transition-transform duration-200",
-            open && "rotate-90",
+            "min-w-0 flex-1 truncate text-start",
+            iconRail && "sr-only",
           )}
-        />
+        >
+          Recents
+        </span>
+        {iconRail ? null : (
+          <ChevronRightIcon
+            className={cn(
+              "size-3.5 shrink-0 text-sidebar-foreground/70 transition-transform duration-200",
+              listOpen && "rotate-90",
+            )}
+          />
+        )}
       </button>
 
       <div
         className={cn(
           "grid transition-[grid-template-rows] duration-200 ease-out",
-          open ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+          listOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
         )}
       >
         <div className="min-h-0 overflow-hidden">
@@ -437,54 +437,11 @@ function RecentsSection({
   );
 }
 
-function CollapsedSideNav({
-  pathname,
-  recentRoutes,
-}: {
-  pathname: string;
-  recentRoutes: SideNavLink[];
-}) {
+function CollapsedSideNav({ pathname }: { pathname: string }) {
+  const navigate = useNavigate();
+
   return (
     <SidebarMenu>
-      <SidebarMenuItem>
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            className="w-full"
-            render={
-              <SidebarMenuButton tooltip="Recents" isActive={false}>
-                <ClockIcon />
-                <span>Recents</span>
-              </SidebarMenuButton>
-            }
-          />
-          <DropdownMenuContent side="right" align="start" className="min-w-48">
-            {recentRoutes.length === 0 ? (
-              <DropdownMenuItem disabled>No recent pages</DropdownMenuItem>
-            ) : (
-              recentRoutes.map((route) => {
-                const Icon = iconForRecentPath(route.href);
-                return (
-                  <DropdownMenuItem
-                    key={route.id}
-                    render={<Link to={route.href} />}
-                    className="items-start gap-2"
-                  >
-                    <Icon className="mt-0.5 size-4 shrink-0" />
-                    <span className="flex min-w-0 flex-1 flex-col items-start gap-0.5">
-                      <span className="truncate">{route.label}</span>
-                      {route.caption ? (
-                        <span className="truncate text-xs text-muted-foreground">
-                          {route.caption}
-                        </span>
-                      ) : null}
-                    </span>
-                  </DropdownMenuItem>
-                );
-              })
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </SidebarMenuItem>
       {TOP_LINKS.map((item) => {
         const Icon = item.icon;
         const isActive = item.section
@@ -495,7 +452,10 @@ function CollapsedSideNav({
             <SidebarMenuButton
               tooltip={item.label}
               isActive={isActive}
-              render={<NavLink to={item.to} end={item.to === "/dashboard"} />}
+              className="cursor-pointer"
+              onClick={() => {
+                void navigate(item.to);
+              }}
             >
               <Icon />
               <span>{item.label}</span>
@@ -545,13 +505,17 @@ function SideNavTree({
     isItemFolder: (item) => (item.getItemData()?.children?.length ?? 0) > 0,
     onPrimaryAction: (item) => {
       const href = item.getItemData().href;
-      if (!href || !item.isFolder()) return;
-      // Clicking an open section should only collapse — navigating would
-      // change the route and the active-section sync would re-expand it.
-      if (item.isExpanded()) return;
-      if (!pathMatches(pathname, href)) {
-        void navigate(href);
+      if (!href) return;
+      if (item.isFolder()) {
+        // Clicking an open section should only collapse — navigating would
+        // change the route and the active-section sync would re-expand it.
+        if (item.isExpanded()) return;
+        if (!pathMatches(pathname, href)) {
+          void navigate(href);
+        }
+        return;
       }
+      void navigate(href);
     },
     dataLoader: {
       getItem: (itemId) => items[itemId],
@@ -565,7 +529,6 @@ function SideNavTree({
       {tree.getItems().map((item) => {
         const navItem = item.getItemData();
         const isFolder = item.isFolder();
-        const href = navItem.href;
         const isActive = activeIds.includes(item.getId());
         const Icon = navItem.icon;
 
@@ -573,17 +536,14 @@ function SideNavTree({
           <TreeItem
             key={item.getId()}
             item={item}
+            type="button"
             data-active={isActive || undefined}
-            render={
-              !isFolder && href ? (
-                <Link to={href} prefetch="intent" />
-              ) : undefined
-            }
+            className="cursor-pointer"
           >
             <TreeItemLabel
               showToggleIcon={false}
               className={cn(
-                "relative w-full gap-1.5 text-sidebar-foreground before:absolute before:inset-x-0 before:-inset-y-0.5 before:-z-10 before:rounded-md",
+                "relative w-full cursor-pointer gap-1.5 text-sidebar-foreground before:absolute before:inset-x-0 before:-inset-y-0.5 before:-z-10 before:rounded-md",
                 "hover:bg-sidebar-accent hover:text-primary hover:before:bg-sidebar-accent",
                 "in-focus-visible:ring-sidebar-ring",
                 isActive
@@ -619,9 +579,9 @@ type RecentRoutesActionData = {
 
 export function AppSideNav({ data }: { data: SideNavData }) {
   const location = useLocation();
-  const { open, hoverOpen, isMobile } = useSidebar();
-  // Visual rail width (includes temporary hover-expand). Keep both nav
-  // trees mounted so hover does not remount and flicker Recents open/closed.
+  const { open, hoverOpen, isMobile, setOpen } = useSidebar();
+  // Visual rail width (includes temporary hover-expand). Keep main nav trees
+  // mounted so hover does not remount. Recents uses one stable control above.
   const showExpandedNav = open || hoverOpen || isMobile;
   const fetcher = useFetcher<RecentRoutesActionData>();
   const lastRecordedPathRef = React.useRef("");
@@ -639,6 +599,22 @@ export function AppSideNav({ data }: { data: SideNavData }) {
   const [spilledRoute, setSpilledRoute] = React.useState<SideNavLink | null>(
     null,
   );
+  const [recentsOpen, setRecentsOpen] = React.useState(readRecentsOpen);
+
+  function handleRecentsOpenChange(next: boolean) {
+    setRecentsOpen(next);
+    writeRecentsOpen(next);
+  }
+
+  function toggleRecentsSection() {
+    // Icon rail: pin the sidebar open and expand Recents in one click.
+    if (!showExpandedNav) {
+      handleRecentsOpenChange(true);
+      setOpen(true);
+      return;
+    }
+    handleRecentsOpenChange(!recentsOpen);
+  }
 
   React.useEffect(() => {
     recentRoutesRef.current = recentRoutes;
@@ -710,17 +686,23 @@ export function AppSideNav({ data }: { data: SideNavData }) {
 
   return (
     <>
+      {/* One Recents control always — never swap under the cursor on hover-expand. */}
+      <nav aria-label="Recents" className="px-1">
+        <RecentsSection
+          recentRoutes={recentRoutes}
+          enteringId={enteringId}
+          spilledRoute={spilledRoute}
+          open={recentsOpen}
+          iconRail={!showExpandedNav}
+          onToggle={toggleRecentsSection}
+        />
+      </nav>
       <div
         className={cn(!showExpandedNav && "hidden")}
         // Keep mounted while icon-rail; only hide so hover expand does not remount.
         inert={!showExpandedNav ? true : undefined}
       >
         <nav aria-label="Main" className="px-1">
-          <RecentsSection
-            recentRoutes={recentRoutes}
-            enteringId={enteringId}
-            spilledRoute={spilledRoute}
-          />
           <SideNavTree data={data} pathname={location.pathname} />
         </nav>
       </div>
@@ -728,10 +710,7 @@ export function AppSideNav({ data }: { data: SideNavData }) {
         className={cn(showExpandedNav && "hidden")}
         inert={showExpandedNav ? true : undefined}
       >
-        <CollapsedSideNav
-          pathname={location.pathname}
-          recentRoutes={recentRoutes}
-        />
+        <CollapsedSideNav pathname={location.pathname} />
       </div>
     </>
   );
