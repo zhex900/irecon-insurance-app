@@ -12,6 +12,7 @@ import {
   jsonb,
   numeric,
   pgTable,
+  primaryKey,
   serial,
   text,
   timestamp,
@@ -55,6 +56,22 @@ export const appUser = pgTable("app_user", {
     .notNull()
     .defaultNow(),
 });
+
+/** Per-user side-nav Recents stack (newest first; app keeps ≤5). */
+export const appUserRecentRoute = pgTable(
+  "app_user_recent_route",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => appUser.userId, { onDelete: "cascade" }),
+    path: varchar("path", { length: 512 }).notNull(),
+    label: varchar("label", { length: 255 }).notNull().default(""),
+    visitedWhen: timestamp("visited_when", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.path] })],
+);
 
 export const client = pgTable("client", {
   clientId: serial("client_id").primaryKey(),

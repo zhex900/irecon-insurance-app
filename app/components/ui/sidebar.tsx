@@ -100,10 +100,16 @@ function SidebarProvider({
       setOpenMobile((mobileOpen) => !mobileOpen);
       return;
     }
-    // Clear hover-expand so a collapse click takes effect immediately.
-    setHoverOpen(false);
-    setOpen((pinnedOpen) => !pinnedOpen);
-  }, [isMobile, setOpen]);
+    if (open) {
+      // Pin-collapse. Clear hover so it does not immediately re-expand.
+      setHoverOpen(false);
+      setOpen(false);
+      return;
+    }
+    // Pinned closed: pin open. If hover already expanded the nav, do not
+    // toggle closed first — just keep it open.
+    setOpen(true);
+  }, [isMobile, open, setOpen]);
 
   // Adds a keyboard shortcut to toggle the sidebar.
   React.useEffect(() => {
@@ -271,77 +277,54 @@ function Sidebar({
     );
   }
 
-  // Pinned-closed keeps icon rail width in layout; hover-expand overlays full nav.
-  const pinnedCollapsed = !open && collapsible === "icon";
   const isFloating = variant === "floating" || variant === "inset";
+  const iconCollapsible = collapsible === "icon";
+  // One DOM tree for icon mode so pinning from hover does not remount/flicker.
+  const panelExpanded = open || hoverOpen;
+  const iconRail = isFloating
+    ? "w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
+    : "w-(--sidebar-width-icon)";
+  const fullRail = isFloating
+    ? "w-[calc(var(--sidebar-width)+(--spacing(4))+2px)]"
+    : "w-(--sidebar-width)";
 
-  return (
-    <div
-      className="group peer relative hidden h-svh text-sidebar-foreground md:block"
-      data-state={state}
-      // Keep icon-mode styles only while pinned closed and not hover-expanded.
-      data-collapsible={pinnedCollapsed && !hoverOpen ? collapsible : ""}
-      data-hover-expand={hoverOpen && pinnedCollapsed ? "true" : undefined}
-      data-variant={variant}
-      data-side={side}
-      data-slot="sidebar"
-    >
-      {pinnedCollapsed ? (
-        <>
-          {/* Reserve icon-rail space so the page does not jump on hover-expand. */}
-          <div
-            aria-hidden
-            className={cn(
-              "hidden h-svh shrink-0 md:block",
-              isFloating
-                ? "w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
-                : "w-(--sidebar-width-icon)",
-            )}
-          />
-          <div
-            data-slot="sidebar-container"
-            data-side={side}
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
-            className={cn(
-              "absolute inset-y-0 z-30 flex h-svh flex-col overflow-hidden transition-[width] duration-200 ease-out",
-              side === "right" ? "end-0" : "start-0",
-              hoverOpen
-                ? cn(
-                    isFloating
-                      ? "w-[calc(var(--sidebar-width)+(--spacing(4))+2px)] p-2"
-                      : "w-(--sidebar-width)",
-                    "shadow-lg",
-                  )
-                : isFloating
-                  ? "w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)] p-2"
-                  : "w-(--sidebar-width-icon)",
-              !isFloating &&
-                "border-sidebar-border group-data-[side=left]:border-r group-data-[side=right]:border-l",
-              className,
-            )}
-            {...props}
-          >
-            <div
-              data-sidebar="sidebar"
-              data-slot="sidebar-inner"
-              className="flex h-full min-h-0 w-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-sidebar-border"
-            >
-              {children}
-            </div>
-          </div>
-        </>
-      ) : (
+  if (iconCollapsible) {
+    return (
+      <div
+        className="group peer relative hidden h-svh text-sidebar-foreground md:block"
+        data-state={state}
+        data-collapsible={!panelExpanded ? collapsible : ""}
+        data-hover-expand={!open && hoverOpen ? "true" : undefined}
+        data-variant={variant}
+        data-side={side}
+        data-slot="sidebar"
+      >
+        {/* Layout gap: icon while pinned closed, full while pinned open. */}
+        <div
+          aria-hidden
+          className={cn(
+            "hidden h-svh shrink-0 transition-[width] duration-200 ease-out md:block",
+            open ? fullRail : iconRail,
+          )}
+        />
         <div
           data-slot="sidebar-container"
           data-side={side}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
           className={cn(
-            // On hover/focus while pinned open, peek wider so truncated labels fit.
-            "hidden h-svh w-(--sidebar-width) flex-col transition-[width] duration-200 ease-out md:flex",
-            "focus-within:z-20 focus-within:w-(--sidebar-width-expanded) hover:z-20 hover:w-(--sidebar-width-expanded)",
-            isFloating
-              ? "p-2 focus-within:w-[calc(var(--sidebar-width-expanded)+(--spacing(4))+2px)] hover:w-[calc(var(--sidebar-width-expanded)+(--spacing(4))+2px)]"
-              : "group-data-[side=left]:border-r group-data-[side=right]:border-l",
+            "absolute inset-y-0 z-30 flex h-svh flex-col overflow-hidden transition-[width] duration-200 ease-out",
+            side === "right" ? "end-0" : "start-0",
+            isFloating && "p-2",
+            panelExpanded ? fullRail : iconRail,
+            !open && hoverOpen && "shadow-lg",
+            // Peek wider when pinned open (overlay; spacer stays full width).
+            open &&
+              (isFloating
+                ? "focus-within:z-40 focus-within:w-[calc(var(--sidebar-width-expanded)+(--spacing(4))+2px)] hover:z-40 hover:w-[calc(var(--sidebar-width-expanded)+(--spacing(4))+2px)]"
+                : "focus-within:z-40 focus-within:w-(--sidebar-width-expanded) hover:z-40 hover:w-(--sidebar-width-expanded)"),
+            !isFloating &&
+              "border-sidebar-border group-data-[side=left]:border-r group-data-[side=right]:border-l",
             className,
           )}
           {...props}
@@ -354,7 +337,41 @@ function Sidebar({
             {children}
           </div>
         </div>
-      )}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="group peer relative hidden h-svh text-sidebar-foreground md:block"
+      data-state={state}
+      data-collapsible={state === "collapsed" ? collapsible : ""}
+      data-variant={variant}
+      data-side={side}
+      data-slot="sidebar"
+    >
+      <div
+        data-slot="sidebar-container"
+        data-side={side}
+        className={cn(
+          "hidden h-svh w-(--sidebar-width) flex-col transition-[width] duration-200 ease-out md:flex",
+          "focus-within:z-20 focus-within:w-(--sidebar-width-expanded) hover:z-20 hover:w-(--sidebar-width-expanded)",
+          "group-data-[collapsible=offcanvas]:w-0 group-data-[collapsible=offcanvas]:overflow-hidden",
+          isFloating
+            ? "p-2 focus-within:w-[calc(var(--sidebar-width-expanded)+(--spacing(4))+2px)] hover:w-[calc(var(--sidebar-width-expanded)+(--spacing(4))+2px)]"
+            : "group-data-[side=left]:border-r group-data-[side=right]:border-l",
+          className,
+        )}
+        {...props}
+      >
+        <div
+          data-sidebar="sidebar"
+          data-slot="sidebar-inner"
+          className="flex h-full min-h-0 w-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-sidebar-border"
+        >
+          {children}
+        </div>
+      </div>
     </div>
   );
 }

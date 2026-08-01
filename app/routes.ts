@@ -47,6 +47,7 @@ export default [
   ),
   route("api/audit", "routes/api/audit.tsx"),
   route("api/search", "routes/api/search.tsx"),
+  route("api/recent-routes", "routes/api/recent-routes.tsx"),
   layout("routes/_app/layout.tsx", [
     route("dashboard", "routes/_app/dashboard.tsx"),
     route("clients", "routes/_app/clients/_index.tsx"),

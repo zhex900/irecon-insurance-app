@@ -112,10 +112,15 @@ function SidebarBrand() {
 
 function SidebarCollapseToggle() {
   // Use pinned `open` (not visual `state`) so hover-expand does not flip the icon.
-  const { open, isMobile, toggleSidebar } = useSidebar();
+  const { open, hoverOpen, isMobile, toggleSidebar } = useSidebar();
   if (isMobile) return null;
 
-  const label = open ? "Collapse sidebar" : "Expand sidebar";
+  // While hover-expanded, the nav is already open — click only pins it.
+  const label = open
+    ? "Collapse sidebar"
+    : hoverOpen
+      ? "Keep sidebar open"
+      : "Expand sidebar";
   const Icon = open ? PanelLeftCloseIcon : PanelLeftOpenIcon;
 
   return (

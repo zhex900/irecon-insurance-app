@@ -329,3 +329,27 @@ body > div:has(> [data-re-slash-command]) {
 .dark .email-placeholder-suggest__token {
   color: var(--warning);
 }
+
+/*
+ * Side nav Recents insert: expand the new top row so the list only pushes down.
+ * (Keep the spilled bottom row mounted + clipped so nothing jumps up first.)
+ */
+@keyframes recents-expand-row {
+  from {
+    grid-template-rows: 0fr;
+  }
+  to {
+    grid-template-rows: 1fr;
+  }
+}
+
+.recents-expand-row {
+  display: grid;
+  overflow: hidden;
+  animation: recents-expand-row 320ms ease-out both;
+}
+
+.recents-expand-row > * {
+  min-height: 0;
+  overflow: hidden;
+}

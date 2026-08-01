@@ -7,12 +7,15 @@ import { client, policy, policyCar } from "~/lib/db/schema";
 import type { AppUser } from "~/lib/db/types";
 import { isSuperAdmin } from "~/lib/auth/roles";
 import { isFeatureEnabled } from "~/lib/services/feature-flags";
+import { listRecentRoutes } from "~/lib/services/navigation/recent-routes.server";
 import { getReferenceData } from "~/lib/services/reference.service";
 
 export type SideNavLink = {
   id: string;
   label: string;
   href: string;
+  /** Secondary line under the label (e.g. Recents → "Client" / "Policy"). */
+  caption?: string;
 };
 
 export type SideNavClientPreview = SideNavLink & {
@@ -39,6 +42,7 @@ export type SideNavPolicyPreview = SideNavLink & {
 };
 
 export type SideNavData = {
+  recentRoutes: SideNavLink[];
   recentClients: SideNavClientPreview[];
   recentPolicies: SideNavPolicyPreview[];
   reports: SideNavLink[];
@@ -243,13 +247,16 @@ async function listSettingsLinks(viewer: AppUser): Promise<SideNavLink[]> {
 }
 
 export async function getSideNavData(viewer: AppUser): Promise<SideNavData> {
-  const [recentClients, recentPolicies, settings] = await Promise.all([
-    listRecentClients(4),
-    listRecentPolicies(4),
-    listSettingsLinks(viewer),
-  ]);
+  const [recentRoutes, recentClients, recentPolicies, settings] =
+    await Promise.all([
+      listRecentRoutes(viewer.userId),
+      listRecentClients(4),
+      listRecentPolicies(4),
+      listSettingsLinks(viewer),
+    ]);
 
   return {
+    recentRoutes,
     recentClients,
     recentPolicies,
     reports: REPORT_LINKS.slice(0, 4),
