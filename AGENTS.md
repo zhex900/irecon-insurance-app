@@ -18,6 +18,7 @@ This file is **behavior only**. Engineering rules live in `docs/`.
 | Testing                                     | [docs/testing.md](docs/testing.md)                                           |
 | Lint / format                               | [docs/tooling.md](docs/tooling.md)                                           |
 | CAR premium / terrorism formulas (legacy)   | [docs/pricing/car-premium-formulas.md](docs/pricing/car-premium-formulas.md) |
+| Observability (CF + Sentry)                 | [docs/observability.md](docs/observability.md)                               |
 | How to run                                  | [README.md](README.md)                                                       |
 
 ## AI coding rules

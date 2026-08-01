@@ -3,6 +3,7 @@ import { isAdminRole } from "~/lib/auth/roles";
 import { getDb } from "~/lib/db/client";
 import { auditLog } from "~/lib/db/schema";
 import type { AppUser, AuditLogEntry } from "~/lib/db/types";
+import { logger } from "~/lib/observability/logger.server";
 import {
   AUDIT_ACTIONS,
   type AuditAction,
@@ -63,7 +64,9 @@ export async function writeAuditLog(input: WriteAuditLogInput): Promise<void> {
       requestPath: path,
     });
   } catch (error) {
-    console.error("writeAuditLog failed", error);
+    logger.error("writeAuditLog failed", {
+      error: error instanceof Error ? error.message : "audit_write_failed",
+    });
   }
 }
 

@@ -28,6 +28,8 @@ export type CloudflareEnv = {
   RESEND_API_KEY?: string;
   EMAIL_FROM?: string;
   EMAIL_REPLY_TO?: string;
+  /** Sentry DSN for Worker / SSR error reporting (secret). */
+  SENTRY_DSN?: string;
   HYPERDRIVE?: { connectionString: string };
   AVATARS?: R2BucketLike;
   LIBRARY_DOCUMENTS?: R2BucketLike;

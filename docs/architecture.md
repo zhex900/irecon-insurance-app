@@ -37,18 +37,19 @@ Primary deploy: **Cloudflare Workers** (`workers/app.ts`).
 
 No crossing responsibilities.
 
-| Path                                       | Owns                                                                           | Must not                               |
-| ------------------------------------------ | ------------------------------------------------------------------------------ | -------------------------------------- |
-| `app/routes/`                              | HTTP coordination: auth gate, Zod parse, call service, map to redirect/JSON/UI | Business rules, Drizzle, premium math  |
-| `app/lib/services/`                        | Business rules, orchestration, transactions                                    | `react`, `react-router`, hooks, JSX    |
-| `app/lib/db/`                              | Schema, client, mappers                                                        | UI, HTTP                               |
-| `app/lib/zod/`                             | Validation schemas                                                             | Side effects                           |
-| `app/components/`                          | Rendering                                                                      | DB access, auth decisions as sole gate |
-| `app/hooks/`                               | Reusable UI logic                                                              | Server imports                         |
-| `app/server/pricing/`                      | Pure premium calculators ([formulas](pricing/car-premium-formulas.md))         | Framework imports                      |
-| `app/lib/` (utils, pdf, storage, supabase) | Cross-cutting infrastructure                                                   | Domain UI                              |
-| `supabase/`                                | Migrations, local config                                                       | App UI                                 |
-| `_archive/`                                | Historical only                                                                | Anything imported by the app           |
+| Path                                       | Owns                                                                                | Must not                               |
+| ------------------------------------------ | ----------------------------------------------------------------------------------- | -------------------------------------- |
+| `app/routes/`                              | HTTP coordination: auth gate, Zod parse, call service, map to redirect/JSON/UI      | Business rules, Drizzle, premium math  |
+| `app/lib/services/`                        | Business rules, orchestration, transactions                                         | `react`, `react-router`, hooks, JSX    |
+| `app/lib/db/`                              | Schema, client, mappers                                                             | UI, HTTP                               |
+| `app/lib/zod/`                             | Validation schemas                                                                  | Side effects                           |
+| `app/components/`                          | Rendering                                                                           | DB access, auth decisions as sole gate |
+| `app/hooks/`                               | Reusable UI logic                                                                   | Server imports                         |
+| `app/server/pricing/`                      | Pure premium calculators ([formulas](pricing/car-premium-formulas.md))              | Framework imports                      |
+| `app/lib/observability/`                   | Structured logger, requestId, Sentry helpers ([observability.md](observability.md)) | Domain UI / PII dumps                  |
+| `app/lib/` (utils, pdf, storage, supabase) | Cross-cutting infrastructure                                                        | Domain UI                              |
+| `supabase/`                                | Migrations, local config                                                            | App UI                                 |
+| `_archive/`                                | Historical only                                                                     | Anything imported by the app           |
 
 Path alias: `~/` → `./app/*`.
 

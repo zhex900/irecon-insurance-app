@@ -102,6 +102,7 @@ async function syncWorkerSecrets() {
   await putSecret("RESEND_API_KEY", process.env.RESEND_API_KEY);
   await putSecret("EMAIL_FROM", process.env.EMAIL_FROM);
   await putSecret("EMAIL_REPLY_TO", process.env.EMAIL_REPLY_TO);
+  await putSecret("SENTRY_DSN", process.env.SENTRY_DSN);
 
   if (!process.env.SUPABASE_ANON_KEY?.trim()) {
     throw new Error(
@@ -113,6 +114,47 @@ async function syncWorkerSecrets() {
       "Warning: RESEND_API_KEY / EMAIL_FROM empty — policy document email will fail on staging until set.",
     );
   }
+  if (!process.env.SENTRY_DSN?.trim()) {
+    console.warn(
+      "Warning: SENTRY_DSN empty — Worker error reporting disabled until set.",
+    );
+  }
+}
+
+async function uploadSentrySourceMaps(appVersion) {
+  const authToken = process.env.SENTRY_AUTH_TOKEN?.trim();
+  const org = process.env.SENTRY_ORG?.trim();
+  const project = process.env.SENTRY_PROJECT?.trim();
+  if (!authToken || !org || !project) {
+    console.warn(
+      "Warning: SENTRY_AUTH_TOKEN / SENTRY_ORG / SENTRY_PROJECT missing — skipping source map upload.",
+    );
+    return;
+  }
+
+  const clientDir = join(webRoot, "build/client");
+  console.log(`→ Uploading Sentry source maps for release ${appVersion}…`);
+  await run("npx", ["sentry-cli", "sourcemaps", "inject", clientDir], {
+    env: {
+      ...process.env,
+      SENTRY_AUTH_TOKEN: authToken,
+      SENTRY_ORG: org,
+      SENTRY_PROJECT: project,
+    },
+  });
+  await run(
+    "npx",
+    ["sentry-cli", "sourcemaps", "upload", "--release", appVersion, clientDir],
+    {
+      env: {
+        ...process.env,
+        SENTRY_AUTH_TOKEN: authToken,
+        SENTRY_ORG: org,
+        SENTRY_PROJECT: project,
+      },
+    },
+  );
+  console.log("✓ Sentry source maps uploaded");
 }
 
 async function main() {
@@ -124,16 +166,31 @@ async function main() {
     return;
   }
 
+  const appVersion = resolveStagingAppVersion();
+
   if (!skipBuild) {
-    const appVersion = resolveStagingAppVersion();
+    const viteSentryDsn =
+      process.env.VITE_SENTRY_DSN?.trim() ||
+      process.env.SENTRY_DSN?.trim() ||
+      "";
     console.log(`→ Building Cloudflare Workers app (version ${appVersion})…`);
     await run("npm", ["run", "build"], {
       env: {
         ...process.env,
         VITE_APP_VERSION: appVersion,
+        ...(viteSentryDsn ? { VITE_SENTRY_DSN: viteSentryDsn } : {}),
       },
     });
     console.log("✓ Build complete");
+
+    try {
+      await uploadSentrySourceMaps(appVersion);
+    } catch (error) {
+      console.warn(
+        "Warning: Sentry source map upload failed.",
+        error instanceof Error ? error.message : error,
+      );
+    }
   }
 
   console.log("→ Deploying Worker…");

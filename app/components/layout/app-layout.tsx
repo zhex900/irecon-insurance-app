@@ -54,6 +54,7 @@ import {
 } from "~/lib/app-version";
 import { APP_NAME } from "~/lib/brand";
 import type { BrokerSession } from "~/lib/db/types";
+import { SentryUserSync } from "~/lib/observability/sentry-user-sync";
 import type { SideNavData } from "~/lib/services/navigation/side-nav.service";
 import { cn } from "~/lib/utils";
 
@@ -167,6 +168,7 @@ export function AppLayout({
 
   return (
     <TooltipProvider>
+      <SentryUserSync userId={broker.id} email={broker.email} />
       <SidebarProvider>
         <Sidebar collapsible="icon" variant="sidebar">
           <SidebarHeader className="flex h-14 shrink-0 flex-row items-center gap-1 overflow-hidden border-b border-sidebar-border px-2 group-data-[collapsible=icon]:justify-center">

@@ -5,12 +5,16 @@ import {
 import { AppErrorPage } from "~/components/app-error-page";
 import { AppLayout } from "~/components/layout/app-layout";
 import { requireAuth } from "~/lib/auth/session.server";
+import { updateRequestContext } from "~/lib/observability/request-context.server";
+import { setSentryUser } from "~/lib/observability/sentry.server";
 import { toBrokerSession } from "~/lib/services/broker-session";
 import { getSideNavData } from "~/lib/services/navigation/side-nav.service";
 import type { Route } from "./+types/layout";
 
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await requireAuth(request);
+  updateRequestContext({ userId: user.userId });
+  setSentryUser({ userId: user.userId, email: user.email });
   const [broker, sideNav] = await Promise.all([
     Promise.resolve(toBrokerSession(user)),
     getSideNavData(user),

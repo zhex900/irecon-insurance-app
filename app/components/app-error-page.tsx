@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { isRouteErrorResponse, Link } from "react-router";
 import { ErrorPageIllustration } from "~/components/error-page-illustration";
 import { Button, buttonVariants } from "~/components/ui/button";
+import { reportClientRouteError } from "~/lib/observability/report-error";
 import { cn } from "~/lib/utils";
 
 function formatErrorDetails(error: unknown): {
@@ -74,6 +75,10 @@ export function AppErrorPage({ error }: { error: unknown }) {
   const { heading, subheading, details, status, stack } =
     formatErrorDetails(error);
   const [showError, setShowError] = useState(false);
+
+  useEffect(() => {
+    reportClientRouteError(error);
+  }, [error]);
   const errorDump =
     stack ||
     [

@@ -443,7 +443,7 @@ tag vX.Y.Z / GitHub Release
 - [ ] UI copy polish pass.
 - [ ] Access control review (broker vs admin vs super-admin).
 - [ ] Backup/restore drill for Supabase prod.
-- [ ] Monitoring: Cloudflare analytics + Supabase + error tracking (Sentry or similar).
+- [x] Monitoring: Cloudflare Observability + Sentry (errors, Session Replay, user interactions). See [observability.md](observability.md).
 
 ---
 

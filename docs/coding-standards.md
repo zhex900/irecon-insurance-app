@@ -126,7 +126,7 @@ Until shared classes exist under e.g. `app/lib/errors.ts`, introduce them when a
 
 **Always include when structured logging exists:** `requestId`, `userId`, `route`, `duration`.
 
-No `console.log` in committed app code; use the project logger once introduced.
+No `console.log` in committed app code; use [`app/lib/observability/logger.server.ts`](../app/lib/observability/logger.server.ts) (`logger.info` / `logger.error`, …). See [observability.md](observability.md).
 
 ## Security
 

@@ -1,11 +1,18 @@
-import type { EntryContext, RouterContextProvider } from "react-router";
+import type {
+  EntryContext,
+  HandleErrorFunction,
+  RouterContextProvider,
+} from "react-router";
 import { ServerRouter } from "react-router";
 import { isbot } from "isbot";
 import { renderToReadableStream } from "react-dom/server";
+import * as Sentry from "@sentry/react-router/cloudflare";
+import { logger } from "~/lib/observability/logger.server";
+import { captureServerException } from "~/lib/observability/sentry.server";
 
 export const streamTimeout = 5_000;
 
-export default async function handleRequest(
+async function handleRequest(
   request: Request,
   responseStatusCode: number,
   responseHeaders: Headers,
@@ -22,14 +29,17 @@ export default async function handleRequest(
   let shellRendered = false;
   const userAgent = request.headers.get("user-agent");
 
-  const body = await renderToReadableStream(
+  const stream = await renderToReadableStream(
     <ServerRouter context={routerContext} url={request.url} />,
     {
       signal: AbortSignal.timeout(streamTimeout + 1000),
       onError(error: unknown) {
         responseStatusCode = 500;
         if (shellRendered) {
-          console.error(error);
+          logger.error("ssr.stream_error", {
+            error: error instanceof Error ? error.message : "ssr_error",
+          });
+          captureServerException(error);
         }
       },
     },
@@ -37,12 +47,22 @@ export default async function handleRequest(
   shellRendered = true;
 
   if ((userAgent && isbot(userAgent)) || routerContext.isSpaMode) {
-    await body.allReady;
+    await stream.allReady;
   }
 
   responseHeaders.set("Content-Type", "text/html");
-  return new Response(body, {
+  return new Response(Sentry.injectTraceMetaTags(stream), {
     headers: responseHeaders,
     status: responseStatusCode,
   });
 }
+
+export const handleError: HandleErrorFunction = (error, { request }) => {
+  if (request.signal.aborted) return;
+  logger.error("route.handle_error", {
+    error: error instanceof Error ? error.message : "route_error",
+  });
+  captureServerException(error);
+};
+
+export default Sentry.wrapSentryHandleRequest(handleRequest);

@@ -97,6 +97,7 @@ export default [
       ]),
     ]),
     route("settings/audit-log", "routes/_app/settings/audit-log.tsx"),
+    route("settings/sentry-test", "routes/_app/settings/sentry-test.tsx"),
     route("settings", "routes/_app/settings/_index.tsx"),
   ]),
 
