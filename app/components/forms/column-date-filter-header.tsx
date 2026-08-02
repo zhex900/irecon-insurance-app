@@ -48,6 +48,11 @@ export function ColumnDateFilterHeader({
   }
 
   function applyPreset(preset: string) {
+    // Clicking the active preset unchecks it (same as Clear).
+    if (draft.preset === preset) {
+      clear();
+      return;
+    }
     const range = rangeForPreset(preset);
     const next: DateRangeValue = {
       from: range.from,
