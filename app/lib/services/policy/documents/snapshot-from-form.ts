@@ -3,6 +3,13 @@ import { normalizeExcesses } from "~/lib/excesses";
 import { normalizeSubLimits } from "~/lib/sub-limits";
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
 
+/** Prefer a finite form money value; fall back when blank/NaN (not when 0). */
+function pickMoney(formValue: unknown, fallback: number): number {
+  if (formValue === "" || formValue == null) return fallback;
+  const n = typeof formValue === "number" ? formValue : Number(formValue);
+  return Number.isFinite(n) ? n : fallback;
+}
+
 /**
  * Merge live wizard form values into a policy snapshot for document generation.
  * Prefer form fields over the last-loaded policy so unsaved edits appear in PDFs.
@@ -45,25 +52,34 @@ export function policySnapshotFromForm(
           : null,
       siteAddress: values.siteAddress ?? policy.car.siteAddress,
       insuredName: values.insuredName ?? policy.car.insuredName,
-      estimatedTurnover:
-        values.estimatedTurnover ?? policy.car.estimatedTurnover,
+      estimatedTurnover: pickMoney(
+        values.estimatedTurnover,
+        policy.car.estimatedTurnover,
+      ),
       businessActivities:
         values.businessActivities ?? policy.car.businessActivities,
       insuredContracts: values.insuredContracts ?? policy.car.insuredContracts,
       geographicalScopes:
         values.geographicalScopes ?? policy.car.geographicalScopes,
-      plantEquipment: values.plantEquipment ?? policy.car.plantEquipment,
-      existingStructure:
-        values.existingStructure ?? policy.car.existingStructure,
-      displayHomes: values.displayHomes ?? policy.car.displayHomes,
+      plantEquipment: pickMoney(
+        values.plantEquipment,
+        policy.car.plantEquipment,
+      ),
+      existingStructure: pickMoney(
+        values.existingStructure,
+        policy.car.existingStructure,
+      ),
+      displayHomes: pickMoney(values.displayHomes, policy.car.displayHomes),
       claimsCountLast3Years:
         values.claimsCountLast3Years ?? policy.car.claimsCountLast3Years,
       anyClaimsExceed20k:
         values.anyClaimsExceed20k ?? policy.car.anyClaimsExceed20k,
       declarationConfirmed:
         values.declarationConfirmed ?? policy.car.declarationConfirmed,
-      contractWorksSumInsured:
-        values.contractWorksSumInsured ?? policy.car.contractWorksSumInsured,
+      contractWorksSumInsured: pickMoney(
+        values.contractWorksSumInsured,
+        policy.car.contractWorksSumInsured,
+      ),
       liabilityLimitBand:
         values.liabilityLimitBand ?? policy.car.liabilityLimitBand,
       hasExistingContractWorksCover:

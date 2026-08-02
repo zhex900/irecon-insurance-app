@@ -115,7 +115,12 @@ export async function generatePolicyPdf(
     throw new Error(`No published pdfme template for ${templateKey}`);
   }
 
-  const baseInputs = mergeInputs ?? policyToMergeInputs(policy);
+  // Derive from the policy snapshot passed in (wizard should pass form+premium
+  // overrides). Optional mergeInputs only fill gaps — never overwrite live keys.
+  const baseInputs = {
+    ...(mergeInputs ?? {}),
+    ...policyToMergeInputs(policy),
+  };
   const inputs: Record<string, string> = {
     ...Object.fromEntries(resolved.mergeFields.map((name) => [name, ""])),
     ...baseInputs,
@@ -164,7 +169,20 @@ export async function generatePolicyPdf(
         }
         continue;
       }
-      if (name in inputs) continue;
+      // Designer renames (e.g. "Transit copy") keep content `{Transit}` — fill
+      // from the canonical merge key when this schema name has no value.
+      if (typeof schema.content === "string" && !inputs[name]) {
+        const single = /^\{([A-Za-z0-9_]+)\}$/.exec(schema.content.trim());
+        if (single) {
+          const fromKey = single[1]!;
+          const from = baseInputs[fromKey] ?? inputs[fromKey];
+          if (from) {
+            inputs[name] = from;
+            continue;
+          }
+        }
+      }
+      if (name in inputs && inputs[name]) continue;
       const m = /^(.+)__(\d+)$/.exec(name);
       if (m && m[1] in baseInputs) {
         inputs[name] = baseInputs[m[1]] ?? "";
@@ -251,15 +269,8 @@ export async function buildPdfBlobFromDocument(
     return buildLegacyTextPdfBlob(doc.name, doc.content);
   }
 
-  if (doc.mergeInputs && policy) {
-    const { pdf } = await generatePolicyPdf(
-      templateKey,
-      policy,
-      doc.mergeInputs,
-    );
-    return new Blob([pdf.buffer as ArrayBuffer], { type: "application/pdf" });
-  }
-
+  // Always rebuild from the policy snapshot so Limits / Premium Breakdown
+  // overrides are current. Ignore stored mergeInputs (they go stale).
   if (policy) {
     return buildPdfBlobFromPolicy(templateKey, policy);
   }

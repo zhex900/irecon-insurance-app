@@ -1,8 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { useFetcher } from "react-router";
 import type { UseFormReturn } from "react-hook-form";
 import { toast } from "sonner";
 import type { Policy, PremiumBreakdown } from "~/lib/db/types";
+import {
+  buildReferralReasons,
+  liabilityLimitLabel,
+} from "~/lib/pricing/referral-reasons";
 import { rollupPremiumTotals } from "~/lib/premium-totals";
 import type { NoteAuthor } from "~/lib/services/users/service";
 import {
@@ -55,9 +59,7 @@ export function usePolicyPremiumCalc({
   const premiumManuallyEditedRef = useRef(false);
   /** Next recalculate response should always replace premium (clears overrides). */
   const forceApplyRecalcRef = useRef(false);
-  const [referralReasons, setReferralReasons] = useState<string[]>(
-    policy.car.referralReasons ?? [],
-  );
+  const rating = fetcher.data?.rating ?? policy.car.rating;
 
   const isFetcherBusy = fetcher.state !== "idle";
   const isCalculating =
@@ -65,20 +67,16 @@ export function usePolicyPremiumCalc({
 
   const lastPolicyIdRef = useRef(policy.policyId);
   const lastPremiumFromPolicyRef = useRef(policy.car.premium);
-  const lastReferralReasonsFromPolicyRef = useRef(policy.car.referralReasons);
   useEffect(() => {
     const changed =
       lastPolicyIdRef.current !== policy.policyId ||
-      lastPremiumFromPolicyRef.current !== policy.car.premium ||
-      lastReferralReasonsFromPolicyRef.current !== policy.car.referralReasons;
+      lastPremiumFromPolicyRef.current !== policy.car.premium;
     if (!changed) return;
     lastPolicyIdRef.current = policy.policyId;
     lastPremiumFromPolicyRef.current = policy.car.premium;
-    lastReferralReasonsFromPolicyRef.current = policy.car.referralReasons;
     premiumManuallyEditedRef.current = false;
     setPremium(withRolledTotals(policy.car.premium));
-    setReferralReasons(policy.car.referralReasons ?? []);
-  }, [policy.policyId, policy.car.premium, policy.car.referralReasons]);
+  }, [policy.policyId, policy.car.premium]);
 
   const lastFetcherDataRef = useRef(fetcher.data);
   useEffect(() => {
@@ -97,10 +95,53 @@ export function usePolicyPremiumCalc({
         toast.success("Premium recalculated — manual overrides cleared");
       }
     }
-    if (data?.referralReasons) {
-      setReferralReasons(data.referralReasons);
-    }
   }, [fetcher.data]);
+
+  // Live Limits / claims + premium overrides (same prefer-override rule as PDFs).
+  const displayHomes = form.watch("displayHomes");
+  const existingStructure = form.watch("existingStructure");
+  const claimsCountLast3Years = form.watch("claimsCountLast3Years");
+  const anyClaimsExceed20k = form.watch("anyClaimsExceed20k");
+  const hasExistingContractWorksCover = form.watch(
+    "hasExistingContractWorksCover",
+  );
+  const plantEquipment = form.watch("plantEquipment");
+  const liabilityLimitBand = form.watch("liabilityLimitBand");
+  const dateStart = form.watch("dateStart");
+
+  const referralReasons = useMemo(() => {
+    if (!rating) return policy.car.referralReasons ?? [];
+    return buildReferralReasons(
+      {
+        displayHomes: Number(displayHomes) || 0,
+        existingStructure: Number(existingStructure) || 0,
+        claimsCountLast3Years: Number(claimsCountLast3Years) || 0,
+        anyClaimsExceed20k: Boolean(anyClaimsExceed20k),
+        hasExistingContractWorksCover: Boolean(hasExistingContractWorksCover),
+        plantEquipment: Number(plantEquipment) || 0,
+        liabilityLimitBand: Number(liabilityLimitBand) || 3,
+        dateStart: String(dateStart || ""),
+      },
+      rating,
+      liabilityLimitLabel(Number(liabilityLimitBand) || 3),
+      premium,
+    );
+  }, [
+    rating,
+    premium,
+    displayHomes,
+    existingStructure,
+    claimsCountLast3Years,
+    anyClaimsExceed20k,
+    hasExistingContractWorksCover,
+    plantEquipment,
+    liabilityLimitBand,
+    dateStart,
+    policy.car.referralReasons,
+  ]);
+
+  // Kept for callers that still pass server reasons after fetch; display is derived.
+  const setReferralReasons = useCallback((_reasons: string[]) => {}, []);
 
   // Auto-calculate only when Premium is open and there is no saved premium yet.
   // Recalculate persists to the DB — skipping when premium exists preserves manual edits.

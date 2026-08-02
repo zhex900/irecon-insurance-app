@@ -77,7 +77,9 @@ function ExcessBandGroups({
                 key={field.key}
                 field={field}
                 className={
-                  field.key === "excessSection1A" ? "md:col-span-2" : undefined
+                  field.key === "excessPlantEquipment"
+                    ? "md:col-span-2"
+                    : undefined
                 }
               />
             ))}

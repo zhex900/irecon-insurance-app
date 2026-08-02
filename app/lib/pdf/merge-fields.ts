@@ -1,4 +1,5 @@
 import type { Policy } from "~/lib/db/types";
+import { preferPremiumOverride } from "~/lib/premium-override";
 import { combinedTrueBasePremium } from "~/lib/premium-totals";
 import { referenceData as reference } from "~/lib/reference-data";
 import { formatCurrency, formatDate } from "~/lib/utils";
@@ -20,7 +21,10 @@ function money(value: number | string | null | undefined) {
   if (typeof value === "string") {
     const trimmed = value.trim();
     if (!trimmed) return "";
-    const parsed = Number(trimmed.replace(/[^0-9.-]/g, ""));
+    // Only format bare / $ amounts — leave free text (e.g. "Not Insured") alone.
+    const bare = trimmed.replace(/[$,\s]/g, "");
+    if (!/^-?\d+(\.\d+)?$/.test(bare)) return trimmed;
+    const parsed = Number(bare);
     if (Number.isNaN(parsed)) return trimmed;
     return formatCurrency(parsed);
   }
@@ -41,7 +45,14 @@ function stateCode(stateId: number) {
   return STATE_BY_ID.get(stateId) ?? "";
 }
 
+const LIABILITY_AMOUNT_BY_ID = new Map<number, number>([
+  [1, 10_000_000],
+  [2, 20_000_000],
+]);
+
 function liabilityLabel(bandId: number) {
+  const amount = LIABILITY_AMOUNT_BY_ID.get(bandId);
+  if (amount != null) return money(amount);
   return LIABILITY_BY_ID.get(bandId) ?? "";
 }
 
@@ -57,38 +68,44 @@ export function premiumCalculationTablePlaceholderContent(): string {
   return JSON.stringify([
     [
       "Base Premium:",
-      "{Section1BeforeBasePremium}",
-      "{Section2BeforeBasePremium}",
+      "{ContractWorksBasePremium}",
+      "{LegalLiabilityBasePremium}",
       "",
     ],
-    ["Existing Structure:", "{Section1ExistingStructure}", "", ""],
+    ["Existing Structure:", "{ExistingStructurePremium}", "", ""],
+    ["Display Homes:", "{DisplayHomesPremium}", "", ""],
     [
       "True Base Premium:",
-      "{Section1TrueBasePremium}",
-      "{Section2TrueBasePremium}",
+      "{ContractWorksTrueBasePremium}",
+      "{LegalLiabilityTrueBasePremium}",
       "{CombinedTrueBasePremium}",
     ],
-    ["Terrorism Levy:", "{Section1TerrorismPremium}", "", ""],
-    ["Plant & Equipment Base Premium", "{Section1PlantEquipment}", "", ""],
+    ["Terrorism Levy:", "{TerrorismLevy}", "", ""],
+    ["Plant & Equipment Base Premium", "{PlantEquipmentPremium}", "", ""],
     [
       "Terrorism Levy: (Plant & Equipment)",
-      "{Section1PlantTerrorismPremium}",
+      "{PlantEquipmentTerrorismLevy}",
       "",
       "",
     ],
-    ["ESL Plant & Equipment:", "{Section1PlantESL}", "", ""],
-    ["ESL:", "{Section1ESL}", "{Section2ESL}", "{CombinedESL}"],
-    ["GST:", "{Section1GST}", "{Section2GST}", "{CombinedGST}"],
-    ["SD:", "{Section1SD}", "{Section2SD}", "{CombinedSD}"],
+    ["ESL Plant & Equipment:", "{PlantEquipmentEsl}", "", ""],
+    ["ESL:", "{ContractWorksEsl}", "{LegalLiabilityEsl}", "{CombinedEsl}"],
+    ["GST:", "{ContractWorksGst}", "{LegalLiabilityGst}", "{CombinedGst}"],
+    [
+      "SD:",
+      "{ContractWorksStampDuty}",
+      "{LegalLiabilityStampDuty}",
+      "{CombinedStampDuty}",
+    ],
     ["Broker Fee:", "", "", "{BrokerFee}"],
     ["Total Fee GST:", "", "", "{BrokerFeeGst}"],
     ["Insurer Admin:", "", "", "{InsurerAdminFee}"],
     ["IAA Admin Fee:", "", "", "{IAAAdminFee}"],
     [
       "Total Premium:",
-      "{Section1TotalPremium}",
-      "{Section2TotalPremium}",
-      "{OriginalTotalPremium}",
+      "{ContractWorksTotalPremium}",
+      "{LegalLiabilityTotalPremium}",
+      "{CombinedTotalPremium}",
     ],
   ]);
 }
@@ -223,15 +240,14 @@ export function normalizePdfmeTemplateSchemas<
 }
 
 /**
- * Map a policy snapshot to legacy Word MERGEFIELD names.
- * Keys are legacy Word MERGEFIELD names used in pdfme schemas.
+ * Map a policy snapshot to pdfme merge-field names (label-based, readable).
  */
 export function policyToMergeInputs(policy: Policy): Record<string, string> {
   const car = policy.car;
   const premium = car.premium;
   const adjustment = car.adjustment;
-  const sub = car.subLimits;
-  const excess = car.excesses;
+  const sub = car.subLimits ?? ({} as NonNullable<typeof car.subLimits>);
+  const excess = car.excesses ?? ({} as NonNullable<typeof car.excesses>);
   const original = adjustment?.breakdown.original;
   const adjusted = adjustment?.breakdown.adjustment;
   const delta = adjustment?.breakdown.delta;
@@ -239,16 +255,15 @@ export function policyToMergeInputs(policy: Policy): Record<string, string> {
   const inputs: Record<string, string> = {
     PolicyNumber: policy.policyNumber,
     CoverType: coverLabel(car.coverTypeId),
-    COVERTYPE: coverLabel(car.coverTypeId).toUpperCase(),
+    CoverTypeUpper: coverLabel(car.coverTypeId).toUpperCase(),
     InsuredName: car.insuredName,
     InceptionDate: formatDate(policy.dateStart),
     ExpiryDate: formatDate(policy.dateEnd),
     EstimatedTurnover: money(car.estimatedTurnover),
     State: stateCode(policy.stateId),
-    Postcode: policy.postcode,
     PostCode: policy.postcode,
     StampDutyExempt: yesNo(adjustment?.stampDutyExempt ?? false),
-    BusinessDescriptionText: String(car.businessActivities ?? "").replace(
+    BusinessDescription: String(car.businessActivities ?? "").replace(
       /\s*\n\s*/g,
       " ",
     ),
@@ -256,10 +271,27 @@ export function policyToMergeInputs(policy: Policy): Record<string, string> {
     GeographicalScope: car.geographicalScopes,
     MaximumConstructionPeriod: String(car.maximumConstructionPeriod ?? ""),
     MaximumMaintenancePeriod: String(car.maximumMaintenancePeriod ?? ""),
-    Section1Value: money(car.contractWorksSumInsured),
-    ExistingStructures: money(car.existingStructure),
-    DisplayHomes: money(car.displayHomes),
-    PlantEquipment: money(car.plantEquipment),
+    ContractWorksLimit: money(car.contractWorksSumInsured),
+    ExistingStructures: money(
+      preferPremiumOverride(
+        premium?.contractWorksExistingStructurePremium ??
+          car.contractWorksExistingStructurePremium,
+        car.existingStructure,
+      ),
+    ),
+    DisplayHomes: money(
+      preferPremiumOverride(
+        premium?.contractWorksDisplayHomesPremium ??
+          car.contractWorksDisplayHomesPremium,
+        car.displayHomes,
+      ),
+    ),
+    ConstructionPlantEquipment: money(
+      preferPremiumOverride(
+        premium?.contractWorksPlantPremium,
+        car.plantEquipment,
+      ),
+    ),
     SiteAddress: car.siteAddress,
     RemovalOfDebris: String(sub.removalOfDebris ?? ""),
     ExpeditingExpenses: String(sub.expeditingExpenses ?? ""),
@@ -273,89 +305,106 @@ export function policyToMergeInputs(policy: Policy): Record<string, string> {
     EmployeesProperty: String(sub.employeesProperty ?? ""),
     MaterialsInOffSiteStorage: String(sub.materialsInOffSiteStorage ?? ""),
     Transit: String(sub.transit ?? ""),
-    Section2Value: liabilityLabel(car.liabilityLimitBand),
-    ExcessSection1A: excess.excessSection1A,
-    ExcessSection1B: excess.excessSection1B,
-    ExcessSection1C: excess.excessSection1C,
-    ExcessSection1D: excess.excessSection1D,
-    ExcessSection1E: excess.excessSection1E,
+    LegalLiabilityLimit: liabilityLabel(car.liabilityLimitBand),
+    ExcessPlantEquipment: money(excess.excessPlantEquipment),
+    ExcessUpTo2MMinorPerils: money(excess.excessUpTo2MMinorPerils),
+    ExcessUpTo2MMajorPerils: money(excess.excessUpTo2MMajorPerils),
+    ExcessOver2MMinorPerils: money(excess.excessOver2MMinorPerils),
+    ExcessOver2MMajorPerils: money(excess.excessOver2MMajorPerils),
     ExcessAdditionalNotes: excess.excessAdditionalNotes ?? "",
-    ExcessSection2A: excess.excessSection2A,
-    ExcessSection2C: excess.excessSection2C,
-    ExcessSection2D: excess.excessSection2D,
-    ExcessSection2E: excess.excessSection2E,
-    ExcessSection2F: excess.excessSection2F,
-    // One top-aligned block in the template — join the legacy 3-way split.
+    ExcessWorkerToWorker: money(excess.excessWorkerToWorker),
+    ExcessUpTo2MLimit10M: money(excess.excessUpTo2MLimit10M),
+    ExcessUpTo2MLimit20M: money(excess.excessUpTo2MLimit20M),
+    ExcessOver2MLimit10M: money(excess.excessOver2MLimit10M),
+    ExcessOver2MLimit20M: money(excess.excessOver2MLimit20M),
+    // Kept numbered — multi-slot excluded-contracts block.
     ExcludedContracts1: car.excludedContracts1 ?? "",
     ExcludedContracts2: car.excludedContracts2 ?? "",
     ExcludedContracts3: car.excludedContracts3 ?? "",
-    NumberOfClaimLast3Years: String(car.claimsCountLast3Years ?? ""),
+    ClaimsCountLast3Years: String(car.claimsCountLast3Years ?? ""),
     AnyClaimsExceed20k: yesNo(car.anyClaimsExceed20k),
-    Confirmation: yesNo(car.declarationConfirmed),
-    Subject: car.customWordings?.[0]?.subject ?? car.customWordingSubject ?? "",
-    Content: car.customWordings?.[0]?.content ?? car.customWordingContent ?? "",
-    Subject2:
+    DutyOfDisclosureConfirmation: yesNo(car.declarationConfirmed),
+    EndorsementSubject:
+      car.customWordings?.[0]?.subject ?? car.customWordingSubject ?? "",
+    EndorsementContent:
+      car.customWordings?.[0]?.content ?? car.customWordingContent ?? "",
+    EndorsementSubject2:
       car.customWordings?.[1]?.subject ?? car.customWordingSubject2 ?? "",
-    Content2:
+    EndorsementContent2:
       car.customWordings?.[1]?.content ?? car.customWordingContent2 ?? "",
     Notes: (policy.notes ?? [])
       .map((note) => note.description)
       .filter(Boolean)
       .join("\n\n"),
-    Name: car.insuredName,
+    ReferralName: car.insuredName,
   };
 
   if (premium) {
+    const esPremium =
+      premium.contractWorksExistingStructurePremium ??
+      car.contractWorksExistingStructurePremium ??
+      0;
+    const dhPremium =
+      premium.contractWorksDisplayHomesPremium ??
+      car.contractWorksDisplayHomesPremium ??
+      0;
+    const plantPremium = premium.contractWorksPlantPremium ?? 0;
+    const terror = premium.contractWorksTerrorismPremium ?? 0;
+    const plantTerror = premium.contractWorksPlantTerrorismPremium ?? 0;
+    const plantEsl = premium.contractWorksPlantESL ?? 0;
+    const s1Esl = premium.contractWorksESL ?? 0;
+    const s2Esl = premium.liabilityESL ?? 0;
+    const s1Sd = premium.contractWorksStampDuty ?? 0;
+    const s2Sd = premium.liabilityStampDuty ?? 0;
+    const s1TrueBase = premium.contractWorksBasePremium ?? 0;
+    const s2TrueBase = premium.liabilityBasePremium ?? 0;
+
     Object.assign(inputs, {
-      Section1BeforeBasePremium: money(
+      // Premium Breakdown — always from live premium (includes manual overrides).
+      ContractWorksBasePremium: money(
         premium.contractWorksCalculatedBasePremium,
       ),
-      Section1TrueBasePremium: money(premium.contractWorksBasePremium),
-      Section1PlantEquipment: money(premium.contractWorksPlantPremium),
-      Section1PlantESL: money(premium.contractWorksPlantESL),
-      Section1ESL: money(premium.contractWorksESL),
-      Section1GST: money(premium.contractWorksGST),
-      Section1SD: money(premium.contractWorksStampDuty),
-      Section1TerrorismPremium: money(premium.contractWorksTerrorismPremium),
-      Section1PlantTerrorismPremium: money(
-        premium.contractWorksPlantTerrorismPremium,
-      ),
-      Section1ExistingStructure: money(
-        premium.contractWorksExistingStructurePremium,
-      ),
-      Section1TotalPremium: money(premium.contractWorksTotalPremium),
-      Section2BeforeBasePremium: money(premium.liabilityCalculatedBasePremium),
-      Section2TrueBasePremium: money(premium.liabilityBasePremium),
-      Section2ESL: money(premium.liabilityESL),
-      Section2GST: money(premium.liabilityGST),
-      Section2SD: money(premium.liabilityStampDuty),
-      Section2TotalPremium: money(premium.liabilityTotalPremium),
+      LegalLiabilityBasePremium: money(premium.liabilityCalculatedBasePremium),
+      ContractWorksTrueBasePremium: money(s1TrueBase),
+      LegalLiabilityTrueBasePremium: money(s2TrueBase),
       CombinedTrueBasePremium: money(combinedTrueBasePremium(premium)),
-      CombinedESL: money(premium.contractWorksESL + premium.liabilityESL),
-      CombinedGST: money(premium.contractWorksGST + premium.liabilityGST),
-      CombinedSD: money(
-        premium.contractWorksStampDuty + premium.liabilityStampDuty,
+      TerrorismLevy: money(terror),
+      ExistingStructurePremium: money(esPremium),
+      DisplayHomesPremium: money(dhPremium),
+      PlantEquipmentPremium: money(plantPremium),
+      PlantEquipmentTerrorismLevy: money(plantTerror),
+      PlantEquipmentEsl: money(plantEsl),
+      ContractWorksEsl: money(s1Esl),
+      LegalLiabilityEsl: money(s2Esl),
+      CombinedEsl: money(s1Esl + s2Esl + plantEsl),
+      ContractWorksGst: money(premium.contractWorksGST),
+      LegalLiabilityGst: money(premium.liabilityGST),
+      CombinedGst: money(
+        (premium.contractWorksGST ?? 0) + (premium.liabilityGST ?? 0),
       ),
+      ContractWorksStampDuty: money(s1Sd),
+      LegalLiabilityStampDuty: money(s2Sd),
+      CombinedStampDuty: money(s1Sd + s2Sd),
+      ContractWorksTotalPremium: money(premium.contractWorksTotalPremium),
+      LegalLiabilityTotalPremium: money(premium.liabilityTotalPremium),
+      CombinedTotalPremium: money(premium.originalTotalPremium),
       BrokerFee: money(premium.combinedBrokerFee),
-      BrokerFeeGst: money(premium.combinedBrokerFee * 0.1),
-      OriginalTotalPremium: money(premium.originalTotalPremium),
+      BrokerFeeGst: money((premium.combinedBrokerFee ?? 0) * 0.1),
       // Adjustment "original turnover" calc columns (same as bind-time premium)
-      CalcSection1Terrorism: money(premium.contractWorksTerrorismPremium),
-      CalcSection1ESL: money(premium.contractWorksESL),
-      CalcSection1GST: money(premium.contractWorksGST),
-      CalcSection1SD: money(premium.contractWorksStampDuty),
-      CalcSection1Gross: money(premium.contractWorksTotalPremium),
-      CalcSection2ESL: money(premium.liabilityESL),
-      CalcSection2GST: money(premium.liabilityGST),
-      CalcSection2SD: money(premium.liabilityStampDuty),
-      CalcSection2Gross: money(premium.liabilityTotalPremium),
-      CalcCombinedBaseNoTerror: money(
-        premium.contractWorksBasePremium + premium.liabilityBasePremium,
+      CalcTerrorismLevy: money(terror),
+      CalcContractWorksEsl: money(s1Esl),
+      CalcContractWorksGst: money(premium.contractWorksGST),
+      CalcContractWorksStampDuty: money(s1Sd),
+      CalcContractWorksGross: money(premium.contractWorksTotalPremium),
+      CalcLegalLiabilityEsl: money(s2Esl),
+      CalcLegalLiabilityGst: money(premium.liabilityGST),
+      CalcLegalLiabilityStampDuty: money(s2Sd),
+      CalcLegalLiabilityGross: money(premium.liabilityTotalPremium),
+      CalcCombinedBaseNoTerror: money(s1TrueBase + s2TrueBase),
+      CalcCombinedGst: money(
+        (premium.contractWorksGST ?? 0) + (premium.liabilityGST ?? 0),
       ),
-      CalcCombinedGST: money(premium.contractWorksGST + premium.liabilityGST),
-      CalcCombinedSD: money(
-        premium.contractWorksStampDuty + premium.liabilityStampDuty,
-      ),
+      CalcCombinedStampDuty: money(s1Sd + s2Sd),
       CalcCombinedGross: money(premium.originalTotalPremium),
     });
   }
@@ -364,38 +413,40 @@ export function policyToMergeInputs(policy: Policy): Record<string, string> {
     Object.assign(inputs, {
       AdjustedTurnover: money(adjustment.adjustedTurnover),
       StampDutyExempt: yesNo(adjustment.stampDutyExempt),
-      AdjustedSection1TrueBasePremium: money(adjusted.section1.trueBasePremium),
-      AdjustedSection1TerrorismPremium: money(
-        adjusted.section1.terrorismPremium,
+      AdjustedContractWorksTrueBasePremium: money(
+        adjusted.section1.trueBasePremium,
       ),
-      AdjustedSection1ESL: money(adjusted.section1.esl),
-      AdjustedSection1GST: money(adjusted.section1.gst),
-      AdjustedSection1SD: money(adjusted.section1.sd),
-      AdjustedSection1Gross: money(adjusted.section1.totalPremium),
-      AdjustedSection2TrueBasePremium: money(adjusted.section2.trueBasePremium),
-      AdjustedSection2ESL: money(adjusted.section2.esl),
-      AdjustedSection2GST: money(adjusted.section2.gst),
-      AdjustedSection2SD: money(adjusted.section2.sd),
-      AdjustedSection2Gross: money(adjusted.section2.totalPremium),
+      AdjustedTerrorismLevy: money(adjusted.section1.terrorismPremium),
+      AdjustedContractWorksEsl: money(adjusted.section1.esl),
+      AdjustedContractWorksGst: money(adjusted.section1.gst),
+      AdjustedContractWorksStampDuty: money(adjusted.section1.sd),
+      AdjustedContractWorksGross: money(adjusted.section1.totalPremium),
+      AdjustedLegalLiabilityTrueBasePremium: money(
+        adjusted.section2.trueBasePremium,
+      ),
+      AdjustedLegalLiabilityEsl: money(adjusted.section2.esl),
+      AdjustedLegalLiabilityGst: money(adjusted.section2.gst),
+      AdjustedLegalLiabilityStampDuty: money(adjusted.section2.sd),
+      AdjustedLegalLiabilityGross: money(adjusted.section2.totalPremium),
       AdjustedCombinedBaseNoTerror: money(adjusted.total.trueBasePremium),
-      AdjustedCombinedGST: money(adjusted.total.gst),
-      AdjustedCombinedSD: money(adjusted.total.sd),
+      AdjustedCombinedGst: money(adjusted.total.gst),
+      AdjustedCombinedStampDuty: money(adjusted.total.sd),
       AdjustedCombinedGross: money(adjusted.total.totalPremium),
-      TotalSection1TrueBasePremium: money(delta.section1.trueBasePremium),
-      TotalSection1TerrorismPremium: money(delta.section1.terrorismPremium),
-      TotalSection1ESL: money(delta.section1.esl),
-      TotalSection1GST: money(delta.section1.gst),
-      TotalSection1SD: money(delta.section1.sd),
-      TotalSection1Gross: money(delta.section1.totalPremium),
-      TotalSection2TrueBasePremium: money(delta.section2.trueBasePremium),
-      TotalSection2ESL: money(delta.section2.esl),
-      TotalSection2GST: money(delta.section2.gst),
-      TotalSection2SD: money(delta.section2.sd),
-      TotalSection2Gross: money(delta.section2.totalPremium),
-      TotalTrueBase: money(delta.total.trueBasePremium),
-      TotalCombinedGST: money(delta.total.gst),
-      TotalCombinedSD: money(delta.total.sd),
-      TotalCombinedGross: money(delta.total.totalPremium),
+      DeltaContractWorksTrueBasePremium: money(delta.section1.trueBasePremium),
+      DeltaTerrorismLevy: money(delta.section1.terrorismPremium),
+      DeltaContractWorksEsl: money(delta.section1.esl),
+      DeltaContractWorksGst: money(delta.section1.gst),
+      DeltaContractWorksStampDuty: money(delta.section1.sd),
+      DeltaContractWorksGross: money(delta.section1.totalPremium),
+      DeltaLegalLiabilityTrueBasePremium: money(delta.section2.trueBasePremium),
+      DeltaLegalLiabilityEsl: money(delta.section2.esl),
+      DeltaLegalLiabilityGst: money(delta.section2.gst),
+      DeltaLegalLiabilityStampDuty: money(delta.section2.sd),
+      DeltaLegalLiabilityGross: money(delta.section2.totalPremium),
+      DeltaTrueBase: money(delta.total.trueBasePremium),
+      DeltaCombinedGst: money(delta.total.gst),
+      DeltaCombinedStampDuty: money(delta.total.sd),
+      DeltaCombinedGross: money(delta.total.totalPremium),
     });
   }
 

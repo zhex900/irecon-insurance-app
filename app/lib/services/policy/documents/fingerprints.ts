@@ -34,6 +34,14 @@ export function reviewDocumentsFingerprint(policy: Policy): string {
     premium?.contractWorksDisplayHomesPremium ?? "none",
     premium?.contractWorksExistingStructurePremium ?? "none",
     premium?.contractWorksBasePremium ?? "none",
+    premium?.contractWorksTerrorismPremium ?? "none",
+    premium?.contractWorksPlantPremium ?? "none",
+    premium?.contractWorksPlantTerrorismPremium ?? "none",
+    premium?.contractWorksESL ?? "none",
+    premium?.contractWorksStampDuty ?? "none",
+    premium?.liabilityBasePremium ?? "none",
+    premium?.liabilityESL ?? "none",
+    premium?.liabilityStampDuty ?? "none",
   ].join("|");
 }
 

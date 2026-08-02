@@ -44,7 +44,7 @@ const SaveHighlightContext = createContext<SaveHighlightContextValue>({
   markAttentionPaths: () => {},
 });
 
-/** Flatten RHF dirtyFields into dot-paths like "excesses.excessSection1A". */
+/** Flatten RHF dirtyFields into dot-paths like "excesses.excessPlantEquipment". */
 export function flattenDirtyPaths(dirty: unknown, prefix = ""): string[] {
   if (dirty === true) return prefix ? [prefix] : [];
   if (!dirty || typeof dirty !== "object") return [];

@@ -109,7 +109,7 @@ async function resolveDocumentPdfBytes(
     const { pdf } = await generatePolicyPdf(
       doc.templateKey,
       policy,
-      doc.mergeInputs,
+      undefined,
       resolved,
     );
     return pdf;

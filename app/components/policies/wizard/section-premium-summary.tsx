@@ -28,6 +28,7 @@ import { formatDocumentLabel } from "~/lib/documents/document-label";
 import { formatCurrency } from "~/lib/utils";
 import { PdfPreviewDialog } from "~/components/pdf-preview-dialog";
 import { buildPdfBlobFromDocument } from "~/lib/pdf/generate";
+import { reviewDocumentsFingerprint } from "~/lib/services/policy/documents/fingerprints";
 import { EmailDocumentsDialog } from "~/components/forms/email-documents-dialog";
 import {
   DEFAULT_EMAIL_TEMPLATES,
@@ -54,6 +55,8 @@ export function PremiumSummaryPanel({
   footerImageWidth,
   adjustment,
   policy,
+  /** Prefer live form+premium snapshot so schedule/rating show manual overrides. */
+  getPreviewPolicy,
   className,
   /** When true, only the Documents block (for &lt;xl main column). */
   documentsOnly = false,
@@ -73,6 +76,7 @@ export function PremiumSummaryPanel({
   footerImageWidth?: number;
   adjustment?: CarAdjustmentRecord;
   policy?: Policy;
+  getPreviewPolicy?: () => Policy | null;
   className?: string;
   documentsOnly?: boolean;
 }) {
@@ -147,7 +151,7 @@ export function PremiumSummaryPanel({
   const hadPreviewDocRef = useRef(false);
   const lastPreviewRequestRef = useRef<{
     doc: PolicyDocument;
-    policy: Policy | undefined;
+    fingerprint: string;
   } | null>(null);
   useEffect(() => {
     if (!previewDoc) {
@@ -160,14 +164,18 @@ export function PremiumSummaryPanel({
       }
       return;
     }
+    const previewPolicy = getPreviewPolicy?.() ?? policy;
+    const fingerprint = previewPolicy
+      ? reviewDocumentsFingerprint(previewPolicy)
+      : "";
     const previousRequest = lastPreviewRequestRef.current;
     if (
       previousRequest?.doc === previewDoc &&
-      previousRequest.policy === policy
+      previousRequest.fingerprint === fingerprint
     ) {
       return;
     }
-    lastPreviewRequestRef.current = { doc: previewDoc, policy };
+    lastPreviewRequestRef.current = { doc: previewDoc, fingerprint };
     hadPreviewDocRef.current = true;
 
     let cancelled = false;
@@ -176,7 +184,7 @@ export function PremiumSummaryPanel({
     setPreviewError(null);
     setPreviewSrc(null);
 
-    void buildPdfBlobFromDocument(previewDoc, policy)
+    void buildPdfBlobFromDocument(previewDoc, previewPolicy ?? undefined)
       .then((blob) => {
         if (cancelled) return;
         objectUrl = URL.createObjectURL(blob);
@@ -195,7 +203,7 @@ export function PremiumSummaryPanel({
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [previewDoc, policy]);
+  }, [previewDoc, policy, getPreviewPolicy, premium]);
 
   const allSelected =
     documentRows.length > 0 && selectedIds.length === documentRows.length;

@@ -306,6 +306,7 @@ function CarPolicyWizardInner({
     isGeneratingDocuments,
     regenerateDocumentsIfNeeded,
     formDataChangedForDocuments,
+    buildDocumentSnapshot,
   } = usePolicyDocuments({
     policy,
     form,
@@ -642,6 +643,7 @@ function CarPolicyWizardInner({
               emailTemplateVars={emailTemplateVars}
               footerImageWidth={footerImageWidth}
               policy={policy}
+              getPreviewPolicy={buildDocumentSnapshot}
               className={wizardModeCardBorderClass(wizardMode)}
             />
           </div>
@@ -714,6 +716,7 @@ function CarPolicyWizardInner({
             emailTemplateVars={emailTemplateVars}
             footerImageWidth={footerImageWidth}
             policy={policy}
+            getPreviewPolicy={buildDocumentSnapshot}
             adjustment={policy.car.adjusted ? policy.car.adjustment : undefined}
             className={wizardModeCardBorderClass(wizardMode)}
           />

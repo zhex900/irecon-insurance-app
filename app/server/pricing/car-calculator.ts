@@ -1,6 +1,9 @@
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
 import type { PremiumBreakdown } from "~/lib/db/types";
-import { formatCurrency } from "~/lib/utils";
+import {
+  buildReferralReasons,
+  liabilityLimitLabel,
+} from "~/lib/pricing/referral-reasons";
 import {
   resolveEsl,
   resolvePlantRate,
@@ -173,7 +176,12 @@ export async function calculateCarPremium(
     isTerrorismRateExist,
   };
 
-  const referralReasons = buildReferralReasons(input, rating, liability.label);
+  const referralReasons = buildReferralReasons(
+    input,
+    rating,
+    liability.label,
+    premium,
+  );
 
   return { premium, rating, referralReasons };
 }
@@ -187,16 +195,16 @@ function getLiabilityValues(
       return {
         rate: price?.tenMilRate ?? 0,
         minPrem: price?.tenMilMinPrem ?? 0,
-        label: "$10 Million",
+        label: liabilityLimitLabel(1),
       };
     case 2:
       return {
         rate: price?.twentyMilRate ?? 0,
         minPrem: price?.twentyMilMinPrem ?? 0,
-        label: "$20 Million",
+        label: liabilityLimitLabel(2),
       };
     default:
-      return { rate: 0, minPrem: 0, label: "Not Insured" };
+      return { rate: 0, minPrem: 0, label: liabilityLimitLabel(3) };
   }
 }
 
@@ -236,60 +244,6 @@ function getContractWorksPlantPremium({
     return plantRate.rate * plantRate.plantMaxValue;
   }
   return plantRate.rate * plantEquipment;
-}
-
-function buildReferralReasons(
-  input: CarPolicyFormValues,
-  rating: RatingSnapshot,
-  liabilityLabel: string,
-) {
-  const reasons: string[] = [];
-
-  if (input.displayHomes > 0) {
-    reasons.push(
-      `Display Homes has a value of ${formatCurrency(input.displayHomes)}`,
-    );
-  }
-  if (input.existingStructure > 0) {
-    reasons.push(
-      `Existing Structure has a value of ${formatCurrency(input.existingStructure)}`,
-    );
-  }
-  if (input.claimsCountLast3Years >= 3) {
-    reasons.push(
-      `Number of claim last 3 years is entered with value ${input.claimsCountLast3Years}`,
-    );
-  }
-  if (input.anyClaimsExceed20k) {
-    reasons.push("Any claims exceeded $20,000 in value is stated as yes");
-  }
-  if (!input.hasExistingContractWorksCover) {
-    reasons.push("Do not hold a current Contract Works/Liability policy");
-  }
-  if (input.plantEquipment > 50000) {
-    reasons.push(
-      "Named Insureds Construction Plant & Equipment is over 50,000",
-    );
-  }
-  if (rating.contractWorksAppliedRate === 0) {
-    reasons.push("Unable to find Contract Works rate");
-  }
-  if (input.liabilityLimitBand !== 3 && rating.liabilityAppliedRate === 0) {
-    reasons.push(`Unable to find Liability rate for ${liabilityLabel}`);
-  }
-  if (rating.stampDutyId === 0) {
-    reasons.push("Unable to find the SD rate");
-  }
-  if (rating.eslId === 0) {
-    reasons.push("Unable to find the ESL rate");
-  }
-  if (!rating.isTerrorismRateExist && input.dateStart >= TERROR_START_DATE) {
-    reasons.push(
-      "Unable to find terrorism rate for this combination of postcode/State",
-    );
-  }
-
-  return reasons;
 }
 
 function round(value: number) {

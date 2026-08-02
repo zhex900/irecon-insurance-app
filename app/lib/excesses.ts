@@ -13,16 +13,30 @@ export type ExcessFieldKey = Exclude<
 export const EXCESS_DEFAULT_FIELD_BY_ID: Partial<
   Record<number, ExcessFieldKey>
 > = {
-  1: "excessSection1A",
-  3: "excessSection1B",
-  4: "excessSection1E",
-  6: "excessSection1C",
-  7: "excessSection1D",
-  9: "excessSection2A",
-  11: "excessSection2C",
-  12: "excessSection2D",
-  14: "excessSection2E",
-  15: "excessSection2F",
+  1: "excessPlantEquipment",
+  3: "excessUpTo2MMinorPerils",
+  4: "excessUpTo2MMajorPerils",
+  6: "excessOver2MMinorPerils",
+  7: "excessOver2MMajorPerils",
+  9: "excessWorkerToWorker",
+  11: "excessUpTo2MLimit10M",
+  12: "excessUpTo2MLimit20M",
+  14: "excessOver2MLimit10M",
+  15: "excessOver2MLimit20M",
+};
+
+/** Old Section1A-style keys → readable keys (one-time JSON upgrade on read). */
+const LEGACY_EXCESS_KEY: Record<string, ExcessFieldKey> = {
+  excessSection1A: "excessPlantEquipment",
+  excessSection1B: "excessUpTo2MMinorPerils",
+  excessSection1E: "excessUpTo2MMajorPerils",
+  excessSection1C: "excessOver2MMinorPerils",
+  excessSection1D: "excessOver2MMajorPerils",
+  excessSection2A: "excessWorkerToWorker",
+  excessSection2C: "excessUpTo2MLimit10M",
+  excessSection2D: "excessUpTo2MLimit20M",
+  excessSection2E: "excessOver2MLimit10M",
+  excessSection2F: "excessOver2MLimit20M",
 };
 
 export type ExcessGroup = "contractWorks" | "legalLiability";
@@ -49,47 +63,47 @@ export type ExcessFieldConfig = {
 
 export const EXCESS_FIELDS: ExcessFieldConfig[] = [
   {
-    key: "excessSection1A",
+    key: "excessPlantEquipment",
     group: "contractWorks",
     label: "Named Insureds Construction Plant & Equipment",
     description: "each and every loss",
   },
   {
-    key: "excessSection1B",
+    key: "excessUpTo2MMinorPerils",
     group: "contractWorks",
     label: "Minor Perils",
     description: "each and every loss",
     band: CONTRACT_VALUE_BAND_LABEL.upTo2m,
   },
   {
-    key: "excessSection1E",
+    key: "excessUpTo2MMajorPerils",
     group: "contractWorks",
     label: "Major Perils",
     description: "each and every loss",
     band: CONTRACT_VALUE_BAND_LABEL.upTo2m,
   },
   {
-    key: "excessSection1C",
+    key: "excessOver2MMinorPerils",
     group: "contractWorks",
     label: "Minor Perils",
     description: "each and every loss",
     band: CONTRACT_VALUE_BAND_LABEL.from2mTo5m,
   },
   {
-    key: "excessSection1D",
+    key: "excessOver2MMajorPerils",
     group: "contractWorks",
     label: "Major Perils",
     description: "each and every loss",
     band: CONTRACT_VALUE_BAND_LABEL.from2mTo5m,
   },
   {
-    key: "excessSection2A",
+    key: "excessWorkerToWorker",
     group: "legalLiability",
     label: "Worker to Worker",
     description: "each and every Occurrence",
   },
   {
-    key: "excessSection2C",
+    key: "excessUpTo2MLimit10M",
     group: "legalLiability",
     label: "$10m Limit of Liability",
     description: "each and every Occurrence",
@@ -97,7 +111,7 @@ export const EXCESS_FIELDS: ExcessFieldConfig[] = [
     liabilityLimitMillions: 10,
   },
   {
-    key: "excessSection2D",
+    key: "excessUpTo2MLimit20M",
     group: "legalLiability",
     label: "$20m Limit of Liability",
     description: "each and every Occurrence",
@@ -105,7 +119,7 @@ export const EXCESS_FIELDS: ExcessFieldConfig[] = [
     liabilityLimitMillions: 20,
   },
   {
-    key: "excessSection2E",
+    key: "excessOver2MLimit10M",
     group: "legalLiability",
     label: "$10m Limit of Liability",
     description: "each and every Occurrence",
@@ -113,7 +127,7 @@ export const EXCESS_FIELDS: ExcessFieldConfig[] = [
     liabilityLimitMillions: 10,
   },
   {
-    key: "excessSection2F",
+    key: "excessOver2MLimit20M",
     group: "legalLiability",
     label: "$20m Limit of Liability",
     description: "each and every Occurrence",
@@ -193,14 +207,36 @@ export function normalizeExcessValue(value: string | undefined): string {
   return match?.[0] ?? "";
 }
 
-export function normalizeExcesses(excesses: CarExcesses): CarExcesses {
+/** Upgrade legacy excessSection1A-style keys when loading stored JSON. */
+export function migrateLegacyExcessKeys(
+  excesses: Record<string, string | undefined> | null | undefined,
+): Record<string, string> {
+  const raw: Record<string, string> = {};
+  for (const [key, value] of Object.entries(excesses ?? {})) {
+    if (value != null) raw[key] = value;
+  }
+  for (const [oldKey, newKey] of Object.entries(LEGACY_EXCESS_KEY)) {
+    const legacy = raw[oldKey];
+    if (legacy == null || legacy === "") continue;
+    if (raw[newKey] == null || raw[newKey] === "") {
+      raw[newKey] = legacy;
+    }
+    delete raw[oldKey];
+  }
+  return raw;
+}
+
+export function normalizeExcesses(
+  excesses: CarExcesses | Record<string, string | undefined>,
+): CarExcesses {
+  const migrated = migrateLegacyExcessKeys(excesses);
   const numeric = Object.fromEntries(
-    EXCESS_FIELDS.map(({ key }) => [key, normalizeExcessValue(excesses[key])]),
+    EXCESS_FIELDS.map(({ key }) => [key, normalizeExcessValue(migrated[key])]),
   ) as Pick<CarExcesses, ExcessFieldKey>;
 
   return {
     ...numeric,
-    excessAdditionalNotes: excesses.excessAdditionalNotes ?? "",
+    excessAdditionalNotes: migrated.excessAdditionalNotes ?? "",
   };
 }
 

@@ -29,6 +29,10 @@ import {
   formatTakenStatusBlockMessage,
   getTakenStatusErrors,
 } from "~/lib/policy-taken-status";
+import {
+  buildReferralReasons,
+  liabilityLimitLabel,
+} from "~/lib/pricing/referral-reasons";
 
 export { isTerminalStatus };
 export {
@@ -86,11 +90,8 @@ export async function upsertPolicyFromForm(
     throw new PolicySaveError("This policy status cannot be changed.");
   }
 
-  const {
-    premium: calculatedPremium,
-    rating,
-    referralReasons,
-  } = await calculatePremiumForPolicy(values);
+  const { premium: calculatedPremium, rating } =
+    await calculatePremiumForPolicy(values);
 
   // Prefer broker manual edits when provided; otherwise use the calculator.
   const premium: PremiumBreakdown =
@@ -100,6 +101,14 @@ export async function upsertPolicyFromForm(
           ...(values.premium as Partial<PremiumBreakdown>),
         }
       : calculatedPremium;
+
+  // Rebuild after premium merge so DH / ES reasons use override amounts.
+  const referralReasons = buildReferralReasons(
+    values,
+    rating,
+    liabilityLimitLabel(Number(values.liabilityLimitBand)),
+    premium,
+  );
 
   if (
     existing.policyStatusId !== POLICY_STATUS.Taken &&

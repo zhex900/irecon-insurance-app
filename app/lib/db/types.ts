@@ -143,17 +143,17 @@ export type CarSubLimits = {
 };
 
 export type CarExcesses = {
-  excessSection1A: string;
-  excessSection1B: string;
-  excessSection1C: string;
-  excessSection1D: string;
-  excessSection1E: string;
+  excessPlantEquipment: string;
+  excessUpTo2MMinorPerils: string;
+  excessUpTo2MMajorPerils: string;
+  excessOver2MMinorPerils: string;
+  excessOver2MMajorPerils: string;
   excessAdditionalNotes: string;
-  excessSection2A: string;
-  excessSection2C: string;
-  excessSection2D: string;
-  excessSection2E: string;
-  excessSection2F: string;
+  excessWorkerToWorker: string;
+  excessUpTo2MLimit10M: string;
+  excessUpTo2MLimit20M: string;
+  excessOver2MLimit10M: string;
+  excessOver2MLimit20M: string;
 };
 
 export type PolicySummary = {

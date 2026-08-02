@@ -52,17 +52,17 @@ const excessNumber = z.preprocess((val) => {
 }, z.string());
 
 const excessesSchema = z.object({
-  excessSection1A: excessNumber,
-  excessSection1B: excessNumber,
-  excessSection1C: excessNumber,
-  excessSection1D: excessNumber,
-  excessSection1E: excessNumber,
+  excessPlantEquipment: excessNumber,
+  excessUpTo2MMinorPerils: excessNumber,
+  excessUpTo2MMajorPerils: excessNumber,
+  excessOver2MMinorPerils: excessNumber,
+  excessOver2MMajorPerils: excessNumber,
   excessAdditionalNotes: z.string().optional(),
-  excessSection2A: excessNumber,
-  excessSection2C: excessNumber,
-  excessSection2D: excessNumber,
-  excessSection2E: excessNumber,
-  excessSection2F: excessNumber,
+  excessWorkerToWorker: excessNumber,
+  excessUpTo2MLimit10M: excessNumber,
+  excessUpTo2MLimit20M: excessNumber,
+  excessOver2MLimit10M: excessNumber,
+  excessOver2MLimit20M: excessNumber,
 });
 
 /** Policy status IDs from reference data (Pending / Taken / Not taken) */

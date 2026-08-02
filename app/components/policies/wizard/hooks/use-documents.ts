@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { useRouteLoaderData } from "react-router";
 import { toast } from "sonner";
@@ -68,18 +68,20 @@ export function usePolicyDocuments({
     };
   }, [policy.policyId]);
 
-  function buildDocumentSnapshot(
-    premiumOverride?: PremiumBreakdown,
-  ): Policy | null {
-    const currentPremium = premiumOverride ?? premium ?? policy.car.premium;
-    if (!currentPremium) return null;
-    return policySnapshotFromForm(policy, form.getValues(), {
-      premium: currentPremium,
-      rating: rating ?? policy.car.rating,
-      referralReasons,
-      documents: documentsRef.current,
-    });
-  }
+  const buildDocumentSnapshot = useCallback(
+    (premiumOverride?: PremiumBreakdown): Policy | null => {
+      // Always snapshot form values (Limits SI, sub-limits, etc.) even before
+      // premium has been calculated — otherwise PDF preview falls back to the
+      // stale loader policy and misses overrides.
+      return policySnapshotFromForm(policy, form.getValues(), {
+        premium: premiumOverride ?? premium ?? policy.car.premium,
+        rating: rating ?? policy.car.rating,
+        referralReasons,
+        documents: documentsRef.current,
+      });
+    },
+    [policy, form, premium, rating, referralReasons],
+  );
 
   /** True when live form/premium would produce a different doc generation key. */
   function formDataChangedForDocuments(premiumOverride?: PremiumBreakdown) {
@@ -132,5 +134,7 @@ export function usePolicyDocuments({
     isGeneratingDocuments,
     regenerateDocumentsIfNeeded,
     formDataChangedForDocuments,
+    /** Live form + premium snapshot for PDF preview (includes manual overrides). */
+    buildDocumentSnapshot,
   };
 }
