@@ -16,14 +16,14 @@ export function HighlightText({
     <>
       {segments.map((segment, index) =>
         segment.match ? (
+          // children= avoids JSX whitespace text nodes that insert spaces into phone/ABN digits
           <mark
             key={`${index}-${segment.text}`}
             className="m-0 rounded-sm bg-warning/30 p-0 text-inherit"
-          >
-            {segment.text}
-          </mark>
+            children={segment.text}
+          />
         ) : (
-          <span key={`${index}-${segment.text}`}>{segment.text}</span>
+          <span key={`${index}-${segment.text}`} children={segment.text} />
         ),
       )}
     </>

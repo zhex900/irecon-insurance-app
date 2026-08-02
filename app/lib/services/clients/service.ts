@@ -1,4 +1,4 @@
-import { asc, eq, sql } from "drizzle-orm";
+import { asc, eq, inArray, sql } from "drizzle-orm";
 import { getReferenceDataAsync } from "~/lib/services/reference.service";
 import { getDb } from "~/lib/db/client";
 import { client, policy } from "~/lib/db/schema";
@@ -97,6 +97,20 @@ export async function getClient(clientId: number) {
     .where(eq(client.clientId, clientId))
     .limit(1);
   return row ? normalizeClient(row) : null;
+}
+
+export async function getClientsByIds(clientIds: number[]) {
+  const ids = [
+    ...new Set(clientIds.filter((id) => Number.isInteger(id) && id > 0)),
+  ];
+  if (ids.length === 0) return [];
+  const db = getDb();
+  const rows = await db
+    .select()
+    .from(client)
+    .where(inArray(client.clientId, ids));
+  const byId = new Map(rows.map((row) => [row.clientId, normalizeClient(row)]));
+  return ids.map((id) => byId.get(id)).filter((row) => row != null);
 }
 
 export type ClientWritable = Omit<

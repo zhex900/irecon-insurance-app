@@ -2,6 +2,9 @@ import { useActionData, useNavigate, useNavigation } from "react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FileTextIcon, Trash2Icon } from "lucide-react";
 import { ClientSummaryPopover } from "~/components/clients/client-summary-popover";
+import { ColumnClientFilterHeader } from "~/components/forms/column-client-filter-header";
+import { ColumnFilterHeader } from "~/components/forms/column-filter-header";
+import { ColumnDateFilterHeader } from "~/components/forms/column-date-filter-header";
 import { ListSearchField } from "~/components/forms/list-search-field";
 import { PageHeader } from "~/components/layout/app-layout";
 import {
@@ -19,7 +22,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "~/components/ui/empty";
-import { FilterTag, StatusBadge } from "~/components/ui/status-badge";
+import { StatusBadge } from "~/components/ui/status-badge";
 import {
   Table,
   TableBody,
@@ -43,8 +46,24 @@ import {
   parsePagination,
 } from "~/lib/pagination";
 import { SearchHighlight } from "~/lib/search/highlight-cell";
+import {
+  EXPIRY_PRESETS,
+  INCEPTION_PRESETS,
+  rangeForExpiryPreset,
+  rangeForInceptionPreset,
+  type DateRangeValue,
+  type ExpiryPresetId,
+  type InceptionPresetId,
+} from "~/lib/search/date-range-filter";
 import { fieldMatches } from "~/lib/search/match";
+import {
+  parsePolicyListFiltersFromUrl,
+  policyListFiltersKey,
+  withDateRangeParam,
+  withIdListParam,
+} from "~/lib/search/policy-list-filters";
 import { writeAuditLog } from "~/lib/services/audit/service";
+import { getClientsByIds } from "~/lib/services/clients/service";
 import { listPoliciesPage } from "~/lib/services/policies/list.service";
 import { deletePolicies } from "~/lib/services/policy/data.service";
 import { getReferenceData } from "~/lib/services/reference.service";
@@ -66,20 +85,25 @@ export function shouldRevalidate() {
 
 export async function loader({ request }: Route.LoaderArgs) {
   const url = new URL(request.url);
-  const q = url.searchParams.get("q") ?? "";
-  const statusParam = url.searchParams.get("status");
-  const statusFilter = statusParam ? Number(statusParam) : null;
+  const filters = parsePolicyListFiltersFromUrl(url);
   const pagination = parsePagination(url, { defaultSize: PAGE_SIZE });
 
-  const [page, reference] = await Promise.all([
+  const [page, reference, selectedClients] = await Promise.all([
     listPoliciesPage({
-      search: q,
-      policyStatusId:
-        statusFilter && !Number.isNaN(statusFilter) ? statusFilter : null,
+      search: filters.q,
+      policyStatusIds: filters.statusIds,
+      coverTypeIds: filters.coverTypeIds,
+      policyCategoryIds: filters.policyCategoryIds,
+      clientIds: filters.clientIds,
+      inceptionFrom: filters.inception.from,
+      inceptionTo: filters.inception.to,
+      expiryFrom: filters.expiry.from,
+      expiryTo: filters.expiry.to,
       limit: pagination.limit,
       offset: pagination.offset,
     }),
     Promise.resolve(getReferenceData()),
+    getClientsByIds(filters.clientIds),
   ]);
 
   const allCount = Object.values(page.statusCounts).reduce((a, b) => a + b, 0);
@@ -90,11 +114,26 @@ export async function loader({ request }: Route.LoaderArgs) {
     page: page.page,
     pageSize: page.pageSize,
     statusCounts: page.statusCounts,
+    coverCounts: page.coverCounts,
+    categoryCounts: page.categoryCounts,
+    inceptionPresetCounts: page.inceptionPresetCounts,
+    expiryPresetCounts: page.expiryPresetCounts,
     allCount,
     reference,
-    q,
-    statusFilter:
-      statusFilter && !Number.isNaN(statusFilter) ? statusFilter : null,
+    q: filters.q,
+    filters: {
+      statusIds: filters.statusIds,
+      coverTypeIds: filters.coverTypeIds,
+      policyCategoryIds: filters.policyCategoryIds,
+      clientIds: filters.clientIds,
+      clients: selectedClients.map((client) => ({
+        clientId: client.clientId,
+        name: client.name,
+        tradingName: client.tradingName,
+      })),
+      inception: filters.inception,
+      expiry: filters.expiry,
+    },
   };
 }
 
@@ -150,8 +189,6 @@ export async function action({ request }: Route.ActionArgs) {
   }
 }
 
-type StatusFilter = "all" | number;
-
 export default function PoliciesIndexRoute({
   loaderData,
 }: Route.ComponentProps) {
@@ -166,23 +203,29 @@ export default function PoliciesIndexRoute({
   const navigate = useNavigate();
   const navigation = useNavigation();
   const actionData = useActionData<typeof action>();
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>(
-    loaderData.statusFilter ?? "all",
-  );
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [pendingDelete, setPendingDelete] = useState<
     DeletablePolicyRef[] | null
   >(null);
   useActionSuccessToast(actionData);
 
+  const filterKey = policyListFiltersKey({
+    q: loaderData.q,
+    statusIds: loaderData.filters.statusIds,
+    coverTypeIds: loaderData.filters.coverTypeIds,
+    policyCategoryIds: loaderData.filters.policyCategoryIds,
+    clientIds: loaderData.filters.clientIds,
+    inception: loaderData.filters.inception,
+    expiry: loaderData.filters.expiry,
+  });
+
   const lastSyncKeyRef = useRef<string | null>(null);
   useEffect(() => {
-    const key = `${loaderData.q}|${loaderData.statusFilter ?? "all"}|${loaderData.page}`;
+    const key = `${loaderData.q}|${filterKey}|${loaderData.page}`;
     if (lastSyncKeyRef.current === key) return;
     lastSyncKeyRef.current = key;
-    setStatusFilter(loaderData.statusFilter ?? "all");
     setSelectedIds([]);
-  }, [loaderData.q, loaderData.statusFilter, loaderData.page]);
+  }, [loaderData.q, filterKey, loaderData.page]);
 
   const handledActionDataRef = useRef(actionData);
   useEffect(() => {
@@ -217,15 +260,24 @@ export default function PoliciesIndexRoute({
     [loaderData.policies, selectedIds],
   );
 
-  function applyStatus(next: StatusFilter) {
-    setStatusFilter(next);
-    const params = new URLSearchParams(searchParams);
-    if (next === "all") params.delete("status");
-    else params.set("status", String(next));
-    params.delete("page");
+  function keepSearch(params: URLSearchParams) {
     if (search.trim()) params.set("q", search.trim());
     else params.delete("q");
-    setSearchParams(params);
+    return params;
+  }
+
+  function applyColumnFilter(
+    key: "status" | "cover" | "category" | "client",
+    nextIds: number[],
+  ) {
+    setSearchParams(keepSearch(withIdListParam(searchParams, key, nextIds)));
+  }
+
+  function applyDateRangeFilter(
+    key: "inception" | "expiry",
+    next: DateRangeValue,
+  ) {
+    setSearchParams(keepSearch(withDateRangeParam(searchParams, key, next)));
   }
 
   const pageHref = (nextPage: number) => pageSearchHref(searchParams, nextPage);
@@ -284,25 +336,6 @@ export default function PoliciesIndexRoute({
         </p>
       </div>
 
-      <div className="mb-4 flex flex-wrap gap-2">
-        <FilterTag
-          active={statusFilter === "all"}
-          onClick={() => applyStatus("all")}
-        >
-          All · {loaderData.allCount}
-        </FilterTag>
-        {loaderData.reference.policyStatuses.map((status) => (
-          <FilterTag
-            key={status.policyStatusId}
-            active={statusFilter === status.policyStatusId}
-            onClick={() => applyStatus(status.policyStatusId)}
-          >
-            {status.name} ·{" "}
-            {loaderData.statusCounts[status.policyStatusId] ?? 0}
-          </FilterTag>
-        ))}
-      </div>
-
       {selectedIds.length > 0 ? (
         <div className="mb-3 flex flex-wrap items-center gap-3 rounded-xl border bg-muted/40 px-4 py-3">
           <p className="text-sm">
@@ -347,12 +380,98 @@ export default function PoliciesIndexRoute({
                 />
               </TableHead>
               <TableHead>Policy #</TableHead>
-              <TableHead>Client</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Cover</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Inception</TableHead>
-              <TableHead>Expiry</TableHead>
+              <TableHead>
+                <ColumnClientFilterHeader
+                  selected={loaderData.filters.clientIds}
+                  selectedOptions={loaderData.filters.clients}
+                  countQuery={searchParams.toString()}
+                  onChange={(next) => applyColumnFilter("client", next)}
+                />
+              </TableHead>
+              <TableHead>
+                <ColumnFilterHeader
+                  label="Status"
+                  selected={loaderData.filters.statusIds.map(String)}
+                  onChange={(next) =>
+                    applyColumnFilter(
+                      "status",
+                      next.map(Number).filter((id) => id > 0),
+                    )
+                  }
+                  options={loaderData.reference.policyStatuses.map(
+                    (status) => ({
+                      value: String(status.policyStatusId),
+                      label: status.name,
+                      count:
+                        loaderData.statusCounts[status.policyStatusId] ?? 0,
+                    }),
+                  )}
+                />
+              </TableHead>
+              <TableHead>
+                <ColumnFilterHeader
+                  label="Cover"
+                  selected={loaderData.filters.coverTypeIds.map(String)}
+                  onChange={(next) =>
+                    applyColumnFilter(
+                      "cover",
+                      next.map(Number).filter((id) => id > 0),
+                    )
+                  }
+                  options={loaderData.reference.coverTypes.map((cover) => ({
+                    value: String(cover.coverTypeId),
+                    label: cover.name,
+                    count: loaderData.coverCounts[cover.coverTypeId] ?? 0,
+                  }))}
+                />
+              </TableHead>
+              <TableHead>
+                <ColumnFilterHeader
+                  label="Category"
+                  selected={loaderData.filters.policyCategoryIds.map(String)}
+                  onChange={(next) =>
+                    applyColumnFilter(
+                      "category",
+                      next.map(Number).filter((id) => id > 0),
+                    )
+                  }
+                  options={loaderData.reference.policyCategories.map(
+                    (category) => ({
+                      value: String(category.policyCategoryId),
+                      label: category.name,
+                      count:
+                        loaderData.categoryCounts[category.policyCategoryId] ??
+                        0,
+                    }),
+                  )}
+                />
+              </TableHead>
+              <TableHead>
+                <ColumnDateFilterHeader
+                  label="Inception"
+                  inputIdPrefix="inception"
+                  presets={INCEPTION_PRESETS}
+                  value={loaderData.filters.inception}
+                  presetCounts={loaderData.inceptionPresetCounts}
+                  rangeForPreset={(preset) =>
+                    rangeForInceptionPreset(preset as InceptionPresetId)
+                  }
+                  onChange={(next) => applyDateRangeFilter("inception", next)}
+                />
+              </TableHead>
+              <TableHead>
+                <ColumnDateFilterHeader
+                  label="Expiry"
+                  inputIdPrefix="expiry"
+                  presets={EXPIRY_PRESETS}
+                  value={loaderData.filters.expiry}
+                  presetCounts={loaderData.expiryPresetCounts}
+                  rangeForPreset={(preset) =>
+                    rangeForExpiryPreset(preset as ExpiryPresetId)
+                  }
+                  onChange={(next) => applyDateRangeFilter("expiry", next)}
+                />
+              </TableHead>
               <TableHead className="text-right">Premium</TableHead>
               <TableHead className="w-20 text-right">Actions</TableHead>
             </TableRow>

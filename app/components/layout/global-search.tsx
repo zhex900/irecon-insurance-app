@@ -1,22 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-import { FileTextIcon, PhoneIcon, SearchIcon, UsersIcon } from "lucide-react";
+import { FileTextIcon, SearchIcon, UsersIcon } from "lucide-react";
 import { Badge } from "~/components/reui/badge";
+import {
+  clientHasVisibleMatch,
+  type ClientSearchResult,
+} from "~/lib/search/client-match";
+import { ClientSearchResultDetails } from "~/lib/search/client-result";
 import { HighlightText } from "~/lib/search/highlight";
 import { fieldMatches } from "~/lib/search/match";
 import { cn, formatNumber } from "~/lib/utils";
 
-export type GlobalSearchClient = {
-  clientId: number;
-  name: string;
-  tradingName: string;
-  abn: string;
-  phone: string;
-  email: string;
-  accountManagerName: string;
-  arName: string;
-  arCompanyName: string;
-};
+export type GlobalSearchClient = ClientSearchResult;
 
 export type GlobalSearchPolicy = {
   policyId: number;
@@ -31,20 +26,6 @@ export type GlobalSearchPolicy = {
 type ResultRow =
   | { kind: "client"; client: GlobalSearchClient }
   | { kind: "policy"; policy: GlobalSearchPolicy };
-
-/** Only keep rows that can show a yellow highlight in the result UI. */
-function clientHasVisibleMatch(client: GlobalSearchClient, query: string) {
-  return (
-    fieldMatches(client.name, query) ||
-    fieldMatches(client.tradingName, query) ||
-    fieldMatches(client.abn, query) ||
-    fieldMatches(client.phone, query) ||
-    fieldMatches(client.email, query) ||
-    fieldMatches(client.accountManagerName, query) ||
-    fieldMatches(client.arCompanyName, query) ||
-    fieldMatches(client.arName, query)
-  );
-}
 
 function policyHasVisibleMatch(policy: GlobalSearchPolicy, query: string) {
   return (
@@ -278,20 +259,6 @@ function ClientResult({
   query: string;
   onSelect: () => void;
 }) {
-  const showTrading = Boolean(client.tradingName);
-  const showAbn = Boolean(client.abn);
-  const showPhone = Boolean(client.phone);
-
-  // Extra detail rows when the query hits fields not already on the primary lines.
-  const matchedFields = (
-    [
-      { label: "Email", value: client.email },
-      { label: "Account Manager", value: client.accountManagerName },
-      { label: "AR Company Name", value: client.arCompanyName },
-      { label: "AR Name", value: client.arName },
-    ] as const
-  ).filter((field) => fieldMatches(field.value, query));
-
   return (
     <button
       type="button"
@@ -301,51 +268,7 @@ function ClientResult({
       onClick={onSelect}
     >
       <UsersIcon className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
-      <span className="min-w-0 flex-1">
-        <span className="block truncate font-medium">
-          <HighlightText text={client.name} query={query} />
-        </span>
-        <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-muted-foreground">
-          {showTrading ? (
-            <span className="truncate">
-              <HighlightText text={client.tradingName} query={query} />
-            </span>
-          ) : null}
-          {showTrading && (showAbn || showPhone) ? (
-            <span aria-hidden>·</span>
-          ) : null}
-          {showAbn ? (
-            <span className="shrink-0">
-              ABN <HighlightText text={client.abn} query={query} />
-            </span>
-          ) : null}
-          {showAbn && showPhone ? <span aria-hidden>·</span> : null}
-          {showPhone ? (
-            <span className="inline-flex shrink-0 items-center gap-1">
-              <PhoneIcon className="size-3" aria-hidden />
-              <HighlightText text={client.phone} query={query} />
-            </span>
-          ) : null}
-          {!showTrading && !showAbn && !showPhone && matchedFields.length === 0
-            ? "—"
-            : null}
-        </span>
-        {matchedFields.length > 0 ? (
-          <span className="mt-1 flex min-w-0 flex-col gap-0.5 text-xs">
-            {matchedFields.map((field) => (
-              <span
-                key={field.label}
-                className="truncate text-muted-foreground"
-              >
-                <span className="font-medium text-foreground/70">
-                  {field.label}:{" "}
-                </span>
-                <HighlightText text={field.value} query={query} />
-              </span>
-            ))}
-          </span>
-        ) : null}
-      </span>
+      <ClientSearchResultDetails client={client} query={query} />
     </button>
   );
 }

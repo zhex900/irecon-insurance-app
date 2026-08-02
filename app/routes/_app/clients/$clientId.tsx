@@ -22,6 +22,7 @@ import { PageHeader } from "~/components/layout/app-layout";
 import { withSuccessToast } from "~/hooks/use-success-toast";
 import { requireAuth } from "~/lib/auth/session.server";
 import { parsePagination } from "~/lib/pagination";
+import { parsePolicyListFiltersFromUrl } from "~/lib/search/policy-list-filters";
 import { formatDate } from "~/lib/utils";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import { listPoliciesPage } from "~/lib/services/policies/list.service";
@@ -44,9 +45,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
 export async function loader({ params, request }: Route.LoaderArgs) {
   const clientId = Number(params.clientId);
   const url = new URL(request.url);
-  const q = url.searchParams.get("q") ?? "";
-  const statusParam = url.searchParams.get("status");
-  const statusFilter = statusParam ? Number(statusParam) : null;
+  const filters = parsePolicyListFiltersFromUrl(url);
   const pagination = parsePagination(url, { defaultSize: PAGE_SIZE });
 
   const [client, reference, page, policyCount] = await Promise.all([
@@ -54,9 +53,14 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     getReferenceDataAsync(),
     listPoliciesPage({
       clientId,
-      search: q,
-      policyStatusId:
-        statusFilter && !Number.isNaN(statusFilter) ? statusFilter : null,
+      search: filters.q,
+      policyStatusIds: filters.statusIds,
+      coverTypeIds: filters.coverTypeIds,
+      policyCategoryIds: filters.policyCategoryIds,
+      inceptionFrom: filters.inception.from,
+      inceptionTo: filters.inception.to,
+      expiryFrom: filters.expiry.from,
+      expiryTo: filters.expiry.to,
       limit: pagination.limit,
       offset: pagination.offset,
     }),
@@ -73,11 +77,20 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     page: page.page,
     pageSize: page.pageSize,
     statusCounts: page.statusCounts,
+    coverCounts: page.coverCounts,
+    categoryCounts: page.categoryCounts,
+    inceptionPresetCounts: page.inceptionPresetCounts,
+    expiryPresetCounts: page.expiryPresetCounts,
     allCount,
     policyCount,
-    q,
-    statusFilter:
-      statusFilter && !Number.isNaN(statusFilter) ? statusFilter : null,
+    q: filters.q,
+    filters: {
+      statusIds: filters.statusIds,
+      coverTypeIds: filters.coverTypeIds,
+      policyCategoryIds: filters.policyCategoryIds,
+      inception: filters.inception,
+      expiry: filters.expiry,
+    },
     reference,
   };
 }
@@ -290,9 +303,14 @@ export default function ClientDetailRoute({
               page={loaderData.page}
               pageSize={loaderData.pageSize}
               statusCounts={loaderData.statusCounts}
+              coverCounts={loaderData.coverCounts}
+              categoryCounts={loaderData.categoryCounts}
+              inceptionPresetCounts={loaderData.inceptionPresetCounts}
+              expiryPresetCounts={loaderData.expiryPresetCounts}
               allCount={loaderData.allCount}
+              policyCount={loaderData.policyCount}
               q={loaderData.q}
-              statusFilter={loaderData.statusFilter}
+              filters={loaderData.filters}
               reference={loaderData.reference}
             />
           </CardContent>

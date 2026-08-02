@@ -1,6 +1,8 @@
 import { useActionData, useNavigate, useNavigation } from "react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FileTextIcon, Trash2Icon } from "lucide-react";
+import { ColumnDateFilterHeader } from "~/components/forms/column-date-filter-header";
+import { ColumnFilterHeader } from "~/components/forms/column-filter-header";
 import { ListSearchField } from "~/components/forms/list-search-field";
 import {
   DeletePoliciesDialog,
@@ -16,7 +18,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "~/components/ui/empty";
-import { FilterTag, StatusBadge } from "~/components/ui/status-badge";
+import { StatusBadge } from "~/components/ui/status-badge";
 import {
   Table,
   TableBody,
@@ -35,15 +37,28 @@ import { useActionSuccessToast } from "~/hooks/use-success-toast";
 import { useDebouncedSearchQuery } from "~/hooks/use-debounced-search-query";
 import type { ReferenceData } from "~/lib/db/types";
 import { pageSearchHref, pageSizeSearchHref } from "~/lib/pagination";
+import {
+  EXPIRY_PRESETS,
+  INCEPTION_PRESETS,
+  rangeForExpiryPreset,
+  rangeForInceptionPreset,
+  type DateRangeValue,
+  type ExpiryPresetId,
+  type InceptionPresetId,
+} from "~/lib/search/date-range-filter";
 import { SearchHighlight } from "~/lib/search/highlight-cell";
 import { fieldMatches } from "~/lib/search/match";
+import {
+  policyListFiltersKey,
+  withDateRangeParam,
+  withIdListParam,
+  type PolicyListUrlFilters,
+} from "~/lib/search/policy-list-filters";
 import type { PolicyListItem } from "~/lib/services/policies/list.service";
 import { formatCurrency, formatDate } from "~/lib/utils";
 import { isTerminalStatus } from "~/lib/zod/policy-car";
 
 const DEFAULT_PAGE_SIZE = 25;
-
-type StatusFilter = "all" | number;
 
 type PoliciesDeleteActionData =
   | {
@@ -60,9 +75,14 @@ export function ClientPoliciesTable({
   page,
   pageSize,
   statusCounts,
+  coverCounts,
+  categoryCounts,
+  inceptionPresetCounts,
+  expiryPresetCounts,
   allCount,
+  policyCount,
   q,
-  statusFilter: statusFilterProp,
+  filters,
   reference,
 }: {
   policies: PolicyListItem[];
@@ -70,9 +90,18 @@ export function ClientPoliciesTable({
   page: number;
   pageSize: number;
   statusCounts: Record<number, number>;
+  coverCounts: Record<number, number>;
+  categoryCounts: Record<number, number>;
+  inceptionPresetCounts: Record<string, number>;
+  expiryPresetCounts: Record<string, number>;
   allCount: number;
+  /** Unfiltered policy count for this client (empty-state gate). */
+  policyCount: number;
   q: string;
-  statusFilter: number | null;
+  filters: Pick<
+    PolicyListUrlFilters,
+    "statusIds" | "coverTypeIds" | "policyCategoryIds" | "inception" | "expiry"
+  >;
   reference: ReferenceData;
 }) {
   const navigate = useNavigate();
@@ -86,23 +115,25 @@ export function ClientPoliciesTable({
     searchParams,
     setSearchParams,
   } = useDebouncedSearchQuery(q);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>(
-    statusFilterProp ?? "all",
-  );
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [pendingDelete, setPendingDelete] = useState<
     DeletablePolicyRef[] | null
   >(null);
   useActionSuccessToast(actionData);
 
+  const filterKey = policyListFiltersKey({
+    q,
+    clientIds: [],
+    ...filters,
+  });
+
   const lastSyncKeyRef = useRef<string | null>(null);
   useEffect(() => {
-    const key = `${q}|${statusFilterProp ?? "all"}|${page}`;
+    const key = `${q}|${filterKey}|${page}`;
     if (lastSyncKeyRef.current === key) return;
     lastSyncKeyRef.current = key;
-    setStatusFilter(statusFilterProp ?? "all");
     setSelectedIds([]);
-  }, [q, statusFilterProp, page]);
+  }, [q, filterKey, page]);
 
   const handledActionDataRef = useRef<PoliciesDeleteActionData | undefined>(
     undefined,
@@ -136,15 +167,24 @@ export function ClientPoliciesTable({
     [policies, selectedIds],
   );
 
-  function applyStatus(next: StatusFilter) {
-    setStatusFilter(next);
-    const params = new URLSearchParams(searchParams);
-    if (next === "all") params.delete("status");
-    else params.set("status", String(next));
-    params.delete("page");
+  function keepSearch(params: URLSearchParams) {
     if (search.trim()) params.set("q", search.trim());
     else params.delete("q");
-    setSearchParams(params);
+    return params;
+  }
+
+  function applyColumnFilter(
+    key: "status" | "cover" | "category",
+    nextIds: number[],
+  ) {
+    setSearchParams(keepSearch(withIdListParam(searchParams, key, nextIds)));
+  }
+
+  function applyDateRangeFilter(
+    key: "inception" | "expiry",
+    next: DateRangeValue,
+  ) {
+    setSearchParams(keepSearch(withDateRangeParam(searchParams, key, next)));
   }
 
   const pageHref = (nextPage: number) => pageSearchHref(searchParams, nextPage);
@@ -181,7 +221,7 @@ export function ClientPoliciesTable({
     });
   }
 
-  if (allCount === 0) {
+  if (policyCount === 0) {
     return (
       <Empty className="border border-border">
         <EmptyHeader>
@@ -202,27 +242,13 @@ export function ClientPoliciesTable({
           value={search}
           onChange={setSearch}
           onClear={clearSearch}
-          placeholder="Search policy #, insured, cover…"
+          placeholder="Search policy #, insured…"
           aria-label="Search policies"
           className="max-w-sm shrink-0"
         />
-        <div className="flex flex-wrap items-center justify-end gap-2 lg:ms-auto">
-          <FilterTag
-            active={statusFilter === "all"}
-            onClick={() => applyStatus("all")}
-          >
-            All · {allCount}
-          </FilterTag>
-          {reference.policyStatuses.map((status) => (
-            <FilterTag
-              key={status.policyStatusId}
-              active={statusFilter === status.policyStatusId}
-              onClick={() => applyStatus(status.policyStatusId)}
-            >
-              {status.name} · {statusCounts[status.policyStatusId] ?? 0}
-            </FilterTag>
-          ))}
-        </div>
+        <p className="text-sm text-muted-foreground lg:ms-auto">
+          {total} of {allCount} policies
+        </p>
       </div>
 
       {selectedIds.length > 0 ? (
@@ -263,11 +289,83 @@ export function ClientPoliciesTable({
                 />
               </TableHead>
               <TableHead>Policy #</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Cover</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Inception</TableHead>
-              <TableHead>Expiry</TableHead>
+              <TableHead>
+                <ColumnFilterHeader
+                  label="Status"
+                  selected={filters.statusIds.map(String)}
+                  onChange={(next) =>
+                    applyColumnFilter(
+                      "status",
+                      next.map(Number).filter((id) => id > 0),
+                    )
+                  }
+                  options={reference.policyStatuses.map((status) => ({
+                    value: String(status.policyStatusId),
+                    label: status.name,
+                    count: statusCounts[status.policyStatusId] ?? 0,
+                  }))}
+                />
+              </TableHead>
+              <TableHead>
+                <ColumnFilterHeader
+                  label="Cover"
+                  selected={filters.coverTypeIds.map(String)}
+                  onChange={(next) =>
+                    applyColumnFilter(
+                      "cover",
+                      next.map(Number).filter((id) => id > 0),
+                    )
+                  }
+                  options={reference.coverTypes.map((cover) => ({
+                    value: String(cover.coverTypeId),
+                    label: cover.name,
+                    count: coverCounts[cover.coverTypeId] ?? 0,
+                  }))}
+                />
+              </TableHead>
+              <TableHead>
+                <ColumnFilterHeader
+                  label="Category"
+                  selected={filters.policyCategoryIds.map(String)}
+                  onChange={(next) =>
+                    applyColumnFilter(
+                      "category",
+                      next.map(Number).filter((id) => id > 0),
+                    )
+                  }
+                  options={reference.policyCategories.map((category) => ({
+                    value: String(category.policyCategoryId),
+                    label: category.name,
+                    count: categoryCounts[category.policyCategoryId] ?? 0,
+                  }))}
+                />
+              </TableHead>
+              <TableHead>
+                <ColumnDateFilterHeader
+                  label="Inception"
+                  inputIdPrefix="client-inception"
+                  presets={INCEPTION_PRESETS}
+                  value={filters.inception}
+                  presetCounts={inceptionPresetCounts}
+                  rangeForPreset={(preset) =>
+                    rangeForInceptionPreset(preset as InceptionPresetId)
+                  }
+                  onChange={(next) => applyDateRangeFilter("inception", next)}
+                />
+              </TableHead>
+              <TableHead>
+                <ColumnDateFilterHeader
+                  label="Expiry"
+                  inputIdPrefix="client-expiry"
+                  presets={EXPIRY_PRESETS}
+                  value={filters.expiry}
+                  presetCounts={expiryPresetCounts}
+                  rangeForPreset={(preset) =>
+                    rangeForExpiryPreset(preset as ExpiryPresetId)
+                  }
+                  onChange={(next) => applyDateRangeFilter("expiry", next)}
+                />
+              </TableHead>
               <TableHead className="text-right">Premium</TableHead>
               <TableHead className="w-20 text-right">Actions</TableHead>
             </TableRow>
@@ -310,8 +408,6 @@ export function ClientPoliciesTable({
                   Boolean(policy.insuredName) &&
                   (!searchQuery ||
                     fieldMatches(policy.insuredName, searchQuery));
-                const coverName = cover?.name ?? "";
-                const categoryName = category?.name ?? "";
                 return (
                   <TableRow
                     key={policy.policyId}
@@ -370,35 +466,8 @@ export function ClientPoliciesTable({
                         name={status?.name ?? "—"}
                       />
                     </TableCell>
-                    <TableCell>
-                      {coverName ? (
-                        searchQuery && fieldMatches(coverName, searchQuery) ? (
-                          <SearchHighlight
-                            text={coverName}
-                            query={searchQuery}
-                          />
-                        ) : (
-                          coverName
-                        )
-                      ) : (
-                        "—"
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {categoryName ? (
-                        searchQuery &&
-                        fieldMatches(categoryName, searchQuery) ? (
-                          <SearchHighlight
-                            text={categoryName}
-                            query={searchQuery}
-                          />
-                        ) : (
-                          categoryName
-                        )
-                      ) : (
-                        "—"
-                      )}
-                    </TableCell>
+                    <TableCell>{cover?.name ?? "—"}</TableCell>
+                    <TableCell>{category?.name ?? "—"}</TableCell>
                     <TableCell>{formatDate(policy.dateStart)}</TableCell>
                     <TableCell>{formatDate(policy.dateEnd)}</TableCell>
                     <TableCell className="text-right font-medium">
