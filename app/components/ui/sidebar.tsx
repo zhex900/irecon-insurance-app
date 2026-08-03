@@ -25,26 +25,21 @@ import { PanelLeftIcon } from "lucide-react";
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
+/** Fallback when a fixed width is required (mobile sheet / non-collapsible). */
 const SIDEBAR_WIDTH = "11rem";
-/** Temporary width while the sidebar is hovered / focused (long labels). */
-const SIDEBAR_WIDTH_EXPANDED = "16rem";
 const SIDEBAR_WIDTH_MOBILE = "18rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
 
 type SidebarContextProps = {
-  /** Visual state (includes temporary hover-expand while pinned closed). */
   state: "expanded" | "collapsed";
-  /** Pinned open state (cookie). Unaffected by hover-expand. */
+  /** Pinned open state (cookie). */
   open: boolean;
   setOpen: (open: boolean) => void;
   openMobile: boolean;
   setOpenMobile: (open: boolean) => void;
   isMobile: boolean;
   toggleSidebar: () => void;
-  /** True while pinned-closed sidebar is hover-expanded. */
-  hoverOpen: boolean;
-  setHoverOpen: (open: boolean) => void;
 };
 
 const SidebarContext = React.createContext<SidebarContextProps | null>(null);
@@ -73,7 +68,6 @@ function SidebarProvider({
 }) {
   const isMobile = useIsMobile();
   const [openMobile, setOpenMobile] = React.useState(false);
-  const [hoverOpen, setHoverOpen] = React.useState(false);
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
@@ -100,15 +94,7 @@ function SidebarProvider({
       setOpenMobile((mobileOpen) => !mobileOpen);
       return;
     }
-    if (open) {
-      // Pin-collapse. Clear hover so it does not immediately re-expand.
-      setHoverOpen(false);
-      setOpen(false);
-      return;
-    }
-    // Pinned closed: pin open. If hover already expanded the nav, do not
-    // toggle closed first — just keep it open.
-    setOpen(true);
+    setOpen(!open);
   }, [isMobile, open, setOpen]);
 
   // Adds a keyboard shortcut to toggle the sidebar.
@@ -127,9 +113,7 @@ function SidebarProvider({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [toggleSidebar]);
 
-  // Hover-expand only applies while pinned closed.
-  const effectiveHoverOpen = !open && hoverOpen;
-  const state = open || effectiveHoverOpen ? "expanded" : "collapsed";
+  const state = open ? "expanded" : "collapsed";
 
   const contextValue = React.useMemo<SidebarContextProps>(
     () => ({
@@ -140,19 +124,8 @@ function SidebarProvider({
       openMobile,
       setOpenMobile,
       toggleSidebar,
-      hoverOpen: effectiveHoverOpen,
-      setHoverOpen,
     }),
-    [
-      state,
-      open,
-      setOpen,
-      isMobile,
-      openMobile,
-      setOpenMobile,
-      toggleSidebar,
-      effectiveHoverOpen,
-    ],
+    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar],
   );
 
   return (
@@ -162,7 +135,6 @@ function SidebarProvider({
         style={
           {
             "--sidebar-width": SIDEBAR_WIDTH,
-            "--sidebar-width-expanded": SIDEBAR_WIDTH_EXPANDED,
             "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
             ...style,
           } as React.CSSProperties
@@ -192,49 +164,7 @@ function Sidebar({
   variant?: "sidebar" | "floating" | "inset";
   collapsible?: "offcanvas" | "icon" | "none";
 }) {
-  const {
-    isMobile,
-    state,
-    open,
-    openMobile,
-    setOpenMobile,
-    hoverOpen,
-    setHoverOpen,
-  } = useSidebar();
-  const hoverLeaveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
-
-  React.useEffect(
-    () => () => {
-      if (hoverLeaveTimerRef.current !== null) {
-        clearTimeout(hoverLeaveTimerRef.current);
-      }
-    },
-    [],
-  );
-
-  const handleMouseEnter = React.useCallback(() => {
-    if (hoverLeaveTimerRef.current !== null) {
-      clearTimeout(hoverLeaveTimerRef.current);
-      hoverLeaveTimerRef.current = null;
-    }
-    // Only hover-expand when pinned closed (icon mode).
-    if (!open && collapsible === "icon") {
-      setHoverOpen(true);
-    }
-  }, [open, collapsible, setHoverOpen]);
-
-  const handleMouseLeave = React.useCallback(() => {
-    if (hoverLeaveTimerRef.current !== null) {
-      clearTimeout(hoverLeaveTimerRef.current);
-    }
-    // Small delay avoids flicker when moving between sidebar chrome.
-    hoverLeaveTimerRef.current = setTimeout(() => {
-      setHoverOpen(false);
-      hoverLeaveTimerRef.current = null;
-    }, 120);
-  }, [setHoverOpen]);
+  const { isMobile, state, open, openMobile, setOpenMobile } = useSidebar();
 
   if (collapsible === "none") {
     return (
@@ -279,32 +209,23 @@ function Sidebar({
 
   const isFloating = variant === "floating" || variant === "inset";
   const iconCollapsible = collapsible === "icon";
-  // One DOM tree for icon mode so pinning from hover does not remount/flicker.
-  const panelExpanded = open || hoverOpen;
   const iconRail = isFloating
     ? "w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
     : "w-(--sidebar-width-icon)";
+  // Expanded width hugs nav labels (no hover grow).
   const fullRail = isFloating
-    ? "w-[calc(var(--sidebar-width)+(--spacing(4))+2px)]"
-    : "w-(--sidebar-width)";
+    ? "w-max max-w-[calc(16rem+(--spacing(4))+2px)]"
+    : "w-max max-w-64";
 
   if (iconCollapsible) {
-    // In-flow width on the flex item (not an absolute overlay) so SidebarInset
-    // pushes when the rail expands — hover, pin, or peek.
-    const peekExpandedRail = isFloating
-      ? "focus-within:w-[calc(var(--sidebar-width-expanded)+(--spacing(4))+2px)] hover:w-[calc(var(--sidebar-width-expanded)+(--spacing(4))+2px)]"
-      : "focus-within:w-(--sidebar-width-expanded) hover:w-(--sidebar-width-expanded)";
-
     return (
       <div
         className={cn(
           "group peer relative hidden h-svh shrink-0 text-sidebar-foreground transition-[width] duration-200 ease-out md:block",
-          panelExpanded ? fullRail : iconRail,
-          open && peekExpandedRail,
+          open ? fullRail : iconRail,
         )}
         data-state={state}
-        data-collapsible={!panelExpanded ? collapsible : ""}
-        data-hover-expand={!open && hoverOpen ? "true" : undefined}
+        data-collapsible={!open ? collapsible : ""}
         data-variant={variant}
         data-side={side}
         data-slot="sidebar"
@@ -312,8 +233,6 @@ function Sidebar({
         <div
           data-slot="sidebar-container"
           data-side={side}
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={handleMouseLeave}
           className={cn(
             "relative z-30 flex h-full w-full flex-col overflow-hidden",
             isFloating && "p-2",
@@ -326,7 +245,7 @@ function Sidebar({
           <div
             data-sidebar="sidebar"
             data-slot="sidebar-inner"
-            className="flex h-full min-h-0 w-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-sidebar-border"
+            className="flex h-full min-h-0 w-max max-w-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-sidebar-border"
           >
             {children}
           </div>
@@ -348,11 +267,10 @@ function Sidebar({
         data-slot="sidebar-container"
         data-side={side}
         className={cn(
-          "hidden h-svh w-(--sidebar-width) flex-col transition-[width] duration-200 ease-out md:flex",
-          "focus-within:z-20 focus-within:w-(--sidebar-width-expanded) hover:z-20 hover:w-(--sidebar-width-expanded)",
+          "hidden h-svh w-max max-w-64 flex-col transition-[width] duration-200 ease-out md:flex",
           "group-data-[collapsible=offcanvas]:w-0 group-data-[collapsible=offcanvas]:overflow-hidden",
           isFloating
-            ? "p-2 focus-within:w-[calc(var(--sidebar-width-expanded)+(--spacing(4))+2px)] hover:w-[calc(var(--sidebar-width-expanded)+(--spacing(4))+2px)]"
+            ? "p-2"
             : "group-data-[side=left]:border-r group-data-[side=right]:border-l",
           className,
         )}
@@ -361,7 +279,7 @@ function Sidebar({
         <div
           data-sidebar="sidebar"
           data-slot="sidebar-inner"
-          className="flex h-full min-h-0 w-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-sidebar-border"
+          className="flex h-full min-h-0 w-max max-w-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-sidebar-border"
         >
           {children}
         </div>
@@ -503,7 +421,10 @@ function SidebarGroup({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="sidebar-group"
       data-sidebar="group"
-      className={cn("relative flex w-full min-w-0 flex-col p-2", className)}
+      className={cn(
+        "relative flex w-max max-w-full min-w-0 flex-col p-2",
+        className,
+      )}
       {...props}
     />
   );
@@ -594,7 +515,7 @@ function SidebarMenuItem({ className, ...props }: React.ComponentProps<"li">) {
 }
 
 const sidebarMenuButtonVariants = cva(
-  "peer/menu-button group/menu-button flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm ring-sidebar-ring outline-hidden transition-[width,height,padding] group-has-data-[sidebar=menu-action]/menu-item:pr-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-open:hover:bg-sidebar-accent data-open:hover:text-sidebar-accent-foreground data-active:bg-sidebar-accent data-active:font-medium data-active:text-sidebar-accent-foreground [&_svg]:size-4 [&_svg]:shrink-0 [&>span:last-child]:whitespace-nowrap",
+  "peer/menu-button group/menu-button flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm ring-sidebar-ring outline-hidden transition-[height,padding] group-has-data-[sidebar=menu-action]/menu-item:pr-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-open:hover:bg-sidebar-accent data-open:hover:text-sidebar-accent-foreground data-active:bg-sidebar-accent data-active:font-medium data-active:text-sidebar-accent-foreground [&_svg]:size-4 [&_svg]:shrink-0 [&>span:last-child]:whitespace-nowrap",
   {
     variants: {
       variant: {

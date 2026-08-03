@@ -329,7 +329,7 @@ function RecentRouteRow({
             className: "mt-0.5 size-4 shrink-0",
             "aria-hidden": true,
           })}
-          <span className="min-w-0 flex-1 truncate text-start">
+          <span className="max-w-44 min-w-0 flex-1 truncate text-start">
             <span className="block truncate">{route.label}</span>
             {route.caption ? (
               <span className="block truncate text-xs font-normal text-sidebar-foreground/55">
@@ -398,10 +398,7 @@ function RecentsSection({
       >
         <ClockIcon className="size-4 shrink-0" />
         <span
-          className={cn(
-            "min-w-0 flex-1 truncate text-start",
-            iconRail && "sr-only",
-          )}
+          className={cn("text-start whitespace-nowrap", iconRail && "sr-only")}
         >
           Recents
         </span>
@@ -565,7 +562,7 @@ function SideNavTree({
               )}
             >
               {Icon ? <Icon className="size-4 shrink-0" /> : null}
-              <span className="min-w-0 flex-1 truncate text-start">
+              <span className="text-start whitespace-nowrap">
                 {navItem.name}
               </span>
               {isFolder ? (
@@ -586,10 +583,8 @@ function SideNavTree({
 
 export function AppSideNav({ data }: { data: SideNavData }) {
   const location = useLocation();
-  const { open, hoverOpen, isMobile, setOpen } = useSidebar();
-  // Visual rail width (includes temporary hover-expand). Keep main nav trees
-  // mounted so hover does not remount. Recents uses one stable control above.
-  const showExpandedNav = open || hoverOpen || isMobile;
+  const { open, isMobile, setOpen } = useSidebar();
+  const showExpandedNav = open || isMobile;
   const lastRecordedPathRef = React.useRef("");
   const recentRoutesRef = React.useRef(data.recentRoutes);
   const enterClearTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(
@@ -700,9 +695,8 @@ export function AppSideNav({ data }: { data: SideNavData }) {
 
   return (
     <>
-      {/* One Recents control always — never swap under the cursor on hover-expand.
-          Expanded: same `px-1` as the main tree. Icon rail: no extra pad so the
-          clock lines up with CollapsedSideNav / SidebarMenuButton icons. */}
+      {/* One Recents control always. Expanded: same `px-1` as the main tree.
+          Icon rail: no extra pad so the clock lines up with CollapsedSideNav. */}
       <nav
         aria-label="Recents"
         className={cn(showExpandedNav ? "px-1" : undefined)}
