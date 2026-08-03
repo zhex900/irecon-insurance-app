@@ -480,6 +480,23 @@ export function heuristicTextWidthPt(text: string, fontSizePt: number): number {
   return Math.max(0, String(text).length) * Math.max(1, fontSizePt) * 0.5;
 }
 
+/** First-baseline inset from the box top (mm) — matches html-rich-text-draw. */
+export function endorsementPaintTopInsetMm(fontSizePt: number): number {
+  return Math.max(1, fontSizePt) * 0.85 * PT_TO_MM;
+}
+
+/**
+ * Minimum schema height (mm) so the first painted line does not fail the
+ * draw page-break check and jump to the next page (overprinting).
+ */
+export function minEndorsementPaintBandMm(
+  fontSizePt: number,
+  lineHeight: number,
+): number {
+  const stepMm = Math.max(1, fontSizePt) * Math.max(0.5, lineHeight) * PT_TO_MM;
+  return endorsementPaintTopInsetMm(fontSizePt) + stepMm;
+}
+
 export function wordingHtmlLineCount(
   html: string,
   widthMm: number,
@@ -504,7 +521,10 @@ export function estimateWordingHtmlHeightMm(
 ): number {
   const count = wordingHtmlLineCount(html, widthMm, fontSizePt);
   const lineMm = Math.max(1, fontSizePt) * Math.max(0.5, lineHeight) * PT_TO_MM;
-  return count * lineMm;
+  // +1 line so the next subject’s block gap is not eaten by baseline inset /
+  // slightly wider wraps (prevents new-page top overlap).
+  if (count <= 0) return 0;
+  return count * lineMm + lineMm;
 }
 
 /** Split a total height into first-page + full-page chunk heights (mm). */

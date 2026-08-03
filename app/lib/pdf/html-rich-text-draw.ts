@@ -17,6 +17,7 @@ import {
   type PdfmeFontStyle,
   type PdfmeFontWeight,
 } from "~/lib/pdf/fonts";
+import { ENDORSEMENT_PAGE_BOTTOM_MARGIN_MM } from "~/lib/pdf/endorsement-expand";
 import {
   heuristicTextWidthPt,
   htmlToDrawLines,
@@ -45,6 +46,10 @@ export type EndorsementRichDrawOp = {
   lineHeight: number;
   /** Top of content area on overflow pages (mm from page top). */
   continuationTopMm?: number;
+  /** Fallback max body height on overflow pages (mm). */
+  continuationHeightMm?: number;
+  /** Reserved body height (mm) per overflow page, in order. */
+  continuationHeightsMm?: number[];
 };
 
 function parseHexColor(color: string): { r: number; g: number; b: number } {
@@ -166,6 +171,9 @@ function ensurePageAt(
 /**
  * Paint wrapped lines starting at `op`, flowing onto following pages when the
  * block is taller than the remaining space (long HTML endorsements).
+ *
+ * `onPageInserted` runs when a blank page is spliced in because layout did not
+ * reserve enough continuation pages — later drawOps must shift their pageIndex.
  */
 function drawLinesAcrossPages(
   doc: PDFDocument,
@@ -173,6 +181,7 @@ function drawLinesAcrossPages(
   op: EndorsementRichDrawOp,
   fonts: Map<string, PDFFont>,
   fallback: PDFFont,
+  onPageInserted?: (pageIndex: number) => void,
 ) {
   const startPage = ensurePageAt(
     doc,
@@ -185,12 +194,23 @@ function drawLinesAcrossPages(
   const x0 = op.xMm * MM_TO_PT;
   const color = parseHexColor(op.fontColor);
   const colorRgb = rgb(color.r, color.g, color.b);
-  const bottomMarginPt = 12 * MM_TO_PT;
+  const pageBottomMarginMm = ENDORSEMENT_PAGE_BOTTOM_MARGIN_MM;
+  const pageHeightMm = pageHeight / MM_TO_PT;
   // Overflow pages start at the template content top (not the first-box yMm).
   const continuationTopMm =
     Number.isFinite(op.continuationTopMm) && (op.continuationTopMm ?? 0) >= 0
       ? Number(op.continuationTopMm)
       : 10;
+  const continuationHeightFallbackMm =
+    Number.isFinite(op.continuationHeightMm) &&
+    (op.continuationHeightMm ?? 0) > 0
+      ? Number(op.continuationHeightMm)
+      : Math.max(40, pageHeightMm - continuationTopMm - pageBottomMarginMm);
+  const continuationHeightsMm = Array.isArray(op.continuationHeightsMm)
+    ? op.continuationHeightsMm.filter(
+        (h) => Number.isFinite(h) && Number(h) > 0,
+      )
+    : [];
 
   const parsedOpFont = parsePdfmeFontName(op.fontName);
   const lineHeight =
@@ -221,20 +241,59 @@ function drawLinesAcrossPages(
     if (w > prev) markerSlotByGroup.set(line.listGroupId, w);
   }
 
+  /** -1 = first page; 0+ = overflow page index into continuationHeightsMm. */
+  let overflowIndex = -1;
+
+  function reservedHeightMm(): number {
+    if (overflowIndex < 0) {
+      return Math.max(op.heightMm, step / MM_TO_PT);
+    }
+    if (overflowIndex < continuationHeightsMm.length) {
+      return Number(continuationHeightsMm[overflowIndex]);
+    }
+    return continuationHeightFallbackMm;
+  }
+
+  function minCursorYForPage(): number {
+    const pageFloorMm = pageHeightMm - pageBottomMarginMm;
+    if (overflowIndex < 0) {
+      const boxBottomMm = Math.min(pageFloorMm, op.yMm + reservedHeightMm());
+      return pageHeight - boxBottomMm * MM_TO_PT;
+    }
+    const boxBottomMm = Math.min(
+      pageFloorMm,
+      continuationTopMm + reservedHeightMm(),
+    );
+    return pageHeight - boxBottomMm * MM_TO_PT;
+  }
+
   let pageIndex = op.pageIndex;
   let page = startPage;
   let cursorY = pageHeight - op.yMm * MM_TO_PT - baselineFromTop;
 
   for (let i = 0; i < lines.length; i++) {
-    if (cursorY < bottomMarginPt + step * 0.5) {
+    if (cursorY < minCursorYForPage() + step * 0.5) {
       // Don't open a page that would only hold blank trailing lines.
       if (!lines.slice(i).some(lineHasInk)) break;
-      pageIndex += 1;
+      const nextPageIndex = pageIndex + 1;
+      const nextOverflowIndex = overflowIndex + 1;
+      // Past layout-reserved continuation pages: insert a blank page so we do
+      // not paint over the next endorsement already placed at the page top.
+      const pastLayoutReservation =
+        nextOverflowIndex >= continuationHeightsMm.length;
+      if (pastLayoutReservation && nextPageIndex < doc.getPageCount()) {
+        doc.insertPage(nextPageIndex, [pageWidth, pageHeight]);
+        onPageInserted?.(nextPageIndex);
+      }
+      pageIndex = nextPageIndex;
       page = ensurePageAt(doc, pageIndex, pageWidth, pageHeight);
+      overflowIndex = nextOverflowIndex;
       cursorY = pageHeight - continuationTopMm * MM_TO_PT - baselineFromTop;
-      // Skip leading blanks so the first ink sits at the page start.
       while (i < lines.length && !lineHasInk(lines[i]!)) i += 1;
       if (i >= lines.length) break;
+      // Reserved band shorter than one line — stop rather than paint over the
+      // next endorsement subject that was packed below on this page.
+      if (cursorY < minCursorYForPage() + step * 0.5) break;
     }
 
     const line = lines[i]!;
@@ -343,7 +402,8 @@ export async function applyEndorsementRichDrawOps(
     );
   }
 
-  for (const op of ops) {
+  for (let opIndex = 0; opIndex < ops.length; opIndex++) {
+    const op = ops[opIndex]!;
     if (!op.html.trim()) continue;
     if (op.pageIndex < 0) continue;
 
@@ -368,7 +428,12 @@ export async function applyEndorsementRichDrawOps(
           ),
         { lockSchemaMetrics: true },
       );
-      drawLinesAcrossPages(doc, lines, op, fonts, fallback!);
+      drawLinesAcrossPages(doc, lines, op, fonts, fallback!, (insertedAt) => {
+        for (let j = opIndex + 1; j < ops.length; j++) {
+          const later = ops[j]!;
+          if (later.pageIndex >= insertedAt) later.pageIndex += 1;
+        }
+      });
     } catch {
       // Skip this op; pdfme plain-text fallback remains visible.
     }

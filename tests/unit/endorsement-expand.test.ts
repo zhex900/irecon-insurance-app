@@ -181,7 +181,33 @@ describe("expandEndorsementPairSchemas", () => {
     expect(vegSubject!.position!.y!).toBeLessThan(120);
   });
 
-  it("moves a whole block to the next page when it does not fit", () => {
+  it("continues packing on the same page instead of jumping a whole block", () => {
+    const template = blankTemplate([[subject, content]]);
+    const inputs = {
+      Endorsements: endorsementsTableContent([
+        { subject: "One", content: "Short" },
+        {
+          subject: "Two",
+          content: "A long body that needs space below the first block.",
+        },
+      ]),
+    };
+    const next = expandEndorsementPairSchemas(template, inputs);
+    const page0 = next.schemas[0]!;
+    const oneContent = page0.find(
+      (s) => s.name === ENDORSEMENT_CONTENT_FIELD,
+    ) as { position?: { y?: number }; height?: number } | undefined;
+    const twoSubject = page0.find(
+      (s) => s.name === `${ENDORSEMENT_SUBJECT_FIELD}__2`,
+    ) as { position?: { y?: number } } | undefined;
+    expect(twoSubject).toBeTruthy();
+    expect(Number(twoSubject!.position!.y)).toBeCloseTo(
+      Number(oneContent!.position!.y) + Number(oneContent!.height) + 5,
+      1,
+    );
+  });
+
+  it("starts a new page only when the next subject cannot fit above the bottom margin", () => {
     const nearBottomSubject = {
       ...subject,
       position: { x: 12, y: 250 },
@@ -197,14 +223,53 @@ describe("expandEndorsementPairSchemas", () => {
         { subject: "One", content: "Short" },
         {
           subject: "Two",
-          content: "A long body that needs space below the first block.",
+          content: "A long body that needs space below the subject.",
         },
       ]),
     };
     const next = expandEndorsementPairSchemas(template, inputs);
     expect(next.schemas.length).toBeGreaterThan(1);
-    const page2Names = next.schemas[1]!.map((s) => s.name);
-    expect(page2Names).toContain(`${ENDORSEMENT_SUBJECT_FIELD}__2`);
+    const page2 = next.schemas[1]!;
+    expect(
+      page2.some((s) => s.name === `${ENDORSEMENT_SUBJECT_FIELD}__2`),
+    ).toBe(true);
+  });
+
+  it("floors short subject boxes to one paintable line (Unsealed Roadworks)", () => {
+    const tinySubject = { ...subject, height: 4.5, fontSize: 9.5 };
+    const template = blankTemplate([[tinySubject, content]]);
+    const inputs = {
+      Endorsements: endorsementsTableContent([
+        {
+          subject: "<p><strong>Unsealed Roadworks</strong></p>",
+          content: "<p>Short body.</p>",
+        },
+      ]),
+    };
+    const next = expandEndorsementPairSchemas(template, inputs, []);
+    const sub = next.schemas[0]!.find(
+      (s) => s.name === ENDORSEMENT_SUBJECT_FIELD,
+    ) as { height?: number } | undefined;
+    // Must be taller than the designer 4.5mm box so draw does not page-break.
+    expect(Number(sub!.height)).toBeGreaterThan(6);
+  });
+
+  it("packs like schedule even when the content prototype is tall (rating-single)", () => {
+    const tallContent = { ...content, height: 85 };
+    const template = blankTemplate([[subject, tallContent]]);
+    const inputs = {
+      Endorsements: endorsementsTableContent(
+        Array.from({ length: 6 }, (_, i) => ({
+          subject: `<p><strong>Section ${i + 1}</strong></p>`,
+          content: `<p>Short body ${i + 1} for packing.</p>`,
+        })),
+      ),
+    };
+    const next = expandEndorsementPairSchemas(template, inputs, []);
+    const subjectsOnFirst = next.schemas[0]!.filter((s) =>
+      String(s.name ?? "").startsWith(ENDORSEMENT_SUBJECT_FIELD),
+    );
+    expect(subjectsOnFirst.length).toBeGreaterThanOrEqual(4);
   });
 
   it("reads and writes editable block gap on the subject prototype", () => {

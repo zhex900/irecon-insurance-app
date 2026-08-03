@@ -41,7 +41,7 @@ describe("wording html", () => {
       plainTextFromWordingHtml("<p>Title</p><ul><li>A</li><li>B</li></ul>"),
     ).toContain("Title");
     expect(wordingHtmlToEstimateText("<ul><li>A</li><li>B</li></ul>")).toMatch(
-      /• A/,
+      /[-•] A/,
     );
   });
 

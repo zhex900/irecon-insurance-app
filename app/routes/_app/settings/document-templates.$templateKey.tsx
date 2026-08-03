@@ -386,8 +386,6 @@ export default function DocumentTemplateEditorRoute({
   const revalidator = useRevalidator();
   const fetcher = useFetcher<typeof action>();
   const designerRef = useRef<PdfmeDesignerHandle>(null);
-  const [fieldToolbarHost, setFieldToolbarHost] =
-    useState<HTMLDivElement | null>(null);
   const handledDataRef = useRef<typeof fetcher.data>(undefined);
   const previewUrlRef = useRef<string | null>(null);
   const baselineTemplateRef = useRef<Template | null>(null);
@@ -1164,10 +1162,6 @@ export default function DocumentTemplateEditorRoute({
                 <SaveIcon data-icon="inline-start" />
                 Save draft
               </LoadingButton>
-              <div
-                ref={setFieldToolbarHost}
-                className="flex min-w-0 flex-wrap items-center gap-1.5 empty:hidden"
-              />
               <LoadingButton
                 type="button"
                 size="sm"
@@ -1190,7 +1184,6 @@ export default function DocumentTemplateEditorRoute({
           ref={designerRef}
           template={docTemplate.template as Template}
           editable={canEdit}
-          toolbarHost={fieldToolbarHost}
           onTemplateChange={handleTemplateChange}
           className="min-h-0 flex-1 overflow-hidden rounded-xl border bg-background"
         />

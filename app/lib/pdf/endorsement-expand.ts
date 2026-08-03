@@ -1,6 +1,10 @@
 /**
  * Expand EndorsementSubject + EndorsementContent prototypes into one styled
- * pair per wording. Empty list → hide both. Overflow → whole block on next page.
+ * pair per wording. Empty list → hide both.
+ *
+ * Sections stack with a fixed block gap. Bodies continue onto the next page
+ * when tall — we do not bounce a whole endorsement just because its first
+ * slice is tight. Layout and draw stop above the bottom margin.
  *
  * Plain text is painted by pdfme. Rich HTML is drawn via pdf-lib `drawOps`
  * after generate (pdfme cannot render tags / underline / mixed fonts).
@@ -9,7 +13,9 @@ import { isBlankPdf, type Template } from "@pdfme/common";
 import { estimateTextHeightMm } from "~/lib/pdf/flow-push-down";
 import type { EndorsementRichDrawOp } from "~/lib/pdf/html-rich-text-draw";
 import {
+  endorsementPaintTopInsetMm,
   estimateWordingHtmlHeightMm,
+  minEndorsementPaintBandMm,
   splitHeightIntoPageChunks,
 } from "~/lib/pdf/html-rich-text-lines";
 import { ENDORSEMENTS_TABLE_FIELD } from "~/lib/pdf/merge-fields";
@@ -17,7 +23,7 @@ import {
   isWordingHtmlEmpty,
   looksLikeHtml,
   plainTextFromWordingHtml,
-  wordingHtmlToEstimateText,
+  plainTextToWordingHtml,
 } from "~/lib/wording/html";
 
 export const ENDORSEMENT_SUBJECT_FIELD = "EndorsementSubject";
@@ -25,6 +31,8 @@ export const ENDORSEMENT_CONTENT_FIELD = "EndorsementContent";
 /** Schema meta: mm between endorsement N and N+1 (editable in designer). */
 export const ENDORSEMENT_BLOCK_GAP_KEY = "endorsementBlockGapMm";
 export const DEFAULT_ENDORSEMENT_BLOCK_GAP_MM = 4;
+/** Keep endorsement text above this margin (mm from page bottom). */
+export const ENDORSEMENT_PAGE_BOTTOM_MARGIN_MM = 18;
 
 type SchemaLike = {
   name?: string;
@@ -92,18 +100,27 @@ export function parseEndorsementPairsFromInputs(
   }
 }
 
-function pageBottomMm(template: Template): number {
+function pageHeightMm(template: Template): number {
   const base = template.basePdf;
   if (isBlankPdf(base)) {
-    const padBottom = Array.isArray(base.padding)
-      ? Number(base.padding[2])
-      : 10;
-    return Math.max(
-      40,
-      Number(base.height) - (Number.isFinite(padBottom) ? padBottom : 10),
-    );
+    const h = Number(base.height);
+    return Number.isFinite(h) && h > 0 ? h : 297;
   }
-  return 290;
+  return 297;
+}
+
+/** Lowest Y (from page top) where endorsement content may still be placed. */
+function pageBottomMm(template: Template): number {
+  const height = pageHeightMm(template);
+  const base = template.basePdf;
+  let padBottom = ENDORSEMENT_PAGE_BOTTOM_MARGIN_MM;
+  if (isBlankPdf(base) && Array.isArray(base.padding)) {
+    const raw = Number(base.padding[2]);
+    if (Number.isFinite(raw) && raw >= 0) {
+      padBottom = Math.max(raw, ENDORSEMENT_PAGE_BOTTOM_MARGIN_MM);
+    }
+  }
+  return Math.max(40, height - padBottom);
 }
 
 function pageTopMm(template: Template): number {
@@ -147,15 +164,6 @@ function cloneSchema(
   };
 }
 
-function estimateSchemaHeight(schema: SchemaLike, htmlOrText: string): number {
-  return estimateTextHeightMm(
-    wordingHtmlToEstimateText(htmlOrText),
-    Number(schema.width ?? 80),
-    Number(schema.fontSize ?? 9.5),
-    Number(schema.lineHeight ?? 1.25),
-  );
-}
-
 /** Split plain text into page-height chunks so tall wordings still paint via pdfme. */
 function splitPlainTextByHeight(
   text: string,
@@ -196,6 +204,8 @@ function toDrawOp(
   height: number,
   html: string,
   continuationTopMm: number,
+  continuationHeightMm: number,
+  continuationHeightsMm: number[] = [],
 ): EndorsementRichDrawOp {
   return {
     pageIndex,
@@ -209,6 +219,8 @@ function toDrawOp(
     fontColor: String(schema.fontColor ?? "#111111"),
     lineHeight: Number(schema.lineHeight ?? 1.25),
     continuationTopMm,
+    continuationHeightMm,
+    continuationHeightsMm,
   };
 }
 
@@ -271,7 +283,6 @@ export function expandEndorsementPairSchemas(
   const blockGapMm = readBlockGapMm(subjectProto);
   const originalBlockBottom = contentY + contentH;
   const bottomLimit = pageBottomMm(template);
-  const topMargin = pageTopMm(template);
 
   const protoPage = pages[protoPageIndex]!;
   const followers = protoPage.filter((s) => {
@@ -322,44 +333,51 @@ export function expandEndorsementPairSchemas(
   const subjectWidthMm = Number(subjectProto.width ?? widthMm);
   const subjectFont = Number(subjectProto.fontSize ?? 11);
   const subjectLh = Number(subjectProto.lineHeight ?? 1.15);
+  // Draw places the first baseline below the box top — subtract that inset so
+  // reserved bands are not shorter than the painted lines (new-page overlaps).
+  const bodyPaintInsetMm = endorsementPaintTopInsetMm(bodyFont);
+  const usablePageH = Math.max(40, bottomLimit - contTopMm - bodyPaintInsetMm);
 
   for (let i = 0; i < pairs.length; i++) {
     const pair = pairs[i]!;
     const subjectIsHtml = looksLikeHtml(pair.subject);
     const contentIsHtml = looksLikeHtml(pair.content);
+    // Measure plain via the HTML line pipeline so catalogue wordings reserve
+    // the same gap before the next subject as rich HTML sections.
+    const subjectHtml = subjectIsHtml
+      ? pair.subject
+      : plainTextToWordingHtml(pair.subject);
+    const bodyHtml = contentIsHtml
+      ? pair.content
+      : plainTextToWordingHtml(pair.content);
+    // Floor to one paintable line — a ~4.5mm designer subject box is shorter
+    // than baseline+line, which made draw jump "Unsealed Roadworks" onto the
+    // next page and overprint.
+    const minSubjectPaintH = minEndorsementPaintBandMm(subjectFont, subjectLh);
+    const minBodyPaintH = minEndorsementPaintBandMm(bodyFont, bodyLh);
     const subH = Math.max(
       subjectH,
-      subjectIsHtml
-        ? estimateWordingHtmlHeightMm(
-            pair.subject,
-            subjectWidthMm,
-            subjectFont,
-            subjectLh,
-          )
-        : estimateSchemaHeight(subjectProto, pair.subject),
+      minSubjectPaintH,
+      estimateWordingHtmlHeightMm(
+        subjectHtml,
+        subjectWidthMm,
+        subjectFont,
+        subjectLh,
+      ),
     );
-    // HTML: use measured wrap height only — do not floor to the prototype
-    // box height or the next endorsement (e.g. Heritage) sits too low.
-    const totalBodyH = contentIsHtml
-      ? Math.max(
-          4,
-          estimateWordingHtmlHeightMm(pair.content, widthMm, bodyFont, bodyLh),
-        )
-      : Math.max(contentH, estimateSchemaHeight(contentProto, pair.content));
-    // For page-fit, only the first page slice matters; tall HTML continues.
-    const firstSliceH = Math.min(
-      totalBodyH,
-      Math.max(40, bottomLimit - topMargin),
+    const totalBodyH = Math.max(
+      contentIsHtml ? minBodyPaintH : contentH,
+      minBodyPaintH,
+      estimateWordingHtmlHeightMm(bodyHtml, widthMm, bodyFont, bodyLh),
     );
-    const blockH = subH + subjectToContentGap + firstSliceH;
 
-    const fits =
-      currentY + blockH <= bottomLimit ||
-      // Single block taller than a page: still place (overlay continues).
-      currentY <= topMargin + 0.5;
-
-    if (!fits) {
-      // Whole endorsement moves to a new page inserted after the current one.
+    // New page only when the subject (+ gap + a first line) will not fit —
+    // never bounce a whole block because its body is tall (body continues).
+    const headroomMm = subH + subjectToContentGap + Math.min(8, contentH);
+    if (
+      i > 0 &&
+      (currentY > bottomLimit - 0.5 || currentY + headroomMm > bottomLimit)
+    ) {
       pageIndex += 1;
       pages.splice(pageIndex, 0, []);
       currentY = contTopMm;
@@ -370,21 +388,19 @@ export function expandEndorsementPairSchemas(
     const subjectPlain = plainTextFromWordingHtml(pair.subject);
     const plainBody = plainTextFromWordingHtml(pair.content);
     const contentYPos = currentY + subH + subjectToContentGap;
-    const usablePageH = Math.max(40, bottomLimit - contTopMm);
-    const roomOnPage = Math.max(contentH, bottomLimit - contentYPos);
+    // Remaining space only (do not floor to designer prototype height).
+    const roomOnPage = Math.max(
+      4,
+      bottomLimit - contentYPos - bodyPaintInsetMm,
+    );
 
-    // HTML: pack from real wrap-line heights so the next endorsement sits
-    // under the last ink (not under an overestimated plain-text box).
-    // Plain: keep pdfme chunk splitting for multi-page text paint.
-    let chunkHeights: number[];
+    let chunkHeights = splitHeightIntoPageChunks(
+      totalBodyH,
+      roomOnPage,
+      usablePageH,
+    );
     let plainChunks: string[] = [plainBody];
-    if (contentIsHtml) {
-      chunkHeights = splitHeightIntoPageChunks(
-        totalBodyH,
-        roomOnPage,
-        usablePageH,
-      );
-    } else {
+    if (!contentIsHtml) {
       plainChunks = splitPlainTextByHeight(
         plainBody,
         widthMm,
@@ -393,17 +409,19 @@ export function expandEndorsementPairSchemas(
         roomOnPage,
         usablePageH,
       );
-      chunkHeights = plainChunks.map((chunk, idx) =>
-        Math.min(
-          idx === 0 ? roomOnPage : usablePageH,
-          Math.max(
-            contentH,
-            estimateTextHeightMm(chunk, widthMm, bodyFont, bodyLh),
+      if (plainChunks.length > chunkHeights.length) {
+        chunkHeights = plainChunks.map((chunk, idx) =>
+          Math.min(
+            idx === 0 ? roomOnPage : usablePageH,
+            Math.max(
+              contentH,
+              estimateTextHeightMm(chunk, widthMm, bodyFont, bodyLh),
+            ),
           ),
-        ),
-      );
+        );
+      }
     }
-    const minChunkH = contentIsHtml ? 4 : contentH;
+    const minChunkH = contentIsHtml ? minBodyPaintH : contentH;
     const firstBodyH = Math.min(
       Math.max(minChunkH, chunkHeights[0] ?? minChunkH),
       roomOnPage,
@@ -430,32 +448,7 @@ export function expandEndorsementPairSchemas(
       firstPaint,
     );
 
-    if (!isWordingHtmlEmpty(pair.subject) && subjectIsHtml) {
-      drawOps.push(
-        toDrawOp(
-          subjectSchema,
-          pageIndex,
-          currentY,
-          subH,
-          pair.subject,
-          contTopMm,
-        ),
-      );
-    }
-    if (!isWordingHtmlEmpty(pair.content) && contentIsHtml) {
-      // Full HTML on the first content box; overlay paginates across pages.
-      drawOps.push(
-        toDrawOp(
-          contentSchema,
-          pageIndex,
-          contentYPos,
-          firstBodyH,
-          pair.content,
-          contTopMm,
-        ),
-      );
-    }
-
+    const sectionPageIndex = pageIndex;
     const targetPage = pages[pageIndex]!;
     targetPage.push(subjectSchema, contentSchema);
 
@@ -465,6 +458,7 @@ export function expandEndorsementPairSchemas(
     }
 
     // Continuation pages: reserve only the height actually used on each page.
+    const overflowHeightsMm: number[] = [];
     for (let c = 1; c < chunkHeights.length; c++) {
       pageIndex += 1;
       pages.splice(pageIndex, 0, []);
@@ -472,6 +466,7 @@ export function expandEndorsementPairSchemas(
         usablePageH,
         Math.max(minChunkH, chunkHeights[c] ?? minChunkH),
       );
+      overflowHeightsMm.push(chunkH);
       const contName = `${contentName}__cont${c}`;
       const contPaint = contentIsHtml ? "" : (plainChunks[c] ?? "");
       inputs[contName] = contPaint;
@@ -479,6 +474,34 @@ export function expandEndorsementPairSchemas(
         cloneSchema(contentProto, contName, contTopMm, chunkH, contPaint),
       );
       blockBottom = contTopMm + chunkH;
+    }
+
+    if (!isWordingHtmlEmpty(pair.subject) && subjectIsHtml) {
+      drawOps.push(
+        toDrawOp(
+          subjectSchema,
+          sectionPageIndex,
+          currentY,
+          subH,
+          pair.subject,
+          contTopMm,
+          usablePageH,
+        ),
+      );
+    }
+    if (!isWordingHtmlEmpty(pair.content) && contentIsHtml) {
+      drawOps.push(
+        toDrawOp(
+          contentSchema,
+          sectionPageIndex,
+          contentYPos,
+          firstBodyH,
+          pair.content,
+          contTopMm,
+          usablePageH,
+          overflowHeightsMm,
+        ),
+      );
     }
 
     currentY = blockBottom + blockGapMm;
