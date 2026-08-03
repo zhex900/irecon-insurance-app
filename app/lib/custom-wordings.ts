@@ -47,7 +47,10 @@ export function normalizeCustomWordings(
   return out;
 }
 
-/** First two items map to PDF Subject/Content / Subject2/Content2. */
+/**
+ * First two items → legacy scalar PDF slots (EndorsementSubject/Content…).
+ * Prefer EndorsementSubject + EndorsementContent pair (loops all wordings).
+ */
 export function flatCustomWordings(items: CustomWordingItem[]) {
   return {
     customWordingSubject: items[0]?.subject || undefined,

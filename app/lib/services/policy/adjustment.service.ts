@@ -1,6 +1,7 @@
 import type { CarAdjustmentRecord, PolicyNote, Policy } from "~/lib/db/types";
 import type { CarAdjustmentInput } from "~/lib/zod/policy-adjustment";
 import { POLICY_STATUS } from "~/lib/zod/policy-car";
+import { collectEndorsementWordings } from "~/lib/pdf/merge-fields";
 import {
   calculateCarAdjustment,
   validateAdjustmentFinish,
@@ -12,6 +13,7 @@ import {
 } from "~/lib/services/policy/documents";
 import { listPublishedForAdjustment } from "~/lib/services/documents/document-templates";
 import { getPolicy, savePolicy } from "~/lib/services/policy/data.service";
+import { getCarWording } from "~/lib/services/reference.service";
 
 export class AdjustmentError extends Error {
   constructor(message: string) {
@@ -103,6 +105,7 @@ export async function submitPolicyAdjustment(
     createdBy,
   };
 
+  const wordingCatalogue = await getCarWording();
   const policy: Policy = {
     ...existing,
     notes: [...(existing.notes ?? []), note],
@@ -110,6 +113,10 @@ export async function submitPolicyAdjustment(
       ...existing.car,
       adjusted: true,
       adjustment,
+      endorsementWordings: collectEndorsementWordings(
+        existing.car,
+        wordingCatalogue,
+      ),
     },
   };
 

@@ -1,5 +1,6 @@
-import type { Policy, PremiumBreakdown } from "~/lib/db/types";
+import type { CarWording, Policy, PremiumBreakdown } from "~/lib/db/types";
 import { normalizeExcesses } from "~/lib/excesses";
+import { collectEndorsementWordings } from "~/lib/pdf/merge-fields";
 import { normalizeSubLimits } from "~/lib/sub-limits";
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
 
@@ -22,9 +23,17 @@ export function policySnapshotFromForm(
     rating?: Policy["car"]["rating"];
     referralReasons?: string[];
     documents?: Policy["documents"];
+    /** Same fixed Additional Wording catalogue shown in the wizard checkboxes. */
+    carWording?: CarWording[];
   },
 ): Policy {
   const premium = options?.premium ?? policy.car.premium;
+  const selectedWordingIds = Array.isArray(values.selectedWordingIds)
+    ? values.selectedWordingIds
+        .map((id) => Number(id))
+        .filter((id) => Number.isFinite(id))
+    : (policy.car.selectedWordingIds ?? []);
+  const wordingCatalogue = options?.carWording ?? [];
   const customWordings =
     values.customWordings ?? policy.car.customWordings ?? [];
 
@@ -115,9 +124,20 @@ export function policySnapshotFromForm(
         values.excludedContracts2 ?? policy.car.excludedContracts2,
       excludedContracts3:
         values.excludedContracts3 ?? policy.car.excludedContracts3,
-      selectedWordingIds:
-        values.selectedWordingIds ?? policy.car.selectedWordingIds,
+      selectedWordingIds,
       customWordings,
+      // Ticked catalogue rows + custom pairs for the Endorsements table merge.
+      endorsementWordings: collectEndorsementWordings(
+        {
+          selectedWordingIds,
+          customWordings,
+          customWordingSubject: policy.car.customWordingSubject,
+          customWordingContent: policy.car.customWordingContent,
+          customWordingSubject2: policy.car.customWordingSubject2,
+          customWordingContent2: policy.car.customWordingContent2,
+        },
+        wordingCatalogue,
+      ),
       referralReasons: options?.referralReasons ?? policy.car.referralReasons,
       premium,
       rating: options?.rating ?? policy.car.rating,

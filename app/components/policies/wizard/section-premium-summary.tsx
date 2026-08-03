@@ -20,6 +20,7 @@ import {
 } from "~/components/ui/tooltip";
 import type {
   CarAdjustmentRecord,
+  CarWording,
   PolicyDocument,
   PremiumBreakdown,
   Policy,
@@ -57,6 +58,8 @@ export function PremiumSummaryPanel({
   policy,
   /** Prefer live form+premium snapshot so schedule/rating show manual overrides. */
   getPreviewPolicy,
+  /** DB Additional Wording catalogue — resolves ticked IDs in PDF preview. */
+  carWording,
   className,
   /** When true, only the Documents block (for &lt;xl main column). */
   documentsOnly = false,
@@ -77,6 +80,7 @@ export function PremiumSummaryPanel({
   adjustment?: CarAdjustmentRecord;
   policy?: Policy;
   getPreviewPolicy?: () => Policy | null;
+  carWording?: CarWording[];
   className?: string;
   documentsOnly?: boolean;
 }) {
@@ -184,7 +188,9 @@ export function PremiumSummaryPanel({
     setPreviewError(null);
     setPreviewSrc(null);
 
-    void buildPdfBlobFromDocument(previewDoc, previewPolicy ?? undefined)
+    void buildPdfBlobFromDocument(previewDoc, previewPolicy ?? undefined, {
+      wordingCatalogue: carWording,
+    })
       .then((blob) => {
         if (cancelled) return;
         objectUrl = URL.createObjectURL(blob);
@@ -203,7 +209,7 @@ export function PremiumSummaryPanel({
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [previewDoc, policy, getPreviewPolicy, premium]);
+  }, [previewDoc, policy, getPreviewPolicy, premium, carWording]);
 
   const allSelected =
     documentRows.length > 0 && selectedIds.length === documentRows.length;

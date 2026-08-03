@@ -2,9 +2,10 @@ import type { Template } from "@pdfme/common";
 import { isStaticSchemaName } from "~/lib/documents/template-editor-form";
 import type { FlowPushDown } from "~/lib/pdf/flow-push-down";
 import {
+  endorsementsTableContent,
   normalizeMultiVariableTextSchema,
   resolveMultiVariableTextInput,
-  resolveTableContentPlaceholders,
+  resolveTableMergeInput,
 } from "~/lib/pdf/merge-fields";
 
 /** Realistic fake values for template Designer preview. */
@@ -33,9 +34,21 @@ const SAMPLE_BY_FIELD: Record<string, string> = {
     "Contracts involving tunnelling, underground mining, or works outside Australia.",
   ExcludedContracts2: "",
   ExcludedContracts3: "",
-  EndorsementSubject: "Endorsement — sample wording",
+  Endorsements: endorsementsTableContent([
+    {
+      subject: "<p><strong>Endorsement — sample wording</strong></p>",
+      content:
+        "<p>It is hereby noted and agreed that this policy is <em>endorsed</em> as follows:</p><ul><li>Sample bullet one</li><li><u>Underlined</u> bullet two</li></ul>",
+    },
+    {
+      subject: "<p><strong>Additional conditions</strong></p>",
+      content:
+        "<p>The insured must notify the insurer of any material change to the contract works programme.</p>",
+    },
+  ]),
+  EndorsementSubject: "<p><strong>Endorsement — sample wording</strong></p>",
   EndorsementContent:
-    "It is hereby noted and agreed that this policy is endorsed as follows for sample preview purposes.",
+    "<p>It is hereby noted and agreed that this policy is <em>endorsed</em> as follows:</p><ul><li>Sample bullet one</li><li><u>Underlined</u> bullet two</li></ul>",
   DutyOfDisclosureConfirmation: "Confirmed",
   ReferralName: "Jordan Lee",
   AnyClaimsExceed20k: "No",
@@ -133,6 +146,21 @@ const SAMPLE_BY_FIELD: Record<string, string> = {
   AdjustedLegalLiabilityTrueBasePremium: "$600.00",
 };
 
+/** Canonical merge-field names (samples + preview). */
+export const KNOWN_MERGE_FIELD_NAMES = Object.keys(SAMPLE_BY_FIELD).sort(
+  (a, b) => a.localeCompare(b),
+);
+
+/**
+ * Designer left-palette names — prefer EndorsementSubject + EndorsementContent
+ * (repeating pair). Legacy Endorsements table still generates if present.
+ */
+const PALETTE_EXCLUDED = new Set(["Endorsements"]);
+
+export const PALETTE_MERGE_FIELD_NAMES = KNOWN_MERGE_FIELD_NAMES.filter(
+  (name) => !PALETTE_EXCLUDED.has(name),
+);
+
 function sampleForField(name: string): string {
   const base = name.replace(/__\d+$/, "");
   if (base in SAMPLE_BY_FIELD) return SAMPLE_BY_FIELD[base]!;
@@ -210,7 +238,7 @@ export function buildSampleMergeInputs(
       }
 
       if (schema.type === "table" && typeof schema.content === "string") {
-        inputs[name] = resolveTableContentPlaceholders(schema.content, inputs);
+        inputs[name] = resolveTableMergeInput(name, schema.content, inputs);
         continue;
       }
 
@@ -233,6 +261,18 @@ export function buildSampleMergeInputs(
 
   if (flowPushDown?.staticInputs) {
     Object.assign(inputs, flowPushDown.staticInputs);
+  }
+
+  // Subject+Content pair expands from the Endorsements JSON list — ensure it
+  // exists even when the legacy table field is not on the template.
+  const hasEndorsementPair = template.schemas.some((page) =>
+    page.some((schema) => {
+      const base = String(schema.name ?? "").replace(/__\d+$/, "");
+      return base === "EndorsementSubject" || base === "EndorsementContent";
+    }),
+  );
+  if (hasEndorsementPair && !inputs.Endorsements) {
+    inputs.Endorsements = SAMPLE_BY_FIELD.Endorsements!;
   }
 
   return inputs;

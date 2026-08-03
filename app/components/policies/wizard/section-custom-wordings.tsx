@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useFormContext, Controller } from "react-hook-form";
 import { PlusIcon } from "lucide-react";
+import { WordingHtmlView } from "~/components/forms/wording-html-view";
+import { WordingRichEditor } from "~/components/forms/wording-rich-editor";
 import { Button } from "~/components/ui/button";
 import {
   Dialog,
@@ -10,12 +12,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
-import { FieldInput, FieldTextarea } from "~/components/ui/form-controls";
 import { type CarPolicyFormValues } from "~/lib/zod/policy-car";
 import {
   createEmptyCustomWording,
   type CustomWordingItem,
 } from "~/lib/custom-wordings";
+import {
+  isWordingHtmlEmpty,
+  normalizeWordingHtmlForSave,
+  plainTextFromWordingHtml,
+} from "~/lib/wording/html";
 
 export function CustomWordingsEditor() {
   const { control } = useFormContext<CarPolicyFormValues>();
@@ -53,7 +59,9 @@ export function CustomWordingsEditor() {
   }
 
   function isDraftDirty() {
-    return draftSubject.trim() !== "" || draftContent.trim() !== "";
+    return (
+      !isWordingHtmlEmpty(draftSubject) || !isWordingHtmlEmpty(draftContent)
+    );
   }
 
   function requestCancel() {
@@ -69,9 +77,9 @@ export function CustomWordingsEditor() {
     onChange: (next: CustomWordingItem[]) => void,
     existingId?: string,
   ) {
-    const subject = draftSubject.trim();
-    const content = draftContent.trim();
-    if (!subject && !content) {
+    const subject = normalizeWordingHtmlForSave(draftSubject);
+    const content = normalizeWordingHtmlForSave(draftContent);
+    if (isWordingHtmlEmpty(subject) && isWordingHtmlEmpty(content)) {
       setDraftError("Enter a subject or content before saving.");
       return;
     }
@@ -124,20 +132,21 @@ export function CustomWordingsEditor() {
                       aria-label="Custom wording"
                     />
                     <div className="flex w-full flex-col gap-3">
-                      <FieldInput
+                      <WordingRichEditor
                         label="Custom Wording Subject"
+                        variant="subject"
                         value={draftSubject}
-                        onChange={(e) => {
-                          setDraftSubject(e.target.value);
+                        onChange={(html) => {
+                          setDraftSubject(html);
                           setDraftError(null);
                         }}
                       />
-                      <FieldTextarea
+                      <WordingRichEditor
                         label="Custom Wording Content"
-                        rows={4}
+                        variant="content"
                         value={draftContent}
-                        onChange={(e) => {
-                          setDraftContent(e.target.value);
+                        onChange={(html) => {
+                          setDraftContent(html);
                           setDraftError(null);
                         }}
                       />
@@ -189,16 +198,18 @@ export function CustomWordingsEditor() {
                     className="mt-1"
                     disabled={mode !== "idle"}
                     onChange={() => setDeleteId(item.id)}
-                    aria-label={`Remove ${item.subject || "custom wording"}`}
+                    aria-label={`Remove ${plainTextFromWordingHtml(item.subject) || "custom wording"}`}
                   />
                   <div className="min-w-0 flex-1">
                     <span className="font-medium text-foreground">
-                      {item.subject || "Untitled"}
+                      {plainTextFromWordingHtml(item.subject) || "Untitled"}
                     </span>
                     {item.content ? (
-                      <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-                        {item.content}
-                      </p>
+                      <WordingHtmlView
+                        html={item.content}
+                        className="mt-1 text-xs text-muted-foreground"
+                        clampLines={2}
+                      />
                     ) : null}
                     <div className="mt-2 flex flex-wrap gap-2">
                       <Button
@@ -235,20 +246,21 @@ export function CustomWordingsEditor() {
                   aria-label="New custom wording"
                 />
                 <div className="flex w-full flex-col gap-3">
-                  <FieldInput
+                  <WordingRichEditor
                     label="Custom Wording Subject"
+                    variant="subject"
                     value={draftSubject}
-                    onChange={(e) => {
-                      setDraftSubject(e.target.value);
+                    onChange={(html) => {
+                      setDraftSubject(html);
                       setDraftError(null);
                     }}
                   />
-                  <FieldTextarea
+                  <WordingRichEditor
                     label="Custom Wording Content"
-                    rows={4}
+                    variant="content"
                     value={draftContent}
-                    onChange={(e) => {
-                      setDraftContent(e.target.value);
+                    onChange={(html) => {
+                      setDraftContent(html);
                       setDraftError(null);
                     }}
                   />
@@ -303,7 +315,8 @@ export function CustomWordingsEditor() {
                   <DialogDescription>
                     This removes{" "}
                     <span className="font-medium text-foreground">
-                      {deleteTarget?.subject || "this wording"}
+                      {plainTextFromWordingHtml(deleteTarget?.subject ?? "") ||
+                        "this wording"}
                     </span>
                     . This cannot be undone from here.
                   </DialogDescription>

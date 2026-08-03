@@ -51,8 +51,12 @@ import {
 } from "~/lib/documents/template-editor-form";
 import { DOCUMENT_LABEL_MAX_LENGTH } from "~/lib/documents/document-label";
 import { formatDocumentTemplateTitle } from "~/lib/documents/template-title";
+import { expandEndorsementPairSchemas } from "~/lib/pdf/endorsement-expand";
 import { applyFlowPushDown } from "~/lib/pdf/flow-push-down";
-import { normalizePdfmeTemplateSchemas } from "~/lib/pdf/merge-fields";
+import {
+  normalizePdfmeTemplateSchemas,
+  syncTableSchemasToInputs,
+} from "~/lib/pdf/merge-fields";
 import { buildSampleMergeInputs } from "~/lib/pdf/sample-merge-inputs";
 import { invalidatePdfTemplateOverrideCache } from "~/lib/pdf/template-override-cache";
 import {
@@ -382,6 +386,8 @@ export default function DocumentTemplateEditorRoute({
   const revalidator = useRevalidator();
   const fetcher = useFetcher<typeof action>();
   const designerRef = useRef<PdfmeDesignerHandle>(null);
+  const [fieldToolbarHost, setFieldToolbarHost] =
+    useState<HTMLDivElement | null>(null);
   const handledDataRef = useRef<typeof fetcher.data>(undefined);
   const previewUrlRef = useRef<string | null>(null);
   const baselineTemplateRef = useRef<Template | null>(null);
@@ -781,29 +787,52 @@ export default function DocumentTemplateEditorRoute({
         mergeFields,
         docTemplate.flowPushDown,
       );
+      const drawOps: import("~/lib/pdf/html-rich-text-draw").EndorsementRichDrawOp[] =
+        [];
       const prepared = applyFlowPushDown(
-        normalizePdfmeTemplateSchemas(
-          template as unknown as {
-            schemas: Array<Array<Record<string, unknown>>>;
-          },
-        ) as Template,
+        expandEndorsementPairSchemas(
+          syncTableSchemasToInputs(
+            normalizePdfmeTemplateSchemas(
+              template as unknown as {
+                schemas: Array<Array<Record<string, unknown>>>;
+              },
+            ),
+            inputs,
+          ) as Template,
+          inputs,
+          drawOps,
+        ),
         docTemplate.flowPushDown,
         inputs,
       );
       // Keep @pdfme/generator out of the Worker SSR graph — load only on Preview.
-      const [{ generate }, { getPdfmeFonts }, { pdfmePlugins }] =
-        await Promise.all([
-          import("@pdfme/generator"),
-          import("~/lib/pdf/fonts"),
-          import("~/lib/pdf/plugins"),
-        ]);
+      const [
+        { generate },
+        { getPdfmeFonts },
+        { pdfmePlugins },
+        { applyEndorsementRichDrawOps },
+      ] = await Promise.all([
+        import("@pdfme/generator"),
+        import("~/lib/pdf/fonts"),
+        import("~/lib/pdf/plugins"),
+        import("~/lib/pdf/html-rich-text-draw"),
+      ]);
       const font = await getPdfmeFonts();
-      const pdf = await generate({
+      let pdf = await generate({
         template: prepared,
         inputs: [inputs],
         plugins: pdfmePlugins,
         options: { font },
       });
+      if (drawOps.length > 0) {
+        try {
+          pdf = new Uint8Array(
+            await applyEndorsementRichDrawOps(pdf, drawOps, font),
+          ) as typeof pdf;
+        } catch {
+          // Keep pdfme base PDF if rich overlay fails.
+        }
+      }
       const blob = new Blob([pdf.buffer as ArrayBuffer], {
         type: "application/pdf",
       });
@@ -1135,6 +1164,10 @@ export default function DocumentTemplateEditorRoute({
                 <SaveIcon data-icon="inline-start" />
                 Save draft
               </LoadingButton>
+              <div
+                ref={setFieldToolbarHost}
+                className="flex min-w-0 flex-wrap items-center gap-1.5 empty:hidden"
+              />
               <LoadingButton
                 type="button"
                 size="sm"
@@ -1157,6 +1190,7 @@ export default function DocumentTemplateEditorRoute({
           ref={designerRef}
           template={docTemplate.template as Template}
           editable={canEdit}
+          toolbarHost={fieldToolbarHost}
           onTemplateChange={handleTemplateChange}
           className="min-h-0 flex-1 overflow-hidden rounded-xl border bg-background"
         />

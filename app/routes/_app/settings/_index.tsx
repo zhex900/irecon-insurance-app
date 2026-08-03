@@ -3,6 +3,7 @@ import {
   BadgeDollarSignIcon,
   FilePenLineIcon,
   FileStackIcon,
+  FileTextIcon,
   MailIcon,
   ScrollTextIcon,
   SlidersHorizontalIcon,
@@ -41,12 +42,14 @@ export async function loader({ request }: Route.LoaderArgs) {
     emailTemplatesEnabled,
     libraryDocumentsEnabled,
     documentTemplatesEnabled,
+    additionalWordingEnabled,
   ] = await Promise.all([
     isFeatureEnabled("audit_log"),
     isFeatureEnabled("prices"),
     isFeatureEnabled("email_templates"),
     isFeatureEnabled("library_documents"),
     isFeatureEnabled("document_templates"),
+    isFeatureEnabled("additional_wording"),
   ]);
   const superAdmin = isSuperAdmin(viewer);
   return {
@@ -54,6 +57,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     showEmailTemplates: emailTemplatesEnabled || superAdmin,
     showLibraryDocuments: libraryDocumentsEnabled || superAdmin,
     showDocumentTemplates: documentTemplatesEnabled || superAdmin,
+    showAdditionalWording: additionalWordingEnabled || superAdmin,
     showPrices: pricesEnabled || superAdmin,
     showAuditLog: auditLogEnabled || superAdmin,
     auditLogEnabled,
@@ -61,6 +65,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     emailTemplatesEnabled,
     libraryDocumentsEnabled,
     documentTemplatesEnabled,
+    additionalWordingEnabled,
   };
 }
 
@@ -97,6 +102,18 @@ export default function SettingsIndexRoute({
         "Search, add, edit, and remove authorised representative brokers used on clients.",
       icon: UsersIcon,
     },
+    ...(loaderData.showAdditionalWording
+      ? [
+          {
+            to: "/settings/car-wording",
+            title: "Additional Wording",
+            description: loaderData.additionalWordingEnabled
+              ? "Manage the endorsement wording catalogue used on the policy Additional Wording step."
+              : "Additional Wording is disabled for other roles. Super-admins can still manage it.",
+            icon: FileTextIcon,
+          },
+        ]
+      : []),
     ...(loaderData.showEmailTemplates
       ? [
           {

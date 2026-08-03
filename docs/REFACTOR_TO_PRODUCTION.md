@@ -20,17 +20,17 @@ Use this as the checklist and decision log. Prefer **small, mergeable PRs** over
 
 ## Current snapshot (baseline)
 
-| Area    | Today                                                                                                                                                                        |
-| ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| App     | Lives under `web/` (React Router 8 + Cloudflare Workers)                                                                                                                     |
-| DB      | `supabase/` at repo root; Drizzle in `web/`                                                                                                                                  |
-| Legacy  | `legacy-app/`, MSSQL `script.sql`, CSVs, `car-pdf-templates/`                                                                                                                |
-| Specs   | Many `CAR_*.md`, `DB_SCHEMA_CHANGELOG.md`, `questions.md` at root                                                                                                            |
-| Routes  | Folder tree `app/routes/{_auth,_app,api}/` + explicit `app/routes.ts` (URLs unchanged)                                                                                       |
-| Data    | `_archive/data/*.json` seeds only; `car_wording` from DB (TS fallback); `reference-data.ts` static lookups; document templates in Postgres (`app_document_template_version`) |
-| Email   | Resend for policy document send; Supabase Auth for password reset/invite emails                                                                                              |
-| Quality | Vitest + Playwright; ESLint/Prettier/`npm run verify` (CI still Phase 9)                                                                                                     |
-| Deploy  | Manual staging script (`npm run deploy:staging`); no PR/prod automation                                                                                                      |
+| Area    | Today                                                                                                                                                          |
+| ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| App     | Lives under `web/` (React Router 8 + Cloudflare Workers)                                                                                                       |
+| DB      | `supabase/` at repo root; Drizzle in `web/`                                                                                                                    |
+| Legacy  | `legacy-app/`, MSSQL `script.sql`, CSVs, `car-pdf-templates/`                                                                                                  |
+| Specs   | Many `CAR_*.md`, `DB_SCHEMA_CHANGELOG.md`, `questions.md` at root                                                                                              |
+| Routes  | Folder tree `app/routes/{_auth,_app,api}/` + explicit `app/routes.ts` (URLs unchanged)                                                                         |
+| Data    | `_archive/data/*.json` seeds only; `car_wording` from DB; `reference-data.ts` static lookups; document templates in Postgres (`app_document_template_version`) |
+| Email   | Resend for policy document send; Supabase Auth for password reset/invite emails                                                                                |
+| Quality | Vitest + Playwright; ESLint/Prettier/`npm run verify` (CI still Phase 9)                                                                                       |
+| Deploy  | Manual staging script (`npm run deploy:staging`); no PR/prod automation                                                                                        |
 
 Large files (all under ~500-line gate after Phase 3 follow-ups):
 
@@ -262,7 +262,7 @@ Cleared — former follow-ups split into domain folders:
 | ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
 | `clients.json`, `policies.json`, `users.json`, `prices.json`, `reference.json` | Seed-only under `_archive/data/` — no runtime imports                                        |
 | `authorised-representatives.json`                                              | Deleted (unused; AR from DB / CSV seed)                                                      |
-| `car-wording.json`                                                             | Deleted from archive; runtime via DB `car_wording` (+ TS fallback)                           |
+| `car-wording.json`                                                             | Deleted from archive; runtime via DB `car_wording`                                           |
 | `reference-data.ts`                                                            | Still static runtime lookups — migrate to DB tables over time                                |
 | `pdf-templates/**` (historical)                                                | Removed from `app/assets/`; live pdfme layouts are DB-only (`app_document_template_version`) |
 

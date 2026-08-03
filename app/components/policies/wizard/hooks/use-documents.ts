@@ -2,7 +2,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { useRouteLoaderData } from "react-router";
 import { toast } from "sonner";
-import type { Policy, PolicyDocument, PremiumBreakdown } from "~/lib/db/types";
+import type {
+  CarWording,
+  Policy,
+  PolicyDocument,
+  PremiumBreakdown,
+} from "~/lib/db/types";
 import {
   ensureReviewDocumentsClient,
   syncPolicyDocumentLabelsClient,
@@ -17,12 +22,15 @@ export function usePolicyDocuments({
   premium,
   referralReasons,
   rating,
+  carWording,
 }: {
   policy: Policy;
   form: UseFormReturn<CarPolicyFormValues>;
   premium: PremiumBreakdown | undefined;
   referralReasons: string[];
   rating: Policy["car"]["rating"] | undefined;
+  /** Fixed Additional Wording catalogue (checkbox list). */
+  carWording?: CarWording[];
 }) {
   const layoutData = useRouteLoaderData("routes/_app/layout") as
     { broker?: { email?: string } } | undefined;
@@ -78,9 +86,10 @@ export function usePolicyDocuments({
         rating: rating ?? policy.car.rating,
         referralReasons,
         documents: documentsRef.current,
+        carWording,
       });
     },
-    [policy, form, premium, rating, referralReasons],
+    [policy, form, premium, rating, referralReasons, carWording],
   );
 
   /** True when live form/premium would produce a different doc generation key. */

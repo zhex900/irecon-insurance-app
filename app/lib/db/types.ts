@@ -294,6 +294,11 @@ export type Policy = {
     excludedContracts3: string;
     selectedWordingIds: number[];
     customWordings: CustomWordingItem[];
+    /**
+     * Transient PDF helper: ticked catalogue + custom `{ subject, content }` rows.
+     * Set by form snapshot; not persisted to app_extras.
+     */
+    endorsementWordings?: Array<{ subject: string; content: string }>;
     /** Derived from customWordings[0] for PDF merge fields. */
     customWordingSubject?: string;
     customWordingContent?: string;

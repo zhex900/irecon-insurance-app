@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   useFormContext,
   Controller,
@@ -6,6 +7,14 @@ import {
 } from "react-hook-form";
 import { useFieldSaveState } from "~/components/forms/field-save-highlight";
 import { Checkbox } from "~/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "~/components/ui/dialog";
+import { WordingHtmlView } from "~/components/forms/wording-html-view";
 import { Field, FieldError, FieldLabel } from "~/components/ui/field";
 import {
   FieldInput,
@@ -13,6 +22,7 @@ import {
   Select,
 } from "~/components/ui/form-controls";
 import { cn } from "~/lib/utils";
+import { plainTextFromWordingHtml } from "~/lib/wording/html";
 import { type CarPolicyFormValues } from "~/lib/zod/policy-car";
 import type { CarWording } from "~/lib/db/types";
 import { Section } from "./section-shared";
@@ -28,6 +38,7 @@ export function ClaimsWordingStep({
     control,
     formState: { errors },
   } = useFormContext<CarPolicyFormValues>();
+  const [wordingDialog, setWordingDialog] = useState<CarWording | null>(null);
 
   return (
     <div className="flex flex-col gap-8">
@@ -98,7 +109,7 @@ export function ClaimsWordingStep({
               control={control}
               name="selectedWordingIds"
               render={({ field }) => {
-                const selected = field.value ?? [];
+                const selected = (field.value ?? []).map(Number);
                 const checked = selected.includes(item.carWordingId);
                 return (
                   <label className="flex items-start gap-3 rounded-md border border-border p-3 text-foreground">
@@ -113,13 +124,23 @@ export function ClaimsWordingStep({
                       }}
                       className="mt-1"
                     />
-                    <span>
-                      <span className="font-medium text-foreground">
-                        {item.subject}
-                      </span>
-                      <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-                        {item.content}
-                      </p>
+                    <span className="min-w-0">
+                      <button
+                        type="button"
+                        className="text-left font-medium text-foreground underline-offset-4 transition-colors hover:text-primary hover:underline"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          setWordingDialog(item);
+                        }}
+                      >
+                        {plainTextFromWordingHtml(item.subject) || item.subject}
+                      </button>
+                      <WordingHtmlView
+                        html={item.content}
+                        className="mt-1 text-xs text-muted-foreground"
+                        clampLines={2}
+                      />
                     </span>
                   </label>
                 );
@@ -129,6 +150,33 @@ export function ClaimsWordingStep({
           <CustomWordingsEditor />
         </div>
       </Section>
+
+      <Dialog
+        open={wordingDialog != null}
+        onOpenChange={(open) => {
+          if (!open) setWordingDialog(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {wordingDialog
+                ? plainTextFromWordingHtml(wordingDialog.subject) ||
+                  wordingDialog.subject
+                : "Wording"}
+            </DialogTitle>
+            <DialogDescription className="sr-only">
+              Full additional wording text
+            </DialogDescription>
+          </DialogHeader>
+          {wordingDialog ? (
+            <WordingHtmlView
+              html={wordingDialog.content}
+              className="max-h-[min(70vh,32rem)] overflow-y-auto text-foreground"
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

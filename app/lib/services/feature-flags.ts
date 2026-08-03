@@ -8,6 +8,7 @@ export const FEATURE_KEYS = [
   "email_templates",
   "library_documents",
   "document_templates",
+  "additional_wording",
 ] as const;
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
 
@@ -50,6 +51,12 @@ const FEATURE_CATALOGUE: Record<
     label: "Document Templates",
     description:
       "When disabled, Document Templates (PDF editor) is hidden from everyone except super-admins.",
+    defaultEnabled: true,
+  },
+  additional_wording: {
+    label: "Additional Wording",
+    description:
+      "When disabled, Additional Wording settings is hidden from everyone except super-admins.",
     defaultEnabled: true,
   },
 };

@@ -179,12 +179,14 @@ async function listSettingsLinks(viewer: AppUser): Promise<SideNavLink[]> {
     emailTemplatesEnabled,
     libraryDocumentsEnabled,
     documentTemplatesEnabled,
+    additionalWordingEnabled,
   ] = await Promise.all([
     isFeatureEnabled("audit_log"),
     isFeatureEnabled("prices"),
     isFeatureEnabled("email_templates"),
     isFeatureEnabled("library_documents"),
     isFeatureEnabled("document_templates"),
+    isFeatureEnabled("additional_wording"),
   ]);
 
   const links: SideNavLink[] = [
@@ -199,6 +201,14 @@ async function listSettingsLinks(viewer: AppUser): Promise<SideNavLink[]> {
       href: "/settings/ar-brokers",
     },
   ];
+
+  if (additionalWordingEnabled || superAdmin) {
+    links.push({
+      id: "settings-car-wording",
+      label: "Additional Wording",
+      href: "/settings/car-wording",
+    });
+  }
 
   if (emailTemplatesEnabled || superAdmin) {
     links.push({

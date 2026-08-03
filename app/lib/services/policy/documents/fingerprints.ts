@@ -28,6 +28,7 @@ export function reviewDocumentsFingerprint(policy: Policy): string {
     JSON.stringify(car.subLimits ?? null),
     JSON.stringify(car.excesses ?? null),
     JSON.stringify(car.selectedWordingIds ?? null),
+    JSON.stringify(car.customWordings ?? null),
     premium?.originalTotalPremium ?? "none",
     premium?.contractWorksTotalPremium ?? "none",
     premium?.liabilityTotalPremium ?? "none",

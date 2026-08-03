@@ -1,5 +1,5 @@
 import type { R2BucketLike } from "~/lib/cloudflare.server";
-import type { Policy, PolicyDocument } from "~/lib/db/types";
+import type { CarWording, Policy, PolicyDocument } from "~/lib/db/types";
 import type { EmailSendRecipient } from "~/lib/email-templates";
 import { generatePolicyPdf, uint8ToBase64 } from "~/lib/pdf/generate";
 import { buildLegacyTextPdfBlob } from "~/lib/pdf/legacy-text-pdf";
@@ -13,6 +13,7 @@ import {
   sendEmail,
   type SendEmailAttachment,
 } from "~/lib/services/email/resend.server";
+import { getCarWording } from "~/lib/services/reference.service";
 
 /** Soft cap before we refuse oversized packs (Resend limit is 40MB encoded). */
 const MAX_ATTACHMENTS_BYTES = 12 * 1024 * 1024;
@@ -73,6 +74,7 @@ async function resolveDocumentPdfBytes(
   doc: PolicyDocument,
   policy: Policy,
   libraryBucket?: R2BucketLike | null,
+  wordingCatalogue?: CarWording[],
 ): Promise<Uint8Array> {
   if (!doc.templateKey) {
     if (libraryBucket) {
@@ -111,6 +113,7 @@ async function resolveDocumentPdfBytes(
       policy,
       undefined,
       resolved,
+      { wordingCatalogue },
     );
     return pdf;
   } catch {
@@ -153,12 +156,14 @@ export async function sendPolicyDocumentsEmail(
 
   const attachments: SendEmailAttachment[] = [];
   let totalBytes = 0;
+  const wordingCatalogue = await getCarWording();
 
   for (const doc of input.documents) {
     const bytes = await resolveDocumentPdfBytes(
       doc,
       input.policy,
       input.libraryBucket,
+      wordingCatalogue,
     );
     totalBytes += bytes.byteLength;
     if (totalBytes > MAX_ATTACHMENTS_BYTES) {

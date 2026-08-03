@@ -60,7 +60,6 @@ Sign in with a seeded user from `_archive/data/users.json`. Default password: `p
 | ---------------------------------------- | ------------------------------------------------------------ |
 | Supabase Postgres                        | Runtime clients, policies, ARs, users, prices, `car_wording` |
 | `app/lib/reference-data.ts`              | Static lookup catalogues (migrate to DB over time)           |
-| `app/lib/car-wording-data.ts`            | Fallback if `car_wording` table is empty                     |
 | Postgres `app_document_template_version` | pdfme PDF layouts (Settings → Document templates)            |
 | `_archive/data/`                         | Seed/fixture JSON for scripts                                |
 | `_archive/seeds-source/`                 | Legacy CSV imports for seed scripts                          |

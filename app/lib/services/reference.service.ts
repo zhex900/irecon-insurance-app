@@ -1,10 +1,10 @@
 import { asc } from "drizzle-orm";
-import { carWordingData } from "~/lib/car-wording-data";
 import { referenceData } from "~/lib/reference-data";
 import { getDb } from "~/lib/db/client";
-import { carWording, policyCarExcessDefault } from "~/lib/db/schema";
+import { policyCarExcessDefault } from "~/lib/db/schema";
 import { defaultExcessesFromCatalogue } from "~/lib/excesses";
 import { listAuthorisedRepresentatives } from "~/lib/services/authorised-representatives/service";
+import { listCarWordings } from "~/lib/services/car-wording/service";
 import type { CarWording, ReferenceData } from "~/lib/db/types";
 import { resolveBrokerFeeLines } from "~/server/pricing/rate-resolver";
 
@@ -48,25 +48,7 @@ export async function getDefaultExcesses(): Promise<
   return defaultExcessesFromCatalogue(rows);
 }
 
-/** Prefer Postgres `car_wording`; fall back to static catalogue if empty. */
+/** Postgres `car_wording` catalogue (Settings → Additional Wording). */
 export async function getCarWording(): Promise<CarWording[]> {
-  const db = getDb();
-  const rows = await db
-    .select({
-      carWordingId: carWording.carWordingId,
-      subject: carWording.subject,
-      content: carWording.content,
-    })
-    .from(carWording)
-    .orderBy(asc(carWording.carWordingId));
-
-  if (rows.length === 0) {
-    return carWordingData;
-  }
-
-  return rows.map((row) => ({
-    carWordingId: row.carWordingId,
-    subject: row.subject ?? "",
-    content: row.content ?? "",
-  }));
+  return listCarWordings();
 }

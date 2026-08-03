@@ -313,6 +313,7 @@ function CarPolicyWizardInner({
     premium,
     referralReasons,
     rating: fetcher.data?.rating,
+    carWording,
   });
 
   const draftSave = usePolicyDraftSave({
@@ -644,6 +645,7 @@ function CarPolicyWizardInner({
               footerImageWidth={footerImageWidth}
               policy={policy}
               getPreviewPolicy={buildDocumentSnapshot}
+              carWording={carWording}
               className={wizardModeCardBorderClass(wizardMode)}
             />
           </div>
@@ -717,6 +719,7 @@ function CarPolicyWizardInner({
             footerImageWidth={footerImageWidth}
             policy={policy}
             getPreviewPolicy={buildDocumentSnapshot}
+            carWording={carWording}
             adjustment={policy.car.adjusted ? policy.car.adjustment : undefined}
             className={wizardModeCardBorderClass(wizardMode)}
           />

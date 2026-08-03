@@ -1,14 +1,19 @@
-import type { Policy, PolicyDocument } from "~/lib/db/types";
+import type { CarWording, Policy, PolicyDocument } from "~/lib/db/types";
 import { isStaticSchemaName } from "~/lib/documents/template-editor-form";
+import { expandEndorsementPairSchemas } from "~/lib/pdf/endorsement-expand";
 import { applyFlowPushDown } from "~/lib/pdf/flow-push-down";
 import { getPdfmeFonts } from "~/lib/pdf/fonts";
+import { applyEndorsementRichDrawOps } from "~/lib/pdf/html-rich-text-draw";
+import type { EndorsementRichDrawOp } from "~/lib/pdf/html-rich-text-draw";
 import { buildLegacyTextPdfBlob } from "~/lib/pdf/legacy-text-pdf";
 import {
+  ENDORSEMENTS_TABLE_FIELD,
   normalizePdfmeTemplateSchemas,
   policyToMergeInputs,
   resolveMultiVariableTextInput,
-  resolveTableContentPlaceholders,
+  syncTableSchemasToInputs,
 } from "~/lib/pdf/merge-fields";
+import { parseEndorsementPairsFromInputs } from "~/lib/pdf/endorsement-expand";
 import { pdfmePlugins } from "~/lib/pdf/plugins";
 import type { DocumentTemplate } from "~/lib/pdf/templates";
 import {
@@ -17,6 +22,7 @@ import {
   setCachedPublishedTemplate,
   type CachedPublishedTemplate,
 } from "~/lib/pdf/template-override-cache";
+import { looksLikeHtml, plainTextFromWordingHtml } from "~/lib/wording/html";
 
 export { invalidatePdfTemplateOverrideCache };
 
@@ -102,6 +108,7 @@ export async function generatePolicyPdf(
   policy: Policy,
   mergeInputs?: Record<string, string>,
   templateOverride?: DocumentTemplate,
+  options?: { wordingCatalogue?: CarWording[] },
 ): Promise<{
   pdf: Uint8Array;
   templateKey: string;
@@ -117,10 +124,27 @@ export async function generatePolicyPdf(
 
   // Derive from the policy snapshot passed in (wizard should pass form+premium
   // overrides). Optional mergeInputs only fill gaps — never overwrite live keys.
+  const liveInputs = policyToMergeInputs(policy, {
+    wordingCatalogue: options?.wordingCatalogue,
+  });
   const baseInputs = {
     ...(mergeInputs ?? {}),
-    ...policyToMergeInputs(policy),
+    ...liveInputs,
   };
+  // If live resolve missed catalogue rows (no wordingCatalogue / empty snapshot)
+  // but the stored pack still has Endorsements, keep those so PDF is not blank.
+  const livePairs = parseEndorsementPairsFromInputs(liveInputs);
+  const storedPairs = parseEndorsementPairsFromInputs(mergeInputs ?? {});
+  if (livePairs.length === 0 && storedPairs.length > 0 && mergeInputs) {
+    baseInputs[ENDORSEMENTS_TABLE_FIELD] =
+      mergeInputs[ENDORSEMENTS_TABLE_FIELD] ?? "";
+    if (mergeInputs.EndorsementSubject != null) {
+      baseInputs.EndorsementSubject = mergeInputs.EndorsementSubject;
+    }
+    if (mergeInputs.EndorsementContent != null) {
+      baseInputs.EndorsementContent = mergeInputs.EndorsementContent;
+    }
+  }
   const inputs: Record<string, string> = {
     ...Object.fromEntries(resolved.mergeFields.map((name) => [name, ""])),
     ...baseInputs,
@@ -140,12 +164,8 @@ export async function generatePolicyPdf(
         inputs[name] = schema.content;
         continue;
       }
-      // Table / list inputs must be JSON arrays. Resolve `{MergeField}`
-      // placeholders in the schema body from individual merge inputs.
-      if (schema.type === "table" && typeof schema.content === "string") {
-        inputs[name] = resolveTableContentPlaceholders(schema.content, inputs);
-        continue;
-      }
+      // Table inputs resolved below via syncTableSchemasToInputs (content + height).
+      if (schema.type === "table") continue;
       if (schema.type === "multiVariableText") {
         const mvt = resolveMultiVariableTextInput(
           schema as Record<string, unknown>,
@@ -192,8 +212,53 @@ export async function generatePolicyPdf(
     }
   }
 
+  // Grow table schemas (e.g. legacy Endorsements table) to fit resolved rows.
+  const withTables = syncTableSchemasToInputs(normalizedTemplate, inputs);
+
+  // Subject+Content prototypes → one styled pair per wording (hide if empty).
+  // Rich HTML is drawn with pdf-lib after pdfme (drawOps).
+  const drawOps: EndorsementRichDrawOp[] = [];
+  const withEndorsements = expandEndorsementPairSchemas(
+    withTables,
+    inputs,
+    drawOps,
+  );
+
+  // Legacy Endorsements table / scalar fields: pdfme cannot render HTML tags.
+  for (const [key, value] of Object.entries(inputs)) {
+    if (!value || !looksLikeHtml(value)) continue;
+    if (
+      key === "Endorsements" ||
+      key.startsWith("EndorsementSubject") ||
+      key.startsWith("EndorsementContent")
+    ) {
+      if (key === "Endorsements") {
+        try {
+          const rows = JSON.parse(value) as unknown;
+          if (Array.isArray(rows)) {
+            inputs[key] = JSON.stringify(
+              rows.map((row) =>
+                Array.isArray(row)
+                  ? row.map((cell) =>
+                      looksLikeHtml(String(cell ?? ""))
+                        ? plainTextFromWordingHtml(String(cell ?? ""))
+                        : String(cell ?? ""),
+                    )
+                  : row,
+              ),
+            );
+          }
+        } catch {
+          inputs[key] = plainTextFromWordingHtml(value);
+        }
+      } else if (drawOps.length === 0) {
+        inputs[key] = plainTextFromWordingHtml(value);
+      }
+    }
+  }
+
   const template = applyFlowPushDown(
-    normalizedTemplate,
+    withEndorsements,
     resolved.flowPushDown,
     inputs,
   );
@@ -203,12 +268,21 @@ export async function generatePolicyPdf(
     import("@pdfme/generator"),
     getPdfmeFonts(),
   ]);
-  const pdf = await generate({
+  let pdf = await generate({
     template,
     inputs: [inputs],
     plugins: pdfmePlugins,
     options: { font },
   });
+
+  if (drawOps.length > 0) {
+    try {
+      const overlay = await applyEndorsementRichDrawOps(pdf, drawOps, font);
+      pdf = new Uint8Array(overlay) as typeof pdf;
+    } catch {
+      // Keep the pdfme base PDF (plain-text endorsements still render).
+    }
+  }
 
   return { pdf, templateKey: resolved.key, inputs };
 }
@@ -216,8 +290,18 @@ export async function generatePolicyPdf(
 export async function buildPdfBlobFromPolicy(
   templateKey: string,
   policy: Policy,
+  options?: {
+    wordingCatalogue?: CarWording[];
+    mergeInputs?: Record<string, string>;
+  },
 ): Promise<Blob> {
-  const { pdf } = await generatePolicyPdf(templateKey, policy);
+  const { pdf } = await generatePolicyPdf(
+    templateKey,
+    policy,
+    options?.mergeInputs,
+    undefined,
+    { wordingCatalogue: options?.wordingCatalogue },
+  );
   return new Blob([pdf.buffer as ArrayBuffer], { type: "application/pdf" });
 }
 
@@ -228,6 +312,7 @@ function isLibraryDocument(doc: PolicyDocument) {
 export async function buildPdfBlobFromDocument(
   doc: PolicyDocument,
   policy?: Policy,
+  options?: { wordingCatalogue?: CarWording[] },
 ): Promise<Blob> {
   if (isLibraryDocument(doc) && !doc.templateKey) {
     const apiPath =
@@ -269,10 +354,14 @@ export async function buildPdfBlobFromDocument(
     return buildLegacyTextPdfBlob(doc.name, doc.content);
   }
 
-  // Always rebuild from the policy snapshot so Limits / Premium Breakdown
-  // overrides are current. Ignore stored mergeInputs (they go stale).
+  // Rebuild from the policy snapshot so Limits / Premium Breakdown overrides
+  // stay current. Pass stored mergeInputs only as Endorsements fallback when
+  // the live catalogue resolve is empty.
   if (policy) {
-    return buildPdfBlobFromPolicy(templateKey, policy);
+    return buildPdfBlobFromPolicy(templateKey, policy, {
+      mergeInputs: doc.mergeInputs,
+      wordingCatalogue: options?.wordingCatalogue,
+    });
   }
 
   return buildLegacyTextPdfBlob(doc.name, doc.content);

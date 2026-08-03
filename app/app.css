@@ -353,3 +353,67 @@ body > div:has(> [data-re-slash-command]) {
   min-height: 0;
   overflow: hidden;
 }
+
+/* Additional Wording TipTap / HTML view — list marker styles */
+.wording-list-styles p {
+  margin: 0.125rem 0;
+}
+
+.wording-list-styles ul,
+.wording-list-styles ol {
+  margin: 0.25rem 0;
+  padding-left: 1.5em;
+  list-style-position: outside;
+}
+
+.wording-list-styles ul:not([data-list-style]),
+.wording-list-styles ul[data-list-style="disc"] {
+  list-style-type: disc;
+}
+
+.wording-list-styles ul[data-list-style="dash"] {
+  list-style: none;
+}
+
+.wording-list-styles ul[data-list-style="dash"] > li {
+  position: relative;
+}
+
+.wording-list-styles ul[data-list-style="dash"] > li::before {
+  content: "-";
+  position: absolute;
+  left: -1.15em;
+}
+
+.wording-list-styles ol:not([data-list-style]),
+.wording-list-styles ol[data-list-style="decimal"] {
+  list-style-type: decimal;
+}
+
+.wording-list-styles ol[data-list-style="lower-alpha"],
+.wording-list-styles ol[data-list-style="lower-roman"] {
+  list-style: none;
+  counter-reset: wording-list;
+}
+
+.wording-list-styles ol[data-list-style="lower-alpha"] > li,
+.wording-list-styles ol[data-list-style="lower-roman"] > li {
+  position: relative;
+  counter-increment: wording-list;
+}
+
+.wording-list-styles ol[data-list-style="lower-alpha"] > li::before {
+  content: counter(wording-list, lower-alpha) ")";
+  position: absolute;
+  left: -1.5em;
+  width: 1.35em;
+  text-align: right;
+}
+
+.wording-list-styles ol[data-list-style="lower-roman"] > li::before {
+  content: "(" counter(wording-list, lower-roman) ")";
+  position: absolute;
+  left: -2em;
+  width: 1.85em;
+  text-align: right;
+}

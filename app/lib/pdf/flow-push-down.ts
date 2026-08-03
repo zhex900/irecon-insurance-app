@@ -21,7 +21,7 @@ type TextSchema = {
   verticalAlignment?: string;
 };
 
-function estimateTextHeightMm(
+export function estimateTextHeightMm(
   text: string,
   widthMm: number,
   fontSizePt: number,
@@ -105,12 +105,14 @@ export function applyFlowPushDown(
     }
   }
 
-  const content = page.find((s) => s.name === "Content") as
-    TextSchema | undefined;
-  if (content) {
+  // Grow long endorsement body text when templates still use scalar slots.
+  for (const contentName of ["EndorsementContent", "Content"] as const) {
+    const content = page.find((s) => s.name === contentName) as
+      TextSchema | undefined;
+    if (!content || content.type !== "text") continue;
     content.verticalAlignment = "top";
     const contentNeeded = estimateTextHeightMm(
-      inputs.Content ?? "",
+      inputs[contentName] ?? "",
       Number(content.width),
       Number(content.fontSize ?? 9.5),
       Number(content.lineHeight ?? 1.25),
