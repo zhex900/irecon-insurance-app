@@ -418,20 +418,31 @@ function CarPolicyWizardInner({
     markAttentionPaths(paths);
   }
 
-  const submitBusy = submitting || isGeneratingDocuments;
+  // PDF generation must not disable Submit (LoadingButton treats loading as disabled).
+  const submitBusy = submitting;
   const wizardMode: WizardMode = isNew ? "new" : fieldsLocked ? "view" : "edit";
-  // useWatch (not form.watch + useMemo on the object): RHF often mutates the
-  // watched values object in place, so a referential useMemo never sees edits
-  // after Submit — staging non-draft policies stayed disabled; local drafts
-  // skipped this gate (!isDraft → hasSubmittedOnce).
-  const formValues = useWatch({ control: form.control });
+  // Re-render on any field change; read getValues() for a stable deep snapshot.
+  // (useWatch alone can still share a mutated object; getValues() is fresh.)
+  useWatch({ control: form.control });
   const submitFingerprint = JSON.stringify({
-    values: formValues,
+    values: form.getValues(),
     premium: premium ?? null,
   });
-  const [submittedFingerprint, setSubmittedFingerprint] =
-    useState(submitFingerprint);
-  const hasChangesSinceSubmit = submitFingerprint !== submittedFingerprint;
+  // Baseline = last successful Submit, or first settled load for non-drafts.
+  // Draft autosave must not reset this — otherwise Submit dies right after "Saved".
+  const submitBaselineRef = useRef<string | null>(null);
+  const [submitBaseline, setSubmitBaseline] = useState<string | null>(null);
+  useEffect(() => {
+    if (submitBaselineRef.current != null) return;
+    const baseline = JSON.stringify({
+      values: form.getValues(),
+      premium: premium ?? policy.car.premium ?? null,
+    });
+    submitBaselineRef.current = baseline;
+    setSubmitBaseline(baseline);
+  }, [form, premium, policy.car.premium]);
+  const hasChangesSinceSubmit =
+    submitBaseline != null && submitFingerprint !== submitBaseline;
   const submitDisabled =
     !isFormValid || (hasSubmittedOnce && !hasChangesSinceSubmit);
   const saveDraftNowRef = useRef(saveDraftNow);
@@ -741,12 +752,12 @@ function CarPolicyWizardInner({
           void confirmSubmit().then((ok) => {
             if (!ok) return;
             setSubmittedInSession(true);
-            setSubmittedFingerprint(
-              JSON.stringify({
-                values: form.getValues(),
-                premium: premiumRef.current ?? premium ?? null,
-              }),
-            );
+            const baseline = JSON.stringify({
+              values: form.getValues(),
+              premium: premiumRef.current ?? premium ?? null,
+            });
+            submitBaselineRef.current = baseline;
+            setSubmitBaseline(baseline);
           });
         }}
       />
