@@ -256,8 +256,7 @@ export function usePolicyWizardNavigation({
     }));
   }, [form.formState.errors, fieldOrder]);
 
-  // Live completeness for side-nav badges / Submit enablement (not only RHF errors).
-  // Serialize for the memo dep — RHF may mutate the watch object in place.
+  // Live schema completeness for side-nav badges and Submit (`isFormValid`).
   const watchedValues = useWatch({ control: form.control });
   const watchedKey = JSON.stringify(watchedValues);
   const {
@@ -266,19 +265,16 @@ export function usePolicyWizardNavigation({
     sectionIssuePaths,
     isFormValid,
   } = useMemo(() => {
-    const counts: Record<string, number> = {
-      "policy-information": 0,
-    };
+    const counts: Record<string, number> = { "policy-information": 0 };
     const firstPaths: Record<string, string> = {};
-    const allPaths: Record<string, string[]> = {
-      "policy-information": [],
-    };
+    const allPaths: Record<string, string[]> = { "policy-information": [] };
     for (const section of POLICY_FORM_SECTIONS) {
       counts[section.id] = 0;
       allPaths[section.id] = [];
     }
 
-    const parsed = carPolicySchema.safeParse(watchedValues);
+    const values = JSON.parse(watchedKey) as CarPolicyFormValues;
+    const parsed = carPolicySchema.safeParse(values);
     if (parsed.success) {
       return {
         sectionIssueCounts: counts,
@@ -318,8 +314,6 @@ export function usePolicyWizardNavigation({
       sectionIssuePaths: allPaths,
       isFormValid: false,
     };
-    // watchedKey tracks deep edits; watchedValues used inside for parse.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [watchedKey, fieldOrder]);
 
   function navigateToSectionFirstIssue(sectionId: string) {
