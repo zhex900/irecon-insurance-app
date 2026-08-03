@@ -5,6 +5,7 @@ import {
   FormProvider,
   useForm,
   useFormContext,
+  useWatch,
   type Resolver,
 } from "react-hook-form";
 import { Badge } from "~/components/reui/badge";
@@ -419,11 +420,15 @@ function CarPolicyWizardInner({
 
   const submitBusy = submitting || isGeneratingDocuments;
   const wizardMode: WizardMode = isNew ? "new" : fieldsLocked ? "view" : "edit";
-  const formValues = form.watch();
-  const submitFingerprint = useMemo(
-    () => JSON.stringify({ values: formValues, premium: premium ?? null }),
-    [formValues, premium],
-  );
+  // useWatch (not form.watch + useMemo on the object): RHF often mutates the
+  // watched values object in place, so a referential useMemo never sees edits
+  // after Submit — staging non-draft policies stayed disabled; local drafts
+  // skipped this gate (!isDraft → hasSubmittedOnce).
+  const formValues = useWatch({ control: form.control });
+  const submitFingerprint = JSON.stringify({
+    values: formValues,
+    premium: premium ?? null,
+  });
   const [submittedFingerprint, setSubmittedFingerprint] =
     useState(submitFingerprint);
   const hasChangesSinceSubmit = submitFingerprint !== submittedFingerprint;

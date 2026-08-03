@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { UseFormReturn } from "react-hook-form";
+import { useWatch, type UseFormReturn } from "react-hook-form";
 import {
   POLICY_FORM_SECTIONS,
   sectionIdForStep,
@@ -257,7 +257,9 @@ export function usePolicyWizardNavigation({
   }, [form.formState.errors, fieldOrder]);
 
   // Live completeness for side-nav badges / Submit enablement (not only RHF errors).
-  const watchedValues = form.watch();
+  // Serialize for the memo dep — RHF may mutate the watch object in place.
+  const watchedValues = useWatch({ control: form.control });
+  const watchedKey = JSON.stringify(watchedValues);
   const {
     sectionIssueCounts,
     sectionFirstIssuePaths,
@@ -316,7 +318,9 @@ export function usePolicyWizardNavigation({
       sectionIssuePaths: allPaths,
       isFormValid: false,
     };
-  }, [watchedValues, fieldOrder]);
+    // watchedKey tracks deep edits; watchedValues used inside for parse.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
+  }, [watchedKey, fieldOrder]);
 
   function navigateToSectionFirstIssue(sectionId: string) {
     const path = sectionFirstIssuePaths[sectionId];
