@@ -89,8 +89,11 @@ export function policySnapshotFromForm(
         values.contractWorksSumInsured,
         policy.car.contractWorksSumInsured,
       ),
-      liabilityLimitBand:
-        values.liabilityLimitBand ?? policy.car.liabilityLimitBand,
+      liabilityLimitBand: (() => {
+        const raw = values.liabilityLimitBand;
+        const n = raw == null || raw === "" ? NaN : Number(raw);
+        return Number.isFinite(n) && n > 0 ? n : policy.car.liabilityLimitBand;
+      })(),
       hasExistingContractWorksCover:
         values.hasExistingContractWorksCover ??
         policy.car.hasExistingContractWorksCover,

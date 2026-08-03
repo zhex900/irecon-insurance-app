@@ -11,6 +11,7 @@
     "db:push": "drizzle-kit push",
     "db:push:templates:staging": "tsx --env-file=.env scripts/push-document-templates-to-staging.mts",
     "db:push:email-templates:staging": "tsx --env-file=.env scripts/push-email-templates-to-staging.mts",
+    "db:push:additional-wording:staging": "tsx --env-file=.env scripts/push-car-wording-to-staging.mts",
     "db:seed": "tsx --env-file=.env scripts/seed-db.mts",
     "db:seed:ar": "tsx --env-file=.env scripts/seed-ar-from-csv.mts",
     "db:seed:clients": "tsx --env-file=.env scripts/seed-clients-from-csv.mts",

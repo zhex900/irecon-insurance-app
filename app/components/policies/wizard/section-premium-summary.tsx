@@ -341,11 +341,11 @@ export function PremiumSummaryPanel({
         ) : null}
       </div>
 
-      {isGeneratingDocuments ? (
-        <p className="text-xs text-muted-foreground">Generating PDFs…</p>
-      ) : documents.length === 0 ? (
+      {documents.length === 0 ? (
         <p className="text-xs text-muted-foreground">
-          Documents are generated after premium is calculated.
+          {isGeneratingDocuments
+            ? "Generating PDFs…"
+            : "Documents are generated after premium is calculated."}
         </p>
       ) : (
         <>

@@ -47,15 +47,12 @@ function stateCode(stateId: number) {
   return STATE_BY_ID.get(stateId) ?? "";
 }
 
-const LIABILITY_AMOUNT_BY_ID = new Map<number, number>([
-  [1, 10_000_000],
-  [2, 20_000_000],
-]);
-
-function liabilityLabel(bandId: number) {
-  const amount = LIABILITY_AMOUNT_BY_ID.get(bandId);
-  if (amount != null) return money(amount);
-  return LIABILITY_BY_ID.get(bandId) ?? "";
+/** Dropdown label as shown on Limits (incl. "Not Insured") — no money transform. */
+function liabilityLabel(bandId: number | string | null | undefined) {
+  // Form <select> values are strings; Map keys are numeric band ids.
+  const id = Number(bandId);
+  if (!Number.isFinite(id) || id <= 0) return "";
+  return LIABILITY_BY_ID.get(id) ?? "";
 }
 
 /** pdfme table field used by Owner Builder ROA premium section. */

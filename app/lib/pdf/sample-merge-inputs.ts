@@ -58,7 +58,7 @@ const SAMPLE_BY_FIELD: Record<string, string> = {
   BrokerFeeGst: "$125.00",
   CombinedTotalPremium: "$48,920.50",
   ContractWorksLimit: "$5,000,000.00",
-  LegalLiabilityLimit: "$20,000,000.00",
+  LegalLiabilityLimit: "$20 Million",
   ContractWorksTrueBasePremium: "$18,400.00",
   LegalLiabilityTrueBasePremium: "$9,200.00",
   TerrorismLevy: "$920.00",
