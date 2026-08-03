@@ -745,7 +745,10 @@ export function policyToMergeInputs(
       .map((note) => note.description)
       .filter(Boolean)
       .join("\n\n"),
-    ReferralName: car.insuredName,
+    // Same lines as Premium Summary “Referral reasons” (newline-separated).
+    ReferralReasons: (car.referralReasons ?? []).join("\n"),
+    // Legacy palette/template name — same value as ReferralReasons.
+    ReferralName: (car.referralReasons ?? []).join("\n"),
   };
 
   if (premium) {

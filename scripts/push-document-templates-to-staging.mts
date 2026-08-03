@@ -28,7 +28,7 @@ const staging = postgres(stagingUrl, { max: 1, prepare: false });
 
 try {
   const rows = await local`
-    select document_template_key, cover_type_id, title, version_number,
+    select document_template_key, cover_type_id, title, label, version_number,
            template_json, flow_push_down, merge_fields, is_published
     from app_document_template_version
     order by document_template_key, version_number
@@ -46,6 +46,7 @@ try {
           document_template_key,
           cover_type_id,
           title,
+          label,
           version_number,
           template_json,
           flow_push_down,
@@ -57,6 +58,7 @@ try {
           ${row.document_template_key},
           ${row.cover_type_id},
           ${row.title},
+          ${row.label ?? ""},
           ${row.version_number},
           ${tx.json(row.template_json)},
           ${row.flow_push_down == null ? null : tx.json(row.flow_push_down)},
@@ -67,11 +69,15 @@ try {
         )
       `;
     });
-    console.log("pushed", row.document_template_key);
+    console.log(
+      "pushed",
+      row.document_template_key,
+      row.label ? `(${row.label})` : "",
+    );
   }
 
   const check = await staging`
-    select document_template_key, cover_type_id, is_published, version_number
+    select document_template_key, label, cover_type_id, is_published, version_number
     from app_document_template_version
     order by document_template_key
   `;

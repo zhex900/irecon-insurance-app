@@ -8,6 +8,14 @@ import {
   resolveTableMergeInput,
 } from "~/lib/pdf/merge-fields";
 
+const SAMPLE_REFERRAL_REASONS = [
+  "Display Homes has a value of $10.00",
+  "Existing Structure has a value of $111.00",
+  "Number of claim last 3 years is entered with value 12",
+  "Any claims exceeded $20,000 in value is stated as yes",
+  "Unable to find terrorism rate for this combination of postcode/State",
+].join("\n");
+
 /** Realistic fake values for template Designer preview. */
 const SAMPLE_BY_FIELD: Record<string, string> = {
   PolicyNumber: "CAR-2026-004821",
@@ -50,7 +58,9 @@ const SAMPLE_BY_FIELD: Record<string, string> = {
   EndorsementContent:
     "<p>It is hereby noted and agreed that this policy is <em>endorsed</em> as follows:</p><ul><li>Sample bullet one</li><li><u>Underlined</u> bullet two</li></ul>",
   DutyOfDisclosureConfirmation: "Confirmed",
-  ReferralName: "Jordan Lee",
+  ReferralReasons: SAMPLE_REFERRAL_REASONS,
+  // Legacy alias — same value as ReferralReasons for old templates.
+  ReferralName: SAMPLE_REFERRAL_REASONS,
   AnyClaimsExceed20k: "No",
   ClaimsCountLast3Years: "0",
   DisplayHomes: "$250,000.00",
@@ -154,8 +164,9 @@ export const KNOWN_MERGE_FIELD_NAMES = Object.keys(SAMPLE_BY_FIELD).sort(
 /**
  * Designer left-palette names — prefer EndorsementSubject + EndorsementContent
  * (repeating pair). Legacy Endorsements table still generates if present.
+ * ReferralName is a legacy alias of ReferralReasons (hidden from palette).
  */
-const PALETTE_EXCLUDED = new Set(["Endorsements"]);
+const PALETTE_EXCLUDED = new Set(["Endorsements", "ReferralName"]);
 
 export const PALETTE_MERGE_FIELD_NAMES = KNOWN_MERGE_FIELD_NAMES.filter(
   (name) => !PALETTE_EXCLUDED.has(name),
