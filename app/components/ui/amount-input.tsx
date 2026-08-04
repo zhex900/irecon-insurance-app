@@ -49,14 +49,17 @@ export function AmountInput({
   const { saved, className: highlight } = useFieldSaveState(name);
   const fieldId = id ?? name;
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const pendingCaretRef = useRef<number | null>(null);
+  const focusedRef = useRef(false);
+  /** Desired caret while focused — kept across RHF re-renders, not one-shot. */
+  const caretRef = useRef<number | null>(null);
 
   useLayoutEffect(() => {
     const input = inputRef.current;
-    const caret = pendingCaretRef.current;
-    if (!input || caret == null) return;
-    pendingCaretRef.current = null;
-    input.setSelectionRange(caret, caret);
+    if (!input || !focusedRef.current || caretRef.current == null) return;
+    const caret = Math.max(0, Math.min(caretRef.current, input.value.length));
+    if (input.selectionStart !== caret || input.selectionEnd !== caret) {
+      input.setSelectionRange(caret, caret);
+    }
   });
 
   return (
@@ -82,25 +85,27 @@ export function AmountInput({
             }}
             value={formatAmountInput(field.value as string | number)}
             onFocus={(event) => {
+              focusedRef.current = true;
               inputProps.onFocus?.(event);
-              // Select existing value (incl. 0) so typing replaces it — do not
-              // clear zeros; 0 is a valid amount for several money fields.
-              event.currentTarget.select();
             }}
             onBlur={(event) => {
+              focusedRef.current = false;
+              caretRef.current = null;
               field.onBlur();
               inputProps.onBlur?.(event);
+            }}
+            onSelect={(event) => {
+              if (focusedRef.current) {
+                caretRef.current = event.currentTarget.selectionStart;
+              }
+              inputProps.onSelect?.(event);
             }}
             onChange={(event) => {
               const input = event.target;
               const caret = input.selectionStart ?? input.value.length;
               const next = sanitizeAmountInput(input.value);
               const formatted = formatAmountInput(next);
-              pendingCaretRef.current = mapAmountCaret(
-                input.value,
-                caret,
-                formatted,
-              );
+              caretRef.current = mapAmountCaret(input.value, caret, formatted);
               field.onChange(next);
             }}
           />
