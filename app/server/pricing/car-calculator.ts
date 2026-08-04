@@ -176,12 +176,7 @@ export async function calculateCarPremium(
     isTerrorismRateExist,
   };
 
-  const referralReasons = buildReferralReasons(
-    input,
-    rating,
-    liability.label,
-    premium,
-  );
+  const referralReasons = buildReferralReasons(input, rating, liability.label);
 
   return { premium, rating, referralReasons };
 }

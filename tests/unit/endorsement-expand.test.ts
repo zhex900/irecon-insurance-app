@@ -250,8 +250,8 @@ describe("expandEndorsementPairSchemas", () => {
     const sub = next.schemas[0]!.find(
       (s) => s.name === ENDORSEMENT_SUBJECT_FIELD,
     ) as { height?: number } | undefined;
-    // Must be taller than the designer 4.5mm box so draw does not page-break.
-    expect(Number(sub!.height)).toBeGreaterThan(6);
+    // Designer box already clears one baseline; do not inflate to two lines.
+    expect(Number(sub!.height)).toBeGreaterThanOrEqual(4.5);
   });
 
   it("packs like schedule even when the content prototype is tall (rating-single)", () => {

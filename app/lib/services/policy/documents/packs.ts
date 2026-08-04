@@ -14,7 +14,10 @@ import {
   adjustmentDocumentsFingerprint,
   reviewDocumentsFingerprint,
 } from "~/lib/services/policy/documents/fingerprints";
-import { policyToMergeInputs } from "~/lib/pdf/merge-fields";
+import {
+  policyToMergeInputs,
+  type BrokerFeeLineInput,
+} from "~/lib/pdf/merge-fields";
 
 export type PackTemplateMeta = Pick<
   DocumentTemplate,
@@ -79,6 +82,8 @@ export type BuildReviewDocumentPackOptions = {
    * Static document-library attachments are omitted (already on the policy).
    */
   includeLibrary?: boolean;
+  /** Live broker fee schedule lines (named PDF fee merge fields). */
+  brokerFeeLines?: BrokerFeeLineInput[];
 };
 
 /** True when the policy already has static / library attachments. */
@@ -106,7 +111,9 @@ export function buildReviewDocumentPack(
   const when = new Date();
   const stamp = formatDocTimestamp(when);
   const generatedWhen = when.toISOString();
-  const mergeInputs = policyToMergeInputs(policy);
+  const mergeInputs = policyToMergeInputs(policy, {
+    brokerFeeLines: options?.brokerFeeLines,
+  });
   let nextId = 1;
 
   const docs: PolicyDocument[] = templates.map((template) => {
@@ -220,6 +227,7 @@ export function buildAdjustmentDocumentPack(
   generatedBy: string,
   templates: PackTemplateMeta[],
   existing: PolicyDocument[] = [],
+  options?: { brokerFeeLines?: BrokerFeeLineInput[] },
 ): PolicyDocument[] {
   if (!policy.car.adjustment || !policy.car.premium) return [];
 
@@ -227,7 +235,9 @@ export function buildAdjustmentDocumentPack(
   const when = new Date();
   const stamp = formatDocTimestamp(when);
   const generatedWhen = when.toISOString();
-  const mergeInputs = policyToMergeInputs(policy);
+  const mergeInputs = policyToMergeInputs(policy, {
+    brokerFeeLines: options?.brokerFeeLines,
+  });
   let nextId = 1;
 
   return templates.map((template) => {

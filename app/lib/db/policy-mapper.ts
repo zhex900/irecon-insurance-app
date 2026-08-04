@@ -98,31 +98,75 @@ function premiumFromRow(
   };
 }
 
+function normalizeRatingSnapshot(
+  rating: RatingSnapshot | Record<string, unknown>,
+  fallbackTier = "",
+  fallbackTerrorExists = false,
+): RatingSnapshot {
+  const r = rating as Partial<RatingSnapshot>;
+  return {
+    priceId: num(r.priceId),
+    stampDutyId: num(r.stampDutyId),
+    eslId: num(r.eslId),
+    plantRate: num(r.plantRate),
+    eslRate: num(r.eslRate),
+    plantEslRate: num(r.plantEslRate),
+    contractWorksStampDutyRate: num(r.contractWorksStampDutyRate),
+    liabilityStampDutyRate: num(r.liabilityStampDutyRate),
+    contractWorksAppliedRate: num(r.contractWorksAppliedRate),
+    liabilityAppliedRate: num(r.liabilityAppliedRate),
+    contractWorksMinPremium: num(r.contractWorksMinPremium),
+    liabilityMinPremium: num(r.liabilityMinPremium),
+    plantValueMin: num(r.plantValueMin),
+    plantValueMax: num(r.plantValueMax),
+    terrorismRate: num(r.terrorismRate),
+    terrorismTier:
+      typeof r.terrorismTier === "string" && r.terrorismTier
+        ? r.terrorismTier
+        : fallbackTier,
+    isTerrorismRateExist: Boolean(
+      r.isTerrorismRateExist ?? fallbackTerrorExists,
+    ),
+  };
+}
+
 function ratingFromRow(
   car: PolicyCarRow,
   extras: AppExtras,
 ): RatingSnapshot | undefined {
-  if (extras.rating) return extras.rating;
+  // Always coerce extras.rating through num() — raw JSON can leave string /
+  // missing rates which breaks client CalculatePremium (terror → NaN).
+  if (extras.rating) {
+    return normalizeRatingSnapshot(
+      extras.rating,
+      extras.terrorismTier ?? "",
+      Boolean(extras.isTerrorismRateExist),
+    );
+  }
   if (car.priceId == null && car.plantRate == null) return undefined;
-  return {
-    priceId: car.priceId ?? 0,
-    stampDutyId: car.priceStampDutyId ?? 0,
-    eslId: car.priceEslId ?? 0,
-    plantRate: num(car.plantRate),
-    eslRate: num(car.eslRate),
-    plantEslRate: num(car.plantEslRate),
-    contractWorksStampDutyRate: num(car.contractWorksStampDutyRate),
-    liabilityStampDutyRate: num(car.liabilityStampDutyRate),
-    contractWorksAppliedRate: num(car.contractWorksAppliedRate),
-    liabilityAppliedRate: num(car.liabilityAppliedRate),
-    contractWorksMinPremium: num(car.contractWorksMinPremium),
-    liabilityMinPremium: num(car.liabilityMinPremium),
-    plantValueMin: num(car.plantValueMin),
-    plantValueMax: num(car.plantValueMax),
-    terrorismRate: num(car.terrorismRate),
-    terrorismTier: extras.terrorismTier ?? "",
-    isTerrorismRateExist: Boolean(extras.isTerrorismRateExist),
-  };
+  return normalizeRatingSnapshot(
+    {
+      priceId: car.priceId ?? 0,
+      stampDutyId: car.priceStampDutyId ?? 0,
+      eslId: car.priceEslId ?? 0,
+      plantRate: car.plantRate,
+      eslRate: car.eslRate,
+      plantEslRate: car.plantEslRate,
+      contractWorksStampDutyRate: car.contractWorksStampDutyRate,
+      liabilityStampDutyRate: car.liabilityStampDutyRate,
+      contractWorksAppliedRate: car.contractWorksAppliedRate,
+      liabilityAppliedRate: car.liabilityAppliedRate,
+      contractWorksMinPremium: car.contractWorksMinPremium,
+      liabilityMinPremium: car.liabilityMinPremium,
+      plantValueMin: car.plantValueMin,
+      plantValueMax: car.plantValueMax,
+      terrorismRate: car.terrorismRate,
+      terrorismTier: extras.terrorismTier ?? "",
+      isTerrorismRateExist: Boolean(extras.isTerrorismRateExist),
+    },
+    extras.terrorismTier ?? "",
+    Boolean(extras.isTerrorismRateExist),
+  );
 }
 
 export function rowsToPolicy(

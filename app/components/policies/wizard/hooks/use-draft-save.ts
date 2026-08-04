@@ -85,6 +85,8 @@ export function usePolicyDraftSave({
   const isSavingDraftRef = useRef(false);
   /** When a save is in flight, queue another pass so blur/Save edits are not dropped. */
   const pendingSaveAfterCurrentRef = useRef(false);
+  /** Preserve skipPremiumRefresh across a queued follow-up save. */
+  const pendingSkipPremiumRefreshRef = useRef(false);
   const lastHandledSavedAtRef = useRef<string | null>(null);
   const pendingDraftPayloadRef = useRef<string | null>(null);
   const pendingDirtyPathsRef = useRef<string[]>([]);
@@ -119,7 +121,10 @@ export function usePolicyDraftSave({
     const subscription = form.watch((values, info) => {
       const name = info.name;
       const root = name?.split(".")[0] ?? "";
-      if (root && pricingRoots.has(root)) {
+      // Only real value edits clear the manual-premium guard. Validation /
+      // trigger callbacks must not — otherwise a premium-breakdown save can
+      // race into a server recalculate that wipes ES/DH-folded terrorism.
+      if (root && pricingRoots.has(root) && info.type === "change") {
         premiumManuallyEditedRef.current = false;
       }
       if (name) {
@@ -171,11 +176,19 @@ export function usePolicyDraftSave({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draftSaveError, draftSavedAt, hasUnsavedChanges, fieldsLocked]);
 
-  async function persistDraft({ force = false }: { force?: boolean } = {}) {
+  async function persistDraft({
+    force = false,
+    skipPremiumRefresh = false,
+  }: {
+    force?: boolean;
+    /** Set when saving after Premium Breakdown click-to-edit (client already recalced). */
+    skipPremiumRefresh?: boolean;
+  } = {}) {
     if (fieldsLocked) return false;
     if (isSavingDraftRef.current) {
       // Do not drop blur/Save while a request is in flight — save again when done.
       pendingSaveAfterCurrentRef.current = true;
+      if (skipPremiumRefresh) pendingSkipPremiumRefreshRef.current = true;
       return false;
     }
     if (!force && !hasUnsavedChangesRef.current) return false;
@@ -259,7 +272,11 @@ export function usePolicyDraftSave({
         publishSaveStatus("saved");
       }
 
-      refreshPremiumAfterSave(pendingDirtyPathsRef.current);
+      // Server recalculate zeros ES/DH and uses base×τ only — never run it after
+      // a Premium Breakdown manual edit (client CalculatePremium already ran).
+      if (!skipPremiumRefresh && !premiumManuallyEditedRef.current) {
+        refreshPremiumAfterSave(pendingDirtyPathsRef.current);
+      }
       toastPolicyDraftSaved(policy.policyNumber, pendingDirtyPathsRef.current);
 
       if (leave?.pendingLeaveAfterSaveRef.current && !editedDuringSave) {
@@ -293,8 +310,10 @@ export function usePolicyDraftSave({
         isSavingDraftRef.current = false;
         if (pendingSaveAfterCurrentRef.current) {
           pendingSaveAfterCurrentRef.current = false;
+          const skipPremiumRefresh = pendingSkipPremiumRefreshRef.current;
+          pendingSkipPremiumRefreshRef.current = false;
           queueMicrotask(() => {
-            void persistDraft({ force: true });
+            void persistDraft({ force: true, skipPremiumRefresh });
           });
         }
       }

@@ -1,6 +1,6 @@
 import { useMemo, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useFormContext } from "react-hook-form";
-import { CalculatorIcon, InfoIcon, PencilIcon, XIcon } from "lucide-react";
+import { InfoIcon, PencilIcon, RotateCcwIcon, XIcon } from "lucide-react";
 import {
   Card,
   CardAction,
@@ -46,7 +46,10 @@ import {
   combinedTrueBasePremium,
   rollupPremiumTotals,
 } from "~/lib/premium-totals";
-import { applyManualPremiumEdit } from "~/lib/premium-manual-recalc";
+import {
+  applyManualPremiumEdit,
+  type ManualPremiumSessionRates,
+} from "~/lib/premium-manual-recalc";
 
 export function PricingDeclarationConfirmedStep({
   premium,
@@ -57,7 +60,7 @@ export function PricingDeclarationConfirmedStep({
   adjustmentBreakdown,
   premiumEditable = false,
   onPremiumChange,
-  onRecalculatePremium,
+  onResetPremium,
   isCalculating = false,
 }: {
   premium?: PremiumBreakdown;
@@ -69,8 +72,8 @@ export function PricingDeclarationConfirmedStep({
   /** When true, premium breakdown cells are click-to-edit. */
   premiumEditable?: boolean;
   onPremiumChange?: (next: PremiumBreakdown) => void;
-  /** Recalculate from rates; clears manual overrides. */
-  onRecalculatePremium?: () => void;
+  /** Clear manual overrides and recalculate from rates. */
+  onResetPremium?: () => void;
   isCalculating?: boolean;
 }) {
   const { watch } = useFormContext<CarPolicyFormValues>();
@@ -79,7 +82,10 @@ export function PricingDeclarationConfirmedStep({
   const contractWorksSumInsured = Number(watch("contractWorksSumInsured") || 0);
   const dateStart = String(watch("dateStart") || "");
   const [manualKeys, setManualKeys] = useState<Set<string>>(() => new Set());
-  const [manualTaxOverride, setManualTaxOverride] = useState(false);
+  /** Session τ / plant ESL rate for subsequent Premium Breakdown edits. */
+  const [sessionRates, setSessionRates] = useState<
+    ManualPremiumSessionRates | undefined
+  >(undefined);
   const [working, setWorking] = useState<PremiumLineWorking | null>(null);
 
   const workingInputs = useMemo<PremiumWorkingInputs>(
@@ -119,16 +125,14 @@ export function PricingDeclarationConfirmedStep({
       next.add(key);
       return next;
     });
-    // Legacy CalculatePremium: editing True Base (and other drivers) recalcs
-    // terrorism / ESL / GST / SD / section + combined totals from frozen rates.
     const result = applyManualPremiumEdit({
       premium: currentPremium,
       rating,
       key,
       value,
-      manualTaxOverride,
+      sessionRates,
     });
-    setManualTaxOverride(result.manualTaxOverride);
+    setSessionRates(result.sessionRates);
     onPremiumChange(result.premium);
   }
 
@@ -153,7 +157,7 @@ export function PricingDeclarationConfirmedStep({
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-3">
           <CardTitle>Premium Breakdown</CardTitle>
-          {onRecalculatePremium ? (
+          {onResetPremium ? (
             <CardAction className="self-center justify-self-auto">
               <Tooltip>
                 <TooltipTrigger
@@ -162,40 +166,40 @@ export function PricingDeclarationConfirmedStep({
                       type="button"
                       variant="outline"
                       size="icon-sm"
-                      aria-label="Recalculate premium"
+                      aria-label="Reset premium"
                       disabled={isCalculating}
                       onClick={() => {
                         setManualKeys(new Set());
-                        setManualTaxOverride(false);
+                        setSessionRates(undefined);
                         setWorking(null);
-                        onRecalculatePremium();
+                        onResetPremium();
                       }}
                     />
                   }
                 >
-                  <CalculatorIcon
-                    className={cn(isCalculating && "animate-pulse")}
+                  <RotateCcwIcon
+                    className={cn(isCalculating && "animate-spin")}
                   />
                 </TooltipTrigger>
                 <TooltipContent>
-                  Recalculate premium. Manual overrides will be lost.
+                  Reset premium. Manual edits will be cleared.
                 </TooltipContent>
               </Tooltip>
             </CardAction>
           ) : null}
         </CardHeader>
         <CardContent className="min-w-0 overflow-x-hidden">
-          <table className="w-full text-sm">
+          <table className="w-full table-fixed text-sm">
             <thead>
               <tr className="border-b border-border text-left text-muted-foreground">
-                <th className="w-full py-2 pr-2">Component</th>
-                <th className="py-2 pl-6 text-right whitespace-nowrap">
+                <th className="w-auto py-2 pr-2">Component</th>
+                <th className="w-28 py-2 pl-4 text-right whitespace-nowrap">
                   Contract works
                 </th>
-                <th className="py-2 pl-6 text-right whitespace-nowrap">
+                <th className="w-28 py-2 pl-4 text-right whitespace-nowrap">
                   Legal liability
                 </th>
-                <th className="py-2 pl-6 text-right whitespace-nowrap">
+                <th className="w-28 py-2 pl-4 text-right whitespace-nowrap">
                   Combined
                 </th>
               </tr>
@@ -318,7 +322,7 @@ export function PricingDeclarationConfirmedStep({
               {reference.feeNames.map((fee) => (
                 <tr key={fee.name}>
                   <td className="w-full py-2 pr-2">
-                    <span className="break-words whitespace-normal">
+                    <span className="wrap-break-word">
                       {fee.name}{" "}
                       <PremiumExplainTrigger
                         label={`How ${fee.name} is calculated`}
@@ -350,9 +354,9 @@ export function PricingDeclarationConfirmedStep({
                       </PremiumExplainTrigger>
                     </span>
                   </td>
-                  <td className="py-2 pl-6" />
-                  <td className="py-2 pl-6" />
-                  <td className="py-2 pl-6 text-right whitespace-nowrap tabular-nums">
+                  <td className="w-28 py-2 pl-4" />
+                  <td className="w-28 py-2 pl-4" />
+                  <td className="w-28 py-2 pl-4 text-right whitespace-nowrap tabular-nums">
                     {formatCurrency(fee.fee + fee.feeGst)}
                   </td>
                 </tr>
@@ -542,10 +546,10 @@ function PremiumRow({
       id={rowId ? `premium-row-${rowId}` : undefined}
       className={cn(strong && "font-semibold")}
     >
-      <td className="w-full py-2 pr-2">
+      <td className="min-w-0 py-2 pr-2">
         <span
           className={cn(
-            "break-words whitespace-normal",
+            "wrap-break-word",
             rowManual && "text-warning",
             attention && "animate-pulse font-semibold text-warning",
           )}
@@ -625,32 +629,31 @@ function PremiumValueCell({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
 
+  const cellClass = "w-28 py-2 pl-4 text-right whitespace-nowrap tabular-nums";
+
   if (value == null) {
-    return <td className="py-2 pl-6 text-right whitespace-nowrap" />;
+    return <td className={cellClass} />;
   }
 
   const valueClass = cn(
-    "whitespace-nowrap tabular-nums",
     (manual || attention) && "font-medium text-warning",
     attention && "animate-pulse font-semibold",
   );
 
   if (!editable || !onChange) {
     return (
-      <td className={cn("py-2 pl-6 text-right", valueClass)}>
-        {formatCurrency(value)}
-      </td>
+      <td className={cn(cellClass, valueClass)}>{formatCurrency(value)}</td>
     );
   }
 
   if (editing) {
     return (
-      <td className="py-1 pl-6 text-right">
+      <td className="w-28 py-1 pl-4 text-right">
         <Input
           autoFocus
           type="text"
           inputMode="decimal"
-          className="ml-auto h-7 w-[7.5rem] text-right font-normal"
+          className="h-7 w-full min-w-0 text-right font-normal tabular-nums"
           value={draft}
           aria-label="Edit premium value"
           onChange={(event) =>
@@ -675,11 +678,11 @@ function PremiumValueCell({
   }
 
   return (
-    <td className="py-2 pl-6 text-right">
+    <td className={cellClass}>
       <button
         type="button"
         className={cn(
-          "inline-flex justify-end rounded px-0 text-right underline-offset-2 hover:bg-muted/60 hover:underline",
+          "inline-flex w-full justify-end rounded px-0 text-right underline-offset-2 hover:bg-muted/60 hover:underline",
           valueClass,
         )}
         title={manual ? "Manually adjusted — click to edit" : "Click to edit"}

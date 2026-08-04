@@ -6,20 +6,21 @@ This file is **behavior only**. Engineering rules live in `docs/`.
 
 ## Read by task
 
-| Task                                        | Document                                                                     |
-| ------------------------------------------- | ---------------------------------------------------------------------------- |
-| Layering, data flow, folder ownership       | [docs/architecture.md](docs/architecture.md)                                 |
-| TypeScript, React, Router, errors, security | [docs/coding-standards.md](docs/coding-standards.md)                         |
-| Patterns (service, repository, mapper, …)   | [docs/design-patterns.md](docs/design-patterns.md)                           |
-| Queries, render, bundle                     | [docs/performance.md](docs/performance.md)                                   |
-| UI / forms / a11y                           | [docs/ui-guidelines.md](docs/ui-guidelines.md)                               |
-| Before finishing any change                 | [docs/code-review.md](docs/code-review.md)                                   |
-| Production roadmap                          | [docs/REFACTOR_TO_PRODUCTION.md](docs/REFACTOR_TO_PRODUCTION.md)             |
-| Testing                                     | [docs/testing.md](docs/testing.md)                                           |
-| Lint / format                               | [docs/tooling.md](docs/tooling.md)                                           |
-| CAR premium / terrorism formulas (legacy)   | [docs/pricing/car-premium-formulas.md](docs/pricing/car-premium-formulas.md) |
-| Observability (CF + Sentry)                 | [docs/observability.md](docs/observability.md)                               |
-| How to run                                  | [README.md](README.md)                                                       |
+| Task                                        | Document                                                                                             |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Layering, data flow, folder ownership       | [docs/architecture.md](docs/architecture.md)                                                         |
+| TypeScript, React, Router, errors, security | [docs/coding-standards.md](docs/coding-standards.md)                                                 |
+| Patterns (service, repository, mapper, …)   | [docs/design-patterns.md](docs/design-patterns.md)                                                   |
+| Queries, render, bundle                     | [docs/performance.md](docs/performance.md)                                                           |
+| UI / forms / a11y                           | [docs/ui-guidelines.md](docs/ui-guidelines.md)                                                       |
+| Before finishing any change                 | [docs/code-review.md](docs/code-review.md)                                                           |
+| Production roadmap                          | [docs/REFACTOR_TO_PRODUCTION.md](docs/REFACTOR_TO_PRODUCTION.md)                                     |
+| Testing                                     | [docs/testing.md](docs/testing.md)                                                                   |
+| Lint / format                               | [docs/tooling.md](docs/tooling.md)                                                                   |
+| CAR premium / terrorism formulas            | [docs/pricing/car-premium-formulas.md](docs/pricing/car-premium-formulas.md)                         |
+| Legacy vs rebuild manual premium quirks     | [docs/pricing/legacy-vs-rebuild-premium-manual.md](docs/pricing/legacy-vs-rebuild-premium-manual.md) |
+| Observability (CF + Sentry)                 | [docs/observability.md](docs/observability.md)                                                       |
+| How to run                                  | [README.md](README.md)                                                                               |
 
 ## AI coding rules
 

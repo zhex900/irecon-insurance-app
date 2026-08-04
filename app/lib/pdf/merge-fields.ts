@@ -628,13 +628,138 @@ export function resolveMultiVariableTextInput(
 }
 
 /** Ensure multiVariableText schemas have the shape pdfme generate() expects. */
+/** Schedule line shape used for named PDF fee merge fields. */
+export type BrokerFeeLineInput = {
+  name: string;
+  sortOrder?: number;
+  fee: number;
+  feeGst: number;
+};
+
+function normalizeBrokerFeeLineName(name: string) {
+  return name
+    .replace(/\s*\(includes GST\)\s*$/i, "")
+    .trim()
+    .toLowerCase();
+}
+
+/**
+ * Named fee fields from broker fee schedule lines (ex-GST amounts + GST total).
+ * Matches legacy rating sheet: Insurer Admin / IAA Admin Fee / Total Fee GST.
+ */
+export function brokerFeeMergeFields(
+  lines: BrokerFeeLineInput[],
+): Record<string, string> {
+  if (lines.length === 0) return {};
+  const find = (needle: string) =>
+    lines.find((line) =>
+      normalizeBrokerFeeLineName(line.name).includes(needle),
+    );
+  const insurer = find("insurer admin");
+  const iaa = find("iaa admin");
+  const feeGstTotal = lines.reduce((sum, line) => sum + (line.feeGst || 0), 0);
+  return {
+    InsurerAdminFee: money(insurer?.fee),
+    IAAAdminFee: money(iaa?.fee),
+    BrokerFeeGst: money(feeGstTotal),
+  };
+}
+
+const FEE_LABEL_TO_FIELD: Array<{ pattern: RegExp; field: string }> = [
+  { pattern: /^Insurer Admin:?$/i, field: "InsurerAdminFee" },
+  { pattern: /^IAA Admin Fee:?$/i, field: "IAAAdminFee" },
+  { pattern: /^Total Fee GST:?$/i, field: "BrokerFeeGst" },
+  { pattern: /^Broker Fee:?$/i, field: "BrokerFee" },
+];
+
+const FEE_VALUE_FIELDS = new Set(
+  FEE_LABEL_TO_FIELD.map((entry) => entry.field),
+);
+
+/**
+ * Some published rating templates swapped fee value field names vs labels
+ * (e.g. BrokerFeeGst drawn next to "Insurer Admin:"). Re-bind by label Y.
+ */
+export function alignBrokerFeeSchemaNames(
+  page: Array<Record<string, unknown>>,
+): Array<Record<string, unknown>> {
+  type Labeled = { index: number; y: number; field: string };
+  type Valued = { index: number; y: number };
+
+  const labels: Labeled[] = [];
+  const values: Valued[] = [];
+
+  page.forEach((schema, index) => {
+    const name = typeof schema.name === "string" ? schema.name : "";
+    const content = typeof schema.content === "string" ? schema.content : "";
+    const y =
+      schema.position &&
+      typeof schema.position === "object" &&
+      typeof (schema.position as { y?: unknown }).y === "number"
+        ? (schema.position as { y: number }).y
+        : null;
+    if (y == null) return;
+
+    const labelHit = FEE_LABEL_TO_FIELD.find((entry) =>
+      entry.pattern.test(content.trim()),
+    );
+    if (labelHit && !FEE_VALUE_FIELDS.has(canonicalMergeFieldName(name))) {
+      labels.push({ index, y, field: labelHit.field });
+      return;
+    }
+
+    const canonical = canonicalMergeFieldName(name);
+    const contentKey = /^\{([A-Za-z0-9_]+)\}$/.exec(content.trim())?.[1];
+    if (
+      FEE_VALUE_FIELDS.has(canonical) ||
+      (contentKey != null && FEE_VALUE_FIELDS.has(contentKey))
+    ) {
+      values.push({ index, y });
+    }
+  });
+
+  if (labels.length === 0 || values.length === 0) return page;
+
+  const assignments = new Map<number, string>();
+  const usedValues = new Set<number>();
+  for (const label of labels) {
+    let best: { index: number; dist: number } | null = null;
+    for (const value of values) {
+      if (usedValues.has(value.index)) continue;
+      const dist = Math.abs(value.y - label.y);
+      if (dist > 2) continue;
+      if (!best || dist < best.dist) best = { index: value.index, dist };
+    }
+    if (!best) continue;
+    usedValues.add(best.index);
+    assignments.set(best.index, label.field);
+  }
+
+  if (assignments.size === 0) return page;
+
+  const next = page.map((schema) => ({ ...schema }));
+  for (const [index] of assignments) {
+    const schema = next[index]!;
+    schema.name = `__tmp_fee_${index}`;
+    schema.content = `{__tmp_fee_${index}}`;
+  }
+  for (const [index, field] of assignments) {
+    const schema = next[index]!;
+    schema.name = field;
+    schema.content = `{${field}}`;
+  }
+  return next;
+}
+
 export function normalizePdfmeTemplateSchemas<
   T extends { schemas: Array<Array<Record<string, unknown>>> },
 >(template: T): T {
   return {
     ...template,
     schemas: template.schemas.map((page) =>
-      page.map((schema) => normalizeMultiVariableTextSchema(schema)),
+      alignBrokerFeeSchemaNames(
+        page.map((schema) => normalizeMultiVariableTextSchema(schema)),
+      ),
     ),
   };
 }
@@ -646,7 +771,10 @@ export function normalizePdfmeTemplateSchemas<
  */
 export function policyToMergeInputs(
   policy: Policy,
-  options?: { wordingCatalogue?: CarWording[] },
+  options?: {
+    wordingCatalogue?: CarWording[];
+    brokerFeeLines?: BrokerFeeLineInput[];
+  },
 ): Record<string, string> {
   const car = policy.car;
   const premium = car.premium;
@@ -796,7 +924,7 @@ export function policyToMergeInputs(
       LegalLiabilityTotalPremium: money(premium.liabilityTotalPremium),
       CombinedTotalPremium: money(premium.originalTotalPremium),
       BrokerFee: money(premium.combinedBrokerFee),
-      BrokerFeeGst: money((premium.combinedBrokerFee ?? 0) * 0.1),
+      ...brokerFeeMergeFields(options?.brokerFeeLines ?? []),
       // Adjustment "original turnover" calc columns (same as bind-time premium)
       CalcTerrorismLevy: money(terror),
       CalcContractWorksEsl: money(s1Esl),

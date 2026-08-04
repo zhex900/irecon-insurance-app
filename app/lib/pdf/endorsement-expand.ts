@@ -13,10 +13,11 @@ import { isBlankPdf, type Template } from "@pdfme/common";
 import { estimateTextHeightMm } from "~/lib/pdf/flow-push-down";
 import type { EndorsementRichDrawOp } from "~/lib/pdf/html-rich-text-draw";
 import {
-  endorsementPaintTopInsetMm,
+  endorsementPaintHeightForLinesMm,
   estimateWordingHtmlHeightMm,
   minEndorsementPaintBandMm,
-  splitHeightIntoPageChunks,
+  splitLineCountsIntoPages,
+  wordingHtmlLineCount,
 } from "~/lib/pdf/html-rich-text-lines";
 import { ENDORSEMENTS_TABLE_FIELD } from "~/lib/pdf/merge-fields";
 import {
@@ -32,7 +33,7 @@ export const ENDORSEMENT_CONTENT_FIELD = "EndorsementContent";
 export const ENDORSEMENT_BLOCK_GAP_KEY = "endorsementBlockGapMm";
 export const DEFAULT_ENDORSEMENT_BLOCK_GAP_MM = 4;
 /** Keep endorsement text above this margin (mm from page bottom). */
-export const ENDORSEMENT_PAGE_BOTTOM_MARGIN_MM = 18;
+export const ENDORSEMENT_PAGE_BOTTOM_MARGIN_MM = 12;
 
 type SchemaLike = {
   name?: string;
@@ -109,18 +110,20 @@ function pageHeightMm(template: Template): number {
   return 297;
 }
 
+/** Bottom margin (mm) used for endorsement packing — shared with pdf-lib draw. */
+export function endorsementPageBottomMarginMm(template: Template): number {
+  const base = template.basePdf;
+  if (isBlankPdf(base) && Array.isArray(base.padding)) {
+    const raw = Number(base.padding[2]);
+    if (Number.isFinite(raw) && raw >= 0) return raw;
+  }
+  return ENDORSEMENT_PAGE_BOTTOM_MARGIN_MM;
+}
+
 /** Lowest Y (from page top) where endorsement content may still be placed. */
 function pageBottomMm(template: Template): number {
   const height = pageHeightMm(template);
-  const base = template.basePdf;
-  let padBottom = ENDORSEMENT_PAGE_BOTTOM_MARGIN_MM;
-  if (isBlankPdf(base) && Array.isArray(base.padding)) {
-    const raw = Number(base.padding[2]);
-    if (Number.isFinite(raw) && raw >= 0) {
-      padBottom = Math.max(raw, ENDORSEMENT_PAGE_BOTTOM_MARGIN_MM);
-    }
-  }
-  return Math.max(40, height - padBottom);
+  return Math.max(40, height - endorsementPageBottomMarginMm(template));
 }
 
 function pageTopMm(template: Template): number {
@@ -206,6 +209,7 @@ function toDrawOp(
   continuationTopMm: number,
   continuationHeightMm: number,
   continuationHeightsMm: number[] = [],
+  pageBottomMarginMm: number = ENDORSEMENT_PAGE_BOTTOM_MARGIN_MM,
 ): EndorsementRichDrawOp {
   return {
     pageIndex,
@@ -221,6 +225,7 @@ function toDrawOp(
     continuationTopMm,
     continuationHeightMm,
     continuationHeightsMm,
+    pageBottomMarginMm,
   };
 }
 
@@ -327,16 +332,17 @@ export function expandEndorsementPairSchemas(
   let currentY = subjectY;
   let lastBottomOnProtoPage = subjectY;
   const contTopMm = overflowTopMm(template);
+  const pageBottomMarginMm = endorsementPageBottomMarginMm(template);
   const widthMm = Number(contentProto.width ?? 80);
   const bodyFont = Number(contentProto.fontSize ?? 9.5);
   const bodyLh = Number(contentProto.lineHeight ?? 1.25);
   const subjectWidthMm = Number(subjectProto.width ?? widthMm);
   const subjectFont = Number(subjectProto.fontSize ?? 11);
   const subjectLh = Number(subjectProto.lineHeight ?? 1.15);
-  // Draw places the first baseline below the box top — subtract that inset so
-  // reserved bands are not shorter than the painted lines (new-page overlaps).
-  const bodyPaintInsetMm = endorsementPaintTopInsetMm(bodyFont);
-  const usablePageH = Math.max(40, bottomLimit - contTopMm - bodyPaintInsetMm);
+  // Use the full band down to the page bottom limit (premium pdfme does the
+  // same). Baseline inset is already covered by minEndorsementPaintBandMm /
+  // line-height estimates — subtracting it again orphaned last lines.
+  const usablePageH = Math.max(40, bottomLimit - contTopMm);
 
   for (let i = 0; i < pairs.length; i++) {
     const pair = pairs[i]!;
@@ -365,12 +371,6 @@ export function expandEndorsementPairSchemas(
         subjectLh,
       ),
     );
-    const totalBodyH = Math.max(
-      contentIsHtml ? minBodyPaintH : contentH,
-      minBodyPaintH,
-      estimateWordingHtmlHeightMm(bodyHtml, widthMm, bodyFont, bodyLh),
-    );
-
     // New page only when the subject (+ gap + a first line) will not fit —
     // never bounce a whole block because its body is tall (body continues).
     const headroomMm = subH + subjectToContentGap + Math.min(8, contentH);
@@ -389,16 +389,27 @@ export function expandEndorsementPairSchemas(
     const plainBody = plainTextFromWordingHtml(pair.content);
     const contentYPos = currentY + subH + subjectToContentGap;
     // Remaining space only (do not floor to designer prototype height).
-    const roomOnPage = Math.max(
-      4,
-      bottomLimit - contentYPos - bodyPaintInsetMm,
-    );
+    const roomOnPage = Math.max(4, bottomLimit - contentYPos);
 
-    let chunkHeights = splitHeightIntoPageChunks(
-      totalBodyH,
+    // Pack by how many wrap-lines fit in the band — not by mm remainders that
+    // used to force a one-line orphan page while the previous page had space.
+    const bodyLineCount = wordingHtmlLineCount(bodyHtml, widthMm, bodyFont);
+    const lineChunks = splitLineCountsIntoPages(
+      bodyLineCount,
       roomOnPage,
       usablePageH,
+      bodyFont,
+      bodyLh,
     );
+    const minChunkH = contentIsHtml ? minBodyPaintH : contentH;
+    const chunkHeights = lineChunks.map((n, idx) => {
+      const maxH = idx === 0 ? roomOnPage : usablePageH;
+      const need = endorsementPaintHeightForLinesMm(n, bodyFont, bodyLh);
+      // Non-final chunks fill the page band so layout and draw share the same
+      // floor (avoids an empty continuation page when draw packs one more line).
+      if (idx < lineChunks.length - 1) return maxH;
+      return Math.min(maxH, Math.max(minChunkH, need));
+    });
     let plainChunks: string[] = [plainBody];
     if (!contentIsHtml) {
       plainChunks = splitPlainTextByHeight(
@@ -409,19 +420,10 @@ export function expandEndorsementPairSchemas(
         roomOnPage,
         usablePageH,
       );
-      if (plainChunks.length > chunkHeights.length) {
-        chunkHeights = plainChunks.map((chunk, idx) =>
-          Math.min(
-            idx === 0 ? roomOnPage : usablePageH,
-            Math.max(
-              contentH,
-              estimateTextHeightMm(chunk, widthMm, bodyFont, bodyLh),
-            ),
-          ),
-        );
-      }
+      // Keep page count aligned with line packing (drop empty trailing chunks).
+      while (plainChunks.length > chunkHeights.length) plainChunks.pop();
+      while (plainChunks.length < chunkHeights.length) plainChunks.push("");
     }
-    const minChunkH = contentIsHtml ? minBodyPaintH : contentH;
     const firstBodyH = Math.min(
       Math.max(minChunkH, chunkHeights[0] ?? minChunkH),
       roomOnPage,
@@ -486,6 +488,8 @@ export function expandEndorsementPairSchemas(
           pair.subject,
           contTopMm,
           usablePageH,
+          [],
+          pageBottomMarginMm,
         ),
       );
     }
@@ -500,6 +504,7 @@ export function expandEndorsementPairSchemas(
           contTopMm,
           usablePageH,
           overflowHeightsMm,
+          pageBottomMarginMm,
         ),
       );
     }

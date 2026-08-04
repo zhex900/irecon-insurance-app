@@ -137,9 +137,12 @@ export type WizardSectionStackProps = {
   setPremium: Dispatch<SetStateAction<PremiumBreakdown | undefined>>;
   hasUnsavedChangesRef: MutableRefObject<boolean>;
   setHasUnsavedChanges: Dispatch<SetStateAction<boolean>>;
-  persistDraft: (opts?: { force?: boolean }) => Promise<unknown>;
+  persistDraft: (opts?: {
+    force?: boolean;
+    skipPremiumRefresh?: boolean;
+  }) => Promise<unknown>;
   handleFieldBlur: () => void;
-  onRecalculatePremium?: () => void;
+  onResetPremium?: () => void;
   isCalculating?: boolean;
   shellCardClassName?: string;
 };
@@ -163,7 +166,7 @@ export function WizardSectionStack({
   setHasUnsavedChanges,
   persistDraft,
   handleFieldBlur,
-  onRecalculatePremium,
+  onResetPremium,
   isCalculating = false,
   shellCardClassName,
 }: WizardSectionStackProps) {
@@ -200,12 +203,13 @@ export function WizardSectionStack({
                     setPremium(next);
                     hasUnsavedChangesRef.current = true;
                     setHasUnsavedChanges(true);
-                    void persistDraft({ force: true });
+                    void persistDraft({
+                      force: true,
+                      skipPremiumRefresh: true,
+                    });
                   }
             }
-            onRecalculatePremium={
-              fieldsLocked ? undefined : onRecalculatePremium
-            }
+            onResetPremium={fieldsLocked ? undefined : onResetPremium}
             isCalculating={isCalculating}
             adjustmentBreakdown={
               policy.car.adjusted ? policy.car.adjustment?.breakdown : undefined
@@ -293,11 +297,9 @@ export function WizardSectionStack({
               setPremium(next);
               hasUnsavedChangesRef.current = true;
               setHasUnsavedChanges(true);
-              void persistDraft({ force: true });
+              void persistDraft({ force: true, skipPremiumRefresh: true });
             }}
-            onRecalculatePremium={
-              fieldsLocked ? undefined : onRecalculatePremium
-            }
+            onResetPremium={fieldsLocked ? undefined : onResetPremium}
             isCalculating={isCalculating}
             adjustmentBreakdown={
               policy.car.adjusted ? policy.car.adjustment?.breakdown : undefined

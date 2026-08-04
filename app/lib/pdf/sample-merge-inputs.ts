@@ -69,8 +69,10 @@ const SAMPLE_BY_FIELD: Record<string, string> = {
   LiabilityConstructionPlantEquipment: "$250,000.00",
   // Legacy aliases for older templates.
   DisplayHomes: "$250,000.00",
-  BrokerFee: "$1,250.00",
-  BrokerFeeGst: "$125.00",
+  BrokerFee: "$308.00",
+  BrokerFeeGst: "$28.00",
+  InsurerAdminFee: "$200.00",
+  IAAAdminFee: "$80.00",
   CombinedTotalPremium: "$48,920.50",
   ContractWorksLimit: "$5,000,000.00",
   LegalLiabilityLimit: "$20 Million",

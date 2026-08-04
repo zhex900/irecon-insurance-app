@@ -237,67 +237,56 @@ Rebuild: combined fee is **derived** from `PolicyFee` lines (`sum(Fee) + sum(Fee
 
 ---
 
-## 6. Client-Side `CalculatePremium` (new policy & view policy)
+## 6. Client-Side premium breakdown edits (rebuild)
 
-Used when broker manually edits premium fields on the pricing step. Logic in `CARNewPolicy.aspx` L1094–1354 and `CARViewPolicy.aspx` L1060–1299.
+Brokers edit Premium Breakdown lines in the policy wizard. Implementation: `app/lib/premium-manual-recalc.ts` (`applyManualPremiumEdit`).
 
-**Rebuild:** `app/lib/premium-manual-recalc.ts` (`applyManualPremiumEdit`), wired from Premium Breakdown click-to-edit.
+**Legacy comparison (quirks + examples):** [legacy-vs-rebuild-premium-manual.md](./legacy-vs-rebuild-premium-manual.md).
 
-### Additional Section 1 variables
-
-```
-ES          = ContractWorksExistingStructurePremium      (manual premium input)
-DH          = ContractWorksDisplayHomesPremium         (manual premium input)
-ES_τ        = τ × ES
-DH_τ        = τ × DH
-```
-
-`Section1Terror` in JS = terrorism on **contract works base only**. The displayed terrorism field combines all three:
+### Session rates
 
 ```
-txtContractWorksTerrorismPremium = Section1Terror + ES_τ + DH_τ
+τ           = session terrorism rate (starts as lookup TerrorismRate; updates if Terrorism Levy is edited)
+plantEslRate = session plant ESL rate (from rating, or Plant ESL ÷ Plant after a Plant ESL edit)
+ES          = ContractWorksExistingStructurePremium
+DH          = ContractWorksDisplayHomesPremium
 ```
 
-### ESL (recalculated unless `ManualTaxOverride` is true)
+### Per-field behaviour (rebuild)
+
+| Edited field                       | Terrorism display      | Plant terror | Plant ESL                                     | Notes                                                                                   |
+| ---------------------------------- | ---------------------- | ------------ | --------------------------------------------- | --------------------------------------------------------------------------------------- |
+| True Base                          | `(base + ES + DH) × τ` | unchanged    | unchanged                                     | Keeps ES/DH fold                                                                        |
+| Existing Structure / Display Homes | `(base + ES + DH) × τ` | unchanged    | unchanged                                     |                                                                                         |
+| Terrorism Levy                     | **typed value**        | `plant × τ′` | unchanged                                     | `τ′ = entered / base` (updates session τ)                                               |
+| Plant & Equipment                  | unchanged              | `plant × τ`  | `(plant + priorPlantTerror) × plantEslRate`   |                                                                                         |
+| Terrorism Levy Plant               | unchanged              | `plant × τ`  | `(plant + enteredPlantTerror) × plantEslRate` | then plant terror set to `plant × τ`                                                    |
+| Plant ESL                          | unchanged              | unchanged    | kept                                          | back-derives `plantEslRate`                                                             |
+| ESL / SD / GST                     | unchanged              | unchanged    | unchanged                                     | Typed line sticks for this edit; **next** driver edit refreshes ESL/SD/GST from formula |
+
+### Taxes (after a driver-field edit)
 
 ```
-ContractWorksESL = (Section1Base + Section1Terror + ES_τ + ES + DH + DH_τ) × ESLRate
-LiabilityESL = 0
+ContractWorksESL = (Base + displayedTerror + ES + DH) × ESLRate
+ContractWorksGST = (Base + displayedTerror + ES + DH
+             + Plant + PlantTerror + PlantESL + ESL) × 0.10
+ContractWorksStampDuty = (… + GST) × SD1
+LiabilityGST / LiabilityStampDuty from liability True Base
 ```
 
-### GST (always recalculated)
+### Section / combined totals
 
 ```
-ContractWorksGST = (Section1Base + Section1Terror + ES_τ + ES + DH + DH_τ
-             + Section1Plant + Section1PlantTerror + ContractWorksESLPlant + ContractWorksESL) × GSTRate
-
-LiabilityGST = (Section2Base + LiabilityESL) × GSTRate
-```
-
-### Stamp duty (recalculated unless `ManualTaxOverride`)
-
-```
-ContractWorksStampDuty = (all Section1 taxable components + ContractWorksGST) × ContractWorksStampDutyRate
-LiabilityStampDuty = (Section2Base + LiabilityESL + LiabilityGST) × LiabilityStampDutyRate
-```
-
-### Section totals
-
-```
-Section1Total = Section1Base + Section1Terror + ES_τ + ES + DH + DH_τ
-              + Section1Plant + Section1PlantTerror + ContractWorksESLPlant
-              + ContractWorksESL + ContractWorksGST + ContractWorksStampDuty
-
-Section2Total = Section2Base + LiabilityESL + LiabilityGST + LiabilityStampDuty
-
+Section1Total = Base + displayedTerror + ES + DH + Plant + PlantTerror + PlantESL
+              + ESL + GST + StampDuty
+Section2Total = LiabilityBase + LiabilityESL + LiabilityGST + LiabilityStampDuty
 CombinedTotal = Section1Total + Section2Total + BrokerFee
 ```
 
-### Manual override rules
+### Manual edit rules
 
-- Editing base on blur: floor to `hidContractWorksMinPremium` / `hidLiabilityMinPremium`.
-- Editing ESL/SD/GST directly sets `ManualTaxOverride = true` permanently for the session — ESL/SD stop auto-recalculating.
-- `hidContractWorksAppliedRate = Section1Base / EstimatedTurnover` back-derived on manual base edit.
+- Editing base floors to contract-works / liability minimum premium.
+- Reset Premium clears session `τ` / plant ESL rate and runs server recalculate from lookup rates.
 
 ---
 
@@ -453,7 +442,7 @@ LiabilityStampDutyRate = LiabilityStampDuty / (S2Base + ESL + GST)
 
 1. **`PlantEslRate`** is loaded from DB but plant ESL uses **`ESLRate`** (construction rate `e`) in `CARCalculator2.cs` L291 — rebuild matches this in `car-calculator.ts` / `premium-workings.ts`.
 2. **`PlantValueMax` assignment bug** at L341 in legacy: `PlantValueMin` is assigned twice from `PlantValueMax` column — may affect plant banding. Rebuild maps min/max columns correctly from Postgres.
-3. **Terrorism field semantics:** server stores terror on CW base only; legacy JS merges ES/DH terror into the displayed terrorism field after manual edits.
+3. **Terrorism field semantics:** server stores terror on CW base only; Premium Breakdown merges ES/DH into the displayed levy on True Base / ES / DH edits. Differences from legacy JS/save quirks: [legacy-vs-rebuild-premium-manual.md](./legacy-vs-rebuild-premium-manual.md).
 4. **Adjustment original row** may not equal the policy's true original premium when plant / ES / DH premiums exist on the certificate.
 5. **75% minimum premium** text appears on new policy and view screens but is **not enforced** outside the adjustment wizard.
 6. **Rebuild fidelity:** missing terrorism postcode/state returns `null` (referral), never a hardcoded fallback rate.

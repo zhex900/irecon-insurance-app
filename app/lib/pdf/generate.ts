@@ -12,6 +12,7 @@ import {
   policyToMergeInputs,
   resolveMultiVariableTextInput,
   syncTableSchemasToInputs,
+  type BrokerFeeLineInput,
 } from "~/lib/pdf/merge-fields";
 import { parseEndorsementPairsFromInputs } from "~/lib/pdf/endorsement-expand";
 import { pdfmePlugins } from "~/lib/pdf/plugins";
@@ -108,7 +109,10 @@ export async function generatePolicyPdf(
   policy: Policy,
   mergeInputs?: Record<string, string>,
   templateOverride?: DocumentTemplate,
-  options?: { wordingCatalogue?: CarWording[] },
+  options?: {
+    wordingCatalogue?: CarWording[];
+    brokerFeeLines?: BrokerFeeLineInput[];
+  },
 ): Promise<{
   pdf: Uint8Array;
   templateKey: string;
@@ -126,6 +130,7 @@ export async function generatePolicyPdf(
   // overrides). Optional mergeInputs only fill gaps — never overwrite live keys.
   const liveInputs = policyToMergeInputs(policy, {
     wordingCatalogue: options?.wordingCatalogue,
+    brokerFeeLines: options?.brokerFeeLines,
   });
   const baseInputs = {
     ...(mergeInputs ?? {}),
@@ -292,6 +297,7 @@ export async function buildPdfBlobFromPolicy(
   policy: Policy,
   options?: {
     wordingCatalogue?: CarWording[];
+    brokerFeeLines?: BrokerFeeLineInput[];
     mergeInputs?: Record<string, string>;
   },
 ): Promise<Blob> {
@@ -300,7 +306,10 @@ export async function buildPdfBlobFromPolicy(
     policy,
     options?.mergeInputs,
     undefined,
-    { wordingCatalogue: options?.wordingCatalogue },
+    {
+      wordingCatalogue: options?.wordingCatalogue,
+      brokerFeeLines: options?.brokerFeeLines,
+    },
   );
   return new Blob([pdf.buffer as ArrayBuffer], { type: "application/pdf" });
 }
@@ -312,7 +321,10 @@ function isLibraryDocument(doc: PolicyDocument) {
 export async function buildPdfBlobFromDocument(
   doc: PolicyDocument,
   policy?: Policy,
-  options?: { wordingCatalogue?: CarWording[] },
+  options?: {
+    wordingCatalogue?: CarWording[];
+    brokerFeeLines?: BrokerFeeLineInput[];
+  },
 ): Promise<Blob> {
   if (isLibraryDocument(doc) && !doc.templateKey) {
     const apiPath =
@@ -361,6 +373,7 @@ export async function buildPdfBlobFromDocument(
     return buildPdfBlobFromPolicy(templateKey, policy, {
       mergeInputs: doc.mergeInputs,
       wordingCatalogue: options?.wordingCatalogue,
+      brokerFeeLines: options?.brokerFeeLines,
     });
   }
 

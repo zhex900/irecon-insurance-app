@@ -14,6 +14,7 @@ import {
 import { listPublishedForAdjustment } from "~/lib/services/documents/document-templates";
 import { getPolicy, savePolicy } from "~/lib/services/policy/data.service";
 import { getCarWording } from "~/lib/services/reference.service";
+import { resolveBrokerFeeLines } from "~/server/pricing/rate-resolver";
 
 export class AdjustmentError extends Error {
   constructor(message: string) {
@@ -121,7 +122,10 @@ export async function submitPolicyAdjustment(
   };
 
   // Adjustment saved → adjustment document only (append-only).
-  const templates = await listPublishedForAdjustment();
+  const [templates, brokerFeeLines] = await Promise.all([
+    listPublishedForAdjustment(),
+    resolveBrokerFeeLines(policy.dateStart),
+  ]);
   const templateMeta = templates.map((t) => ({
     key: t.key,
     title: t.title,
@@ -132,6 +136,7 @@ export async function submitPolicyAdjustment(
     createdBy,
     templateMeta,
     policy.documents ?? [],
+    { brokerFeeLines },
   );
   const merged = mergeReviewDocuments(policy.documents, pack);
   const documents = syncPolicyDocumentLabels(merged, {

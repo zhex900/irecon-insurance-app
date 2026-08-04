@@ -8,6 +8,7 @@ import type {
   PolicyDocument,
   PremiumBreakdown,
 } from "~/lib/db/types";
+import type { BrokerFeeLineInput } from "~/lib/pdf/merge-fields";
 import {
   ensureReviewDocumentsClient,
   syncPolicyDocumentLabelsClient,
@@ -23,6 +24,7 @@ export function usePolicyDocuments({
   referralReasons,
   rating,
   carWording,
+  brokerFeeLines,
 }: {
   policy: Policy;
   form: UseFormReturn<CarPolicyFormValues>;
@@ -31,6 +33,7 @@ export function usePolicyDocuments({
   rating: Policy["car"]["rating"] | undefined;
   /** Fixed Additional Wording catalogue (checkbox list). */
   carWording?: CarWording[];
+  brokerFeeLines?: BrokerFeeLineInput[];
 }) {
   const layoutData = useRouteLoaderData("routes/_app/layout") as
     { broker?: { email?: string } } | undefined;
@@ -122,6 +125,7 @@ export function usePolicyDocuments({
       const previous = documentsRef.current;
       const next = await ensureReviewDocumentsClient(snapshot, generatedBy, {
         force: options?.force,
+        brokerFeeLines,
       });
       if (options?.cancelled?.()) return;
       setDocuments(next);

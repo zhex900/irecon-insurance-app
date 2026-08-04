@@ -102,12 +102,11 @@ export async function upsertPolicyFromForm(
         }
       : calculatedPremium;
 
-  // Rebuild after premium merge so DH / ES reasons use override amounts.
+  // Referral DH / ES use Limits of Liability fields, not premium lines.
   const referralReasons = buildReferralReasons(
     values,
     rating,
     liabilityLimitLabel(Number(values.liabilityLimitBand)),
-    premium,
   );
 
   if (

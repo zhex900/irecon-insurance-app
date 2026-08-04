@@ -298,7 +298,7 @@ function CarPolicyWizardInner({
     setReferralReasons,
     isFetcherBusy,
     isCalculating,
-    recalculatePremium,
+    resetManualPremium,
     refreshPremiumAfterSave,
   } = premiumCalc;
 
@@ -315,6 +315,7 @@ function CarPolicyWizardInner({
     referralReasons,
     rating: fetcher.data?.rating,
     carWording,
+    brokerFeeLines: reference.feeNames,
   });
 
   const draftSave = usePolicyDraftSave({
@@ -656,6 +657,7 @@ function CarPolicyWizardInner({
               policy={policy}
               getPreviewPolicy={buildDocumentSnapshot}
               carWording={carWording}
+              brokerFeeLines={reference.feeNames}
               className={wizardModeCardBorderClass(wizardMode)}
             />
           </div>
@@ -694,7 +696,7 @@ function CarPolicyWizardInner({
             setHasUnsavedChanges={setHasUnsavedChanges}
             persistDraft={persistDraft}
             handleFieldBlur={handleFieldBlur}
-            onRecalculatePremium={recalculatePremium}
+            onResetPremium={resetManualPremium}
             isCalculating={isCalculating}
             shellCardClassName={wizardModeCardBorderClass(wizardMode)}
           />
@@ -730,6 +732,7 @@ function CarPolicyWizardInner({
             policy={policy}
             getPreviewPolicy={buildDocumentSnapshot}
             carWording={carWording}
+            brokerFeeLines={reference.feeNames}
             adjustment={policy.car.adjusted ? policy.car.adjustment : undefined}
             className={wizardModeCardBorderClass(wizardMode)}
           />

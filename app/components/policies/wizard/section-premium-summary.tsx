@@ -60,6 +60,8 @@ export function PremiumSummaryPanel({
   getPreviewPolicy,
   /** DB Additional Wording catalogue — resolves ticked IDs in PDF preview. */
   carWording,
+  /** Live broker fee schedule — named fee merge fields on rating PDFs. */
+  brokerFeeLines,
   className,
   /** When true, only the Documents block (for &lt;xl main column). */
   documentsOnly = false,
@@ -81,6 +83,12 @@ export function PremiumSummaryPanel({
   policy?: Policy;
   getPreviewPolicy?: () => Policy | null;
   carWording?: CarWording[];
+  brokerFeeLines?: Array<{
+    name: string;
+    sortOrder: number;
+    fee: number;
+    feeGst: number;
+  }>;
   className?: string;
   documentsOnly?: boolean;
 }) {
@@ -190,6 +198,7 @@ export function PremiumSummaryPanel({
 
     void buildPdfBlobFromDocument(previewDoc, previewPolicy ?? undefined, {
       wordingCatalogue: carWording,
+      brokerFeeLines,
     })
       .then((blob) => {
         if (cancelled) return;
@@ -209,7 +218,14 @@ export function PremiumSummaryPanel({
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [previewDoc, policy, getPreviewPolicy, premium, carWording]);
+  }, [
+    previewDoc,
+    policy,
+    getPreviewPolicy,
+    premium,
+    carWording,
+    brokerFeeLines,
+  ]);
 
   const allSelected =
     documentRows.length > 0 && selectedIds.length === documentRows.length;

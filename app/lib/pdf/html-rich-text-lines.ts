@@ -485,16 +485,45 @@ export function endorsementPaintTopInsetMm(fontSizePt: number): number {
   return Math.max(1, fontSizePt) * 0.85 * PT_TO_MM;
 }
 
-/**
- * Minimum schema height (mm) so the first painted line does not fail the
- * draw page-break check and jump to the next page (overprinting).
- */
-export function minEndorsementPaintBandMm(
+export function endorsementLineStepMm(
   fontSizePt: number,
   lineHeight: number,
 ): number {
-  const stepMm = Math.max(1, fontSizePt) * Math.max(0.5, lineHeight) * PT_TO_MM;
-  return endorsementPaintTopInsetMm(fontSizePt) + stepMm;
+  return Math.max(1, fontSizePt) * Math.max(0.5, lineHeight) * PT_TO_MM;
+}
+
+/**
+ * Minimum schema height (mm) so one painted baseline fits in the band.
+ */
+export function minEndorsementPaintBandMm(
+  fontSizePt: number,
+  _lineHeight: number,
+): number {
+  return endorsementPaintTopInsetMm(fontSizePt);
+}
+
+/** Painted band height for exactly `lineCount` baselines. */
+export function endorsementPaintHeightForLinesMm(
+  lineCount: number,
+  fontSizePt: number,
+  lineHeight: number,
+): number {
+  if (lineCount <= 0) return 0;
+  const insetMm = endorsementPaintTopInsetMm(fontSizePt);
+  const stepMm = endorsementLineStepMm(fontSizePt, lineHeight);
+  return insetMm + (lineCount - 1) * stepMm;
+}
+
+/** How many baselines fit in a band of `bandHeightMm` (pack to the floor). */
+export function countLinesFittingInBandMm(
+  bandHeightMm: number,
+  fontSizePt: number,
+  lineHeight: number,
+): number {
+  const insetMm = endorsementPaintTopInsetMm(fontSizePt);
+  const stepMm = endorsementLineStepMm(fontSizePt, lineHeight);
+  if (bandHeightMm < insetMm - 0.01) return 0;
+  return Math.floor((bandHeightMm - insetMm) / stepMm + 1e-6) + 1;
 }
 
 export function wordingHtmlLineCount(
@@ -520,14 +549,37 @@ export function estimateWordingHtmlHeightMm(
   lineHeight: number,
 ): number {
   const count = wordingHtmlLineCount(html, widthMm, fontSizePt);
-  const lineMm = Math.max(1, fontSizePt) * Math.max(0.5, lineHeight) * PT_TO_MM;
-  // +1 line so the next subject’s block gap is not eaten by baseline inset /
-  // slightly wider wraps (prevents new-page top overlap).
-  if (count <= 0) return 0;
-  return count * lineMm + lineMm;
+  return endorsementPaintHeightForLinesMm(count, fontSizePt, lineHeight);
 }
 
-/** Split a total height into first-page + full-page chunk heights (mm). */
+/**
+ * Split a line count across pages by how many lines actually fit in each band.
+ * Never opens a page for a fractional leftover millimetre.
+ */
+export function splitLineCountsIntoPages(
+  totalLines: number,
+  firstMaxMm: number,
+  pageMaxMm: number,
+  fontSizePt: number,
+  lineHeight: number,
+): number[] {
+  const total = Math.max(0, Math.floor(totalLines));
+  if (total <= 0) return [0];
+  const chunks: number[] = [];
+  let remaining = total;
+  let limitMm = Math.max(1, firstMaxMm);
+  while (remaining > 0) {
+    let fit = countLinesFittingInBandMm(limitMm, fontSizePt, lineHeight);
+    if (fit < 1) fit = 1;
+    const take = Math.min(remaining, fit);
+    chunks.push(take);
+    remaining -= take;
+    limitMm = Math.max(1, pageMaxMm);
+  }
+  return chunks;
+}
+
+/** @deprecated Prefer splitLineCountsIntoPages — mm splits orphan last lines. */
 export function splitHeightIntoPageChunks(
   totalHeightMm: number,
   firstMaxMm: number,

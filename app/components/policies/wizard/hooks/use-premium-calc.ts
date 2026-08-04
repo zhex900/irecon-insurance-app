@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { useFetcher } from "react-router";
 import type { UseFormReturn } from "react-hook-form";
-import { toast } from "sonner";
 import type { Policy, PremiumBreakdown } from "~/lib/db/types";
 import {
   buildReferralReasons,
@@ -57,8 +56,6 @@ export function usePolicyPremiumCalc({
   });
   /** When true, skip auto-recalculate so click-to-edit premium values stick. */
   const premiumManuallyEditedRef = useRef(false);
-  /** Next recalculate response should always replace premium (clears overrides). */
-  const forceApplyRecalcRef = useRef(false);
   const rating = fetcher.data?.rating ?? policy.car.rating;
 
   const isFetcherBusy = fetcher.state !== "idle";
@@ -83,21 +80,14 @@ export function usePolicyPremiumCalc({
     if (lastFetcherDataRef.current === fetcher.data) return;
     lastFetcherDataRef.current = fetcher.data;
     const data = lastFetcherDataRef.current;
-    const applyPremium =
-      Boolean(data?.premium) &&
-      (!premiumManuallyEditedRef.current || forceApplyRecalcRef.current);
-    if (applyPremium && data?.premium) {
-      const fromRecalculateButton = forceApplyRecalcRef.current;
-      forceApplyRecalcRef.current = false;
-      premiumManuallyEditedRef.current = false;
-      setPremium(withRolledTotals(data.premium));
-      if (fromRecalculateButton) {
-        toast.success("Premium recalculated — manual overrides cleared");
-      }
-    }
+    if (!data?.premium) return;
+    // Manual Premium Breakdown edits (ES/DH → folded terrorism) always win
+    // over an in-flight server recalculate.
+    if (premiumManuallyEditedRef.current) return;
+    setPremium(withRolledTotals(data.premium));
   }, [fetcher.data]);
 
-  // Live Limits / claims + premium overrides (same prefer-override rule as PDFs).
+  // Live Limits of Liability / claims (referral DH/ES use limits, not premium).
   const displayHomes = form.watch("displayHomes");
   const existingStructure = form.watch("existingStructure");
   const claimsCountLast3Years = form.watch("claimsCountLast3Years");
@@ -124,11 +114,9 @@ export function usePolicyPremiumCalc({
       },
       rating,
       liabilityLimitLabel(Number(liabilityLimitBand) || 3),
-      premium,
     );
   }, [
     rating,
-    premium,
     displayHomes,
     existingStructure,
     claimsCountLast3Years,
@@ -175,11 +163,12 @@ export function usePolicyPremiumCalc({
     });
   }
 
-  /** Force server recalculation; clears the manual-override guard so results apply. */
-  function recalculatePremium() {
+  /** Clear manual Premium Breakdown overrides and recalculate from rates. */
+  function resetManualPremium() {
     if (fieldsLocked) return;
     premiumManuallyEditedRef.current = false;
-    forceApplyRecalcRef.current = true;
+    const parsed = carPolicyPricingSchema.safeParse(form.getValues());
+    if (!parsed.success) return;
     submitIntent("recalculate");
   }
 
@@ -195,8 +184,6 @@ export function usePolicyPremiumCalc({
 
     const parsed = carPolicyPricingSchema.safeParse(form.getValues());
     if (!parsed.success) return;
-    // Apply server result even if something else toggled the manual flag mid-flight.
-    forceApplyRecalcRef.current = true;
     submitIntent("recalculate");
   }
 
@@ -210,7 +197,7 @@ export function usePolicyPremiumCalc({
     isFetcherBusy,
     isCalculating,
     submitIntent,
-    recalculatePremium,
+    resetManualPremium,
     refreshPremiumAfterSave,
   };
 }

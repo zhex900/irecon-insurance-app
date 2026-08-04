@@ -1,5 +1,6 @@
 import type { Policy, PolicyDocument } from "~/lib/db/types";
 import type { LibraryDocumentRecord } from "~/lib/library-documents";
+import type { BrokerFeeLineInput } from "~/lib/pdf/merge-fields";
 import { mergeReviewDocuments } from "~/lib/services/policy/documents/merge";
 import {
   buildReviewDocumentPack,
@@ -80,7 +81,7 @@ export async function syncPolicyDocumentLabelsClient(
 export async function ensureReviewDocumentsClient(
   policy: Policy,
   generatedBy: string,
-  options?: { force?: boolean },
+  options?: { force?: boolean; brokerFeeLines?: BrokerFeeLineInput[] },
 ): Promise<PolicyDocument[]> {
   if (!policy.car.premium) return policy.documents ?? [];
   const existing = policy.documents ?? [];
@@ -97,7 +98,7 @@ export async function ensureReviewDocumentsClient(
     templates,
     existing,
     libraryDocs,
-    { includeLibrary },
+    { includeLibrary, brokerFeeLines: options?.brokerFeeLines },
   );
   const nextPack = options?.force
     ? pack.map((doc) => ({

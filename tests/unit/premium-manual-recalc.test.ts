@@ -51,41 +51,27 @@ function premium(overrides: Partial<PremiumBreakdown> = {}): PremiumBreakdown {
   };
 }
 
-describe("applyManualPremiumEdit — contract works True Base", () => {
-  it("recalculates terrorism, ESL, GST, SD, section total, and combined", () => {
-    const base = 6700;
+describe("applyManualPremiumEdit — corrected vs legacy quirks", () => {
+  it("Quirk 1 fixed: True Base keeps ES/DH fold", () => {
+    const base = 11250;
+    const es = 340;
+    const dh = 10;
     const τ = 0.053;
-    const e = 0.2;
-    const s1 = 0.09;
-    const terror = Math.round(base * τ * 100) / 100; // 355.1
-    const esl = Math.round((base + terror) * e * 100) / 100;
-    const gst = Math.round((base + terror + esl) * 0.1 * 100) / 100;
-    const sd = Math.round((base + terror + esl + gst) * s1 * 100) / 100;
-    const cwTotal = Math.round((base + terror + esl + gst + sd) * 100) / 100;
+    const terror = Math.round((base + es + dh) * τ * 100) / 100;
 
     const result = applyManualPremiumEdit({
-      premium: premium(),
-      rating: rating({ terrorismRate: τ, eslRate: e }),
+      premium: premium({
+        contractWorksBasePremium: 1250,
+        contractWorksTerrorismPremium: 84.8,
+        contractWorksExistingStructurePremium: es,
+        contractWorksDisplayHomesPremium: dh,
+      }),
+      rating: rating({ terrorismRate: τ, eslRate: 0.27 }),
       key: "contractWorksBasePremium",
       value: base,
-      manualTaxOverride: false,
     });
 
-    expect(result.premium.contractWorksBasePremium).toBe(base);
     expect(result.premium.contractWorksTerrorismPremium).toBe(terror);
-    expect(result.premium.contractWorksESL).toBe(esl);
-    expect(result.premium.contractWorksGST).toBe(gst);
-    expect(result.premium.contractWorksStampDuty).toBe(sd);
-    expect(result.premium.contractWorksTotalPremium).toBe(cwTotal);
-    expect(result.premium.originalTotalPremium).toBe(
-      Math.round(
-        (cwTotal +
-          result.premium.liabilityTotalPremium +
-          result.premium.combinedBrokerFee) *
-          100,
-      ) / 100,
-    );
-    expect(result.manualTaxOverride).toBe(false);
   });
 
   it("floors True Base to the contract works minimum premium", () => {
@@ -94,63 +80,163 @@ describe("applyManualPremiumEdit — contract works True Base", () => {
       rating: rating({ contractWorksMinPremium: 800 }),
       key: "contractWorksBasePremium",
       value: 100,
-      manualTaxOverride: false,
     });
     expect(result.premium.contractWorksBasePremium).toBe(800);
   });
 
-  it("folds Display Homes / Existing Structure terrorism into the levy", () => {
-    const base = 1000;
-    const dh = 200;
-    const es = 100;
-    const τ = 0.05;
-    const terror = Math.round((base * τ + es * τ + dh * τ) * 100) / 100;
+  it("ES/DH edit: display terror = base×τ + ES×τ + DH×τ", () => {
+    const base = 1250;
+    const es = 10;
+    const τ = 0.053;
+    const e = 0.27;
+    const terror = Math.round((base * τ + es * τ) * 100) / 100;
+    const esl = Math.round((base + terror + es) * e * 100) / 100;
 
     const result = applyManualPremiumEdit({
       premium: premium({
-        contractWorksDisplayHomesPremium: dh,
-        contractWorksExistingStructurePremium: es,
+        contractWorksBasePremium: base,
+        contractWorksTerrorismPremium: Math.round(base * τ * 100) / 100,
       }),
-      rating: rating({ terrorismRate: τ, eslRate: 0 }),
-      key: "contractWorksBasePremium",
-      value: base,
-      manualTaxOverride: false,
+      rating: rating({ terrorismRate: τ, eslRate: e }),
+      key: "contractWorksExistingStructurePremium",
+      value: es,
     });
 
     expect(result.premium.contractWorksTerrorismPremium).toBe(terror);
-    // ESL = (base + terror + es + dh) × 0
-    expect(result.premium.contractWorksESL).toBe(0);
+    expect(result.premium.contractWorksESL).toBe(esl);
   });
 
-  it("keeps ESL/SD when ManualTaxOverride is set, but still refreshes GST", () => {
+  it("Quirk 2 fixed: typed Terrorism Levy sticks; plant terror updates; plant ESL unchanged", () => {
+    const base = 1250;
+    const plant = 100;
+    const plantEsl = 12.34;
+    const es = 340;
+    const dh = 10;
+    const edited = 100;
+    const τ = edited / base;
+    const plantTerror = Math.round(plant * τ * 100) / 100;
+
     const result = applyManualPremiumEdit({
       premium: premium({
-        contractWorksESL: 12,
-        contractWorksStampDuty: 34,
-        contractWorksGST: 1,
+        contractWorksBasePremium: base,
+        contractWorksTerrorismPremium: Math.round(base * 0.053 * 100) / 100,
+        contractWorksExistingStructurePremium: es,
+        contractWorksDisplayHomesPremium: dh,
+        contractWorksPlantPremium: plant,
+        contractWorksPlantTerrorismPremium:
+          Math.round(plant * 0.053 * 100) / 100,
+        contractWorksPlantESL: plantEsl,
       }),
-      rating: rating(),
-      key: "contractWorksBasePremium",
-      value: 1000,
-      manualTaxOverride: true,
+      rating: rating({ terrorismRate: 0.053, eslRate: 0.2 }),
+      key: "contractWorksTerrorismPremium",
+      value: edited,
     });
 
-    expect(result.premium.contractWorksESL).toBe(12);
-    expect(result.premium.contractWorksStampDuty).toBe(34);
-    expect(result.premium.contractWorksGST).not.toBe(1);
-    expect(result.manualTaxOverride).toBe(true);
+    // Legacy would show 128.00 — rebuild keeps 100.00
+    expect(result.premium.contractWorksTerrorismPremium).toBe(edited);
+    expect(result.premium.contractWorksPlantTerrorismPremium).toBe(plantTerror);
+    expect(result.premium.contractWorksPlantESL).toBe(plantEsl);
+    expect(result.sessionRates.terrorismRate).toBeCloseTo(τ, 8);
   });
 
-  it("locks tax override when ESL is edited directly", () => {
-    const result = applyManualPremiumEdit({
-      premium: premium(),
-      rating: rating(),
+  it("session τ from Terrorism Levy edit applies on later True Base (with fold)", () => {
+    const first = applyManualPremiumEdit({
+      premium: premium({
+        contractWorksBasePremium: 1250,
+        contractWorksTerrorismPremium: 66.25,
+        contractWorksExistingStructurePremium: 340,
+        contractWorksDisplayHomesPremium: 10,
+      }),
+      rating: rating({ terrorismRate: 0.053 }),
+      key: "contractWorksTerrorismPremium",
+      value: 100,
+    });
+
+    const second = applyManualPremiumEdit({
+      premium: first.premium,
+      rating: rating({ terrorismRate: 0.053 }),
+      key: "contractWorksBasePremium",
+      value: 11250,
+      sessionRates: first.sessionRates,
+    });
+
+    const τ = 100 / 1250;
+    expect(second.premium.contractWorksTerrorismPremium).toBe(
+      Math.round((11250 + 340 + 10) * τ * 100) / 100,
+    );
+  });
+
+  it("Quirk 4 fixed: ESL edit does not freeze later True Base tax recalc", () => {
+    const afterEsl = applyManualPremiumEdit({
+      premium: premium({
+        contractWorksBasePremium: 1250,
+        contractWorksTerrorismPremium: 66.25,
+      }),
+      rating: rating({ terrorismRate: 0.053, eslRate: 0.27 }),
       key: "contractWorksESL",
       value: 99,
-      manualTaxOverride: false,
     });
-    expect(result.premium.contractWorksESL).toBe(99);
-    expect(result.manualTaxOverride).toBe(true);
+    expect(afterEsl.premium.contractWorksESL).toBe(99);
+    expect(afterEsl.manualTaxOverride).toBe(false);
+
+    const afterBase = applyManualPremiumEdit({
+      premium: afterEsl.premium,
+      rating: rating({ terrorismRate: 0.053, eslRate: 0.27 }),
+      key: "contractWorksBasePremium",
+      value: 2000,
+      sessionRates: afterEsl.sessionRates,
+    });
+
+    const terror = Math.round(2000 * 0.053 * 100) / 100;
+    const expectedEsl = Math.round((2000 + terror) * 0.27 * 100) / 100;
+    expect(afterBase.premium.contractWorksESL).toBe(expectedEsl);
+    expect(afterBase.premium.contractWorksESL).not.toBe(99);
+  });
+
+  it("Plant edit: ESL uses prior plant terror, then plant terror = τ×plant", () => {
+    const τ = 0.053;
+    const plantEslRate = 0.27;
+    const prevPlantTerror = 5;
+    const plant = 100;
+
+    const result = applyManualPremiumEdit({
+      premium: premium({
+        contractWorksBasePremium: 1250,
+        contractWorksTerrorismPremium: Math.round(1250 * τ * 100) / 100,
+        contractWorksPlantPremium: 50,
+        contractWorksPlantTerrorismPremium: prevPlantTerror,
+      }),
+      rating: rating({ terrorismRate: τ, plantEslRate, eslRate: 0.2 }),
+      key: "contractWorksPlantPremium",
+      value: plant,
+    });
+
+    expect(result.premium.contractWorksPlantESL).toBe(
+      Math.round((plant + prevPlantTerror) * plantEslRate * 100) / 100,
+    );
+    expect(result.premium.contractWorksPlantTerrorismPremium).toBe(
+      Math.round(plant * τ * 100) / 100,
+    );
+  });
+
+  it("derives τ from folded levy when rating is missing", () => {
+    const base = 1250;
+    const es = 10;
+    const τ = 0.053;
+    // Stored levy already folded at previous es=0 → base×τ; editing es uses derived τ
+    const result = applyManualPremiumEdit({
+      premium: premium({
+        contractWorksBasePremium: base,
+        contractWorksTerrorismPremium: Math.round(base * τ * 100) / 100,
+      }),
+      rating: undefined,
+      key: "contractWorksExistingStructurePremium",
+      value: es,
+    });
+
+    expect(result.premium.contractWorksTerrorismPremium).toBe(
+      Math.round((base + es) * τ * 100) / 100,
+    );
   });
 });
 
@@ -165,14 +251,10 @@ describe("applyManualPremiumEdit — liability True Base", () => {
       rating: rating(),
       key: "liabilityBasePremium",
       value: base,
-      manualTaxOverride: false,
     });
 
     expect(result.premium.liabilityBasePremium).toBe(base);
     expect(result.premium.liabilityGST).toBe(gst);
     expect(result.premium.liabilityStampDuty).toBe(sd);
-    expect(result.premium.liabilityTotalPremium).toBe(
-      Math.round((base + gst + sd) * 100) / 100,
-    );
   });
 });

@@ -3,6 +3,7 @@ import type { CarWording, Policy, PolicyDocument } from "~/lib/db/types";
 import type { EmailSendRecipient } from "~/lib/email-templates";
 import { generatePolicyPdf, uint8ToBase64 } from "~/lib/pdf/generate";
 import { buildLegacyTextPdfBlob } from "~/lib/pdf/legacy-text-pdf";
+import type { BrokerFeeLineInput } from "~/lib/pdf/merge-fields";
 import { resolvePublishedPdfTemplate } from "~/lib/services/documents/document-templates";
 import {
   getLibraryDocumentByFilename,
@@ -14,6 +15,7 @@ import {
   type SendEmailAttachment,
 } from "~/lib/services/email/resend.server";
 import { getCarWording } from "~/lib/services/reference.service";
+import { resolveBrokerFeeLines } from "~/server/pricing/rate-resolver";
 
 /** Soft cap before we refuse oversized packs (Resend limit is 40MB encoded). */
 const MAX_ATTACHMENTS_BYTES = 12 * 1024 * 1024;
@@ -75,6 +77,7 @@ async function resolveDocumentPdfBytes(
   policy: Policy,
   libraryBucket?: R2BucketLike | null,
   wordingCatalogue?: CarWording[],
+  brokerFeeLines?: BrokerFeeLineInput[],
 ): Promise<Uint8Array> {
   if (!doc.templateKey) {
     if (libraryBucket) {
@@ -113,7 +116,7 @@ async function resolveDocumentPdfBytes(
       policy,
       undefined,
       resolved,
-      { wordingCatalogue },
+      { wordingCatalogue, brokerFeeLines },
     );
     return pdf;
   } catch {
@@ -156,7 +159,10 @@ export async function sendPolicyDocumentsEmail(
 
   const attachments: SendEmailAttachment[] = [];
   let totalBytes = 0;
-  const wordingCatalogue = await getCarWording();
+  const [wordingCatalogue, brokerFeeLines] = await Promise.all([
+    getCarWording(),
+    resolveBrokerFeeLines(input.policy.dateStart),
+  ]);
 
   for (const doc of input.documents) {
     const bytes = await resolveDocumentPdfBytes(
@@ -164,6 +170,7 @@ export async function sendPolicyDocumentsEmail(
       input.policy,
       input.libraryBucket,
       wordingCatalogue,
+      brokerFeeLines,
     );
     totalBytes += bytes.byteLength;
     if (totalBytes > MAX_ATTACHMENTS_BYTES) {

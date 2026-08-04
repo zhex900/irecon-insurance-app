@@ -1,9 +1,10 @@
 /**
  * CAR referral reason list (informational — does not block save).
- * Shared by the calculator and Premium Summary so override amounts stay in sync.
+ * Shared by the calculator and Premium Summary.
+ *
+ * Display Homes / Existing Structure reasons use Limits of Liability
+ * sum-insured fields — not Premium Breakdown lines.
  */
-import type { PremiumBreakdown } from "~/lib/db/types";
-import { preferPremiumOverride } from "~/lib/premium-override";
 import { formatCurrency } from "~/lib/utils";
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
 
@@ -29,7 +30,7 @@ export function liabilityLimitLabel(band: number): string {
   }
 }
 
-/** Build referral reasons; prefer Premium overrides for DH / ES amounts. */
+/** Build referral reasons from risk / limits inputs + rating presence. */
 export function buildReferralReasons(
   input: Pick<
     CarPolicyFormValues,
@@ -44,18 +45,11 @@ export function buildReferralReasons(
   >,
   rating: ReferralRatingInput,
   liabilityLabel: string,
-  premium?: PremiumBreakdown | null,
 ): string[] {
   const reasons: string[] = [];
 
-  const displayHomesValue = preferPremiumOverride(
-    premium?.contractWorksDisplayHomesPremium,
-    input.displayHomes,
-  );
-  const existingStructureValue = preferPremiumOverride(
-    premium?.contractWorksExistingStructurePremium,
-    input.existingStructure,
-  );
+  const displayHomesValue = Number(input.displayHomes) || 0;
+  const existingStructureValue = Number(input.existingStructure) || 0;
 
   if (displayHomesValue > 0) {
     reasons.push(
