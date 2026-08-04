@@ -294,14 +294,16 @@ CombinedTotal = Section1Total + Section2Total + BrokerFee
 
 > **Stage 1 rebuild model:** One `PolicyCARAdjustment` row per policy (save overwrites; no Draft status), linked to an **immutable Taken** policy. Original policy premium is never overwritten; effective premium = original + current adjustment delta. See [CAR_INSURANCE_APP_SPEC.md §6.9](./CAR_INSURANCE_APP_SPEC.md#69-policy-state-and-lifecycle). Formulas below describe **legacy** `CARAdjust.aspx` calculation logic (still used for delta math). Stage 2 may redesign adjustments.
 
-**Legacy simplified model** — excludes plant, display homes, existing structures, and broker fees. Uses **frozen rates** stored on the policy from original policy.
+**Legacy simplified model** — excludes plant, display homes, existing structures, and broker fees. Uses **frozen rates** from the original policy (§9).
 
 Inputs:
 
 - `T_adj` = adjustment turnover
 - `T_orig` = original estimated turnover
-- `r₁, r₂, m₁, m₂, τ, e, g, s₁, s₂` = stored rates
+- `r₁, r₂, m₁, m₂, τ, e, g, s₁, s₂` = frozen rates (§9)
 - `SDExempt` = stamp duty exempt (Yes → Section 2 SD = 0)
+
+**Rebuild:** `rating.*` keeps **lookup** rates for live premium. `calculateCarAdjustment` derives the same frozen rates as legacy save from stored premium amounts (§9), so adjust matches `CARAdjust.aspx` without corrupting premium recalc.
 
 ### 7.1 Original row (reconstructed)
 
@@ -394,20 +396,23 @@ flowchart TD
 
 ---
 
-## 9. Stored Rate Back-Calculation (on save)
+## 9. Stored Rate Back-Calculation (on save / adjust)
 
-When a policy is saved, effective rates are derived from final premium amounts and stored for future adjustments:
+Legacy save derives effective rates from final premium amounts and stores them on the certificate for `CARAdjust`. Rebuild derives the same rates inside `calculateCarAdjustment` (rating rows keep lookup rates).
 
 ```
-ContractWorksAppliedRate  = TrueBase₁ / Turnover
-LiabilityAppliedRate  = TrueBase₂ / Turnover
+r₁ = (BeforeBase₁ < TrueBase₁) ? BeforeBase₁ / Turnover : TrueBase₁ / Turnover
+r₂ = (BeforeBase₂ < TrueBase₂) ? BeforeBase₂ / Turnover : TrueBase₂ / Turnover
 TerrorismRate = ContractWorksTerrorismPremium / ContractWorksBasePremium
 PlantRate     = ContractWorksPlantPremium / PlantValue
 ESLRate       = ContractWorksESL / (TrueBase₁ + TerrorismPremium)
 PlantEslRate  = ContractWorksPlantESL / (Plant + PlantTerrorism)
-ContractWorksStampDutyRate = ContractWorksStampDuty / (all S1 taxable + GST)
+ContractWorksStampDutyRate = ContractWorksStampDuty / (TrueBase₁ + Terrorism + Plant + PlantTerror + PlantESL + ESL + GST)
+  // note: ES/DH excluded from SD rate denominator (legacy quirk)
 LiabilityStampDutyRate = LiabilityStampDuty / (S2Base + ESL + GST)
 ```
+
+Rates rounded to **6 dp**, `MidpointRounding.AwayFromZero` (legacy `Math.Round(..., 6, …)`).
 
 ---
 
@@ -415,7 +420,7 @@ LiabilityStampDutyRate = LiabilityStampDuty / (S2Base + ESL + GST)
 
 | Component                          | New policy (server) | View/edit (JS)            | Adjustment                         |
 | ---------------------------------- | ------------------- | ------------------------- | ---------------------------------- |
-| Rate source                        | DB lookup           | Hidden fields from policy | Frozen stored rates                |
+| Rate source                        | DB lookup           | Hidden fields from policy | Frozen rates from premium (§9)     |
 | Plant & equipment                  | Yes                 | Yes (JS)                  | **No**                             |
 | Display homes / existing structure | No (JS only)        | Yes (JS)                  | **No**                             |
 | Terrorism on S2                    | No                  | No                        | No                                 |

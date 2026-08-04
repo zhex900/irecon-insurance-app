@@ -514,6 +514,47 @@ export function endorsementPaintHeightForLinesMm(
   return insetMm + (lineCount - 1) * stepMm;
 }
 
+/**
+ * Schema / draw reserve height for `lineCount` baselines.
+ * Rounds up so `countLinesFittingInBandMm(h)` never drops a line after
+ * `toFixed(2)` — that off-by-one spilled the last line onto the next page
+ * top (overlapping the following endorsement).
+ */
+export function endorsementReserveHeightForLinesMm(
+  lineCount: number,
+  fontSizePt: number,
+  lineHeight: number,
+): number {
+  if (lineCount <= 0) return 0;
+  const need = endorsementPaintHeightForLinesMm(
+    lineCount,
+    fontSizePt,
+    lineHeight,
+  );
+  // Round UP to 0.01mm, then confirm; pad 0.01 if float still under-fits.
+  let h = Math.ceil(need * 100 - 1e-9) / 100;
+  if (countLinesFittingInBandMm(h, fontSizePt, lineHeight) < lineCount) {
+    h = Number((h + 0.01).toFixed(2));
+  }
+  return h;
+}
+
+/**
+ * Lowest Y (mm from page top) where endorsement ink may still be painted.
+ * Full-page chunks may use the page floor; short last chunks must stop at the
+ * reserved bottom so the next subject on that page is not overpainted.
+ */
+export function endorsementDrawBoxBottomMm(opts: {
+  pageFloorMm: number;
+  reservedBottomMm: number;
+  lineStepMm: number;
+}): number {
+  const { pageFloorMm, reservedBottomMm, lineStepMm } = opts;
+  const step = Math.max(0.5, lineStepMm);
+  const fillsPage = reservedBottomMm >= pageFloorMm - step * 0.5;
+  return fillsPage ? pageFloorMm : Math.min(pageFloorMm, reservedBottomMm);
+}
+
 /** How many baselines fit in a band of `bandHeightMm` (pack to the floor). */
 export function countLinesFittingInBandMm(
   bandHeightMm: number,
@@ -549,7 +590,7 @@ export function estimateWordingHtmlHeightMm(
   lineHeight: number,
 ): number {
   const count = wordingHtmlLineCount(html, widthMm, fontSizePt);
-  return endorsementPaintHeightForLinesMm(count, fontSizePt, lineHeight);
+  return endorsementReserveHeightForLinesMm(count, fontSizePt, lineHeight);
 }
 
 /**

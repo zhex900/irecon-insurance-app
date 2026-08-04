@@ -21,10 +21,12 @@ export function nextAmendmentNumber(
   return existing.filter((doc) => doc.templateKey === templateKey).length;
 }
 
-function coverTypeLabel(coverTypeId: number) {
-  if (coverTypeId === 2) return "Single";
-  if (coverTypeId === 3) return "Owner Builder";
-  return "Annual";
+function coverTypeLabel(coverTypeId: number | string | null | undefined) {
+  const id = Number(coverTypeId);
+  if (id === 2) return "Single";
+  if (id === 3) return "Owner Builder";
+  if (id === 1) return "Annual";
+  return "";
 }
 
 function effectiveTotalPremium(policy: Policy): number | null {

@@ -128,6 +128,56 @@ describe("calculateCarAdjustment", () => {
     expect(breakdown.original.section1.gst).toBe(100);
     expect(breakdown.original.section1.totalPremium).toBe(1100);
   });
+
+  it("reconstructs original CW taxes from premium back-calc rates (legacy CARAdjust / policy 1029)", () => {
+    // Lookup rates on rating stay 0.27 / 0.053 / 0.09 for live premium; adjust must
+    // use frozen rates derived from stored amounts (ES absorbed into ESL/SD rates).
+    const breakdown = calculateCarAdjustment({
+      originalTurnover: 121,
+      adjustmentTurnover: 121,
+      stampDutyExempt: false,
+      premium: premium({
+        contractWorksCalculatedBasePremium: 0,
+        contractWorksBasePremium: 1000,
+        contractWorksTerrorismPremium: 4174.81,
+        contractWorksPlantPremium: 0.99,
+        contractWorksPlantTerrorismPremium: 0.05,
+        contractWorksPlantESL: 0.28,
+        contractWorksExistingStructurePremium: 77_770,
+        contractWorksESL: 22_395.1,
+        contractWorksGST: 10_534.12,
+        contractWorksStampDuty: 10_428.78,
+        contractWorksTotalPremium: 126_304.13,
+        liabilityCalculatedBasePremium: 0,
+        liabilityBasePremium: 1000,
+        liabilityGST: 100,
+        liabilityStampDuty: 99,
+        liabilityTotalPremium: 1199,
+      }),
+      rating: rating({
+        eslRate: 0.27,
+        terrorismRate: 0.053,
+        contractWorksStampDutyRate: 0.09,
+        liabilityStampDutyRate: 0.09,
+        contractWorksAppliedRate: 0,
+        liabilityAppliedRate: 0,
+        contractWorksMinPremium: 1000,
+        liabilityMinPremium: 1000,
+      }),
+    });
+
+    expect(breakdown.original.section1).toEqual({
+      trueBasePremium: 1000,
+      terrorismPremium: 4174.81,
+      esl: 22_395.1,
+      gst: 2756.99,
+      sd: 8299.96,
+      totalPremium: 38_626.86,
+    });
+    // Same turnover + min prem → adjustment row matches original reconstruct.
+    expect(breakdown.adjustment.section1.totalPremium).toBe(38_626.86);
+    expect(breakdown.delta.section1.totalPremium).toBe(0);
+  });
 });
 
 describe("validateAdjustmentFinish", () => {

@@ -38,8 +38,11 @@ function yesNo(value: boolean | null | undefined) {
   return value ? "Yes" : "No";
 }
 
-function coverLabel(coverTypeId: number) {
-  return COVER_BY_ID.get(coverTypeId) ?? "Annual";
+function coverLabel(coverTypeId: number | string | null | undefined) {
+  // Form <select> values are often strings; Map keys are numeric cover type ids.
+  const id = Number(coverTypeId);
+  if (!Number.isFinite(id) || id <= 0) return "";
+  return COVER_BY_ID.get(id) ?? "";
 }
 
 function stateCode(stateId: number) {
@@ -925,22 +928,6 @@ export function policyToMergeInputs(
       CombinedTotalPremium: money(premium.originalTotalPremium),
       BrokerFee: money(premium.combinedBrokerFee),
       ...brokerFeeMergeFields(options?.brokerFeeLines ?? []),
-      // Adjustment "original turnover" calc columns (same as bind-time premium)
-      CalcTerrorismLevy: money(terror),
-      CalcContractWorksEsl: money(s1Esl),
-      CalcContractWorksGst: money(premium.contractWorksGST),
-      CalcContractWorksStampDuty: money(s1Sd),
-      CalcContractWorksGross: money(premium.contractWorksTotalPremium),
-      CalcLegalLiabilityEsl: money(s2Esl),
-      CalcLegalLiabilityGst: money(premium.liabilityGST),
-      CalcLegalLiabilityStampDuty: money(s2Sd),
-      CalcLegalLiabilityGross: money(premium.liabilityTotalPremium),
-      CalcCombinedBaseNoTerror: money(s1TrueBase + s2TrueBase),
-      CalcCombinedGst: money(
-        (premium.contractWorksGST ?? 0) + (premium.liabilityGST ?? 0),
-      ),
-      CalcCombinedStampDuty: money(s1Sd + s2Sd),
-      CalcCombinedGross: money(premium.originalTotalPremium),
     });
   }
 
@@ -948,6 +935,20 @@ export function policyToMergeInputs(
     Object.assign(inputs, {
       AdjustedTurnover: money(adjustment.adjustedTurnover),
       StampDutyExempt: yesNo(adjustment.stampDutyExempt),
+      // Calc* = adjust "original" column (CARAdjust reconstruct), not bind premium.
+      CalcTerrorismLevy: money(original.section1.terrorismPremium),
+      CalcContractWorksEsl: money(original.section1.esl),
+      CalcContractWorksGst: money(original.section1.gst),
+      CalcContractWorksStampDuty: money(original.section1.sd),
+      CalcContractWorksGross: money(original.section1.totalPremium),
+      CalcLegalLiabilityEsl: money(original.section2.esl),
+      CalcLegalLiabilityGst: money(original.section2.gst),
+      CalcLegalLiabilityStampDuty: money(original.section2.sd),
+      CalcLegalLiabilityGross: money(original.section2.totalPremium),
+      CalcCombinedBaseNoTerror: money(original.total.trueBasePremium),
+      CalcCombinedGst: money(original.total.gst),
+      CalcCombinedStampDuty: money(original.total.sd),
+      CalcCombinedGross: money(original.total.totalPremium),
       AdjustedContractWorksTrueBasePremium: money(
         adjusted.section1.trueBasePremium,
       ),

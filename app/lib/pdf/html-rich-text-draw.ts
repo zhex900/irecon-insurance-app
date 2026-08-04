@@ -19,6 +19,8 @@ import {
 } from "~/lib/pdf/fonts";
 import { ENDORSEMENT_PAGE_BOTTOM_MARGIN_MM } from "~/lib/pdf/endorsement-expand";
 import {
+  countLinesFittingInBandMm,
+  endorsementDrawBoxBottomMm,
   heuristicTextWidthPt,
   htmlToDrawLines,
   lineHasInk,
@@ -50,6 +52,13 @@ export type EndorsementRichDrawOp = {
   continuationHeightMm?: number;
   /** Reserved body height (mm) per overflow page, in order. */
   continuationHeightsMm?: number[];
+  /**
+   * Exact line counts per page band: [first, ...continuations].
+   * When set, draw never paints more lines on a band than layout planned —
+   * leftover lines open a private page (shifting later drawOps) instead of
+   * overprinting the next endorsement at the page top.
+   */
+  pageLineBudgets?: number[];
   /** Must match expand's page bottom margin or lines orphan / empty pages appear. */
   pageBottomMarginMm?: number;
 };
@@ -217,6 +226,11 @@ function drawLinesAcrossPages(
         (h) => Number.isFinite(h) && Number(h) > 0,
       )
     : [];
+  const pageLineBudgets = Array.isArray(op.pageLineBudgets)
+    ? op.pageLineBudgets
+        .filter((n) => Number.isFinite(n) && Number(n) >= 0)
+        .map((n) => Math.floor(Number(n)))
+    : [];
 
   const parsedOpFont = parsePdfmeFontName(op.fontName);
   const lineHeight =
@@ -249,6 +263,7 @@ function drawLinesAcrossPages(
 
   /** -1 = first page; 0+ = overflow page index into continuationHeightsMm. */
   let overflowIndex = -1;
+  let linesOnPage = 0;
 
   function reservedHeightMm(): number {
     if (overflowIndex < 0) {
@@ -260,20 +275,50 @@ function drawLinesAcrossPages(
     return continuationHeightFallbackMm;
   }
 
+  function lineBudgetForPage(): number | null {
+    if (pageLineBudgets.length === 0) return null;
+    if (overflowIndex < 0) return pageLineBudgets[0] ?? null;
+    const idx = overflowIndex + 1;
+    if (idx < pageLineBudgets.length) return pageLineBudgets[idx]!;
+    // Unplanned overflow page — pack to the fallback band.
+    return Math.max(
+      1,
+      countLinesFittingInBandMm(
+        continuationHeightFallbackMm,
+        op.fontSizePt,
+        lineHeight,
+      ),
+    );
+  }
+
   function minCursorYForPage(): number {
     const pageFloorMm = pageHeightMm - pageBottomMarginMm;
     const reservedBottomMm =
       overflowIndex < 0
         ? op.yMm + reservedHeightMm()
         : continuationTopMm + reservedHeightMm();
-    // Multi-page body (or unplanned overflow): fill each page to the floor.
-    // One-page body: stop at the reserved bottom so the next endorsement below
-    // on the same page is not overpainted.
-    const fillsPage = continuationHeightsMm.length > 0 || overflowIndex >= 0;
-    const boxBottomMm = fillsPage
-      ? pageFloorMm
-      : Math.min(pageFloorMm, reservedBottomMm);
+    const boxBottomMm = endorsementDrawBoxBottomMm({
+      pageFloorMm,
+      reservedBottomMm,
+      lineStepMm: step / MM_TO_PT,
+    });
     return pageHeight - boxBottomMm * MM_TO_PT;
+  }
+
+  function claimOverflowPage(nextPageIndex: number, nextOverflowIndex: number) {
+    // Past layout-reserved pages: always take a private page and shift later
+    // drawOps. Previously we only inserted when nextPageIndex < pageCount, so
+    // a spill that appended a page still shared that index with Heritage etc.
+    const pastLayoutReservation =
+      nextOverflowIndex >= continuationHeightsMm.length;
+    if (pastLayoutReservation) {
+      if (nextPageIndex < doc.getPageCount()) {
+        doc.insertPage(nextPageIndex, [pageWidth, pageHeight]);
+      } else {
+        doc.addPage([pageWidth, pageHeight]);
+      }
+      onPageInserted?.(nextPageIndex);
+    }
   }
 
   let pageIndex = op.pageIndex;
@@ -281,30 +326,35 @@ function drawLinesAcrossPages(
   let cursorY = pageHeight - op.yMm * MM_TO_PT - baselineFromTop;
 
   for (let i = 0; i < lines.length; i++) {
-    // Break only when the baseline would sit below the reserved / page floor
-    // (no half-line buffer — that left empty space while orphaning the last line).
-    if (cursorY < minCursorYForPage()) {
+    const budget = lineBudgetForPage();
+    const overBudget = budget != null && linesOnPage >= budget;
+    // When layout provided a line budget, trust it over mm height — reserved
+    // height is often toFixed(2)'d and can be 0.01mm short of the last baseline,
+    // which used to spill one line onto the next page top (overlap).
+    // Without a budget, break when the baseline would sit below the floor.
+    const outOfBand =
+      budget != null ? overBudget : cursorY < minCursorYForPage();
+    if (outOfBand) {
       // Don't open a page that would only hold blank trailing lines.
       if (!lines.slice(i).some(lineHasInk)) break;
       const nextPageIndex = pageIndex + 1;
       const nextOverflowIndex = overflowIndex + 1;
-      // Past layout-reserved continuation pages: insert a blank page so we do
-      // not paint over the next endorsement already placed at the page top.
-      const pastLayoutReservation =
-        nextOverflowIndex >= continuationHeightsMm.length;
-      if (pastLayoutReservation && nextPageIndex < doc.getPageCount()) {
-        doc.insertPage(nextPageIndex, [pageWidth, pageHeight]);
-        onPageInserted?.(nextPageIndex);
-      }
+      claimOverflowPage(nextPageIndex, nextOverflowIndex);
       pageIndex = nextPageIndex;
       page = ensurePageAt(doc, pageIndex, pageWidth, pageHeight);
       overflowIndex = nextOverflowIndex;
+      linesOnPage = 0;
       cursorY = pageHeight - continuationTopMm * MM_TO_PT - baselineFromTop;
       while (i < lines.length && !lineHasInk(lines[i]!)) i += 1;
       if (i >= lines.length) break;
-      // Reserved band shorter than one line — stop rather than paint over the
-      // next endorsement subject that was packed below on this page.
-      if (cursorY < minCursorYForPage()) break;
+      const nextBudget = lineBudgetForPage();
+      // Reserved band / budget shorter than one line — stop rather than paint
+      // over the next endorsement subject packed below on this page.
+      if (nextBudget != null) {
+        if (nextBudget < 1) break;
+      } else if (cursorY < minCursorYForPage()) {
+        break;
+      }
     }
 
     const line = lines[i]!;
@@ -358,6 +408,7 @@ function drawLinesAcrossPages(
       x += w;
     }
     cursorY -= step;
+    linesOnPage += 1;
   }
   return pageIndex;
 }
@@ -434,11 +485,10 @@ export async function applyEndorsementRichDrawOps(
           italic: parsed.style === "italic",
         },
         op.widthMm,
+        // Match endorsement-expand / wordingHtmlLineCount — do not sanitize
+        // before measure or wrap counts drift and spill onto the next page.
         (text, style) =>
-          heuristicTextWidthPt(
-            sanitizeDrawText(text),
-            style.fontSizePt || op.fontSizePt,
-          ),
+          heuristicTextWidthPt(text, style.fontSizePt || op.fontSizePt),
         { lockSchemaMetrics: true },
       );
       const endPage = drawLinesAcrossPages(
@@ -461,9 +511,13 @@ export async function applyEndorsementRichDrawOps(
   }
 
   // Drop trailing blank continuation pages left by pdfme when draw packed the
-  // last line onto the previous page.
-  if (lastPaintedPage >= 0) {
-    while (doc.getPageCount() > lastPaintedPage + 1) {
+  // last line onto the previous page — never drop a page still targeted by ops.
+  let maxNeededPage = lastPaintedPage;
+  for (const op of ops) {
+    if (op.pageIndex > maxNeededPage) maxNeededPage = op.pageIndex;
+  }
+  if (maxNeededPage >= 0) {
+    while (doc.getPageCount() > maxNeededPage + 1) {
       doc.removePage(doc.getPageCount() - 1);
     }
   }

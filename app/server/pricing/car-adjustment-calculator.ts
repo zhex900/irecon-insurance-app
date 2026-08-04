@@ -7,6 +7,14 @@ import type {
 
 const GST_RATE = 0.1;
 
+/**
+ * End-of-term adjustment (legacy CARAdjust.aspx).
+ *
+ * Uses **frozen rates back-calculated from stored premium amounts** (§9), not the
+ * lookup rates kept on `rating` for live premium recalc. Legacy save overwrote
+ * certificate ESL/terror/SD rates that way (ES/plant absorbed into the rate);
+ * rebuild keeps lookup rates on the policy and derives the same effective rates here.
+ */
 export function calculateCarAdjustment({
   originalTurnover,
   adjustmentTurnover,
@@ -20,11 +28,13 @@ export function calculateCarAdjustment({
   premium: PremiumBreakdown;
   rating: RatingSnapshot;
 }): AdjustmentBreakdown {
+  const rates = resolveAdjustmentRates(premium, rating, originalTurnover);
+
   const originalSection1 = buildSectionRow({
     base: premium.contractWorksBasePremium,
     terror: premium.contractWorksTerrorismPremium,
-    eslRate: rating.eslRate,
-    sdRate: rating.contractWorksStampDutyRate,
+    eslRate: rates.eslRate,
+    sdRate: rates.contractWorksStampDutyRate,
     stampDutyExempt: false,
     isSection2: false,
   });
@@ -32,26 +42,26 @@ export function calculateCarAdjustment({
   const originalSection2 = buildSectionRow({
     base: premium.liabilityBasePremium,
     terror: 0,
-    eslRate: rating.eslRate,
-    sdRate: rating.liabilityStampDutyRate,
+    eslRate: rates.eslRate,
+    sdRate: rates.liabilityStampDutyRate,
     stampDutyExempt,
     isSection2: true,
   });
 
   const adjustedSection1Base = Math.max(
-    adjustmentTurnover * rating.contractWorksAppliedRate,
-    rating.contractWorksMinPremium,
+    adjustmentTurnover * rates.contractWorksAppliedRate,
+    rates.contractWorksMinPremium,
   );
   const adjustedSection2Base = Math.max(
-    adjustmentTurnover * rating.liabilityAppliedRate,
-    rating.liabilityMinPremium,
+    adjustmentTurnover * rates.liabilityAppliedRate,
+    rates.liabilityMinPremium,
   );
 
   const adjustmentSection1 = buildSectionRow({
     base: adjustedSection1Base,
-    terror: adjustedSection1Base * rating.terrorismRate,
-    eslRate: rating.eslRate,
-    sdRate: rating.contractWorksStampDutyRate,
+    terror: adjustedSection1Base * rates.terrorismRate,
+    eslRate: rates.eslRate,
+    sdRate: rates.contractWorksStampDutyRate,
     stampDutyExempt: false,
     isSection2: false,
   });
@@ -59,8 +69,8 @@ export function calculateCarAdjustment({
   const adjustmentSection2 = buildSectionRow({
     base: adjustedSection2Base,
     terror: 0,
-    eslRate: rating.eslRate,
-    sdRate: rating.liabilityStampDutyRate,
+    eslRate: rates.eslRate,
+    sdRate: rates.liabilityStampDutyRate,
     stampDutyExempt,
     isSection2: true,
   });
@@ -76,9 +86,9 @@ export function calculateCarAdjustment({
 
   const deltaSection1 = buildSectionRow({
     base: deltaSection1Base,
-    terror: deltaSection1Base * rating.terrorismRate,
-    eslRate: rating.eslRate,
-    sdRate: rating.contractWorksStampDutyRate,
+    terror: deltaSection1Base * rates.terrorismRate,
+    eslRate: rates.eslRate,
+    sdRate: rates.contractWorksStampDutyRate,
     stampDutyExempt: false,
     isSection2: false,
   });
@@ -86,8 +96,8 @@ export function calculateCarAdjustment({
   const deltaSection2 = buildSectionRow({
     base: deltaSection2Base,
     terror: 0,
-    eslRate: rating.eslRate,
-    sdRate: rating.liabilityStampDutyRate,
+    eslRate: rates.eslRate,
+    sdRate: rates.liabilityStampDutyRate,
     stampDutyExempt,
     isSection2: true,
   });
@@ -126,6 +136,97 @@ export function validateAdjustmentFinish(
   }
 
   return null;
+}
+
+/** @internal exported for unit tests */
+export function resolveAdjustmentRates(
+  premium: PremiumBreakdown,
+  rating: RatingSnapshot,
+  originalTurnover: number,
+) {
+  const s1Base = premium.contractWorksBasePremium;
+  const s1Terror = premium.contractWorksTerrorismPremium;
+  const s1Plant = premium.contractWorksPlantPremium;
+  const s1PlantTerror = premium.contractWorksPlantTerrorismPremium;
+  const s1PlantEsl = premium.contractWorksPlantESL;
+  const s1Esl = premium.contractWorksESL;
+  const s1Gst = premium.contractWorksGST;
+  const s1Sd = premium.contractWorksStampDuty;
+  const s2Base = premium.liabilityBasePremium;
+  const s2Esl = premium.liabilityESL;
+  const s2Gst = premium.liabilityGST;
+  const s2Sd = premium.liabilityStampDuty;
+
+  const terrorDenom = s1Base;
+  const eslDenom = s1Base + s1Terror;
+  // Legacy SDRateSection1 denom excludes ES/DH (CARNewPolicy.aspx.cs ~502–503).
+  const sd1Denom =
+    s1Base + s1Terror + s1Plant + s1PlantTerror + s1PlantEsl + s1Esl + s1Gst;
+  const sd2Denom = s2Base + s2Esl + s2Gst;
+
+  return {
+    contractWorksAppliedRate: resolveAppliedRate({
+      beforeBase: premium.contractWorksCalculatedBasePremium,
+      trueBase: s1Base,
+      turnover: originalTurnover,
+      fallback: rating.contractWorksAppliedRate,
+    }),
+    liabilityAppliedRate: resolveAppliedRate({
+      beforeBase: premium.liabilityCalculatedBasePremium,
+      trueBase: s2Base,
+      turnover: originalTurnover,
+      fallback: rating.liabilityAppliedRate,
+    }),
+    contractWorksMinPremium: rating.contractWorksMinPremium,
+    liabilityMinPremium: rating.liabilityMinPremium,
+    // 0 is a valid frozen rate (e.g. no terrorism) — only fall back when denom missing.
+    terrorismRate: rateFromPremium(s1Terror, terrorDenom, rating.terrorismRate),
+    eslRate: rateFromPremium(s1Esl, eslDenom, rating.eslRate),
+    contractWorksStampDutyRate: rateFromPremium(
+      s1Sd,
+      sd1Denom,
+      rating.contractWorksStampDutyRate,
+    ),
+    liabilityStampDutyRate: rateFromPremium(
+      s2Sd,
+      sd2Denom,
+      rating.liabilityStampDutyRate,
+    ),
+  };
+}
+
+/**
+ * Legacy Section1Rate / Section2Rate on save:
+ * (BeforeBase < TrueBase) ? BeforeBase/Turnover : TrueBase/Turnover
+ */
+function resolveAppliedRate({
+  beforeBase,
+  trueBase,
+  turnover,
+  fallback,
+}: {
+  beforeBase: number;
+  trueBase: number;
+  turnover: number;
+  fallback: number;
+}) {
+  if (!(turnover > 0)) return fallback;
+  const numerator = beforeBase < trueBase ? beforeBase : trueBase;
+  return roundRate(numerator / turnover);
+}
+
+function rateFromPremium(
+  numerator: number,
+  denominator: number,
+  fallback: number,
+) {
+  if (!(denominator > 0) || !Number.isFinite(numerator)) return fallback;
+  return roundRate(numerator / denominator);
+}
+
+/** Legacy Math.Round(..., 6, MidpointRounding.AwayFromZero) for positive rates. */
+function roundRate(value: number) {
+  return Math.round(value * 1e6) / 1e6;
 }
 
 function buildSectionRow({

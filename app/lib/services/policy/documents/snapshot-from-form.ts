@@ -54,11 +54,17 @@ export function policySnapshotFromForm(
     documents: options?.documents ?? policy.documents,
     car: {
       ...policy.car,
-      coverTypeId: values.coverTypeId ?? policy.car.coverTypeId,
-      annualCoverTypeId:
-        (values.coverTypeId ?? policy.car.coverTypeId) === 1
-          ? (values.annualCoverTypeId ?? policy.car.annualCoverTypeId ?? null)
-          : null,
+      coverTypeId: (() => {
+        const raw = values.coverTypeId ?? policy.car.coverTypeId;
+        const n = Number(raw);
+        return Number.isFinite(n) && n > 0 ? n : policy.car.coverTypeId;
+      })(),
+      annualCoverTypeId: (() => {
+        const raw = values.coverTypeId ?? policy.car.coverTypeId;
+        const coverTypeId = Number(raw);
+        if (coverTypeId !== 1) return null;
+        return values.annualCoverTypeId ?? policy.car.annualCoverTypeId ?? null;
+      })(),
       siteAddress: values.siteAddress ?? policy.car.siteAddress,
       insuredName: values.insuredName ?? policy.car.insuredName,
       estimatedTurnover: pickMoney(

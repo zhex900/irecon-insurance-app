@@ -13,7 +13,7 @@ import { isBlankPdf, type Template } from "@pdfme/common";
 import { estimateTextHeightMm } from "~/lib/pdf/flow-push-down";
 import type { EndorsementRichDrawOp } from "~/lib/pdf/html-rich-text-draw";
 import {
-  endorsementPaintHeightForLinesMm,
+  endorsementReserveHeightForLinesMm,
   estimateWordingHtmlHeightMm,
   minEndorsementPaintBandMm,
   splitLineCountsIntoPages,
@@ -210,6 +210,7 @@ function toDrawOp(
   continuationHeightMm: number,
   continuationHeightsMm: number[] = [],
   pageBottomMarginMm: number = ENDORSEMENT_PAGE_BOTTOM_MARGIN_MM,
+  pageLineBudgets: number[] = [],
 ): EndorsementRichDrawOp {
   return {
     pageIndex,
@@ -226,6 +227,7 @@ function toDrawOp(
     continuationHeightMm,
     continuationHeightsMm,
     pageBottomMarginMm,
+    pageLineBudgets,
   };
 }
 
@@ -404,7 +406,7 @@ export function expandEndorsementPairSchemas(
     const minChunkH = contentIsHtml ? minBodyPaintH : contentH;
     const chunkHeights = lineChunks.map((n, idx) => {
       const maxH = idx === 0 ? roomOnPage : usablePageH;
-      const need = endorsementPaintHeightForLinesMm(n, bodyFont, bodyLh);
+      const need = endorsementReserveHeightForLinesMm(n, bodyFont, bodyLh);
       // Non-final chunks fill the page band so layout and draw share the same
       // floor (avoids an empty continuation page when draw packs one more line).
       if (idx < lineChunks.length - 1) return maxH;
@@ -505,6 +507,7 @@ export function expandEndorsementPairSchemas(
           usablePageH,
           overflowHeightsMm,
           pageBottomMarginMm,
+          lineChunks,
         ),
       );
     }
