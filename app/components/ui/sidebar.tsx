@@ -25,9 +25,8 @@ import { PanelLeftIcon } from "lucide-react";
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
-/** Fallback when a fixed width is required (mobile sheet / non-collapsible). */
+/** Fallback when a fixed width is required (non-collapsible). */
 const SIDEBAR_WIDTH = "11rem";
-const SIDEBAR_WIDTH_MOBILE = "18rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
 
@@ -189,19 +188,23 @@ function Sidebar({
           data-sidebar="sidebar"
           data-slot="sidebar"
           data-mobile="true"
-          className="w-(--sidebar-width) bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden"
-          style={
-            {
-              "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
-            } as React.CSSProperties
-          }
+          showCloseButton={false}
+          className={cn(
+            "w-max max-w-[min(100vw-2rem,20rem)] gap-0 bg-sidebar p-0 text-sidebar-foreground",
+            // Override Sheet defaults (w-3/4 / sm:max-w-sm) so width hugs nav labels.
+            "data-[side=left]:w-max data-[side=right]:w-max",
+            "data-[side=left]:max-w-[min(100vw-2rem,20rem)] data-[side=right]:max-w-[min(100vw-2rem,20rem)]",
+            "data-[side=left]:sm:max-w-[min(100vw-2rem,20rem)] data-[side=right]:sm:max-w-[min(100vw-2rem,20rem)]",
+          )}
           side={side}
         >
           <SheetHeader className="sr-only">
             <SheetTitle>Sidebar</SheetTitle>
             <SheetDescription>Displays the mobile sidebar.</SheetDescription>
           </SheetHeader>
-          <div className="flex h-full w-full flex-col">{children}</div>
+          <div className="flex h-full w-max max-w-full flex-col items-stretch">
+            {children}
+          </div>
         </SheetContent>
       </Sheet>
     );
@@ -212,10 +215,10 @@ function Sidebar({
   const iconRail = isFloating
     ? "w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
     : "w-(--sidebar-width-icon)";
-  // Expanded width hugs nav labels (no hover grow).
+  // Expanded: hug widest nav label (not a fixed rem width).
   const fullRail = isFloating
-    ? "w-max max-w-[calc(16rem+(--spacing(4))+2px)]"
-    : "w-max max-w-64";
+    ? "w-max max-w-[min(100vw-2rem,20rem)]"
+    : "w-max max-w-[min(100vw-2rem,20rem)]";
 
   if (iconCollapsible) {
     return (
@@ -234,7 +237,8 @@ function Sidebar({
           data-slot="sidebar-container"
           data-side={side}
           className={cn(
-            "relative z-30 flex h-full w-full flex-col overflow-hidden",
+            "relative z-30 flex h-full flex-col overflow-hidden",
+            open ? "w-max" : "w-full",
             isFloating && "p-2",
             !isFloating &&
               "border-sidebar-border group-data-[side=left]:border-r group-data-[side=right]:border-l",
@@ -245,7 +249,10 @@ function Sidebar({
           <div
             data-sidebar="sidebar"
             data-slot="sidebar-inner"
-            className="flex h-full min-h-0 w-max max-w-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-sidebar-border"
+            className={cn(
+              "flex h-full min-h-0 flex-col items-stretch bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-sidebar-border",
+              open ? "w-max" : "w-full",
+            )}
           >
             {children}
           </div>
@@ -267,7 +274,7 @@ function Sidebar({
         data-slot="sidebar-container"
         data-side={side}
         className={cn(
-          "hidden h-svh w-max max-w-64 flex-col transition-[width] duration-200 ease-out md:flex",
+          "hidden h-svh w-max max-w-[min(100vw-2rem,20rem)] flex-col transition-[width] duration-200 ease-out md:flex",
           "group-data-[collapsible=offcanvas]:w-0 group-data-[collapsible=offcanvas]:overflow-hidden",
           isFloating
             ? "p-2"
@@ -279,7 +286,7 @@ function Sidebar({
         <div
           data-sidebar="sidebar"
           data-slot="sidebar-inner"
-          className="flex h-full min-h-0 w-max max-w-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-sidebar-border"
+          className="flex h-full min-h-0 w-max flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-sidebar-border"
         >
           {children}
         </div>
@@ -371,7 +378,7 @@ function SidebarHeader({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="sidebar-header"
       data-sidebar="header"
-      className={cn("flex shrink-0 flex-col gap-2 p-2", className)}
+      className={cn("flex w-full shrink-0 flex-col gap-2 p-2", className)}
       {...props}
     />
   );
@@ -382,7 +389,7 @@ function SidebarFooter({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="sidebar-footer"
       data-sidebar="footer"
-      className={cn("flex shrink-0 flex-col gap-2 p-2", className)}
+      className={cn("flex w-full shrink-0 flex-col gap-2 p-2", className)}
       {...props}
     />
   );
@@ -408,7 +415,7 @@ function SidebarContent({ className, ...props }: React.ComponentProps<"div">) {
       data-slot="sidebar-content"
       data-sidebar="content"
       className={cn(
-        "no-scrollbar flex min-h-0 flex-1 flex-col gap-0 overflow-auto group-data-[collapsible=icon]:overflow-hidden",
+        "no-scrollbar flex min-h-0 w-max flex-1 flex-col gap-0 overflow-auto group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:overflow-hidden",
         className,
       )}
       {...props}
@@ -422,7 +429,7 @@ function SidebarGroup({ className, ...props }: React.ComponentProps<"div">) {
       data-slot="sidebar-group"
       data-sidebar="group"
       className={cn(
-        "relative flex w-max max-w-full min-w-0 flex-col p-2",
+        "relative flex w-max flex-col p-2 group-data-[collapsible=icon]:w-full",
         className,
       )}
       {...props}
@@ -497,7 +504,10 @@ function SidebarMenu({ className, ...props }: React.ComponentProps<"ul">) {
     <ul
       data-slot="sidebar-menu"
       data-sidebar="menu"
-      className={cn("flex w-full min-w-0 flex-col gap-0", className)}
+      className={cn(
+        "flex w-max min-w-0 flex-col gap-0 group-data-[collapsible=icon]:w-full",
+        className,
+      )}
       {...props}
     />
   );
@@ -508,14 +518,17 @@ function SidebarMenuItem({ className, ...props }: React.ComponentProps<"li">) {
     <li
       data-slot="sidebar-menu-item"
       data-sidebar="menu-item"
-      className={cn("group/menu-item relative", className)}
+      className={cn(
+        "group/menu-item relative w-max group-data-[collapsible=icon]:w-full",
+        className,
+      )}
       {...props}
     />
   );
 }
 
 const sidebarMenuButtonVariants = cva(
-  "peer/menu-button group/menu-button flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm ring-sidebar-ring outline-hidden transition-[height,padding] group-has-data-[sidebar=menu-action]/menu-item:pr-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-open:hover:bg-sidebar-accent data-open:hover:text-sidebar-accent-foreground data-active:bg-sidebar-accent data-active:font-medium data-active:text-sidebar-accent-foreground [&_svg]:size-4 [&_svg]:shrink-0 [&>span:last-child]:whitespace-nowrap",
+  "peer/menu-button group/menu-button flex w-max items-center gap-2 rounded-md p-2 text-left text-sm ring-sidebar-ring outline-hidden transition-[height,padding] group-has-data-[sidebar=menu-action]/menu-item:pr-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:w-8! group-data-[collapsible=icon]:gap-0 group-data-[collapsible=icon]:overflow-hidden group-data-[collapsible=icon]:p-2! hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-open:hover:bg-sidebar-accent data-open:hover:text-sidebar-accent-foreground data-active:bg-sidebar-accent data-active:font-medium data-active:text-sidebar-accent-foreground [&_svg]:size-4 [&_svg]:shrink-0 group-data-[collapsible=icon]:[&>span]:hidden [&>span:last-child]:whitespace-nowrap",
   {
     variants: {
       variant: {

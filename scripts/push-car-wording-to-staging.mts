@@ -56,9 +56,7 @@ try {
     from car_wording
     order by car_wording_id
   `;
-  console.log(
-    JSON.stringify({ pushed: rows.length, staging: check }, null, 2),
-  );
+  console.log(JSON.stringify({ pushed: rows.length, staging: check }, null, 2));
 } finally {
   await local.end({ timeout: 5 });
   await staging.end({ timeout: 5 });

@@ -67,17 +67,11 @@ function SidebarBrand() {
       <>
         <Link
           to="/dashboard"
-          className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden px-1"
+          className="flex w-max items-center gap-2 px-1"
           aria-label={`${APP_NAME} dashboard`}
         >
-          <img
-            src="/favicon.png"
-            alt=""
-            className="size-7 shrink-0 rounded-md object-contain"
-          />
-          <span className="truncate text-sm font-medium text-sidebar-foreground">
-            {APP_NAME}
-          </span>
+          <Logo showTagline={false} className="text-sidebar-foreground" />
+          <span className="sr-only">{APP_NAME}</span>
         </Link>
         <SidebarTrigger className="shrink-0" aria-label="Toggle sidebar" />
       </>
@@ -105,7 +99,7 @@ function SidebarBrand() {
       to="/dashboard"
       className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden px-1"
     >
-      <Logo size="sm" tone="invert" className="min-w-0" />
+      <Logo showTagline={false} className="text-sidebar-foreground" />
       <span className="sr-only">{APP_NAME}</span>
     </Link>
   );
@@ -165,7 +159,7 @@ export function AppLayout({
       <SentryUserSync userId={broker.id} email={broker.email} />
       <SidebarProvider>
         <Sidebar collapsible="icon" variant="sidebar">
-          <SidebarHeader className="flex h-14 shrink-0 flex-row items-center gap-1 overflow-hidden border-b border-sidebar-border px-2 group-data-[collapsible=icon]:justify-center">
+          <SidebarHeader className="flex h-14 w-full shrink-0 flex-row items-center gap-1 border-b border-sidebar-border px-2 group-data-[collapsible=icon]:justify-center">
             <SidebarBrand />
           </SidebarHeader>
 

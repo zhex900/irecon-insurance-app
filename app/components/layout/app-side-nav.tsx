@@ -386,13 +386,14 @@ function RecentsSection({
         type="button"
         onClick={onToggle}
         title={iconRail ? "Recents" : undefined}
+        aria-label={iconRail ? "Recents" : undefined}
         className={cn(
           // Match TreeItemLabel / SidebarMenuButton icon column (px-2, gap-1.5, h-8).
-          "relative flex h-8 w-full cursor-pointer items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-sidebar-foreground outline-none",
+          "relative flex h-8 w-max cursor-pointer items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-sidebar-foreground outline-none",
           "hover:bg-sidebar-accent hover:text-primary",
           "focus-visible:ring-2 focus-visible:ring-sidebar-ring",
           // Icon rail: same box as SidebarMenuButton `size-8 p-2`.
-          iconRail && "size-8 gap-2 p-2",
+          iconRail && "size-8 gap-0 overflow-hidden p-2",
         )}
         aria-expanded={listOpen}
       >
@@ -462,13 +463,13 @@ function CollapsedSideNav({ pathname }: { pathname: string }) {
             <SidebarMenuButton
               tooltip={item.label}
               isActive={isActive}
+              aria-label={item.label}
               className="cursor-pointer"
               onClick={() => {
                 void navigate(item.to);
               }}
             >
               <Icon />
-              <span>{item.label}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         );
@@ -535,7 +536,12 @@ function SideNavTree({
   });
 
   return (
-    <Tree indent={indent} tree={tree} toggleIconType="chevron">
+    <Tree
+      indent={indent}
+      tree={tree}
+      toggleIconType="chevron"
+      className="w-max"
+    >
       {tree.getItems().map((item) => {
         const navItem = item.getItemData();
         const isFolder = item.isFolder();
@@ -553,7 +559,7 @@ function SideNavTree({
             <TreeItemLabel
               showToggleIcon={false}
               className={cn(
-                "relative w-full cursor-pointer gap-1.5 text-sidebar-foreground before:absolute before:inset-x-0 before:-inset-y-0.5 before:-z-10 before:rounded-md",
+                "relative w-max cursor-pointer gap-1.5 text-sidebar-foreground before:absolute before:inset-x-0 before:-inset-y-0.5 before:-z-10 before:rounded-md",
                 "hover:bg-sidebar-accent hover:text-primary hover:before:bg-sidebar-accent",
                 "in-focus-visible:ring-sidebar-ring",
                 isActive
@@ -715,7 +721,7 @@ export function AppSideNav({ data }: { data: SideNavData }) {
         // Keep mounted while icon-rail; only hide so hover expand does not remount.
         inert={!showExpandedNav ? true : undefined}
       >
-        <nav aria-label="Main" className="px-1">
+        <nav aria-label="Main" className="w-max px-1">
           <SideNavTree data={data} pathname={location.pathname} />
         </nav>
       </div>

@@ -1,55 +1,30 @@
 import { cn } from "~/lib/utils";
 
-const sizeClass = {
-  sm: "h-7",
-  md: "h-8",
-  lg: "h-10",
-} as const;
-
-const textSizeClass = {
-  sm: "text-[9px]",
-  md: "text-[10px]",
-  lg: "text-xs",
-} as const;
-
 type LogoProps = {
   className?: string;
-  size?: keyof typeof sizeClass;
-  /**
-   * - `adaptive` — invert in dark mode (default page backgrounds)
-   * - `invert` — always white (dark panels / black sidebars)
-   * - `default` — original asset colors
-   */
-  tone?: "adaptive" | "invert" | "default";
+  /** When false, only the mark is shown (keeps side-nav width tied to nav labels). */
+  showTagline?: boolean;
 };
 
-export function Logo({ className, size = "sm", tone = "adaptive" }: LogoProps) {
+export function Logo({ className }: LogoProps) {
   return (
     <span
       className={cn(
-        "inline-flex max-w-full min-w-0 flex-col items-start gap-0.5",
+        "inline-flex w-max flex-col items-start gap-0.5",
         className,
       )}
     >
       <img
-        src="/irecon-icon.png"
+        src="/irecon-logo.svg"
         alt="IRECON"
-        width={236}
-        height={63}
         decoding="async"
         className={cn(
-          "aspect-236/63 w-auto max-w-full object-contain object-left",
-          sizeClass[size],
-          tone === "invert" && "brightness-0 invert",
-          tone === "adaptive" && "dark:brightness-0 dark:invert",
+          "aspect-214/52 w-auto max-w-full object-contain object-left",
+          "h-8",
         )}
       />
-      <span
-        className={cn(
-          "max-w-full leading-none font-medium tracking-wide whitespace-nowrap text-primary",
-          textSizeClass[size],
-        )}
-      >
+
+      <span className="text-[10px] leading-none font-medium tracking-wide whitespace-nowrap text-primary">
         Insurance Services Pty Ltd
       </span>
     </span>
