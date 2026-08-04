@@ -1,6 +1,5 @@
 import { normalizeCustomWordings } from "~/lib/custom-wordings";
 import type { CarWording, Policy } from "~/lib/db/types";
-import { preferPremiumOverride } from "~/lib/premium-override";
 import { combinedTrueBasePremium } from "~/lib/premium-totals";
 import { referenceData as reference } from "~/lib/reference-data";
 import { formatCurrency, formatDate } from "~/lib/utils";
@@ -473,8 +472,8 @@ export function premiumCalculationTablePlaceholderContent(): string {
       "{LegalLiabilityBasePremium}",
       "",
     ],
-    ["Existing Structure:", "{ExistingStructurePremium}", "", ""],
-    ["Display Homes:", "{DisplayHomesPremium}", "", ""],
+    ["Existing Structure:", "{PremiumExistingStructure}", "", ""],
+    ["Display Homes:", "{PremiumDisplayHomes}", "", ""],
     [
       "True Base Premium:",
       "{ContractWorksTrueBasePremium}",
@@ -482,14 +481,14 @@ export function premiumCalculationTablePlaceholderContent(): string {
       "{CombinedTrueBasePremium}",
     ],
     ["Terrorism Levy:", "{TerrorismLevy}", "", ""],
-    ["Plant & Equipment Base Premium", "{PlantEquipmentPremium}", "", ""],
+    ["Plant & Equipment Base Premium", "{PremiumPlantAndEquipment}", "", ""],
     [
       "Terrorism Levy: (Plant & Equipment)",
-      "{PlantEquipmentTerrorismLevy}",
+      "{PremiumPlantAndEquipmentTerrorismLevy}",
       "",
       "",
     ],
-    ["ESL Plant & Equipment:", "{PlantEquipmentEsl}", "", ""],
+    ["ESL Plant & Equipment:", "{PremiumPlantAndEquipmentEsl}", "", ""],
     ["ESL:", "{ContractWorksEsl}", "{LegalLiabilityEsl}", "{CombinedEsl}"],
     ["GST:", "{ContractWorksGst}", "{LegalLiabilityGst}", "{CombinedGst}"],
     [
@@ -681,27 +680,16 @@ export function policyToMergeInputs(
     GeographicalScope: car.geographicalScopes,
     MaximumConstructionPeriod: String(car.maximumConstructionPeriod ?? ""),
     MaximumMaintenancePeriod: String(car.maximumMaintenancePeriod ?? ""),
+    // Limits of Liability (Section 1) — sum insured amounts, not premiums.
+    LiabilityContractWorks: money(car.contractWorksSumInsured),
+    LiabilityDisplayHomes: money(car.displayHomes),
+    LiabilityExistingStructure: money(car.existingStructure),
+    LiabilityConstructionPlantEquipment: money(car.plantEquipment),
+    // Legacy aliases (schedule/rating templates historically used these).
     ContractWorksLimit: money(car.contractWorksSumInsured),
-    ExistingStructures: money(
-      preferPremiumOverride(
-        premium?.contractWorksExistingStructurePremium ??
-          car.contractWorksExistingStructurePremium,
-        car.existingStructure,
-      ),
-    ),
-    DisplayHomes: money(
-      preferPremiumOverride(
-        premium?.contractWorksDisplayHomesPremium ??
-          car.contractWorksDisplayHomesPremium,
-        car.displayHomes,
-      ),
-    ),
-    ConstructionPlantEquipment: money(
-      preferPremiumOverride(
-        premium?.contractWorksPlantPremium,
-        car.plantEquipment,
-      ),
-    ),
+    DisplayHomes: money(car.displayHomes),
+    ExistingStructures: money(car.existingStructure),
+    ConstructionPlantEquipment: money(car.plantEquipment),
     SiteAddress: car.siteAddress,
     RemovalOfDebris: String(sub.removalOfDebris ?? ""),
     ExpeditingExpenses: String(sub.expeditingExpenses ?? ""),
@@ -781,8 +769,15 @@ export function policyToMergeInputs(
       LegalLiabilityTrueBasePremium: money(s2TrueBase),
       CombinedTrueBasePremium: money(combinedTrueBasePremium(premium)),
       TerrorismLevy: money(terror),
-      ExistingStructurePremium: money(esPremium),
+      // Premium section lines (distinct from Liability* sum-insured fields).
+      PremiumDisplayHomes: money(dhPremium),
+      PremiumExistingStructure: money(esPremium),
+      PremiumPlantAndEquipment: money(plantPremium),
+      PremiumPlantAndEquipmentTerrorismLevy: money(plantTerror),
+      PremiumPlantAndEquipmentEsl: money(plantEsl),
+      // Legacy aliases.
       DisplayHomesPremium: money(dhPremium),
+      ExistingStructurePremium: money(esPremium),
       PlantEquipmentPremium: money(plantPremium),
       PlantEquipmentTerrorismLevy: money(plantTerror),
       PlantEquipmentEsl: money(plantEsl),
