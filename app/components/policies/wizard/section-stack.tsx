@@ -144,6 +144,8 @@ export type WizardSectionStackProps = {
   handleFieldBlur: () => void;
   onResetPremium?: () => void;
   isCalculating?: boolean;
+  onExportExcel?: () => void;
+  isExportingExcel?: boolean;
   shellCardClassName?: string;
 };
 
@@ -168,6 +170,8 @@ export function WizardSectionStack({
   handleFieldBlur,
   onResetPremium,
   isCalculating = false,
+  onExportExcel,
+  isExportingExcel = false,
   shellCardClassName,
 }: WizardSectionStackProps) {
   return (
@@ -211,6 +215,8 @@ export function WizardSectionStack({
             }
             onResetPremium={fieldsLocked ? undefined : onResetPremium}
             isCalculating={isCalculating}
+            onExportExcel={onExportExcel}
+            isExportingExcel={isExportingExcel}
             adjustmentBreakdown={
               policy.car.adjusted ? policy.car.adjustment?.breakdown : undefined
             }
@@ -301,6 +307,8 @@ export function WizardSectionStack({
             }}
             onResetPremium={fieldsLocked ? undefined : onResetPremium}
             isCalculating={isCalculating}
+            onExportExcel={onExportExcel}
+            isExportingExcel={isExportingExcel}
             adjustmentBreakdown={
               policy.car.adjusted ? policy.car.adjustment?.breakdown : undefined
             }

@@ -9,6 +9,7 @@ import type { Plugin } from "vite";
  * imports and Wrangler uploads them — blowing the free plan 3 MiB gzip limit.
  */
 const CLIENT_ONLY_PREFIXES = [
+  "exceljs",
   "@pdfme/ui",
   "@pdfme/converter",
   "@react-email/editor",

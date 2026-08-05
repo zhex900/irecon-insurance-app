@@ -10,7 +10,15 @@ import type {
 } from "~/lib/db/types";
 import type { BrokerFeeLineInput } from "~/lib/pdf/merge-fields";
 import {
+  buildPremiumExcelDocument,
+  downloadPremiumExcelDocument,
+  latestPremiumExcelDocument,
+  premiumExcelExportEnabled,
+  premiumExcelFingerprint,
+} from "~/lib/premium-excel";
+import {
   ensureReviewDocumentsClient,
+  savePolicyDocumentsClient,
   syncPolicyDocumentLabelsClient,
 } from "~/lib/services/policy/documents/documents.client";
 import { reviewDocumentsFingerprint } from "~/lib/services/policy/documents/fingerprints";
@@ -44,6 +52,7 @@ export function usePolicyDocuments({
     policy.documents ?? [],
   );
   const [isGeneratingDocuments, setIsGeneratingDocuments] = useState(false);
+  const [isExportingExcel, setIsExportingExcel] = useState(false);
   const documentsRef = useRef(documents);
   const policyRef = useRef(policy);
   useEffect(() => {
@@ -142,9 +151,62 @@ export function usePolicyDocuments({
     }
   }
 
+  async function exportPremiumExcel() {
+    const snapshot = buildDocumentSnapshot();
+    if (!snapshot?.car.premium) {
+      toast.error("Premium not calculated", {
+        description: "Calculate premium before exporting to Excel.",
+      });
+      return;
+    }
+    const fingerprint = premiumExcelFingerprint(snapshot);
+    const needsRegenerate = premiumExcelExportEnabled(
+      documentsRef.current,
+      fingerprint,
+    );
+
+    setIsExportingExcel(true);
+    try {
+      if (!needsRegenerate) {
+        const existing = latestPremiumExcelDocument(documentsRef.current);
+        if (existing?.pdfBase64) {
+          downloadPremiumExcelDocument(existing);
+          return;
+        }
+        // Fingerprint matched but bytes missing — fall through and rebuild.
+      }
+
+      const doc = await buildPremiumExcelDocument({
+        policy: snapshot,
+        premium: snapshot.car.premium,
+        rating: snapshot.car.rating,
+        generatedBy,
+        existing: documentsRef.current,
+      });
+      const next = [...documentsRef.current, doc];
+      const saved = await savePolicyDocumentsClient(policy.policyId, next);
+      setDocuments(saved);
+      downloadPremiumExcelDocument(doc);
+      toast.success("Excel exported", {
+        description: "Saved to Documents and downloaded.",
+      });
+    } catch (err: unknown) {
+      toast.error("Excel export failed", {
+        description:
+          err instanceof Error
+            ? err.message
+            : "Could not generate spreadsheet.",
+      });
+    } finally {
+      setIsExportingExcel(false);
+    }
+  }
+
   return {
     documents,
     isGeneratingDocuments,
+    isExportingExcel,
+    exportPremiumExcel,
     regenerateDocumentsIfNeeded,
     formDataChangedForDocuments,
     /** Live form + premium snapshot for PDF preview (includes manual overrides). */

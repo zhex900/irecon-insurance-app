@@ -1,6 +1,12 @@
 import { useMemo, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useFormContext } from "react-hook-form";
-import { InfoIcon, PencilIcon, RotateCcwIcon, XIcon } from "lucide-react";
+import {
+  FileSpreadsheetIcon,
+  InfoIcon,
+  PencilIcon,
+  RotateCcwIcon,
+  XIcon,
+} from "lucide-react";
 import {
   Card,
   CardAction,
@@ -62,6 +68,8 @@ export function PricingDeclarationConfirmedStep({
   onPremiumChange,
   onResetPremium,
   isCalculating = false,
+  onExportExcel,
+  isExportingExcel = false,
 }: {
   premium?: PremiumBreakdown;
   referralReasons: string[];
@@ -75,6 +83,9 @@ export function PricingDeclarationConfirmedStep({
   /** Clear manual overrides and recalculate from rates. */
   onResetPremium?: () => void;
   isCalculating?: boolean;
+  /** Export / download premium breakdown Excel. */
+  onExportExcel?: () => void;
+  isExportingExcel?: boolean;
 }) {
   const { watch } = useFormContext<CarPolicyFormValues>();
   const estimatedTurnover = Number(watch("estimatedTurnover") || 0);
@@ -157,34 +168,79 @@ export function PricingDeclarationConfirmedStep({
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-3">
           <CardTitle>Premium Breakdown</CardTitle>
-          {onResetPremium ? (
-            <CardAction className="self-center justify-self-auto">
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon-sm"
-                      aria-label="Reset premium"
-                      disabled={isCalculating}
-                      onClick={() => {
-                        setManualKeys(new Set());
-                        setSessionRates(undefined);
-                        setWorking(null);
-                        onResetPremium();
-                      }}
+          {onResetPremium || onExportExcel ? (
+            <CardAction className="flex items-center gap-1.5 self-center justify-self-auto">
+              {onResetPremium ? (
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        aria-label="Reset premium"
+                        disabled={isCalculating}
+                        onClick={() => {
+                          setManualKeys(new Set());
+                          setSessionRates(undefined);
+                          setWorking(null);
+                          onResetPremium();
+                        }}
+                      />
+                    }
+                  >
+                    <RotateCcwIcon
+                      className={cn(isCalculating && "animate-spin")}
                     />
-                  }
-                >
-                  <RotateCcwIcon
-                    className={cn(isCalculating && "animate-spin")}
-                  />
-                </TooltipTrigger>
-                <TooltipContent>
-                  Reset premium. Manual edits will be cleared.
-                </TooltipContent>
-              </Tooltip>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Reset premium. Manual edits will be cleared.
+                  </TooltipContent>
+                </Tooltip>
+              ) : null}
+              {onExportExcel ? (
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      // Not a <button>: this card sits in a disabled fieldset when
+                      // the policy is view-only, and native controls ignore clicks.
+                      <span
+                        role="button"
+                        tabIndex={isExportingExcel ? -1 : 0}
+                        aria-label="Export premium to Excel"
+                        aria-disabled={isExportingExcel || undefined}
+                        className={cn(
+                          "inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md border border-border bg-background shadow-xs transition-colors outline-none",
+                          "hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50",
+                          isExportingExcel &&
+                            "pointer-events-none cursor-default opacity-50",
+                        )}
+                        onClick={() => {
+                          if (isExportingExcel) return;
+                          onExportExcel();
+                        }}
+                        onKeyDown={(event) => {
+                          if (isExportingExcel) return;
+                          if (event.key !== "Enter" && event.key !== " ")
+                            return;
+                          event.preventDefault();
+                          onExportExcel();
+                        }}
+                      />
+                    }
+                  >
+                    <FileSpreadsheetIcon
+                      className={cn(
+                        "size-4 text-emerald-700",
+                        isExportingExcel && "animate-pulse",
+                      )}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Download Excel (regenerates when premium or inputs change)
+                  </TooltipContent>
+                </Tooltip>
+              ) : null}
             </CardAction>
           ) : null}
         </CardHeader>

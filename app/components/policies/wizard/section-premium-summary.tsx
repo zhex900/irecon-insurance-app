@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDownIcon, FileTypeIcon, MailIcon } from "lucide-react";
+import {
+  ChevronDownIcon,
+  FileSpreadsheetIcon,
+  FileTypeIcon,
+  MailIcon,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Button } from "~/components/ui/button";
@@ -26,6 +31,11 @@ import type {
   Policy,
 } from "~/lib/db/types";
 import { formatDocumentLabel } from "~/lib/documents/document-label";
+import {
+  downloadPremiumExcelDocument,
+  isPremiumExcelDocument,
+} from "~/lib/premium-excel";
+import { rollupPremiumTotals } from "~/lib/premium-totals";
 import { formatCurrency } from "~/lib/utils";
 import { PdfPreviewDialog } from "~/components/pdf-preview-dialog";
 import { buildPdfBlobFromDocument } from "~/lib/pdf/generate";
@@ -166,7 +176,7 @@ export function PremiumSummaryPanel({
     fingerprint: string;
   } | null>(null);
   useEffect(() => {
-    if (!previewDoc) {
+    if (!previewDoc || isPremiumExcelDocument(previewDoc)) {
       lastPreviewRequestRef.current = null;
       if (hadPreviewDocRef.current) {
         hadPreviewDocRef.current = false;
@@ -227,11 +237,22 @@ export function PremiumSummaryPanel({
     brokerFeeLines,
   ]);
 
+  const selectableRows = documentRows.filter(
+    (row) => !isPremiumExcelDocument(row.doc),
+  );
+
   const allSelected =
-    documentRows.length > 0 && selectedIds.length === documentRows.length;
+    selectableRows.length > 0 &&
+    selectableRows.every((row) =>
+      selectedIds.includes(row.doc.policyDocumentId),
+    );
 
   const selectedDocs = documentRows
-    .filter((row) => selectedIds.includes(row.doc.policyDocumentId))
+    .filter(
+      (row) =>
+        selectedIds.includes(row.doc.policyDocumentId) &&
+        !isPremiumExcelDocument(row.doc),
+    )
     .map((row) => row.doc);
 
   const brokerTemplateKey = resolveBrokerTemplateKey({
@@ -255,16 +276,17 @@ export function PremiumSummaryPanel({
   const activeDefaultTo =
     emailRecipient === "insurer" ? insurerTemplate.toEmail : brokerEmail;
 
+  const rolledPremium = premium ? rollupPremiumTotals(premium) : undefined;
   const contractWorksTotal = adjustment
     ? adjustment.adjustedContractWorksTotalPremium
-    : premium?.contractWorksTotalPremium;
+    : rolledPremium?.contractWorksTotalPremium;
   const liabilityTotal = adjustment
     ? adjustment.adjustedLiabilityTotalPremium
-    : premium?.liabilityTotalPremium;
+    : rolledPremium?.liabilityTotalPremium;
   const effectiveTotal =
-    premium && adjustment
-      ? premium.originalTotalPremium + adjustment.adjustedTotalPremium
-      : premium?.originalTotalPremium;
+    rolledPremium && adjustment
+      ? rolledPremium.originalTotalPremium + adjustment.adjustedTotalPremium
+      : rolledPremium?.originalTotalPremium;
 
   function toggleDoc(id: number, checked: boolean) {
     setSelectedIds((prev) =>
@@ -274,8 +296,20 @@ export function PremiumSummaryPanel({
 
   function toggleAll(checked: boolean) {
     setSelectedIds(
-      checked ? documentRows.map((row) => row.doc.policyDocumentId) : [],
+      checked ? selectableRows.map((row) => row.doc.policyDocumentId) : [],
     );
+  }
+
+  function handleDocumentActivate(doc: PolicyDocument) {
+    if (isPremiumExcelDocument(doc)) {
+      try {
+        downloadPremiumExcelDocument(doc);
+      } catch {
+        // Missing bytes — ignore; list still shows the row.
+      }
+      return;
+    }
+    setPreviewDoc(doc);
   }
 
   function openEmail(recipient: EmailSendRecipient) {
@@ -368,35 +402,44 @@ export function PremiumSummaryPanel({
           <ScrollArea className="h-48 rounded-md border border-border">
             <ul className="flex flex-col gap-1 p-2">
               {documentRows.map(({ doc, version }) => {
+                const isExcel = isPremiumExcelDocument(doc);
                 const checked = selectedIds.includes(doc.policyDocumentId);
                 const shortName = formatDocumentLabel(doc.name);
                 const showVersion = hasPreviousVersions || version > 1;
                 return (
                   <li key={doc.policyDocumentId}>
                     <div className="relative flex items-start gap-2 rounded-md px-1 py-1 pe-9 hover:bg-muted/60">
-                      <Checkbox
-                        className="mt-0.5"
-                        checked={checked}
-                        onCheckedChange={(value) =>
-                          toggleDoc(doc.policyDocumentId, Boolean(value))
-                        }
-                        aria-label={
-                          showVersion
-                            ? `Select ${shortName} version ${version}`
-                            : `Select ${shortName}`
-                        }
-                      />
+                      {isExcel ? (
+                        <span className="mt-0.5 size-4 shrink-0" aria-hidden />
+                      ) : (
+                        <Checkbox
+                          className="mt-0.5"
+                          checked={checked}
+                          onCheckedChange={(value) =>
+                            toggleDoc(doc.policyDocumentId, Boolean(value))
+                          }
+                          aria-label={
+                            showVersion
+                              ? `Select ${shortName} version ${version}`
+                              : `Select ${shortName}`
+                          }
+                        />
+                      )}
                       <Tooltip>
                         <TooltipTrigger
                           render={
                             <button
                               type="button"
                               className="flex min-w-0 flex-1 items-start gap-2 text-left"
-                              onClick={() => setPreviewDoc(doc)}
+                              onClick={() => handleDocumentActivate(doc)}
                             />
                           }
                         >
-                          <FileTypeIcon className="mt-0.5 size-3.5 shrink-0 text-red-600" />
+                          {isExcel ? (
+                            <FileSpreadsheetIcon className="mt-0.5 size-3.5 shrink-0 text-emerald-700" />
+                          ) : (
+                            <FileTypeIcon className="mt-0.5 size-3.5 shrink-0 text-red-600" />
+                          )}
                           <span className="min-w-0 flex-1">
                             <span className="block truncate font-medium text-foreground underline-offset-2 hover:underline">
                               {shortName}
@@ -408,7 +451,7 @@ export function PremiumSummaryPanel({
                           </span>
                         </TooltipTrigger>
                         <TooltipContent side="left" className="max-w-xs">
-                          {doc.filename}
+                          {isExcel ? `Download ${doc.filename}` : doc.filename}
                         </TooltipContent>
                       </Tooltip>
                       {showVersion ? (

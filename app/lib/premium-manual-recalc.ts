@@ -7,9 +7,8 @@
  * @see docs/pricing/car-premium-formulas.md §6
  */
 import type { PremiumBreakdown, RatingSnapshot } from "~/lib/db/types";
+import { GST_RATE } from "~/lib/pricing/constants";
 import { rollupPremiumTotals } from "~/lib/premium-totals";
-
-const GST_RATE = 0.1;
 
 const TAX_LINE_KEYS = new Set<keyof PremiumBreakdown>([
   "contractWorksESL",

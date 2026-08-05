@@ -1,7 +1,7 @@
 import type { PremiumBreakdown, RatingSnapshot } from "~/lib/db/types";
+import { GST_RATE } from "~/lib/pricing/constants";
 import { formatCurrency, formatRate } from "~/lib/utils";
 
-const GST_RATE = 0.1;
 const TERROR_START_DATE = "2021-01-01";
 const VERSION_21_START_DATE = "2023-01-01";
 const PLANT_CERTIFICATE_TURNOVER_LIMIT = 2_500_000;

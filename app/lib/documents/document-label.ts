@@ -1,9 +1,9 @@
 /** Max length for document labels shown on the policy documents side card. */
 export const DOCUMENT_LABEL_MAX_LENGTH = 28;
 
-/** Default label: first characters of the filename (without `.pdf`). */
+/** Default label: first characters of the filename (without `.pdf` / `.xlsx`). */
 export function documentLabelFromFilename(filename: string): string {
-  const base = filename.replace(/\.pdf$/i, "").trim() || filename.trim();
+  const base = filename.replace(/\.(pdf|xlsx)$/i, "").trim() || filename.trim();
   return base.slice(0, DOCUMENT_LABEL_MAX_LENGTH);
 }
 

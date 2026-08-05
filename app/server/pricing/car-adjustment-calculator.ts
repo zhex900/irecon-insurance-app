@@ -4,8 +4,7 @@ import type {
   PremiumBreakdown,
   RatingSnapshot,
 } from "~/lib/db/types";
-
-const GST_RATE = 0.1;
+import { GST_RATE } from "~/lib/pricing/constants";
 
 /**
  * End-of-term adjustment (legacy CARAdjust.aspx).
@@ -244,19 +243,27 @@ function buildSectionRow({
   stampDutyExempt: boolean;
   isSection2: boolean;
 }): AdjustmentSectionRow {
-  const esl = isSection2 ? 0 : (base + terror) * eslRate;
-  const gst = (base + terror + esl) * GST_RATE;
-  const sd =
-    isSection2 && stampDutyExempt ? 0 : (base + terror + esl + gst) * sdRate;
-  const totalPremium = base + terror + esl + gst + sd;
+  const eslRaw = isSection2 ? 0 : (base + terror) * eslRate;
+  const gstRaw = (base + terror + eslRaw) * GST_RATE;
+  const sdRaw =
+    isSection2 && stampDutyExempt
+      ? 0
+      : (base + terror + eslRaw + gstRaw) * sdRate;
+
+  const trueBasePremium = round(base);
+  const terrorismPremium = round(terror);
+  const esl = round(eslRaw);
+  const gst = round(gstRaw);
+  const sd = round(sdRaw);
 
   return {
-    trueBasePremium: round(base),
-    terrorismPremium: round(terror),
-    esl: round(esl),
-    gst: round(gst),
-    sd: round(sd),
-    totalPremium: round(totalPremium),
+    trueBasePremium,
+    terrorismPremium,
+    esl,
+    gst,
+    sd,
+    // Sum rounded lines (not round of the unrounded sum) so totals match the grid.
+    totalPremium: round(trueBasePremium + terrorismPremium + esl + gst + sd),
   };
 }
 

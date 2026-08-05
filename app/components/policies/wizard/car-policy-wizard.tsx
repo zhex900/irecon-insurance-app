@@ -305,6 +305,8 @@ function CarPolicyWizardInner({
   const {
     documents,
     isGeneratingDocuments,
+    isExportingExcel,
+    exportPremiumExcel,
     regenerateDocumentsIfNeeded,
     formDataChangedForDocuments,
     buildDocumentSnapshot,
@@ -698,6 +700,10 @@ function CarPolicyWizardInner({
             handleFieldBlur={handleFieldBlur}
             onResetPremium={resetManualPremium}
             isCalculating={isCalculating}
+            onExportExcel={() => {
+              void exportPremiumExcel();
+            }}
+            isExportingExcel={isExportingExcel}
             shellCardClassName={wizardModeCardBorderClass(wizardMode)}
           />
 

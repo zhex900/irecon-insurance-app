@@ -1,9 +1,10 @@
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
-import type { PremiumBreakdown } from "~/lib/db/types";
+import { GST_RATE } from "~/lib/pricing/constants";
 import {
   buildReferralReasons,
   liabilityLimitLabel,
 } from "~/lib/pricing/referral-reasons";
+import { rollupPremiumTotals } from "~/lib/premium-totals";
 import {
   resolveEsl,
   resolvePlantRate,
@@ -19,7 +20,6 @@ import type {
   ResolvedPrice,
 } from "~/server/pricing/types";
 
-const GST_RATE = 0.1;
 const TERROR_START_DATE = "2021-01-01";
 const VERSION_21_START_DATE = "2023-01-01";
 const PLANT_CERTIFICATE_TURNOVER_LIMIT = 2_500_000;
@@ -52,46 +52,56 @@ export async function calculateCarPremium(
   const terrorismRate = terrorism?.rate ?? 0;
   const isTerrorismRateExist = terrorism != null;
 
-  const contractWorksCalculatedBasePremium =
-    cwRate != null ? cwRate * input.estimatedTurnover : 0;
-  const contractWorksBasePremium = Math.max(
-    contractWorksCalculatedBasePremium,
-    cwMinPrem,
+  // Round each line as it is produced (same chain as premium-workings / manual
+  // recalc). Totals are the sum of those rounded lines — not round(sum of
+  // unrounded floats), which can disagree by 1¢ with the breakdown.
+  const contractWorksCalculatedBasePremium = round(
+    cwRate != null ? cwRate * input.estimatedTurnover : 0,
+  );
+  const contractWorksBasePremium = round(
+    Math.max(contractWorksCalculatedBasePremium, cwMinPrem),
   );
   // Legacy CARCalculator: Terrorism Levy = True Base Premium × τ only.
   // Display Homes / Existing Structure are manual premium lines (not SI → premium).
   const contractWorksDisplayHomesPremium = 0;
   const contractWorksExistingStructurePremium = 0;
-  const contractWorksTerrorismPremium =
-    contractWorksBasePremium * terrorismRate;
-  const contractWorksPlantPremium = getContractWorksPlantPremium({
-    certificateDate,
-    plantEquipment: input.plantEquipment,
-    section1ContractWorksValue: input.contractWorksSumInsured,
-    plantRate,
-  });
+  const contractWorksTerrorismPremium = round(
+    contractWorksBasePremium * terrorismRate,
+  );
+  const contractWorksPlantPremium = round(
+    getContractWorksPlantPremium({
+      certificateDate,
+      plantEquipment: input.plantEquipment,
+      section1ContractWorksValue: input.contractWorksSumInsured,
+      plantRate,
+    }),
+  );
   const contractWorksPlantTerrorismPremium =
     contractWorksPlantPremium > 0
-      ? contractWorksPlantPremium * terrorismRate
+      ? round(contractWorksPlantPremium * terrorismRate)
       : 0;
   // Legacy CARCalculator uses construction ESL rate `e` for plant ESL
   // (PlantEslRate is loaded/stored but not applied in server calc).
   const contractWorksPlantESL =
     contractWorksPlantPremium > 0
-      ? (contractWorksPlantPremium + contractWorksPlantTerrorismPremium) *
-        eslRate
+      ? round(
+          (contractWorksPlantPremium + contractWorksPlantTerrorismPremium) *
+            eslRate,
+        )
       : 0;
-  const contractWorksESL =
-    (contractWorksBasePremium + contractWorksTerrorismPremium) * eslRate;
-  const contractWorksGST =
+  const contractWorksESL = round(
+    (contractWorksBasePremium + contractWorksTerrorismPremium) * eslRate,
+  );
+  const contractWorksGST = round(
     (contractWorksBasePremium +
       contractWorksTerrorismPremium +
       contractWorksPlantPremium +
       contractWorksPlantTerrorismPremium +
       contractWorksPlantESL +
       contractWorksESL) *
-    GST_RATE;
-  const contractWorksStampDuty =
+      GST_RATE,
+  );
+  const contractWorksStampDuty = round(
     (contractWorksBasePremium +
       contractWorksTerrorismPremium +
       contractWorksPlantPremium +
@@ -99,62 +109,43 @@ export async function calculateCarPremium(
       contractWorksPlantESL +
       contractWorksESL +
       contractWorksGST) *
-    sdRate;
-  const contractWorksTotalPremium =
-    contractWorksBasePremium +
-    contractWorksTerrorismPremium +
-    contractWorksDisplayHomesPremium +
-    contractWorksExistingStructurePremium +
-    contractWorksPlantPremium +
-    contractWorksPlantTerrorismPremium +
-    contractWorksPlantESL +
-    contractWorksESL +
-    contractWorksGST +
-    contractWorksStampDuty;
+      sdRate,
+  );
 
-  const liabilityCalculatedBasePremium =
-    liability.rate * input.estimatedTurnover;
-  const liabilityBasePremium = Math.max(
-    liabilityCalculatedBasePremium,
-    liability.minPrem,
+  const liabilityCalculatedBasePremium = round(
+    liability.rate * input.estimatedTurnover,
+  );
+  const liabilityBasePremium = round(
+    Math.max(liabilityCalculatedBasePremium, liability.minPrem),
   );
   const liabilityESL = 0;
-  const liabilityGST = (liabilityBasePremium + liabilityESL) * GST_RATE;
-  const liabilityStampDuty =
-    (liabilityBasePremium + liabilityESL + liabilityGST) * sdRate;
-  const liabilityTotalPremium =
-    liabilityBasePremium + liabilityESL + liabilityGST + liabilityStampDuty;
+  const liabilityGST = round((liabilityBasePremium + liabilityESL) * GST_RATE);
+  const liabilityStampDuty = round(
+    (liabilityBasePremium + liabilityESL + liabilityGST) * sdRate,
+  );
 
-  const premium: PremiumBreakdown = {
-    contractWorksCalculatedBasePremium: round(
-      contractWorksCalculatedBasePremium,
-    ),
-    contractWorksBasePremium: round(contractWorksBasePremium),
-    contractWorksPlantPremium: round(contractWorksPlantPremium),
-    contractWorksPlantESL: round(contractWorksPlantESL),
-    contractWorksESL: round(contractWorksESL),
-    contractWorksGST: round(contractWorksGST),
-    contractWorksStampDuty: round(contractWorksStampDuty),
-    contractWorksTerrorismPremium: round(contractWorksTerrorismPremium),
-    contractWorksPlantTerrorismPremium: round(
-      contractWorksPlantTerrorismPremium,
-    ),
-    contractWorksDisplayHomesPremium: round(contractWorksDisplayHomesPremium),
-    contractWorksExistingStructurePremium: round(
-      contractWorksExistingStructurePremium,
-    ),
-    contractWorksTotalPremium: round(contractWorksTotalPremium),
-    liabilityCalculatedBasePremium: round(liabilityCalculatedBasePremium),
-    liabilityBasePremium: round(liabilityBasePremium),
-    liabilityESL: round(liabilityESL),
-    liabilityGST: round(liabilityGST),
-    liabilityStampDuty: round(liabilityStampDuty),
-    liabilityTotalPremium: round(liabilityTotalPremium),
+  const premium = rollupPremiumTotals({
+    contractWorksCalculatedBasePremium,
+    contractWorksBasePremium,
+    contractWorksPlantPremium,
+    contractWorksPlantESL,
+    contractWorksESL,
+    contractWorksGST,
+    contractWorksStampDuty,
+    contractWorksTerrorismPremium,
+    contractWorksPlantTerrorismPremium,
+    contractWorksDisplayHomesPremium,
+    contractWorksExistingStructurePremium,
+    contractWorksTotalPremium: 0,
+    liabilityCalculatedBasePremium,
+    liabilityBasePremium,
+    liabilityESL,
+    liabilityGST,
+    liabilityStampDuty,
+    liabilityTotalPremium: 0,
     combinedBrokerFee: round(brokerFeeTotal),
-    originalTotalPremium: round(
-      contractWorksTotalPremium + liabilityTotalPremium + brokerFeeTotal,
-    ),
-  };
+    originalTotalPremium: 0,
+  });
 
   const rating: RatingSnapshot = {
     priceId: price?.priceId ?? 0,
