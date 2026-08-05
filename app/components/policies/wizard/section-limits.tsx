@@ -2,7 +2,7 @@ import { useFormContext } from "react-hook-form";
 import { FieldInput, Select } from "~/components/ui/form-controls";
 import { type CarPolicyFormValues } from "~/lib/zod/policy-car";
 import type { ReferenceData } from "~/lib/db/types";
-import { SUB_LIMIT_FIELDS } from "~/lib/sub-limits";
+import { SUB_LIMIT_FIELDS } from "~/lib/policies/sub-limits";
 import { Section, SubLimitField } from "./section-shared";
 
 export function LimitsOfLiabilityStep({

@@ -3,7 +3,7 @@ import { formatDocumentLabel } from "~/lib/documents/document-label";
 import {
   libraryDocumentMatchesPolicy,
   type LibraryDocumentRecord,
-} from "~/lib/library-documents";
+} from "~/lib/documents/library-documents";
 import type { DocumentTemplate } from "~/lib/pdf/templates";
 import {
   formatDocTimestamp,

@@ -5,7 +5,7 @@ import { desc, eq, sql } from "drizzle-orm";
 import { getDb } from "~/lib/db/client";
 import { client, policy, policyCar } from "~/lib/db/schema";
 import type { AppUser } from "~/lib/db/types";
-import { isSuperAdmin } from "~/lib/auth/roles";
+import { isAdminRole, isSuperAdmin } from "~/lib/auth/roles";
 import { isFeatureEnabled } from "~/lib/services/feature-flags";
 import { listRecentRoutes } from "~/lib/services/navigation/recent-routes.server";
 import { getReferenceData } from "~/lib/services/reference.service";
@@ -173,6 +173,7 @@ async function listRecentPolicies(limit = 4): Promise<SideNavPolicyPreview[]> {
 
 async function listSettingsLinks(viewer: AppUser): Promise<SideNavLink[]> {
   const superAdmin = isSuperAdmin(viewer);
+  const admin = isAdminRole(viewer);
   const [
     auditLogEnabled,
     pricesEnabled,
@@ -189,18 +190,23 @@ async function listSettingsLinks(viewer: AppUser): Promise<SideNavLink[]> {
     isFeatureEnabled("additional_wording"),
   ]);
 
-  const links: SideNavLink[] = [
-    {
+  const links: SideNavLink[] = [];
+
+  if (superAdmin) {
+    links.push({
       id: "settings-users",
       label: "User Management",
       href: "/settings/users",
-    },
-    {
+    });
+  }
+
+  if (admin) {
+    links.push({
       id: "settings-ar-brokers",
       label: "Authorised Representatives",
       href: "/settings/ar-brokers",
-    },
-  ];
+    });
+  }
 
   if (additionalWordingEnabled || superAdmin) {
     links.push({

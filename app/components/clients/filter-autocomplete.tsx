@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronsUpDownIcon, XIcon } from "lucide-react";
-import { Label } from "~/components/ui/label";
+import { Field, FieldLabel } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import { cn } from "~/lib/utils";
 import type { FormAutocompleteOption } from "~/components/clients/form-autocomplete";
@@ -147,16 +147,12 @@ export function FilterAutocomplete({
       : null;
 
   return (
-    <div
-      className={cn(
-        "flex min-w-0 flex-col",
-        hideLabel ? "gap-0" : "gap-1.5",
-        className,
-      )}
+    <Field
+      className={cn("min-w-0", hideLabel ? "gap-0" : undefined, className)}
     >
-      <Label htmlFor={id} className={hideLabel ? "sr-only" : undefined}>
+      <FieldLabel htmlFor={id} className={hideLabel ? "sr-only" : undefined}>
         {label}
-      </Label>
+      </FieldLabel>
       <div ref={anchorRef} className="relative">
         <Input
           id={id}
@@ -206,7 +202,7 @@ export function FilterAutocomplete({
         <ChevronsUpDownIcon className="pointer-events-none absolute top-1/2 right-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
       </div>
       {listbox}
-    </div>
+    </Field>
   );
 }
 

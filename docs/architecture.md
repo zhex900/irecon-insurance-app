@@ -31,25 +31,29 @@ Immutable. Use these for trade-offs.
 | Storage | R2 (avatars, library documents)                                    |
 | Locale  | `en-AU`, AUD                                                       |
 
-Primary deploy: **Cloudflare Workers** (`workers/app.ts`).
+Primary deploy: **Cloudflare Workers**. The application entrypoint is
+`workers/app.ts`; server-side PDF rendering runs in the private
+`workers/documents.ts` auxiliary Worker through the `DOCUMENT_SERVICE` service
+binding. Authentication, authorization, database access, and email
+orchestration remain in the application Worker.
 
 ## Folder ownership
 
 No crossing responsibilities.
 
-| Path                                       | Owns                                                                                | Must not                               |
-| ------------------------------------------ | ----------------------------------------------------------------------------------- | -------------------------------------- |
-| `app/routes/`                              | HTTP coordination: auth gate, Zod parse, call service, map to redirect/JSON/UI      | Business rules, Drizzle, premium math  |
-| `app/lib/services/`                        | Business rules, orchestration, transactions                                         | `react`, `react-router`, hooks, JSX    |
-| `app/lib/db/`                              | Schema, client, mappers                                                             | UI, HTTP                               |
-| `app/lib/zod/`                             | Validation schemas                                                                  | Side effects                           |
-| `app/components/`                          | Rendering                                                                           | DB access, auth decisions as sole gate |
-| `app/hooks/`                               | Reusable UI logic                                                                   | Server imports                         |
-| `app/server/pricing/`                      | Pure premium calculators ([formulas](pricing/car-premium-formulas.md))              | Framework imports                      |
-| `app/lib/observability/`                   | Structured logger, requestId, Sentry helpers ([observability.md](observability.md)) | Domain UI / PII dumps                  |
-| `app/lib/` (utils, pdf, storage, supabase) | Cross-cutting infrastructure                                                        | Domain UI                              |
-| `supabase/`                                | Migrations, local config                                                            | App UI                                 |
-| `_archive/`                                | Historical only                                                                     | Anything imported by the app           |
+| Path                                                | Owns                                                                                | Must not                               |
+| --------------------------------------------------- | ----------------------------------------------------------------------------------- | -------------------------------------- |
+| `app/routes/`                                       | HTTP coordination: auth gate, Zod parse, call service, map to redirect/JSON/UI      | Business rules, Drizzle, premium math  |
+| `app/lib/services/`                                 | Business rules, orchestration, transactions                                         | `react`, `react-router`, hooks, JSX    |
+| `app/lib/db/`                                       | Schema, client, mappers                                                             | UI, HTTP                               |
+| `app/lib/zod/`                                      | Validation schemas                                                                  | Side effects                           |
+| `app/components/`                                   | Rendering                                                                           | DB access, auth decisions as sole gate |
+| `app/hooks/`                                        | Reusable UI logic                                                                   | Server imports                         |
+| `app/server/pricing/`                               | Pure premium calculators ([formulas](pricing/car-premium-formulas.md))              | Framework imports                      |
+| `app/lib/observability/`                            | Structured logger, requestId, Sentry helpers ([observability.md](observability.md)) | Domain UI / PII dumps                  |
+| `app/lib/` (domain helpers, pdf, storage, supabase) | Pure domain and cross-cutting infrastructure                                        | React components / route coordination  |
+| `supabase/`                                         | Migrations, local config                                                            | App UI                                 |
+| `_archive/`                                         | Historical only                                                                     | Anything imported by the app           |
 
 Path alias: `~/` → `./app/*`.
 
@@ -68,15 +72,17 @@ Never expose raw database rows to the UI. Never write from loaders (see [coding-
 
 ```text
 Browser
-  → Worker
+  → application Worker
     → Route loader | action | resource route
-      → requireAuth / ownership / role
+      → requireAuth / product scope / role
       → Zod (draft | full)
       → service (framework-agnostic)
            ├─ db / mapper
            ├─ server/pricing (pure)
            ├─ supabase / R2
       → redirect | JSON DTO | loaderData
+      → private DOCUMENT_SERVICE binding (PDF rendering only)
+          → bounded Zod contract → PDF response
   → Route component → domain components
 ```
 
@@ -139,7 +145,9 @@ Draft (soft) vs full (`superRefine`) schemas. Validate at the route edge.
 
 ### Presentation
 
-`components/ui` (shadcn), `components/reui` (ReUI), domain folders (`clients/`, `policies/wizard/`, `prices/`, `settings/`, …). See [ui-guidelines.md](ui-guidelines.md).
+`components/ui` (shadcn), `components/reui` (ReUI), shared form controls in `components/forms`, and domain folders (`auth/`, `clients/`, `documents/`, `email/`, `policies/`, `prices/`, `search/`, `settings/`). Domain renderers must not live under `app/lib`. See [ui-guidelines.md](ui-guidelines.md).
+
+Pure domain helpers follow the same names under `app/lib` (`documents/`, `email/`, `policies/`, `pricing/`, `search/`). Root-level `app/lib` is reserved for genuinely cross-cutting utilities and runtime infrastructure.
 
 ## Domains
 

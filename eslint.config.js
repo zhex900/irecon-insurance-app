@@ -20,6 +20,7 @@ export default tseslint.config(
       "supabase/**",
       "drizzle/**",
       "public/**",
+      "workers/*-env.d.ts",
       // Ops / one-off scripts — not part of the app lint gate.
       "scripts/**",
     ],
@@ -80,6 +81,38 @@ export default tseslint.config(
     rules: {
       // Route modules export loader/action/meta/default — not just components.
       "react-refresh/only-export-components": "off",
+    },
+  },
+  {
+    files: ["app/**/*.{ts,tsx}"],
+    ignores: [
+      "app/components/ui/**/*.{ts,tsx}",
+      "app/components/reui/**/*.{ts,tsx}",
+    ],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "Literal[value=/\\bspace-[xy]-/]",
+          message:
+            "Use flex/grid with gap-* instead of space-x-* or space-y-*.",
+        },
+        {
+          selector: "TemplateElement[value.raw=/\\bspace-[xy]-/]",
+          message:
+            "Use flex/grid with gap-* instead of space-x-* or space-y-*.",
+        },
+        {
+          selector:
+            "Literal[value=/(?:bg|text|border|ring|fill|stroke)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-[0-9]+/]",
+          message: "Use semantic design-system color tokens.",
+        },
+        {
+          selector:
+            "TemplateElement[value.raw=/(?:bg|text|border|ring|fill|stroke)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-[0-9]+/]",
+          message: "Use semantic design-system color tokens.",
+        },
+      ],
     },
   },
   {

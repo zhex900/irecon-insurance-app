@@ -1,27 +1,25 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { FileTextIcon, SearchIcon, UsersIcon } from "lucide-react";
 import { Badge } from "~/components/reui/badge";
+import { ClientSearchResultDetails } from "~/components/search/client-result";
+import { SearchResultsStatus } from "~/components/search/search-results-status";
+import { HighlightText } from "~/components/search/highlight";
+import { useApiSearch } from "~/hooks/use-api-search";
 import {
-  clientHasVisibleMatch,
-  type ClientSearchResult,
-} from "~/lib/search/client-match";
-import { ClientSearchResultDetails } from "~/lib/search/client-result";
-import { HighlightText } from "~/lib/search/highlight";
+  GLOBAL_SEARCH_PARAMS,
+  type GlobalSearchApiResponse,
+} from "~/lib/search/api-search";
+import { clientHasVisibleMatch } from "~/lib/search/client-match";
 import { fieldMatches } from "~/lib/search/match";
+import type {
+  GlobalSearchClientHit,
+  GlobalSearchPolicyHit,
+} from "~/lib/services/search/global-search.service";
 import { cn, formatNumber } from "~/lib/utils";
 
-export type GlobalSearchClient = ClientSearchResult;
-
-export type GlobalSearchPolicy = {
-  policyId: number;
-  policyNumber: string;
-  insuredName: string;
-  clientName: string;
-  clientTradingName: string;
-  clientId: number;
-  statusName: string;
-};
+export type GlobalSearchClient = GlobalSearchClientHit;
+export type GlobalSearchPolicy = GlobalSearchPolicyHit;
 
 type ResultRow =
   | { kind: "client"; client: GlobalSearchClient }
@@ -51,22 +49,28 @@ export function GlobalSearch({
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
-  const [clients, setClients] = useState<GlobalSearchClient[]>([]);
-  const [policies, setPolicies] = useState<GlobalSearchPolicy[]>([]);
-  const [clientTotal, setClientTotal] = useState(0);
-  const [policyTotal, setPolicyTotal] = useState(0);
-  /** Query string the current clients/policies results belong to. */
-  const [settledQuery, setSettledQuery] = useState<string | null>(null);
+  const [activeIndex, setActiveIndex] = useState(-1);
+
+  const {
+    trimmedQuery: q,
+    active,
+    data,
+    isSearching,
+    isSettled,
+    hasError,
+    reset: resetSearch,
+  } = useApiSearch<GlobalSearchApiResponse>({
+    enabled: open,
+    query,
+    searchParams: GLOBAL_SEARCH_PARAMS,
+  });
 
   const closeSearch = useCallback(() => {
     onOpenChange(false);
     setQuery("");
-    setClients([]);
-    setPolicies([]);
-    setClientTotal(0);
-    setPolicyTotal(0);
-    setSettledQuery(null);
-  }, [onOpenChange]);
+    setActiveIndex(-1);
+    resetSearch();
+  }, [onOpenChange, resetSearch]);
 
   useEffect(() => {
     if (!open) return;
@@ -95,46 +99,52 @@ export function GlobalSearch({
     };
   }, [open, closeSearch]);
 
-  const q = query.trim();
-  const active = open && q.length > 0;
+  const clients = useMemo(() => data?.clients ?? [], [data?.clients]);
+  const policies = useMemo(() => data?.policies ?? [], [data?.policies]);
+  const clientTotal = data?.clientTotal ?? clients.length;
+  const policyTotal = data?.policyTotal ?? policies.length;
 
-  useEffect(() => {
-    if (!active) return;
+  const displayClients = useMemo(
+    () =>
+      isSettled
+        ? clients.filter((client) => clientHasVisibleMatch(client, q))
+        : [],
+    [isSettled, clients, q],
+  );
+  const displayPolicies = useMemo(
+    () =>
+      isSettled
+        ? policies.filter((policy) => policyHasVisibleMatch(policy, q))
+        : [],
+    [isSettled, policies, q],
+  );
+  const displayClientTotal =
+    displayClients.length < clients.length
+      ? displayClients.length
+      : clientTotal;
+  const displayPolicyTotal =
+    displayPolicies.length < policies.length
+      ? displayPolicies.length
+      : policyTotal;
+  const hasResults = displayClients.length > 0 || displayPolicies.length > 0;
+  const showEmpty = active && isSettled && !hasError && !hasResults;
 
-    const controller = new AbortController();
-    const timer = window.setTimeout(async () => {
-      try {
-        const response = await fetch(`/api/search?q=${encodeURIComponent(q)}`, {
-          signal: controller.signal,
-        });
-        if (!response.ok) throw new Error("Search failed");
-        const data = (await response.json()) as {
-          clients: GlobalSearchClient[];
-          policies: GlobalSearchPolicy[];
-          clientTotal?: number;
-          policyTotal?: number;
-          total?: number;
-        };
-        setClients(data.clients ?? []);
-        setPolicies(data.policies ?? []);
-        setClientTotal(data.clientTotal ?? data.clients?.length ?? 0);
-        setPolicyTotal(data.policyTotal ?? data.policies?.length ?? 0);
-        setSettledQuery(q);
-      } catch (error) {
-        if ((error as Error).name === "AbortError") return;
-        setClients([]);
-        setPolicies([]);
-        setClientTotal(0);
-        setPolicyTotal(0);
-        setSettledQuery(q);
-      }
-    }, 250);
+  const flatResults = useMemo<ResultRow[]>(() => {
+    if (!isSettled) return [];
+    return [
+      ...displayClients.map((client): ResultRow => ({
+        kind: "client",
+        client,
+      })),
+      ...displayPolicies.map((policy): ResultRow => ({
+        kind: "policy",
+        policy,
+      })),
+    ];
+  }, [displayClients, displayPolicies, isSettled]);
 
-    return () => {
-      controller.abort();
-      window.clearTimeout(timer);
-    };
-  }, [active, q]);
+  const safeActiveIndex =
+    activeIndex >= 0 && activeIndex < flatResults.length ? activeIndex : -1;
 
   function goTo(row: ResultRow) {
     closeSearch();
@@ -145,25 +155,38 @@ export function GlobalSearch({
     navigate(`/policies/${row.policy.policyId}`);
   }
 
-  const settled = settledQuery === q;
-  const displayClients = settled
-    ? clients.filter((client) => clientHasVisibleMatch(client, q))
-    : [];
-  const displayPolicies = settled
-    ? policies.filter((policy) => policyHasVisibleMatch(policy, q))
-    : [];
-  // Server totals may include rows matched on hidden fields — align badge to UI.
-  const displayClientTotal =
-    displayClients.length < clients.length
-      ? displayClients.length
-      : clientTotal;
-  const displayPolicyTotal =
-    displayPolicies.length < policies.length
-      ? displayPolicies.length
-      : policyTotal;
-  const hasResults = displayClients.length > 0 || displayPolicies.length > 0;
-  const searching = active && !settled;
-  const showEmpty = active && settled && !hasResults;
+  function onInputKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (!active || flatResults.length === 0) return;
+
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setActiveIndex((index) => {
+        const current = index >= 0 && index < flatResults.length ? index : -1;
+        return current < flatResults.length - 1 ? current + 1 : 0;
+      });
+      return;
+    }
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActiveIndex((index) => {
+        const current = index >= 0 && index < flatResults.length ? index : 0;
+        return current > 0 ? current - 1 : flatResults.length - 1;
+      });
+      return;
+    }
+
+    if (event.key === "Enter" && safeActiveIndex >= 0) {
+      event.preventDefault();
+      const row = flatResults[safeActiveIndex];
+      if (row) goTo(row);
+    }
+  }
+
+  const activeOptionId =
+    safeActiveIndex >= 0
+      ? `global-search-option-${safeActiveIndex}`
+      : undefined;
 
   return (
     <div
@@ -177,6 +200,7 @@ export function GlobalSearch({
           value={query}
           onChange={(event) => {
             setQuery(event.target.value);
+            setActiveIndex(-1);
             onOpenChange(true);
           }}
           onFocus={() => onOpenChange(true)}
@@ -185,11 +209,14 @@ export function GlobalSearch({
             // Delay lets result row mousedown (preventDefault) run first.
             window.setTimeout(() => closeSearch(), 150);
           }}
+          onKeyDown={onInputKeyDown}
           placeholder="Search clients or policies…"
           className="h-full w-full min-w-0 bg-transparent text-foreground outline-none placeholder:text-muted-foreground"
           aria-expanded={open}
           aria-controls="global-search-results"
           aria-autocomplete="list"
+          aria-activedescendant={activeOptionId}
+          aria-busy={isSearching}
           role="combobox"
         />
       </div>
@@ -199,15 +226,19 @@ export function GlobalSearch({
         <div
           id="global-search-results"
           role="listbox"
+          aria-label="Search results"
           className="absolute top-full left-0 z-50 mt-1 max-h-96 w-full overflow-y-auto rounded-lg border bg-popover text-sm text-popover-foreground shadow-md ring-1 ring-foreground/10"
         >
-          {showEmpty ? (
-            <p className="px-3 py-6 text-center text-muted-foreground">
-              No match for “{q}”.
-            </p>
-          ) : searching ? (
-            <p className="px-3 py-3 text-muted-foreground">Searching…</p>
-          ) : (
+          <SearchResultsStatus
+            active={active}
+            isSearching={isSearching}
+            hasError={hasError}
+            showEmpty={showEmpty}
+            emptyQuery={q}
+            resultCount={hasResults ? flatResults.length : undefined}
+            className="py-3"
+          />
+          {!showEmpty && !hasError && !isSearching && active ? (
             <div className="flex flex-col gap-0.5 p-1">
               {displayClients.length > 0 ? (
                 <ResultGroup
@@ -215,14 +246,27 @@ export function GlobalSearch({
                   count={displayClientTotal}
                   showing={displayClients.length}
                 >
-                  {displayClients.map((client) => (
-                    <ClientResult
-                      key={`client-${client.clientId}`}
-                      client={client}
-                      query={q}
-                      onSelect={() => goTo({ kind: "client", client })}
-                    />
-                  ))}
+                  {displayClients.map((client) => {
+                    const index = flatResults.findIndex(
+                      (row) =>
+                        row.kind === "client" &&
+                        row.client.clientId === client.clientId,
+                    );
+                    return (
+                      <ClientResult
+                        key={`client-${client.clientId}`}
+                        id={
+                          index >= 0
+                            ? `global-search-option-${index}`
+                            : undefined
+                        }
+                        client={client}
+                        query={q}
+                        active={index === safeActiveIndex}
+                        onSelect={() => goTo({ kind: "client", client })}
+                      />
+                    );
+                  })}
                 </ResultGroup>
               ) : null}
 
@@ -232,18 +276,31 @@ export function GlobalSearch({
                   count={displayPolicyTotal}
                   showing={displayPolicies.length}
                 >
-                  {displayPolicies.map((policy) => (
-                    <PolicyResult
-                      key={`policy-${policy.policyId}`}
-                      policy={policy}
-                      query={q}
-                      onSelect={() => goTo({ kind: "policy", policy })}
-                    />
-                  ))}
+                  {displayPolicies.map((policy) => {
+                    const index = flatResults.findIndex(
+                      (row) =>
+                        row.kind === "policy" &&
+                        row.policy.policyId === policy.policyId,
+                    );
+                    return (
+                      <PolicyResult
+                        key={`policy-${policy.policyId}`}
+                        id={
+                          index >= 0
+                            ? `global-search-option-${index}`
+                            : undefined
+                        }
+                        policy={policy}
+                        query={q}
+                        active={index === safeActiveIndex}
+                        onSelect={() => goTo({ kind: "policy", policy })}
+                      />
+                    );
+                  })}
                 </ResultGroup>
               ) : null}
             </div>
-          )}
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -251,19 +308,28 @@ export function GlobalSearch({
 }
 
 function ClientResult({
+  id,
   client,
   query,
+  active,
   onSelect,
 }: {
+  id?: string;
   client: GlobalSearchClient;
   query: string;
+  active?: boolean;
   onSelect: () => void;
 }) {
   return (
     <button
+      id={id}
       type="button"
       role="option"
-      className="flex w-full items-start gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-muted"
+      aria-selected={active}
+      className={cn(
+        "flex w-full items-start gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-muted",
+        active && "bg-muted",
+      )}
       onMouseDown={(event) => event.preventDefault()}
       onClick={onSelect}
     >
@@ -274,12 +340,16 @@ function ClientResult({
 }
 
 function PolicyResult({
+  id,
   policy,
   query,
+  active,
   onSelect,
 }: {
+  id?: string;
   policy: GlobalSearchPolicy;
   query: string;
+  active?: boolean;
   onSelect: () => void;
 }) {
   const statusMatches = fieldMatches(policy.statusName, query);
@@ -290,9 +360,14 @@ function PolicyResult({
 
   return (
     <button
+      id={id}
       type="button"
       role="option"
-      className="flex w-full items-start gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-muted"
+      aria-selected={active}
+      className={cn(
+        "flex w-full items-start gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-muted",
+        active && "bg-muted",
+      )}
       onMouseDown={(event) => event.preventDefault()}
       onClick={onSelect}
     >

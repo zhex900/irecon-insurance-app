@@ -55,6 +55,23 @@ This app SSR-renders on **Cloudflare Workers** (≈128 MB isolate, CPU limits)
 
 Ask before every new import: _“Does the Worker need this on every request to this route?”_ If no → dynamic import, client-only stub, or a separate light module.
 
+### PDF Worker boundary
+
+Server PDF generation belongs to the private document Worker
+(`wrangler.documents.jsonc`), not the React Router SSR graph. The application
+Worker owns auth, policy/template reads, and email orchestration, then sends a
+bounded render snapshot through `DOCUMENT_SERVICE`. Browser preview remains a
+client-only dynamic import and does not call the document Worker.
+
+Measured dry-run baseline after the split (2026-08-05):
+
+- application Worker: **1,781.08 KiB gzip** (previously 2,651.54 KiB);
+- document Worker: **1,392.28 KiB gzip**;
+- document fonts: static-assets binding, excluded from script compression.
+
+Deploy the document Worker before an application version that references it.
+Both Worker sizes must be measured independently with Wrangler dry runs.
+
 ## Email & external I/O
 
 - Don’t send mail from loaders.

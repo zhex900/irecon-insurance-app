@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useActionData, useNavigation } from "react-router";
+import { useActionData } from "react-router";
 import { PlusIcon } from "lucide-react";
+import { useHandledActionData } from "~/hooks/use-handled-action-data";
 import { useActionSuccessToast } from "~/hooks/use-success-toast";
 import { useDebouncedSearchQuery } from "~/hooks/use-debounced-search-query";
 import { PageHeader } from "~/components/layout/app-layout";
@@ -12,7 +13,14 @@ import { UserFormDialog } from "~/components/settings/user-form-dialog";
 import { UsersTable } from "~/components/settings/users-table";
 import { Button } from "~/components/ui/button";
 import { requireAuth } from "~/lib/auth/session.server";
+import { isSuperAdmin } from "~/lib/auth/roles";
 import { getAvatarsBucket } from "~/lib/cloudflare.server";
+import { publicErrorMessage } from "~/lib/http/public-error.server";
+import {
+  parseFormIntent,
+  positiveIntegerSchema,
+  queryTextSchema,
+} from "~/lib/http/route-input";
 import type { AppUser } from "~/lib/db/types";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import {
@@ -41,10 +49,16 @@ export function meta() {
 const PAGE_SIZE = 25;
 
 export async function loader({ request }: Route.LoaderArgs) {
-  await requireAuth(request);
+  const viewer = await requireAuth(request);
+  if (!isSuperAdmin(viewer)) {
+    throw new Response("Not Found", { status: 404 });
+  }
   const url = new URL(request.url);
-  const q = url.searchParams.get("q") ?? "";
-  const editId = url.searchParams.get("edit")?.trim() || null;
+  const q = queryTextSchema.parse(url.searchParams.get("q") ?? "");
+  const parsedEditId = positiveIntegerSchema.safeParse(
+    url.searchParams.get("edit"),
+  );
+  const editId = parsedEditId.success ? String(parsedEditId.data) : null;
   const pagination = parsePagination(url, { defaultSize: PAGE_SIZE });
   const [page, editUser] = await Promise.all([
     listUsersPage({
@@ -92,12 +106,27 @@ async function applyAvatarUpload(
 
 export async function action({ request, context }: Route.ActionArgs) {
   const actor = await requireAuth(request);
+  if (!isSuperAdmin(actor)) {
+    throw new Response("Not Found", { status: 404 });
+  }
   const formData = await request.formData();
-  const intent = String(formData.get("intent") ?? "");
+  const intent = parseFormIntent(formData, [
+    "create",
+    "update",
+    "delete",
+    "enable",
+    "disable",
+  ]);
 
   if (intent === "delete") {
     const id = String(formData.get("id") ?? "").trim();
     if (!id) return { ok: false as const, error: "Missing id" };
+    if (id === actor.userId) {
+      return {
+        ok: false as const,
+        error: "You cannot delete your own account.",
+      };
+    }
     try {
       const target = await getUser(id);
       const bucket = getAvatarsBucket(context);
@@ -120,7 +149,10 @@ export async function action({ request, context }: Route.ActionArgs) {
     } catch (error) {
       return {
         ok: false as const,
-        error: error instanceof Error ? error.message : "Delete failed",
+        error: publicErrorMessage(error, {
+          fallback: "Delete failed",
+          operation: "user_delete",
+        }),
       };
     }
   }
@@ -128,6 +160,12 @@ export async function action({ request, context }: Route.ActionArgs) {
   if (intent === "disable" || intent === "enable") {
     const id = String(formData.get("id") ?? "").trim();
     if (!id) return { ok: false as const, error: "Missing id" };
+    if (intent === "disable" && id === actor.userId) {
+      return {
+        ok: false as const,
+        error: "You cannot disable your own account.",
+      };
+    }
     try {
       const updated = await setUserDisabled(id, intent === "disable");
       await writeAuditLog({
@@ -150,7 +188,10 @@ export async function action({ request, context }: Route.ActionArgs) {
     } catch (error) {
       return {
         ok: false as const,
-        error: error instanceof Error ? error.message : "Update failed",
+        error: publicErrorMessage(error, {
+          fallback: "Update failed",
+          operation: "user_status_update",
+        }),
       };
     }
   }
@@ -221,7 +262,10 @@ export async function action({ request, context }: Route.ActionArgs) {
     } catch (error) {
       return {
         ok: false as const,
-        error: error instanceof Error ? error.message : "Save failed",
+        error: publicErrorMessage(error, {
+          fallback: "Save failed",
+          operation: "user_save",
+        }),
       };
     }
   }
@@ -244,7 +288,6 @@ export default function SettingsUsersRoute({
   const [editing, setEditing] = useState<AppUser | null>(null);
   const [toggling, setToggling] = useState<AppUser | null>(null);
   const [deleting, setDeleting] = useState<AppUser | null>(null);
-  const navigation = useNavigation();
   const actionData = useActionData<typeof action>();
   useActionSuccessToast(actionData);
 
@@ -266,22 +309,13 @@ export default function SettingsUsersRoute({
     setEditorOpen(true);
   }, [loaderData.editUser]);
 
-  const handledActionDataRef = useRef(actionData);
-  useEffect(() => {
-    if (navigation.state !== "idle") return;
-    if (handledActionDataRef.current === actionData) return;
-    handledActionDataRef.current = actionData;
-    const handled = handledActionDataRef.current;
-    if (!handled?.ok) return;
-    if (
-      handled.intent === "delete" ||
-      handled.intent === "enable" ||
-      handled.intent === "disable"
-    ) {
+  useHandledActionData(actionData, {
+    intents: ["delete", "enable", "disable"],
+    onSuccess: () => {
       setDeleting(null);
       setToggling(null);
-    }
-  }, [actionData, navigation.state]);
+    },
+  });
 
   function clearEditParam() {
     if (!searchParams.has("edit")) return;

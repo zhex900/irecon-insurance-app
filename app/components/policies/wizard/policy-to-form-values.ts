@@ -1,6 +1,6 @@
 import type { Policy } from "~/lib/db/types";
-import { normalizeExcesses } from "~/lib/excesses";
-import { normalizeSubLimits } from "~/lib/sub-limits";
+import { normalizeExcesses } from "~/lib/policies/excesses";
+import { normalizeSubLimits } from "~/lib/policies/sub-limits";
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
 
 export function policyToFormValues(policy: Policy): CarPolicyFormValues {

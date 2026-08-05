@@ -1,6 +1,7 @@
 import { redirect, useActionData } from "react-router";
 import { PriceEditorDialog } from "~/components/prices/price-editor-dialog";
 import { requireAuth } from "~/lib/auth/session.server";
+import { publicErrorMessage } from "~/lib/http/public-error.server";
 import { isSuperAdmin } from "~/lib/auth/roles";
 import {
   createTemplate,
@@ -9,7 +10,7 @@ import {
   pricesListHref,
   slugLabel,
   slugToKind,
-} from "~/lib/prices/settings-shared";
+} from "~/lib/pricing/settings-shared";
 import { withSuccessToast } from "~/hooks/use-success-toast";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import {
@@ -140,7 +141,10 @@ export async function action({ request, params }: Route.ActionArgs) {
     if (error instanceof Response) throw error;
     return {
       ok: false as const,
-      error: error instanceof Error ? error.message : "Create failed",
+      error: publicErrorMessage(error, {
+        fallback: "Create failed",
+        operation: "price_catalogue_entry_create",
+      }),
     };
   }
 }

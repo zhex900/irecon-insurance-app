@@ -59,7 +59,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
         />
         <AuthBlueprintBackground />
         <div className="relative z-10">
-          <Logo size="md" tone="invert" />
+          <Logo className="[&>span]:text-invert-foreground" />
           <h1 className="mt-16 max-w-md text-4xl leading-tight font-semibold tracking-tight">
             Manage Clients & Policies with Confidence.
           </h1>
@@ -87,7 +87,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
       <section className="flex flex-1 items-center justify-center border-l border-border bg-background p-6 dark:bg-card">
         <div className="w-full max-w-md">
           <div className="mb-8 lg:hidden">
-            <Logo size="sm" tone="adaptive" />
+            <Logo />
           </div>
           {children}
           <p className="mt-8 text-center text-xs text-muted-foreground">

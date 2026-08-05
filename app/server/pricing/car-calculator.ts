@@ -4,7 +4,7 @@ import {
   buildReferralReasons,
   liabilityLimitLabel,
 } from "~/lib/pricing/referral-reasons";
-import { rollupPremiumTotals } from "~/lib/premium-totals";
+import { rollupPremiumTotals } from "~/lib/pricing/premium-totals";
 import {
   resolveEsl,
   resolvePlantRate,

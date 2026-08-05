@@ -6,7 +6,7 @@ import type { z } from "zod";
 import {
   flatCustomWordings,
   normalizeCustomWordings,
-} from "~/lib/custom-wordings";
+} from "~/lib/policies/custom-wordings";
 
 type DraftValues = z.infer<typeof carPolicyDraftSchema>;
 

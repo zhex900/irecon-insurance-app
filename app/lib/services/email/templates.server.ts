@@ -6,7 +6,7 @@ import {
   EMAIL_TEMPLATE_KEYS,
   type EmailTemplate,
   type EmailTemplateKey,
-} from "~/lib/email-templates";
+} from "~/lib/email/templates";
 
 export async function listEmailTemplates(): Promise<EmailTemplate[]> {
   const db = getDb();

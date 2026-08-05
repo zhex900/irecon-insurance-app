@@ -53,6 +53,7 @@ import {
   getAppVersion,
 } from "~/lib/app-version";
 import { APP_NAME } from "~/lib/brand";
+import { isSuperAdmin } from "~/lib/auth/roles";
 import type { BrokerSession } from "~/lib/db/types";
 import { SentryUserSync } from "~/lib/observability/sentry-user-sync";
 import type { SideNavData } from "~/lib/services/navigation/side-nav.service";
@@ -144,11 +145,6 @@ export function AppLayout({
   /** When set (e.g. layout ErrorBoundary), replace the route Outlet. */
   content?: React.ReactNode;
 }) {
-  const navigation = useNavigation();
-  const logoutFetcher = useFetcher();
-  const loggingOut =
-    logoutFetcher.state !== "idle" ||
-    (navigation.state !== "idle" && navigation.formAction?.includes("/logout"));
   const [searchOpen, setSearchOpen] = React.useState(false);
   useSuccessToastFromSearch();
   const appVersion = getAppVersion();
@@ -195,58 +191,7 @@ export function AppLayout({
             <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
             <div className="ml-auto flex min-w-0 items-center gap-3">
               <ThemeToggle />
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  className={cn(
-                    "rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                  )}
-                  aria-label="Account menu"
-                >
-                  <UserAvatar
-                    email={broker.email}
-                    fullName={broker.fullName}
-                    userId={broker.id}
-                    avatarR2Key={broker.avatarR2Key}
-                  />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="min-w-52">
-                  <DropdownMenuGroup>
-                    <DropdownMenuLabel className="font-normal">
-                      <div className="flex flex-col gap-0.5">
-                        <span className="truncate text-sm font-medium text-foreground">
-                          {broker.fullName}
-                        </span>
-                        <span className="truncate text-xs text-muted-foreground">
-                          {broker.email}
-                        </span>
-                      </div>
-                    </DropdownMenuLabel>
-                  </DropdownMenuGroup>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuGroup>
-                    <DropdownMenuItem
-                      render={<Link to={`/settings/users?edit=${broker.id}`} />}
-                    >
-                      <UserIcon />
-                      Profile
-                    </DropdownMenuItem>
-                  </DropdownMenuGroup>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    variant="destructive"
-                    disabled={loggingOut}
-                    onClick={() => {
-                      void logoutFetcher.submit(null, {
-                        method: "post",
-                        action: "/logout",
-                      });
-                    }}
-                  >
-                    {loggingOut ? <Spinner /> : <LogOutIcon />}
-                    {loggingOut ? "Logging out…" : "Log out"}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <AccountMenu broker={broker} />
             </div>
           </header>
 
@@ -257,6 +202,73 @@ export function AppLayout({
       </SidebarProvider>
       <Toaster />
     </TooltipProvider>
+  );
+}
+
+function AccountMenu({ broker }: { broker: BrokerSession }) {
+  const navigation = useNavigation();
+  const logoutFetcher = useFetcher();
+  const loggingOut =
+    logoutFetcher.state !== "idle" ||
+    (navigation.state !== "idle" && navigation.formAction?.includes("/logout"));
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        className={cn(
+          "rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        )}
+        aria-label="Account menu"
+      >
+        <UserAvatar
+          email={broker.email}
+          fullName={broker.fullName}
+          userId={broker.id}
+          avatarR2Key={broker.avatarR2Key}
+        />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="min-w-52">
+        <DropdownMenuGroup>
+          <DropdownMenuLabel className="font-normal">
+            <div className="flex flex-col gap-0.5">
+              <span className="truncate text-sm font-medium text-foreground">
+                {broker.fullName}
+              </span>
+              <span className="truncate text-xs text-muted-foreground">
+                {broker.email}
+              </span>
+            </div>
+          </DropdownMenuLabel>
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        {isSuperAdmin(broker) ? (
+          <>
+            <DropdownMenuGroup>
+              <DropdownMenuItem
+                render={<Link to={`/settings/users?edit=${broker.id}`} />}
+              >
+                <UserIcon />
+                Profile
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+          </>
+        ) : null}
+        <DropdownMenuItem
+          variant="destructive"
+          disabled={loggingOut}
+          onClick={() => {
+            void logoutFetcher.submit(null, {
+              method: "post",
+              action: "/logout",
+            });
+          }}
+        >
+          {loggingOut ? <Spinner /> : <LogOutIcon />}
+          {loggingOut ? "Logging out…" : "Log out"}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

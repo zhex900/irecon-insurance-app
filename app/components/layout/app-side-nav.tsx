@@ -496,19 +496,14 @@ function SideNavTree({
   const [expandedItems, setExpandedItems] = React.useState<string[]>(() =>
     activeSection ? [activeSection] : [],
   );
-  const [lastActiveSection, setLastActiveSection] =
-    React.useState(activeSection);
-
-  // Keep the active section open when moving between its pages.
-  if (activeSection !== lastActiveSection) {
-    setLastActiveSection(activeSection);
-    if (activeSection && !expandedItems.includes(activeSection)) {
-      setExpandedItems([...expandedItems, activeSection]);
-    }
-  }
+  // Derive the active section instead of synchronizing it through an effect.
+  const visibleExpandedItems =
+    activeSection && !expandedItems.includes(activeSection)
+      ? [...expandedItems, activeSection]
+      : expandedItems;
 
   const tree = useTree<NavItem>({
-    state: { expandedItems },
+    state: { expandedItems: visibleExpandedItems },
     setExpandedItems,
     indent,
     rootItemId: "root",
@@ -519,7 +514,7 @@ function SideNavTree({
       if (!href) return;
       if (item.isFolder()) {
         // Clicking an open section should only collapse — navigating would
-        // change the route and the active-section sync would re-expand it.
+        // change the route and the active-section derivation would re-expand it.
         if (item.isExpanded()) return;
         if (!pathMatches(pathname, href)) {
           void navigate(href);
@@ -587,7 +582,11 @@ function SideNavTree({
   );
 }
 
-export function AppSideNav({ data }: { data: SideNavData }) {
+export const AppSideNav = React.memo(function AppSideNav({
+  data,
+}: {
+  data: SideNavData;
+}) {
   const location = useLocation();
   const { open, isMobile, setOpen } = useSidebar();
   const showExpandedNav = open || isMobile;
@@ -598,10 +597,6 @@ export function AppSideNav({ data }: { data: SideNavData }) {
   );
   const recordAbortRef = React.useRef<AbortController | null>(null);
 
-  const loaderRoutesKey = data.recentRoutes
-    .map((r) => `${r.href}:${r.label}:${r.caption ?? ""}`)
-    .join("|");
-  const [loaderKey, setLoaderKey] = React.useState(loaderRoutesKey);
   const [recentRoutes, setRecentRoutes] = React.useState(data.recentRoutes);
   const [enteringId, setEnteringId] = React.useState<string | null>(null);
   const [spilledRoute, setSpilledRoute] = React.useState<SideNavLink | null>(
@@ -630,12 +625,6 @@ export function AppSideNav({ data }: { data: SideNavData }) {
   React.useEffect(() => {
     recentRoutesRef.current = recentRoutes;
   }, [recentRoutes]);
-
-  if (loaderRoutesKey !== loaderKey) {
-    setLoaderKey(loaderRoutesKey);
-    setRecentRoutes(data.recentRoutes);
-    setSpilledRoute(null);
-  }
 
   React.useEffect(
     () => () => {
@@ -733,4 +722,4 @@ export function AppSideNav({ data }: { data: SideNavData }) {
       </div>
     </>
   );
-}
+});

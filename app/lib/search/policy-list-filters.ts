@@ -8,6 +8,7 @@ import {
   formatIdListParam,
   parseIdListParam,
 } from "~/lib/search/id-list-param";
+import { queryTextSchema } from "~/lib/http/route-input";
 
 export type PolicyListUrlFilters = {
   q: string;
@@ -21,7 +22,7 @@ export type PolicyListUrlFilters = {
 
 export function parsePolicyListFiltersFromUrl(url: URL): PolicyListUrlFilters {
   return {
-    q: url.searchParams.get("q") ?? "",
+    q: queryTextSchema.parse(url.searchParams.get("q") ?? ""),
     statusIds: parseIdListParam(url.searchParams.get("status")),
     coverTypeIds: parseIdListParam(url.searchParams.get("cover")),
     policyCategoryIds: parseIdListParam(url.searchParams.get("category")),

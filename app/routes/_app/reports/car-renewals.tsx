@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Form, useSearchParams } from "react-router";
 import { DownloadIcon, FileTextIcon } from "lucide-react";
 import { PageHeader } from "~/components/layout/app-layout";
@@ -12,7 +12,7 @@ import {
   EmptyTitle,
 } from "~/components/ui/empty";
 import { Input } from "~/components/ui/input";
-import { Label } from "~/components/ui/label";
+import { Field, FieldGroup, FieldLabel } from "~/components/ui/field";
 import {
   Table,
   TableBody,
@@ -35,6 +35,9 @@ import { formatDate } from "~/lib/utils";
 import { POLICY_STATUS } from "~/lib/zod/policy-car";
 import type { Route } from "./+types/car-renewals";
 import { pageTitle } from "~/lib/brand";
+import { requireAuth } from "~/lib/auth/session.server";
+import { optionalIsoDateSchema, queryTextSchema } from "~/lib/http/route-input";
+import { parseIdListParam } from "~/lib/search/id-list-param";
 
 const PAGE_SIZE = 50;
 
@@ -42,25 +45,22 @@ export function meta() {
   return [{ title: pageTitle("CAR Renewal Report") }];
 }
 
-function parseIdList(value: string | null, fallback: number[]) {
-  if (value == null || value === "") return fallback;
-  return value
-    .split(",")
-    .map((part) => Number(part))
-    .filter((n) => Number.isInteger(n) && n > 0);
-}
-
 export async function loader({ request }: Route.LoaderArgs) {
+  await requireAuth(request);
   const url = new URL(request.url);
   const reference = getReferenceData();
-  const referenceDate = url.searchParams.get("ref") ?? todayIsoDate();
-  const search = url.searchParams.get("q") ?? "";
-  const statusIds = parseIdList(url.searchParams.get("status"), [
-    POLICY_STATUS.Taken,
-    POLICY_STATUS.Pending,
-    POLICY_STATUS.NotTaken,
-  ]);
-  const policyCategoryIds = parseIdList(url.searchParams.get("type"), [1, 2]);
+  const referenceDate =
+    optionalIsoDateSchema.parse(url.searchParams.get("ref") ?? undefined) ??
+    todayIsoDate();
+  const search = queryTextSchema.parse(url.searchParams.get("q") ?? "");
+  const parsedStatusIds = parseIdListParam(url.searchParams.get("status"));
+  const statusIds = parsedStatusIds.length
+    ? parsedStatusIds
+    : [POLICY_STATUS.Taken, POLICY_STATUS.Pending, POLICY_STATUS.NotTaken];
+  const parsedCategoryIds = parseIdListParam(url.searchParams.get("type"));
+  const policyCategoryIds = parsedCategoryIds.length
+    ? parsedCategoryIds
+    : [1, 2];
   const pagination = parsePagination(url, { defaultSize: PAGE_SIZE });
 
   const page = await listReportPoliciesPage({
@@ -119,15 +119,9 @@ export default function CarRenewalReportRoute({
     setSearchParams(params);
   }
 
-  const pageHref = useMemo(
-    () => (nextPage: number) => pageSearchHref(searchParams, nextPage),
-    [searchParams],
-  );
-  const pageSizeHref = useMemo(
-    () => (nextPageSize: number) =>
-      pageSizeSearchHref(searchParams, nextPageSize, PAGE_SIZE),
-    [searchParams],
-  );
+  const pageHref = (nextPage: number) => pageSearchHref(searchParams, nextPage);
+  const pageSizeHref = (nextPageSize: number) =>
+    pageSizeSearchHref(searchParams, nextPageSize, PAGE_SIZE);
 
   function exportCsv() {
     const csv = toCsv(
@@ -173,24 +167,25 @@ export default function CarRenewalReportRoute({
       />
 
       <Form
+        key={`${loaderData.referenceDate}|${loaderData.search}|${loaderData.statusIds.join(",")}|${loaderData.policyCategoryIds.join(",")}`}
         method="get"
         onSubmit={applyFilters}
         className="mb-4 flex flex-col gap-4 rounded-xl border bg-card p-4"
       >
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-          <div className="flex flex-1 flex-col gap-3 sm:flex-row">
-            <div className="grid gap-1.5">
-              <Label htmlFor="referenceDate">Reference date</Label>
+          <FieldGroup className="flex-1 gap-3 sm:flex-row">
+            <Field className="sm:w-44">
+              <FieldLabel htmlFor="referenceDate">Reference date</FieldLabel>
               <Input
                 id="referenceDate"
                 type="date"
                 value={referenceDate}
                 onChange={(e) => setReferenceDate(e.target.value)}
-                className="w-full sm:w-44"
+                className="w-full"
               />
-            </div>
-            <div className="grid min-w-0 flex-1 gap-1.5">
-              <Label htmlFor="renewalSearch">Search</Label>
+            </Field>
+            <Field className="min-w-0 flex-1">
+              <FieldLabel htmlFor="renewalSearch">Search</FieldLabel>
               <Input
                 id="renewalSearch"
                 value={search}
@@ -198,8 +193,8 @@ export default function CarRenewalReportRoute({
                 placeholder="Client, AR, policy #…"
                 className="max-w-md"
               />
-            </div>
-          </div>
+            </Field>
+          </FieldGroup>
           <div className="flex flex-wrap gap-2">
             <Button type="submit">Apply</Button>
             <Button

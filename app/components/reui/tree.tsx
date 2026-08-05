@@ -167,7 +167,7 @@ function TreeItemLabel<T = any>({
     <span
       data-slot="tree-item-label"
       className={cn(
-        "flex items-center gap-1 bg-background transition-colors hover:bg-accent in-focus-visible:ring-[3px] in-focus-visible:ring-ring/50 in-data-[drag-target=true]:bg-accent in-data-[search-match=true]:bg-blue-50! in-data-[selected=true]:bg-accent in-data-[selected=true]:text-accent-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0",
+        "flex items-center gap-1 bg-background transition-colors hover:bg-accent in-focus-visible:ring-[3px] in-focus-visible:ring-ring/50 in-data-[drag-target=true]:bg-accent in-data-[search-match=true]:bg-primary/10! in-data-[selected=true]:bg-accent in-data-[selected=true]:text-accent-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0",
         // Only pad leaves when a leading toggle is shown on folders.
         showToggleIcon && "not-in-data-[folder=true]:ps-7",
         "rounded-md",

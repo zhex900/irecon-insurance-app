@@ -1,8 +1,8 @@
 import type { CarWording, Policy, PolicyDocument } from "~/lib/db/types";
+import type { Font } from "@pdfme/common";
 import { isStaticSchemaName } from "~/lib/documents/template-editor-form";
 import { expandEndorsementPairSchemas } from "~/lib/pdf/endorsement-expand";
 import { applyFlowPushDown } from "~/lib/pdf/flow-push-down";
-import { getPdfmeFonts } from "~/lib/pdf/fonts";
 import { applyEndorsementRichDrawOps } from "~/lib/pdf/html-rich-text-draw";
 import type { EndorsementRichDrawOp } from "~/lib/pdf/html-rich-text-draw";
 import { buildLegacyTextPdfBlob } from "~/lib/pdf/legacy-text-pdf";
@@ -23,7 +23,10 @@ import {
   setCachedPublishedTemplate,
   type CachedPublishedTemplate,
 } from "~/lib/pdf/template-override-cache";
-import { looksLikeHtml, plainTextFromWordingHtml } from "~/lib/wording/html";
+import {
+  looksLikeHtml,
+  plainTextFromWordingHtml,
+} from "~/lib/policies/wording/html";
 
 export { invalidatePdfTemplateOverrideCache };
 
@@ -112,6 +115,7 @@ export async function generatePolicyPdf(
   options?: {
     wordingCatalogue?: CarWording[];
     brokerFeeLines?: BrokerFeeLineInput[];
+    font?: Font;
   },
 ): Promise<{
   pdf: Uint8Array;
@@ -269,10 +273,11 @@ export async function generatePolicyPdf(
   );
 
   // Dynamic import keeps @pdfme/generator out of the default Worker SSR graph.
-  const [{ generate }, font] = await Promise.all([
-    import("@pdfme/generator"),
-    getPdfmeFonts(),
-  ]);
+  if (!options?.font) {
+    throw new Error("PDF font data is required for document generation.");
+  }
+  const { generate } = await import("@pdfme/generator");
+  const font = options.font;
   let pdf = await generate({
     template,
     inputs: [inputs],
@@ -299,6 +304,7 @@ export async function buildPdfBlobFromPolicy(
     wordingCatalogue?: CarWording[];
     brokerFeeLines?: BrokerFeeLineInput[];
     mergeInputs?: Record<string, string>;
+    font?: Font;
   },
 ): Promise<Blob> {
   const { pdf } = await generatePolicyPdf(
@@ -309,6 +315,7 @@ export async function buildPdfBlobFromPolicy(
     {
       wordingCatalogue: options?.wordingCatalogue,
       brokerFeeLines: options?.brokerFeeLines,
+      font: options?.font,
     },
   );
   return new Blob([pdf.buffer as ArrayBuffer], { type: "application/pdf" });
@@ -324,6 +331,7 @@ export async function buildPdfBlobFromDocument(
   options?: {
     wordingCatalogue?: CarWording[];
     brokerFeeLines?: BrokerFeeLineInput[];
+    font?: Font;
   },
 ): Promise<Blob> {
   if (isLibraryDocument(doc) && !doc.templateKey) {
@@ -374,6 +382,7 @@ export async function buildPdfBlobFromDocument(
       mergeInputs: doc.mergeInputs,
       wordingCatalogue: options?.wordingCatalogue,
       brokerFeeLines: options?.brokerFeeLines,
+      font: options?.font,
     });
   }
 

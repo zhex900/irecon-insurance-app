@@ -1,5 +1,9 @@
 import { redirect } from "react-router";
 import { requireAuth } from "~/lib/auth/session.server";
+import {
+  positiveIntegerSchema,
+  searchParamsObject,
+} from "~/lib/http/route-input";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import { getClient } from "~/lib/services/clients/service";
 import { createPolicyDraft } from "~/lib/services/policy/data.service";
@@ -7,8 +11,11 @@ import type { Route } from "./+types/new";
 
 export async function loader({ request }: Route.LoaderArgs) {
   const actor = await requireAuth(request);
-  const url = new URL(request.url);
-  const clientId = Number(url.searchParams.get("clientId"));
+  const parsedClientId = positiveIntegerSchema.safeParse(
+    searchParamsObject(request).clientId,
+  );
+  if (!parsedClientId.success) throw redirect("/clients");
+  const clientId = parsedClientId.data;
   const client = await getClient(clientId);
   if (!client) throw new Response("Client not found", { status: 404 });
 

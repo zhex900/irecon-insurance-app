@@ -1,5 +1,5 @@
 import type { Policy, PolicyDocument } from "~/lib/db/types";
-import type { LibraryDocumentRecord } from "~/lib/library-documents";
+import type { LibraryDocumentRecord } from "~/lib/documents/library-documents";
 import type { BrokerFeeLineInput } from "~/lib/pdf/merge-fields";
 import { mergeReviewDocuments } from "~/lib/services/policy/documents/merge";
 import {
@@ -52,7 +52,12 @@ export async function savePolicyDocumentsClient(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ documents }),
   });
-  if (!response.ok) throw new Error("Failed to save documents");
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as {
+      formError?: string;
+    } | null;
+    throw new Error(payload?.formError ?? "Failed to save documents");
+  }
   return (await response.json()) as PolicyDocument[];
 }
 

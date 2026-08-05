@@ -12,6 +12,7 @@ import { Input } from "~/components/ui/input";
 import { cn } from "~/lib/utils";
 import { resetPasswordForEmail } from "~/lib/supabase/auth.server";
 import { getAppOrigin } from "~/lib/supabase/env.server";
+import { logger } from "~/lib/observability/logger.server";
 import type { Route } from "./+types/forgot-password";
 import { pageTitle } from "~/lib/brand";
 
@@ -31,8 +32,11 @@ export async function action({ request }: Route.ActionArgs) {
   const { error } = await resetPasswordForEmail(email, redirectTo);
 
   if (error) {
-    console.error("resetPasswordForEmail:", error.message, error);
     const msg = error.message.toLowerCase();
+    logger.warn("Password reset email failed", {
+      operation: "auth_password_reset_email",
+      errorType: error.name,
+    });
     if (
       msg.includes("rate limit") ||
       msg.includes("over_email_send_rate_limit") ||

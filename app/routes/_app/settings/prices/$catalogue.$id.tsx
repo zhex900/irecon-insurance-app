@@ -5,6 +5,12 @@ import {
   PriceScheduleDialog,
 } from "~/components/prices/price-schedule-dialog";
 import { requireAuth } from "~/lib/auth/session.server";
+import { publicErrorMessage } from "~/lib/http/public-error.server";
+import {
+  booleanFlagSchema,
+  parseFormIntent,
+  parsePositiveInteger,
+} from "~/lib/http/route-input";
 import { isSuperAdmin } from "~/lib/auth/roles";
 import {
   isPriceCatalogueSlug,
@@ -14,7 +20,7 @@ import {
   scheduleViewFromSnapshot,
   slugLabel,
   slugToKind,
-} from "~/lib/prices/settings-shared";
+} from "~/lib/pricing/settings-shared";
 import { withSuccessToast } from "~/hooks/use-success-toast";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import {
@@ -53,8 +59,8 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   if (!isPriceCatalogueSlug(slug)) {
     throw redirect("/settings/prices/car-rates");
   }
-  const id = Number(params.id);
-  if (!Number.isFinite(id) || id <= 0) throw redirect(pricesListHref(slug));
+  const id = parsePositiveInteger(params.id);
+  if (!id) throw redirect(pricesListHref(slug));
 
   const catalogue = await getPriceCatalogueSnapshot();
   const kind = slugToKind(slug);
@@ -64,8 +70,10 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   }
 
   const url = new URL(request.url);
-  const deleting = url.searchParams.get("delete") === "1";
-  const editing = url.searchParams.get("edit") === "1";
+  const deleting =
+    booleanFlagSchema.parse(url.searchParams.get("delete") ?? "0") === "1";
+  const editing =
+    booleanFlagSchema.parse(url.searchParams.get("edit") ?? "0") === "1";
   const canEdit = isSuperAdmin(viewer);
 
   if ((editing || deleting) && !canEdit) {
@@ -97,11 +105,11 @@ export async function action({ request, params }: Route.ActionArgs) {
     return { ok: false as const, error: "Unknown catalogue" };
   }
   const kind = slugToKind(slug);
-  const id = Number(params.id);
+  const id = parsePositiveInteger(params.id);
   if (!id) return { ok: false as const, error: "Missing id" };
 
   const formData = await request.formData();
-  const intent = String(formData.get("intent") ?? "");
+  const intent = parseFormIntent(formData, ["update", "delete"]);
 
   if (intent === "delete") {
     try {
@@ -144,7 +152,10 @@ export async function action({ request, params }: Route.ActionArgs) {
       if (error instanceof Response) throw error;
       return {
         ok: false as const,
-        error: error instanceof Error ? error.message : "Delete failed",
+        error: publicErrorMessage(error, {
+          fallback: "Delete failed",
+          operation: "price_catalogue_entry_delete",
+        }),
       };
     }
   }
@@ -194,7 +205,10 @@ export async function action({ request, params }: Route.ActionArgs) {
     if (error instanceof Response) throw error;
     return {
       ok: false as const,
-      error: error instanceof Error ? error.message : "Save failed",
+      error: publicErrorMessage(error, {
+        fallback: "Save failed",
+        operation: "price_catalogue_entry_save",
+      }),
     };
   }
 }

@@ -15,7 +15,7 @@ import { PageHeader } from "~/components/layout/app-layout";
 import {
   DocumentTemplatesEditorShell,
   DocumentTemplatesListShell,
-} from "~/components/settings/document-templates-loading";
+} from "~/components/documents/document-templates-loading";
 import { ThemeModePicker } from "~/components/theme-toggle";
 import {
   Card,
@@ -25,7 +25,7 @@ import {
   CardTitle,
 } from "~/components/ui/card";
 import { requireAuth } from "~/lib/auth/session.server";
-import { isSuperAdmin } from "~/lib/auth/roles";
+import { isAdminRole, isSuperAdmin } from "~/lib/auth/roles";
 import { isFeatureEnabled } from "~/lib/services/feature-flags";
 import type { Route } from "./+types/_index";
 import { pageTitle } from "~/lib/brand";
@@ -53,6 +53,8 @@ export async function loader({ request }: Route.LoaderArgs) {
   ]);
   const superAdmin = isSuperAdmin(viewer);
   return {
+    showUsers: superAdmin,
+    showAuthorisedRepresentatives: isAdminRole(viewer),
     showFeatures: superAdmin,
     showEmailTemplates: emailTemplatesEnabled || superAdmin,
     showLibraryDocuments: libraryDocumentsEnabled || superAdmin,
@@ -89,19 +91,27 @@ export default function SettingsIndexRoute({
   }
 
   const settingsItems = [
-    {
-      to: "/settings/users",
-      title: "User Management",
-      description: "Manage users and their permissions.",
-      icon: UserCogIcon,
-    },
-    {
-      to: "/settings/ar-brokers",
-      title: "Authorised Representatives",
-      description:
-        "Search, add, edit, and remove authorised representative brokers used on clients.",
-      icon: UsersIcon,
-    },
+    ...(loaderData.showUsers
+      ? [
+          {
+            to: "/settings/users",
+            title: "User Management",
+            description: "Manage users and their permissions.",
+            icon: UserCogIcon,
+          },
+        ]
+      : []),
+    ...(loaderData.showAuthorisedRepresentatives
+      ? [
+          {
+            to: "/settings/ar-brokers",
+            title: "Authorised Representatives",
+            description:
+              "Search, add, edit, and remove authorised representative brokers used on clients.",
+            icon: UsersIcon,
+          },
+        ]
+      : []),
     ...(loaderData.showAdditionalWording
       ? [
           {

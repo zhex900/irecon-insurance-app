@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { ExternalServiceError } from "~/lib/errors";
 
 export type SendEmailAttachment = {
   filename: string;
@@ -24,12 +25,10 @@ export type SendEmailResult = {
   id: string;
 };
 
-function required(name: string, value: string | undefined) {
+function required(_name: string, value: string | undefined) {
   const trimmed = value?.trim();
   if (!trimmed) {
-    throw new Error(
-      `${name} is not set. Add it to .env (local) or Worker secrets (staging/prod).`,
-    );
+    throw new ExternalServiceError("Email service is not configured.");
   }
   return trimmed;
 }
@@ -141,10 +140,10 @@ export async function sendEmail(
   });
 
   if (error) {
-    throw new Error(error.message || "Resend failed to send email");
+    throw new ExternalServiceError("Email could not be sent right now.");
   }
   if (!data?.id) {
-    throw new Error("Resend did not return an email id");
+    throw new ExternalServiceError("Email could not be sent right now.");
   }
   return { id: data.id };
 }

@@ -4,8 +4,8 @@ import {
   EMAIL_TEMPLATE_KEYS,
   EMAIL_TEMPLATE_META,
   type EmailTemplateKey,
-} from "~/lib/email-templates";
-import { isPriceCatalogueSlug, slugLabel } from "~/lib/prices/settings-shared";
+} from "~/lib/email/templates";
+import { isPriceCatalogueSlug, slugLabel } from "~/lib/pricing/settings-shared";
 
 export const RECENT_ROUTES_MAX = 5;
 

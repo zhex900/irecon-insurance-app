@@ -6,7 +6,7 @@ import {
   buildReferralReasons,
   liabilityLimitLabel,
 } from "~/lib/pricing/referral-reasons";
-import { rollupPremiumTotals } from "~/lib/premium-totals";
+import { rollupPremiumTotals } from "~/lib/pricing/premium-totals";
 import type { NoteAuthor } from "~/lib/services/users/service";
 import {
   carPolicyPricingSchema,

@@ -15,6 +15,8 @@ _archive
 supabase
 drizzle
 public
+workers/*-env.d.ts
+workers/documents-local.env
 *.min.js
 *.min.css
 

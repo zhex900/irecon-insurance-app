@@ -11,6 +11,7 @@ import {
 } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import { cn } from "~/lib/utils";
+import { logger } from "~/lib/observability/logger.server";
 import {
   appendClearAuthSessionCookies,
   getAuthUserWithSession,
@@ -56,7 +57,13 @@ export async function action({ request }: Route.ActionArgs) {
     password,
   );
   if (error) {
-    return { error: error.message };
+    logger.warn("Password reset update failed", {
+      operation: "auth_password_update",
+      errorType: error.name,
+    });
+    return {
+      error: "Password could not be updated. Request a new reset link.",
+    };
   }
 
   const headers = new Headers();

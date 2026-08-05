@@ -1,7 +1,10 @@
 import { requireAuth } from "~/lib/auth/session.server";
 import { getLibraryDocumentsBucket } from "~/lib/cloudflare.server";
 import { getLibraryDocumentByFilename } from "~/lib/services/documents/library-documents";
-import { getLibraryDocumentObject } from "~/lib/storage/library-documents.server";
+import {
+  applyPrivatePdfResponseHeaders,
+  getLibraryDocumentObject,
+} from "~/lib/storage/library-documents.server";
 import type { Route } from "./+types/library-documents.file.$filename";
 
 export async function loader({ request, params, context }: Route.LoaderArgs) {
@@ -30,13 +33,6 @@ export async function loader({ request, params, context }: Route.LoaderArgs) {
 
   const headers = new Headers();
   object.writeHttpMetadata?.(headers);
-  if (!headers.has("Content-Type")) {
-    headers.set("Content-Type", doc.contentType || "application/pdf");
-  }
-  headers.set("Cache-Control", "private, max-age=3600");
-  headers.set(
-    "Content-Disposition",
-    `inline; filename="${doc.filename.replace(/"/g, "")}"`,
-  );
+  applyPrivatePdfResponseHeaders(headers, doc.filename);
   return new Response(object.body, { headers });
 }

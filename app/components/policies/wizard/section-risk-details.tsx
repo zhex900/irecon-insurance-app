@@ -6,7 +6,7 @@ import {
 } from "~/components/ui/form-controls";
 import { type CarPolicyFormValues } from "~/lib/zod/policy-car";
 import type { ReferenceData } from "~/lib/db/types";
-import { SiteAddressAutocomplete } from "~/components/forms/site-address-autocomplete";
+import { SiteAddressAutocomplete } from "~/components/policies/wizard/site-address-autocomplete";
 import {
   applyAnnualCoverTypeDefaults,
   applyCoverTypeDefaults,

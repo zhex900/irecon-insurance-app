@@ -1,5 +1,8 @@
 import { carPolicyDraftSchema } from "~/lib/zod/policy-car";
 import { POLICY_STATUS } from "~/lib/zod/policy-car";
+import { requireAuth } from "~/lib/auth/session.server";
+import { publicErrorMessage } from "~/lib/http/public-error.server";
+import { parsePositiveInteger } from "~/lib/http/route-input";
 import { mergeDraftIntoPolicy } from "~/lib/services/policy/draft-merge";
 import {
   deletePolicyDraft,
@@ -10,7 +13,14 @@ import type { Route } from "./+types/policies.$policyId.draft";
 
 /** Browser draft-save / discard endpoint (Postgres via Drizzle). */
 export async function action({ request, params }: Route.ActionArgs) {
-  const policyId = Number(params.policyId);
+  await requireAuth(request);
+  const policyId = parsePositiveInteger(params.policyId);
+  if (!policyId) {
+    return Response.json(
+      { ok: false, formError: "Invalid policy id." },
+      { status: 400 },
+    );
+  }
 
   if (request.method === "DELETE") {
     try {
@@ -20,8 +30,10 @@ export async function action({ request, params }: Route.ActionArgs) {
       return Response.json(
         {
           ok: false,
-          formError:
-            error instanceof Error ? error.message : "Could not discard policy",
+          formError: publicErrorMessage(error, {
+            fallback: "Could not discard policy",
+            operation: "policy_draft_discard",
+          }),
         },
         { status: 400 },
       );
@@ -35,7 +47,7 @@ export async function action({ request, params }: Route.ActionArgs) {
     );
   }
 
-  const body = (await request.json()) as unknown;
+  const body = await request.json().catch(() => null);
   const parsed = carPolicyDraftSchema.safeParse(body);
   if (!parsed.success) {
     return Response.json({

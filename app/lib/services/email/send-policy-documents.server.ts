@@ -1,9 +1,13 @@
 import type { R2BucketLike } from "~/lib/cloudflare.server";
 import type { CarWording, Policy, PolicyDocument } from "~/lib/db/types";
-import type { EmailSendRecipient } from "~/lib/email-templates";
-import { generatePolicyPdf, uint8ToBase64 } from "~/lib/pdf/generate";
+import type { EmailSendRecipient } from "~/lib/email/templates";
+import {
+  renderPolicyPdf,
+  type DocumentServiceBinding,
+} from "~/lib/pdf/document-worker.client.server";
 import { buildLegacyTextPdfBlob } from "~/lib/pdf/legacy-text-pdf";
 import type { BrokerFeeLineInput } from "~/lib/pdf/merge-fields";
+import { getRequestContext } from "~/lib/observability/request-context.server";
 import { resolvePublishedPdfTemplate } from "~/lib/services/documents/document-templates";
 import {
   getLibraryDocumentByFilename,
@@ -41,6 +45,7 @@ export type SendPolicyDocumentsInput = {
   html?: string;
   recipientType: EmailSendRecipient;
   libraryBucket?: R2BucketLike | null;
+  documentService: DocumentServiceBinding;
 };
 
 export type SendPolicyDocumentsResult = {
@@ -72,13 +77,36 @@ async function blobToUint8(blob: Blob): Promise<Uint8Array> {
   return new Uint8Array(await blob.arrayBuffer());
 }
 
-async function resolveDocumentPdfBytes(
-  doc: PolicyDocument,
-  policy: Policy,
-  libraryBucket?: R2BucketLike | null,
-  wordingCatalogue?: CarWording[],
-  brokerFeeLines?: BrokerFeeLineInput[],
-): Promise<Uint8Array> {
+function uint8ToBase64(bytes: Uint8Array) {
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    binary += String.fromCharCode(
+      ...bytes.subarray(offset, offset + chunkSize),
+    );
+  }
+  return btoa(binary);
+}
+
+type ResolveDocumentPdfInput = {
+  doc: PolicyDocument;
+  policy: Policy;
+  libraryBucket?: R2BucketLike | null;
+  wordingCatalogue?: CarWording[];
+  brokerFeeLines?: BrokerFeeLineInput[];
+  documentService: DocumentServiceBinding;
+  requestId: string;
+};
+
+async function resolveDocumentPdfBytes({
+  doc,
+  policy,
+  libraryBucket,
+  wordingCatalogue,
+  brokerFeeLines,
+  documentService,
+  requestId,
+}: ResolveDocumentPdfInput): Promise<Uint8Array> {
   if (!doc.templateKey) {
     if (libraryBucket) {
       const libraryDoc =
@@ -110,18 +138,15 @@ async function resolveDocumentPdfBytes(
     return blobToUint8(await buildLegacyTextPdfBlob(doc.name, doc.content));
   }
 
-  try {
-    const { pdf } = await generatePolicyPdf(
-      doc.templateKey,
-      policy,
-      undefined,
-      resolved,
-      { wordingCatalogue, brokerFeeLines },
-    );
-    return pdf;
-  } catch {
-    return blobToUint8(await buildLegacyTextPdfBlob(doc.name, doc.content));
-  }
+  return renderPolicyPdf(documentService, {
+    contractVersion: 1,
+    requestId,
+    templateKey: doc.templateKey,
+    policy,
+    template: resolved,
+    wordingCatalogue,
+    brokerFeeLines,
+  });
 }
 
 function sanitizeAttachmentFilename(raw: string): string {
@@ -159,19 +184,22 @@ export async function sendPolicyDocumentsEmail(
 
   const attachments: SendEmailAttachment[] = [];
   let totalBytes = 0;
+  const requestId = getRequestContext()?.requestId ?? crypto.randomUUID();
   const [wordingCatalogue, brokerFeeLines] = await Promise.all([
     getCarWording(),
     resolveBrokerFeeLines(input.policy.dateStart),
   ]);
 
   for (const doc of input.documents) {
-    const bytes = await resolveDocumentPdfBytes(
+    const bytes = await resolveDocumentPdfBytes({
       doc,
-      input.policy,
-      input.libraryBucket,
+      policy: input.policy,
+      libraryBucket: input.libraryBucket,
       wordingCatalogue,
       brokerFeeLines,
-    );
+      documentService: input.documentService,
+      requestId,
+    });
     totalBytes += bytes.byteLength;
     if (totalBytes > MAX_ATTACHMENTS_BYTES) {
       throw new Error(

@@ -76,7 +76,7 @@ Existing hotspots above these limits are debt — do not grow them; split on tou
 - **Actions own mutations.**
 - Resource routes (`api/*`): **JSON only**.
 - Page routes: **UI only** (plus loader DTOs).
-- Authz (`requireAuth` + roles + ownership) on every loader/action/`api/*`.
+- Authz (`requireAuth` + the documented product scope and roles) on every loader/action/`api/*`.
 - Validate with Zod at the edge (draft vs full schema).
 - Multi-intent: `formData.get("intent")`.
 - Use `./+types/<route>` generated types.
@@ -118,7 +118,7 @@ Prefer typed domain errors over `throw new Error("…")`:
 
 Routes map these to `formError`, field errors, toast, or HTTP status. API shape: `{ ok, errors?, formError? }`. Unexpected → route `ErrorBoundary` / `AppErrorPage`.
 
-Until shared classes exist under e.g. `app/lib/errors.ts`, introduce them when adding new throw sites — do not proliferate raw `Error`.
+Use the shared domain error classes in `app/lib/errors.ts` for expected failures; do not proliferate raw `Error` throw sites.
 
 ## Logging
 
@@ -131,7 +131,7 @@ No `console.log` in committed app code; use [`app/lib/observability/logger.serve
 ## Security
 
 - Validate every input. Never trust the client.
-- Always check **ownership** (e.g. policy/client belongs to caller’s scope), not only role.
+- Enforce the documented product scope, not UI visibility alone. Currently, authenticated enabled brokers have portfolio-wide client/policy access; settings mutations, including users and authorised representatives, require admin or super-admin.
 - Authz on every server entry — UI hiding is not security.
 - Escape / encode output appropriately (React text nodes are safe; don’t `dangerouslySetInnerHTML` with untrusted data).
 - CSRF: follow React Router same-origin action + cookie practices (`httpOnly` / `secure` / `sameSite`).

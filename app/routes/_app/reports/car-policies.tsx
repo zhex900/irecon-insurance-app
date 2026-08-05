@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router";
+import { useMemo, useState } from "react";
+import { Form, useFetcher } from "react-router";
 import { DownloadIcon } from "lucide-react";
 import { PageHeader } from "~/components/layout/app-layout";
 import { Button } from "~/components/ui/button";
@@ -11,8 +11,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
+import { Field, FieldGroup, FieldLabel } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
-import { Label } from "~/components/ui/label";
+import { Skeleton } from "~/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -31,16 +32,23 @@ import { getCarPolicyReportSummary } from "~/lib/services/reports/list.service";
 import { formatCurrency, formatDate } from "~/lib/utils";
 import type { Route } from "./+types/car-policies";
 import { pageTitle } from "~/lib/brand";
+import { requireAuth } from "~/lib/auth/session.server";
+import { optionalIsoDateSchema } from "~/lib/http/route-input";
 
 export function meta() {
   return [{ title: pageTitle("CAR Policy Report") }];
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
+  await requireAuth(request);
   const url = new URL(request.url);
   const defaults = defaultCarPolicyPeriod();
-  const dateFrom = url.searchParams.get("from") ?? defaults.dateFrom;
-  const dateTo = url.searchParams.get("to") ?? defaults.dateTo;
+  const dateFrom =
+    optionalIsoDateSchema.parse(url.searchParams.get("from") ?? undefined) ??
+    defaults.dateFrom;
+  const dateTo =
+    optionalIsoDateSchema.parse(url.searchParams.get("to") ?? undefined) ??
+    defaults.dateTo;
   const summary = await getCarPolicyReportSummary(dateFrom, dateTo);
   return { summary, dateFrom, dateTo };
 }
@@ -48,23 +56,15 @@ export async function loader({ request }: Route.LoaderArgs) {
 export default function CarPolicyReportRoute({
   loaderData,
 }: Route.ComponentProps) {
-  const [, setSearchParams] = useSearchParams();
-  const [dateFrom, setDateFrom] = useState(loaderData.dateFrom);
-  const [dateTo, setDateTo] = useState(loaderData.dateTo);
+  const detailFetcher = useFetcher<{
+    rows: ReportPolicyRow[];
+    total: number;
+  }>();
   const [detailStatus, setDetailStatus] = useState<CarSearchStatus | null>(
     null,
   );
-  const [detailRows, setDetailRows] = useState<ReportPolicyRow[]>([]);
-  const [detailLoading, setDetailLoading] = useState(false);
-
-  const lastPeriodRef = useRef(`${loaderData.dateFrom}|${loaderData.dateTo}`);
-  useEffect(() => {
-    const key = `${loaderData.dateFrom}|${loaderData.dateTo}`;
-    if (lastPeriodRef.current === key) return;
-    lastPeriodRef.current = key;
-    setDateFrom(loaderData.dateFrom);
-    setDateTo(loaderData.dateTo);
-  }, [loaderData.dateFrom, loaderData.dateTo]);
+  const detailRows = detailFetcher.data?.rows ?? [];
+  const detailLoading = detailFetcher.state !== "idle";
 
   const summary = loaderData.summary;
   const totalPolicies = useMemo(
@@ -74,53 +74,15 @@ export default function CarPolicyReportRoute({
 
   const detailMeta = summary.find((row) => row.status === detailStatus) ?? null;
 
-  const hadDetailStatusRef = useRef(false);
-  const lastDetailRequestKeyRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (!detailStatus) {
-      lastDetailRequestKeyRef.current = null;
-      if (hadDetailStatusRef.current) {
-        hadDetailStatusRef.current = false;
-        setDetailRows([]);
-      }
-      return;
-    }
-    const requestKey = `${detailStatus}|${loaderData.dateFrom}|${loaderData.dateTo}`;
-    if (lastDetailRequestKeyRef.current === requestKey) return;
-    lastDetailRequestKeyRef.current = requestKey;
-    hadDetailStatusRef.current = true;
-    const controller = new AbortController();
-    setDetailLoading(true);
-    void (async () => {
-      try {
-        const params = new URLSearchParams({
-          type: "report-detail",
-          from: loaderData.dateFrom,
-          to: loaderData.dateTo,
-          status: detailStatus,
-        });
-        const response = await fetch(`/api/search?${params}`, {
-          signal: controller.signal,
-        });
-        if (!response.ok) throw new Error("Failed to load detail");
-        const data = (await response.json()) as { rows: ReportPolicyRow[] };
-        setDetailRows(data.rows ?? []);
-      } catch (error) {
-        if ((error as Error).name === "AbortError") return;
-        setDetailRows([]);
-      } finally {
-        setDetailLoading(false);
-      }
-    })();
-    return () => controller.abort();
-  }, [detailStatus, loaderData.dateFrom, loaderData.dateTo]);
-
-  function applyPeriod() {
-    const params = new URLSearchParams();
-    params.set("from", dateFrom);
-    params.set("to", dateTo);
-    setSearchParams(params);
-    setDetailStatus(null);
+  function openDetail(status: CarSearchStatus) {
+    setDetailStatus(status);
+    const params = new URLSearchParams({
+      type: "report-detail",
+      from: loaderData.dateFrom,
+      to: loaderData.dateTo,
+      status,
+    });
+    detailFetcher.load(`/api/search?${params}`);
   }
 
   function exportSummary() {
@@ -195,37 +157,36 @@ export default function CarPolicyReportRoute({
         ]}
       />
 
-      <form
+      <Form
+        key={`${loaderData.dateFrom}|${loaderData.dateTo}`}
+        method="get"
         className="mb-4 flex flex-col gap-4 rounded-xl border bg-card p-4 lg:flex-row lg:items-end lg:justify-between"
-        onSubmit={(event) => {
-          event.preventDefault();
-          applyPeriod();
-        }}
+        onSubmit={() => setDetailStatus(null)}
       >
-        <div className="flex flex-1 flex-col gap-3 sm:flex-row">
-          <div className="grid gap-1.5">
-            <Label htmlFor="dateFrom">Date from</Label>
-            <Input
-              id="dateFrom"
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="w-full sm:w-44"
-            />
-          </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="dateTo">Date to</Label>
-            <Input
-              id="dateTo"
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className="w-full sm:w-44"
-            />
-          </div>
-          <div className="flex items-end">
-            <Button type="submit">Apply</Button>
-          </div>
+        <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-end">
+          <FieldGroup className="gap-3 sm:flex-row">
+            <Field className="sm:w-44">
+              <FieldLabel htmlFor="dateFrom">Date from</FieldLabel>
+              <Input
+                id="dateFrom"
+                name="from"
+                type="date"
+                defaultValue={loaderData.dateFrom}
+                className="w-full"
+              />
+            </Field>
+            <Field className="sm:w-44">
+              <FieldLabel htmlFor="dateTo">Date to</FieldLabel>
+              <Input
+                id="dateTo"
+                name="to"
+                type="date"
+                defaultValue={loaderData.dateTo}
+                className="w-full"
+              />
+            </Field>
+          </FieldGroup>
+          <Button type="submit">Apply</Button>
         </div>
         <Button
           type="button"
@@ -236,7 +197,7 @@ export default function CarPolicyReportRoute({
           <DownloadIcon data-icon="inline-start" />
           Export CSV
         </Button>
-      </form>
+      </Form>
 
       <p className="mb-3 text-sm text-muted-foreground">
         {totalPolicies} polic{totalPolicies === 1 ? "y" : "ies"} created{" "}
@@ -267,23 +228,17 @@ export default function CarPolicyReportRoute({
               </TableRow>
             ) : (
               summary.map((row) => (
-                <TableRow
-                  key={row.status}
-                  className={
-                    row.policyCount > 0 ? "cursor-pointer" : "opacity-60"
-                  }
-                  onClick={() => {
-                    if (row.policyCount > 0) setDetailStatus(row.status);
-                  }}
-                >
+                <TableRow key={row.status}>
                   <TableCell className="font-medium">
-                    {row.policyCount > 0 ? (
-                      <span className="text-primary underline-offset-2 hover:underline">
-                        {row.status}
-                      </span>
-                    ) : (
-                      row.status
-                    )}
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="h-auto px-0"
+                      disabled={row.policyCount === 0}
+                      onClick={() => openDetail(row.status)}
+                    >
+                      {row.status}
+                    </Button>
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
                     {row.policyCount}
@@ -328,11 +283,19 @@ export default function CarPolicyReportRoute({
               <TableBody>
                 {detailLoading ? (
                   <TableRow>
+                    {[0, 1, 2, 3].map((column) => (
+                      <TableCell key={column} className="py-4">
+                        <Skeleton className="h-4 w-full" />
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ) : detailRows.length === 0 ? (
+                  <TableRow>
                     <TableCell
                       colSpan={4}
                       className="py-8 text-center text-muted-foreground"
                     >
-                      Loading…
+                      No policies found for this status.
                     </TableCell>
                   </TableRow>
                 ) : (

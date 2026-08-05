@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Form,
   redirect,
@@ -11,6 +11,7 @@ import { flattenFieldErrors, focusFormIssue } from "~/lib/form-validation-ui";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FileTextIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { ListSearchField } from "~/components/forms/list-search-field";
+import { useHandledActionData } from "~/hooks/use-handled-action-data";
 import { useActionSuccessToast } from "~/hooks/use-success-toast";
 import { useDebouncedSearchQuery } from "~/hooks/use-debounced-search-query";
 import { PageHeader } from "~/components/layout/app-layout";
@@ -32,6 +33,10 @@ import {
   EmptyTitle,
 } from "~/components/ui/empty";
 import {
+  InteractiveTableActionsCell,
+  InteractiveTableRow,
+} from "~/components/ui/interactive-table-row";
+import {
   Table,
   TableBody,
   TableCell,
@@ -39,14 +44,20 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table";
-import { WordingHtmlView } from "~/components/forms/wording-html-view";
-import { WordingRichEditor } from "~/components/forms/wording-rich-editor";
+import { WordingHtmlView } from "~/components/policies/wording-html-view";
+import { WordingRichEditor } from "~/components/policies/wording-rich-editor";
 import { isAdminRole, isSuperAdmin } from "~/lib/auth/roles";
 import { requireAuth } from "~/lib/auth/session.server";
+import { publicErrorMessage } from "~/lib/http/public-error.server";
+import {
+  parseFormIntent,
+  parsePositiveInteger,
+  queryTextSchema,
+} from "~/lib/http/route-input";
 import type { CarWording } from "~/lib/db/types";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import { isFeatureEnabled } from "~/lib/services/feature-flags";
-import { SearchHighlight } from "~/lib/search/highlight-cell";
+import { SearchHighlight } from "~/components/search/highlight-cell";
 import { TablePagination } from "~/components/ui/table-pagination";
 import {
   pageSearchHref,
@@ -60,7 +71,7 @@ import {
   listCarWordingsPage,
   updateCarWording,
 } from "~/lib/services/car-wording/service";
-import { plainTextFromWordingHtml } from "~/lib/wording/html";
+import { plainTextFromWordingHtml } from "~/lib/policies/wording/html";
 import {
   carWordingFormSchema,
   type CarWordingFormValues,
@@ -81,7 +92,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     throw redirect("/settings");
   }
   const url = new URL(request.url);
-  const q = url.searchParams.get("q") ?? "";
+  const q = queryTextSchema.parse(url.searchParams.get("q") ?? "");
   const pagination = parsePagination(url, { defaultSize: PAGE_SIZE });
   const page = await listCarWordingsPage({
     search: q || undefined,
@@ -110,10 +121,10 @@ export async function action({ request }: Route.ActionArgs) {
   }
 
   const formData = await request.formData();
-  const intent = String(formData.get("intent") ?? "");
+  const intent = parseFormIntent(formData, ["create", "update", "delete"]);
 
   if (intent === "delete") {
-    const id = Number(formData.get("id"));
+    const id = parsePositiveInteger(formData.get("id"));
     if (!id) return { ok: false as const, error: "Missing id" };
     try {
       const existing = await getCarWordingById(id);
@@ -135,7 +146,10 @@ export async function action({ request }: Route.ActionArgs) {
     } catch (error) {
       return {
         ok: false as const,
-        error: error instanceof Error ? error.message : "Delete failed",
+        error: publicErrorMessage(error, {
+          fallback: "Delete failed",
+          operation: "car_wording_delete",
+        }),
       };
     }
   }
@@ -171,7 +185,7 @@ export async function action({ request }: Route.ActionArgs) {
           message: `Wording “${created.subject}” added`,
         };
       }
-      const id = Number(formData.get("id"));
+      const id = parsePositiveInteger(formData.get("id"));
       if (!id) return { ok: false as const, error: "Missing id" };
       const updated = await updateCarWording(id, parsed.data);
       await writeAuditLog({
@@ -191,7 +205,10 @@ export async function action({ request }: Route.ActionArgs) {
     } catch (error) {
       return {
         ok: false as const,
-        error: error instanceof Error ? error.message : "Save failed",
+        error: publicErrorMessage(error, {
+          fallback: "Save failed",
+          operation: "car_wording_save",
+        }),
       };
     }
   }
@@ -211,7 +228,6 @@ function WordingFormDialog({
   const navigation = useNavigation();
   const actionData = useActionData<typeof action>();
   const submit = useSubmit();
-  const handledActionDataRef = useRef(actionData);
   const saving =
     navigation.state === "submitting" &&
     (navigation.formData?.get("intent") === "create" ||
@@ -234,19 +250,11 @@ function WordingFormDialog({
     submit(data, { method: "post" });
   }
 
-  // Close once per successful save. Stale actionData must not re-close on reopen.
-  useEffect(() => {
-    if (navigation.state !== "idle") return;
-    if (handledActionDataRef.current === actionData) return;
-    handledActionDataRef.current = actionData;
-    if (
-      !actionData?.ok ||
-      (actionData.intent !== "create" && actionData.intent !== "update")
-    ) {
-      return;
-    }
-    onOpenChange(false);
-  }, [actionData, navigation.state, onOpenChange]);
+  useHandledActionData(actionData, {
+    enabled: open,
+    intents: ["create", "update"],
+    onSuccess: () => onOpenChange(false),
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -352,15 +360,10 @@ export default function SettingsCarWordingRoute({
   const pageSizeHref = (nextPageSize: number) =>
     pageSizeSearchHref(searchParams, nextPageSize, PAGE_SIZE);
 
-  const handledDeleteActionDataRef = useRef(actionData);
-  useEffect(() => {
-    if (navigation.state !== "idle") return;
-    if (handledDeleteActionDataRef.current === actionData) return;
-    handledDeleteActionDataRef.current = actionData;
-    const handled = handledDeleteActionDataRef.current;
-    if (!handled?.ok || handled.intent !== "delete") return;
-    setDeleting(null);
-  }, [actionData, navigation.state]);
+  useHandledActionData(actionData, {
+    intents: "delete",
+    onSuccess: () => setDeleting(null),
+  });
 
   function openCreate() {
     setEditing(null);
@@ -437,10 +440,11 @@ export default function SettingsCarWordingRoute({
               </TableRow>
             ) : (
               wordings.map((item) => (
-                <TableRow
+                <InteractiveTableRow
                   key={item.carWordingId}
-                  className={canEdit ? "cursor-pointer" : undefined}
-                  onClick={canEdit ? () => openEdit(item) : undefined}
+                  disabled={!canEdit}
+                  aria-label={`Edit wording ${plainTextFromWordingHtml(item.subject)}`}
+                  onActivate={() => openEdit(item)}
                 >
                   <TableCell className="text-muted-foreground tabular-nums">
                     {item.carWordingId}
@@ -468,23 +472,20 @@ export default function SettingsCarWordingRoute({
                     )}
                   </TableCell>
                   {canEdit ? (
-                    <TableCell className="text-right">
+                    <InteractiveTableActionsCell className="text-right">
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon-sm"
                         className="text-destructive hover:text-destructive"
                         aria-label={`Delete ${item.subject}`}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          setDeleting(item);
-                        }}
+                        onClick={() => setDeleting(item)}
                       >
                         <Trash2Icon />
                       </Button>
-                    </TableCell>
+                    </InteractiveTableActionsCell>
                   ) : null}
-                </TableRow>
+                </InteractiveTableRow>
               ))
             )}
           </TableBody>

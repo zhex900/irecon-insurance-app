@@ -36,7 +36,7 @@ import {
   EMAIL_TEMPLATE_META,
   type EmailTemplate,
   type EmailTemplateKey,
-} from "~/lib/email-templates";
+} from "~/lib/email/templates";
 import { getEmailFooterDisplayWidth } from "~/lib/services/email/footer-image.server";
 import { listEmailTemplates } from "~/lib/services/email/templates.server";
 import { isFeatureEnabled } from "~/lib/services/feature-flags";

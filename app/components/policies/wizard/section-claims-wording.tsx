@@ -14,7 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
-import { WordingHtmlView } from "~/components/forms/wording-html-view";
+import { WordingHtmlView } from "~/components/policies/wording-html-view";
 import { Field, FieldError, FieldLabel } from "~/components/ui/field";
 import {
   FieldInput,
@@ -22,7 +22,7 @@ import {
   Select,
 } from "~/components/ui/form-controls";
 import { cn } from "~/lib/utils";
-import { plainTextFromWordingHtml } from "~/lib/wording/html";
+import { plainTextFromWordingHtml } from "~/lib/policies/wording/html";
 import { type CarPolicyFormValues } from "~/lib/zod/policy-car";
 import type { CarWording } from "~/lib/db/types";
 import { Section } from "./section-shared";

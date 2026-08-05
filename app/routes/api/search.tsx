@@ -1,4 +1,9 @@
+import { z } from "zod";
 import { requireAuth } from "~/lib/auth/session.server";
+import {
+  invalidInputResponse,
+  searchParamsObject,
+} from "~/lib/http/route-input";
 import { parseIdListParam } from "~/lib/search/id-list-param";
 import { parsePolicyListFiltersFromUrl } from "~/lib/search/policy-list-filters";
 import { countPoliciesForClientIds } from "~/lib/services/policies/list.service";
@@ -10,8 +15,26 @@ import {
   searchClients,
   searchGlobal,
 } from "~/lib/services/search/global-search.service";
-import type { CarSearchStatus } from "~/lib/services/reports/service";
+import { CAR_SEARCH_STATUSES } from "~/lib/services/reports/service";
 import type { Route } from "./+types/search";
+
+const searchQuerySchema = z.object({
+  q: z.string().trim().max(200).catch(""),
+  type: z
+    .enum(["global", "clients", "client-policy-counts", "report-detail"])
+    .catch("global"),
+  limit: z.coerce.number().int().min(1).max(5_000).catch(8),
+  ids: z.string().max(10_000).optional(),
+  from: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+  to: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+  status: z.enum(CAR_SEARCH_STATUSES).optional(),
+});
 
 /**
  * GET /api/search?q=… — global clients + policies (capped).
@@ -22,12 +45,9 @@ import type { Route } from "./+types/search";
 export async function loader({ request }: Route.LoaderArgs) {
   await requireAuth(request);
   const url = new URL(request.url);
-  const q = url.searchParams.get("q") ?? "";
-  const type = url.searchParams.get("type") ?? "global";
-  const limit = Math.min(
-    Math.max(Number(url.searchParams.get("limit") ?? "8") || 8, 1),
-    5000,
-  );
+  const parsed = searchQuerySchema.safeParse(searchParamsObject(request));
+  if (!parsed.success) return invalidInputResponse("Invalid search query.");
+  const { q, type, limit } = parsed.data;
 
   if (type === "clients") {
     const results = await searchClients(q, Math.min(limit, 50));
@@ -35,7 +55,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   }
 
   if (type === "client-policy-counts") {
-    const ids = parseIdListParam(url.searchParams.get("ids"));
+    const ids = parseIdListParam(parsed.data.ids ?? null);
     const filters = parsePolicyListFiltersFromUrl(url);
     const counts = await countPoliciesForClientIds(
       {
@@ -54,13 +74,15 @@ export async function loader({ request }: Route.LoaderArgs) {
   }
 
   if (type === "report-detail") {
-    const dateFrom = url.searchParams.get("from") ?? "";
-    const dateTo = url.searchParams.get("to") ?? "";
-    const status = (url.searchParams.get("status") ?? "") as CarSearchStatus;
+    const dateFrom = parsed.data.from;
+    const dateTo = parsed.data.to;
+    const status = parsed.data.status;
+    if (!status)
+      return invalidInputResponse("A valid report status is required.");
     const filters = filtersForCarSearchStatus(status);
     const page = await listReportPoliciesPage({
-      dateFrom: dateFrom || undefined,
-      dateTo: dateTo || undefined,
+      dateFrom,
+      dateTo,
       statusIds: filters.statusIds,
       policyCategoryIds: filters.policyCategoryIds,
       limit: Math.min(limit, 5000),

@@ -6,6 +6,7 @@ import {
 export { POLICY_MESSAGE_NOTE_TYPE_ID };
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
 import type { z } from "zod";
+import { ValidationError } from "~/lib/errors";
 import {
   isTerminalStatus,
   POLICY_STATUS,
@@ -14,7 +15,7 @@ import {
 import {
   flatCustomWordings,
   normalizeCustomWordings,
-} from "~/lib/custom-wordings";
+} from "~/lib/policies/custom-wordings";
 import {
   calculatePremiumForPolicy,
   createMessageNote,
@@ -28,7 +29,7 @@ import {
 import {
   formatTakenStatusBlockMessage,
   getTakenStatusErrors,
-} from "~/lib/policy-taken-status";
+} from "~/lib/policies/taken-status";
 import {
   buildReferralReasons,
   liabilityLimitLabel,
@@ -38,16 +39,11 @@ export { isTerminalStatus };
 export {
   formatTakenStatusBlockMessage,
   getTakenStatusErrors,
-} from "~/lib/policy-taken-status";
+} from "~/lib/policies/taken-status";
 
 type DraftValues = z.infer<typeof carPolicyDraftSchema>;
 
-export class PolicySaveError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "PolicySaveError";
-  }
-}
+export class PolicySaveError extends ValidationError {}
 
 export async function savePolicyDraft(policyId: number, values: DraftValues) {
   const existing = await getPolicy(policyId);

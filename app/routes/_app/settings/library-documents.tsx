@@ -1,10 +1,12 @@
 import { redirect } from "react-router";
 import { FileStackIcon } from "lucide-react";
 import { PageHeader } from "~/components/layout/app-layout";
-import { LibraryDocumentsManager } from "~/components/settings/library-documents-manager";
+import { LibraryDocumentsManager } from "~/components/documents/library-documents-manager";
 import { isAdminRole, isSuperAdmin } from "~/lib/auth/roles";
 import { requireAuth } from "~/lib/auth/session.server";
 import { getLibraryDocumentsBucket } from "~/lib/cloudflare.server";
+import { publicErrorMessage } from "~/lib/http/public-error.server";
+import { parseFormIntent, parsePositiveInteger } from "~/lib/http/route-input";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import { isFeatureEnabled } from "~/lib/services/feature-flags";
 import {
@@ -60,7 +62,12 @@ export async function action({ request, context }: Route.ActionArgs) {
   }
 
   const formData = await request.formData();
-  const intent = String(formData.get("intent") ?? "");
+  const intent = parseFormIntent(formData, [
+    "upload",
+    "delete",
+    "update-label",
+    "update-cover-types",
+  ]);
 
   if (intent === "upload") {
     const clientId = String(formData.get("clientId") ?? "");
@@ -116,15 +123,18 @@ export async function action({ request, context }: Route.ActionArgs) {
     } catch (error) {
       return {
         ok: false as const,
-        error: error instanceof Error ? error.message : "Upload failed.",
+        error: publicErrorMessage(error, {
+          fallback: "Upload failed.",
+          operation: "library_document_upload",
+        }),
         clientId: clientId || undefined,
       };
     }
   }
 
   if (intent === "delete") {
-    const id = Number(formData.get("id"));
-    if (!Number.isFinite(id) || id <= 0) {
+    const id = parsePositiveInteger(formData.get("id"));
+    if (!id) {
       return { ok: false as const, error: "Invalid document." };
     }
     try {
@@ -145,15 +155,18 @@ export async function action({ request, context }: Route.ActionArgs) {
     } catch (error) {
       return {
         ok: false as const,
-        error: error instanceof Error ? error.message : "Delete failed.",
+        error: publicErrorMessage(error, {
+          fallback: "Delete failed.",
+          operation: "library_document_delete",
+        }),
       };
     }
   }
 
   if (intent === "update-label") {
-    const id = Number(formData.get("id"));
+    const id = parsePositiveInteger(formData.get("id"));
     const label = String(formData.get("label") ?? "");
-    if (!Number.isFinite(id) || id <= 0) {
+    if (!id) {
       return { ok: false as const, error: "Invalid document." };
     }
     try {
@@ -181,20 +194,23 @@ export async function action({ request, context }: Route.ActionArgs) {
     } catch (error) {
       return {
         ok: false as const,
-        error: error instanceof Error ? error.message : "Update failed.",
+        error: publicErrorMessage(error, {
+          fallback: "Update failed.",
+          operation: "library_document_cover_types_update",
+        }),
       };
     }
   }
 
   if (intent === "update-cover-types") {
-    const id = Number(formData.get("id"));
-    if (!Number.isFinite(id) || id <= 0) {
+    const id = parsePositiveInteger(formData.get("id"));
+    if (!id) {
       return { ok: false as const, error: "Invalid document." };
     }
     const coverTypeIds = formData
       .getAll("coverTypeId")
-      .map((value) => Number(value))
-      .filter((value) => Number.isFinite(value) && value > 0);
+      .map(parsePositiveInteger)
+      .filter((value): value is number => value !== undefined);
     try {
       const document = await updateLibraryDocumentCoverTypes(
         { id, coverTypeIds },
@@ -223,7 +239,10 @@ export async function action({ request, context }: Route.ActionArgs) {
     } catch (error) {
       return {
         ok: false as const,
-        error: error instanceof Error ? error.message : "Update failed.",
+        error: publicErrorMessage(error, {
+          fallback: "Update failed.",
+          operation: "library_document_label_update",
+        }),
       };
     }
   }

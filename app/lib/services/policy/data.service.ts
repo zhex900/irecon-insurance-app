@@ -7,8 +7,8 @@ import {
 import { getDb } from "~/lib/db/client";
 import { policy, policyCar, policyCarAdjustment } from "~/lib/db/schema";
 import { policyToRows, rowsToPolicy } from "~/lib/db/policy-mapper";
-import { normalizeExcesses } from "~/lib/excesses";
-import { normalizeSubLimits } from "~/lib/sub-limits";
+import { normalizeExcesses } from "~/lib/policies/excesses";
+import { normalizeSubLimits } from "~/lib/policies/sub-limits";
 import type { Policy, PolicySummary } from "~/lib/db/types";
 import { listClients } from "~/lib/services/clients/service";
 

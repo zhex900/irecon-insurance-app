@@ -42,7 +42,7 @@ _archive/      Legacy app, specs, CSVs, MSSQL dumps (not deployed)
 
 ## Run locally
 
-Requires [Docker](https://docs.docker.com/get-docker/) and the [Supabase CLI](https://supabase.com/docs/guides/cli).
+Requires Node.js 24+, [Docker](https://docs.docker.com/get-docker/), and the [Supabase CLI](https://supabase.com/docs/guides/cli).
 
 ```bash
 npm install
@@ -50,6 +50,8 @@ cp .env.example .env   # DATABASE_URL points at local Supabase
 npm run db:start       # starts local Postgres on :54322
 npm run db:reset       # apply migrations + seed
 npm run dev            # http://127.0.0.1:5173
+# Second terminal: private PDF service used by email attachment rendering
+npm run dev:documents-worker
 ```
 
 Sign in with a seeded user from `_archive/data/users.json`. Default password: `password123`.
@@ -79,6 +81,7 @@ npm run db:export:prices  # MSSQL → JSON snapshot only
 npm run db:push           # drizzle-kit push (dev only)
 npm run dev
 npm run build
+npm run build:documents-worker # document Worker dry-run bundle
 npm run typecheck
 npm run lint
 npm run format:check
@@ -87,6 +90,7 @@ npm run test              # Vitest
 npm run test:e2e          # Playwright (needs `npx playwright install chromium`)
 npm run test:smoke        # Playwright smoke subset
 npm run deploy:staging
+npm run deploy:documents:staging # document Worker only
 npm run deploy:secret
 ```
 

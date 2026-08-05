@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { Form, useActionData, useNavigation, useSubmit } from "react-router";
 import { useForm } from "react-hook-form";
 import { flattenFieldErrors, focusFormIssue } from "~/lib/form-validation-ui";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { BadgeCheckIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { ListSearchField } from "~/components/forms/list-search-field";
+import { useHandledActionData } from "~/hooks/use-handled-action-data";
 import { useActionSuccessToast } from "~/hooks/use-success-toast";
 import { useDebouncedSearchQuery } from "~/hooks/use-debounced-search-query";
 import { PageHeader } from "~/components/layout/app-layout";
@@ -28,6 +29,10 @@ import {
 import { Field, FieldError, FieldLabel } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import {
+  InteractiveTableActionsCell,
+  InteractiveTableRow,
+} from "~/components/ui/interactive-table-row";
+import {
   Table,
   TableBody,
   TableCell,
@@ -36,9 +41,16 @@ import {
   TableRow,
 } from "~/components/ui/table";
 import { requireAuth } from "~/lib/auth/session.server";
+import { publicErrorMessage } from "~/lib/http/public-error.server";
+import {
+  parseFormIntent,
+  parsePositiveInteger,
+  queryTextSchema,
+} from "~/lib/http/route-input";
+import { isAdminRole } from "~/lib/auth/roles";
 import type { WholesaleBroker } from "~/lib/db/types";
 import { writeAuditLog } from "~/lib/services/audit/service";
-import { SearchHighlight } from "~/lib/search/highlight-cell";
+import { SearchHighlight } from "~/components/search/highlight-cell";
 import { TablePagination } from "~/components/ui/table-pagination";
 import {
   pageSearchHref,
@@ -66,9 +78,12 @@ export function meta() {
 const PAGE_SIZE = 25;
 
 export async function loader({ request }: Route.LoaderArgs) {
-  await requireAuth(request);
+  const viewer = await requireAuth(request);
+  if (!isAdminRole(viewer)) {
+    throw new Response("Not Found", { status: 404 });
+  }
   const url = new URL(request.url);
-  const q = url.searchParams.get("q") ?? "";
+  const q = queryTextSchema.parse(url.searchParams.get("q") ?? "");
   const pagination = parsePagination(url, { defaultSize: PAGE_SIZE });
   const page = await listAuthorisedRepresentativesPage({
     search: q || undefined,
@@ -86,11 +101,14 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 export async function action({ request }: Route.ActionArgs) {
   const actor = await requireAuth(request);
+  if (!isAdminRole(actor)) {
+    throw new Response("Not Found", { status: 404 });
+  }
   const formData = await request.formData();
-  const intent = String(formData.get("intent") ?? "");
+  const intent = parseFormIntent(formData, ["create", "update", "delete"]);
 
   if (intent === "delete") {
-    const id = Number(formData.get("id"));
+    const id = parsePositiveInteger(formData.get("id"));
     if (!id) return { ok: false as const, error: "Missing id" };
     try {
       const existing = await getAuthorisedRepresentative(id);
@@ -115,7 +133,10 @@ export async function action({ request }: Route.ActionArgs) {
     } catch (error) {
       return {
         ok: false as const,
-        error: error instanceof Error ? error.message : "Delete failed",
+        error: publicErrorMessage(error, {
+          fallback: "Delete failed",
+          operation: "authorised_representative_delete",
+        }),
       };
     }
   }
@@ -159,7 +180,7 @@ export async function action({ request }: Route.ActionArgs) {
           message: `Authorised representative ${created.fullName} added`,
         };
       }
-      const id = Number(formData.get("id"));
+      const id = parsePositiveInteger(formData.get("id"));
       if (!id) return { ok: false as const, error: "Missing id" };
       const updated = await updateAuthorisedRepresentative(id, parsed.data);
       await writeAuditLog({
@@ -182,7 +203,10 @@ export async function action({ request }: Route.ActionArgs) {
     } catch (error) {
       return {
         ok: false as const,
-        error: error instanceof Error ? error.message : "Save failed",
+        error: publicErrorMessage(error, {
+          fallback: "Save failed",
+          operation: "authorised_representative_save",
+        }),
       };
     }
   }
@@ -228,16 +252,11 @@ function ArFormDialog({
     submit(data, { method: "post" });
   }
 
-  // Close dialog after successful save
-  if (
-    open &&
-    actionData?.ok &&
-    (actionData.intent === "create" || actionData.intent === "update") &&
-    navigation.state === "idle"
-  ) {
-    // defer close to avoid render-phase setState; use effect-like pattern via timeout
-    queueMicrotask(() => onOpenChange(false));
-  }
+  useHandledActionData(actionData, {
+    enabled: open,
+    intents: ["create", "update"],
+    onSuccess: () => onOpenChange(false),
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -367,15 +386,10 @@ export default function SettingsArBrokersRoute({
   const pageSizeHref = (nextPageSize: number) =>
     pageSizeSearchHref(searchParams, nextPageSize, PAGE_SIZE);
 
-  const handledDeleteActionDataRef = useRef(actionData);
-  useEffect(() => {
-    if (navigation.state !== "idle") return;
-    if (handledDeleteActionDataRef.current === actionData) return;
-    handledDeleteActionDataRef.current = actionData;
-    const handled = handledDeleteActionDataRef.current;
-    if (!handled?.ok || handled.intent !== "delete") return;
-    setDeleting(null);
-  }, [actionData, navigation.state]);
+  useHandledActionData(actionData, {
+    intents: "delete",
+    onSuccess: () => setDeleting(null),
+  });
 
   function openCreate() {
     setEditing(null);
@@ -451,10 +465,10 @@ export default function SettingsArBrokersRoute({
               </TableRow>
             ) : (
               brokers.map((ar) => (
-                <TableRow
+                <InteractiveTableRow
                   key={ar.authorisedRepresentativeId}
-                  className="cursor-pointer"
-                  onClick={() => openEdit(ar)}
+                  aria-label={`Edit ${ar.fullName}`}
+                  onActivate={() => openEdit(ar)}
                 >
                   <TableCell className="font-medium">
                     <SearchHighlight text={ar.fullName} query={searchQuery} />
@@ -471,21 +485,18 @@ export default function SettingsArBrokersRoute({
                   <TableCell className="text-muted-foreground">
                     <SearchHighlight text={ar.email} query={searchQuery} />
                   </TableCell>
-                  <TableCell className="text-right">
+                  <InteractiveTableActionsCell className="text-right">
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon-sm"
                       aria-label={`Delete ${ar.fullName}`}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        setDeleting(ar);
-                      }}
+                      onClick={() => setDeleting(ar)}
                     >
                       <Trash2Icon />
                     </Button>
-                  </TableCell>
-                </TableRow>
+                  </InteractiveTableActionsCell>
+                </InteractiveTableRow>
               ))
             )}
           </TableBody>

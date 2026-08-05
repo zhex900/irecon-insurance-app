@@ -1,13 +1,17 @@
 import { requireAuth } from "~/lib/auth/session.server";
 import { getLibraryDocumentsBucket } from "~/lib/cloudflare.server";
+import { parsePositiveInteger } from "~/lib/http/route-input";
 import { getLibraryDocumentById } from "~/lib/services/documents/library-documents";
-import { getLibraryDocumentObject } from "~/lib/storage/library-documents.server";
+import {
+  applyPrivatePdfResponseHeaders,
+  getLibraryDocumentObject,
+} from "~/lib/storage/library-documents.server";
 import type { Route } from "./+types/library-documents.$id";
 
 export async function loader({ request, params, context }: Route.LoaderArgs) {
   await requireAuth(request);
-  const id = Number(params.id);
-  if (!Number.isFinite(id) || id <= 0) {
+  const id = parsePositiveInteger(params.id);
+  if (!id) {
     throw new Response("Not found", { status: 404 });
   }
 
@@ -30,13 +34,6 @@ export async function loader({ request, params, context }: Route.LoaderArgs) {
 
   const headers = new Headers();
   object.writeHttpMetadata?.(headers);
-  if (!headers.has("Content-Type")) {
-    headers.set("Content-Type", doc.contentType || "application/pdf");
-  }
-  headers.set("Cache-Control", "private, max-age=3600");
-  headers.set(
-    "Content-Disposition",
-    `inline; filename="${doc.filename.replace(/"/g, "")}"`,
-  );
+  applyPrivatePdfResponseHeaders(headers, doc.filename);
   return new Response(object.body, { headers });
 }

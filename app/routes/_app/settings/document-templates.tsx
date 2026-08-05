@@ -12,7 +12,7 @@ import { PageHeader } from "~/components/layout/app-layout";
 import {
   DocumentTemplatesEditorShell,
   DocumentTemplatesListShell,
-} from "~/components/settings/document-templates-loading";
+} from "~/components/documents/document-templates-loading";
 import { Button } from "~/components/ui/button";
 import {
   Card,
@@ -31,6 +31,11 @@ import {
 import { Field, FieldGroup, FieldLabel } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import {
+  NativeSelect,
+  NativeSelectOption,
+} from "~/components/ui/native-select";
+import { InteractiveTableRow } from "~/components/ui/interactive-table-row";
+import {
   Table,
   TableBody,
   TableCell,
@@ -39,6 +44,8 @@ import {
   TableRow,
 } from "~/components/ui/table";
 import { requireAuth } from "~/lib/auth/session.server";
+import { publicErrorMessage } from "~/lib/http/public-error.server";
+import { parseFormIntent } from "~/lib/http/route-input";
 import { isAdminRole, isSuperAdmin } from "~/lib/auth/roles";
 import { pageTitle } from "~/lib/brand";
 import { formatDocumentTemplateTitle } from "~/lib/documents/template-title";
@@ -91,7 +98,7 @@ export async function action({ request }: Route.ActionArgs) {
   }
 
   const formData = await request.formData();
-  const intent = String(formData.get("intent") ?? "");
+  const intent = parseFormIntent(formData, ["create"]);
   if (intent !== "create") {
     return { ok: false as const, error: "Unknown action." };
   }
@@ -128,10 +135,10 @@ export async function action({ request }: Route.ActionArgs) {
   } catch (error) {
     return {
       ok: false as const,
-      error:
-        error instanceof Error
-          ? error.message
-          : "Failed to create document template.",
+      error: publicErrorMessage(error, {
+        fallback: "Failed to create document template.",
+        operation: "document_template_create",
+      }),
     };
   }
 }
@@ -237,18 +244,10 @@ function TemplatesTable({
           {templates.map((template) => {
             const title = formatDocumentTemplateTitle(template.title);
             return (
-              <TableRow
+              <InteractiveTableRow
                 key={template.key}
-                className="cursor-pointer"
-                tabIndex={0}
                 aria-label={`Open ${title}`}
-                onClick={() => onRowActivate(template.key)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    onRowActivate(template.key);
-                  }
-                }}
+                onActivate={() => onRowActivate(template.key)}
               >
                 <TableCell>
                   <TemplateIcon />
@@ -264,7 +263,7 @@ function TemplatesTable({
                 <TableCell>
                   <LastUpdatedCell updatedWhen={template.updatedWhen} />
                 </TableCell>
-              </TableRow>
+              </InteractiveTableRow>
             );
           })}
         </TableBody>
@@ -309,18 +308,20 @@ function NewTemplateDialog({
             </Field>
             <Field>
               <FieldLabel htmlFor="new-template-cover">Cover type</FieldLabel>
-              <select
+              <NativeSelect
                 id="new-template-cover"
                 name="coverTypeId"
                 defaultValue="1"
                 disabled={submitting}
-                className="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+                className="w-full"
               >
-                <option value="1">Annual</option>
-                <option value="2">Single</option>
-                <option value="3">Owner Builder</option>
-                <option value="all">All cover types</option>
-              </select>
+                <NativeSelectOption value="1">Annual</NativeSelectOption>
+                <NativeSelectOption value="2">Single</NativeSelectOption>
+                <NativeSelectOption value="3">Owner Builder</NativeSelectOption>
+                <NativeSelectOption value="all">
+                  All cover types
+                </NativeSelectOption>
+              </NativeSelect>
             </Field>
           </FieldGroup>
           <DialogFooter>

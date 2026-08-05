@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { stripAmountCommas } from "~/lib/amount-input";
-import { visibleExcessFields } from "~/lib/excesses";
+import { visibleExcessFields } from "~/lib/policies/excesses";
 
 /** Free-text sub-limit wording (legacy varchar(100)). */
 const subLimitText = z

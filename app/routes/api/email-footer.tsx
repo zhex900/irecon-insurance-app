@@ -1,4 +1,6 @@
 import { requireAuth } from "~/lib/auth/session.server";
+import { publicErrorMessage } from "~/lib/http/public-error.server";
+import { parseFormIntent } from "~/lib/http/route-input";
 import { isSuperAdmin } from "~/lib/auth/roles";
 import {
   dataUriToBytes,
@@ -8,6 +10,8 @@ import {
   saveEmailFooterFile,
 } from "~/lib/services/email/footer-image.server";
 import type { Route } from "./+types/email-footer";
+
+const displayWidthSchema = z.coerce.number().finite();
 
 /** GET — footer image bytes (or JSON meta with ?format=meta / data-uri). */
 export async function loader({ request }: Route.LoaderArgs) {
@@ -68,21 +72,31 @@ export async function action({ request }: Route.ActionArgs) {
   }
 
   const formData = await request.formData();
-  const intent = String(formData.get("intent") ?? "upload");
+  const intent = parseFormIntent(formData, ["upload", "width"], "upload");
+  if (!intent) {
+    return Response.json({ error: "Unknown action." }, { status: 400 });
+  }
 
   if (intent === "width") {
-    const raw = Number(formData.get("displayWidth"));
-    if (!Number.isFinite(raw)) {
+    const parsedWidth = displayWidthSchema.safeParse(
+      formData.get("displayWidth"),
+    );
+    if (!parsedWidth.success) {
       return Response.json({ error: "Enter a valid width." }, { status: 400 });
     }
     try {
-      const displayWidth = await saveEmailFooterDisplayWidth(raw, viewer.email);
+      const displayWidth = await saveEmailFooterDisplayWidth(
+        parsedWidth.data,
+        viewer.email,
+      );
       return Response.json({ ok: true, displayWidth });
     } catch (error) {
       return Response.json(
         {
-          error:
-            error instanceof Error ? error.message : "Could not save width.",
+          error: publicErrorMessage(error, {
+            fallback: "Could not save width.",
+            operation: "email_footer_width_save",
+          }),
         },
         { status: 400 },
       );
@@ -105,10 +119,13 @@ export async function action({ request }: Route.ActionArgs) {
   } catch (error) {
     return Response.json(
       {
-        error:
-          error instanceof Error ? error.message : "Could not upload image.",
+        error: publicErrorMessage(error, {
+          fallback: "Could not upload image.",
+          operation: "email_footer_upload",
+        }),
       },
       { status: 400 },
     );
   }
 }
+import { z } from "zod";

@@ -10,6 +10,8 @@ import type { Plugin } from "vite";
  */
 const CLIENT_ONLY_PREFIXES = [
   "exceljs",
+  "@pdfme/generator",
+  "@pdfme/schemas",
   "@pdfme/ui",
   "@pdfme/converter",
   "@react-email/editor",
@@ -33,6 +35,11 @@ const CLIENT_ONLY_PREFIXES = [
   "prosemirror-tables",
 ] as const;
 
+const CLIENT_ONLY_MODULE_SUFFIXES = [
+  "/app/lib/pdf/generate.ts",
+  "/app/lib/pdf/plugins.ts",
+] as const;
+
 function isClientOnlyPackage(id: string): boolean {
   // Let Vite/Tailwind handle CSS from these packages; only stub JS modules.
   if (id.endsWith(".css") || id.includes(".css?")) return false;
@@ -41,10 +48,26 @@ function isClientOnlyPackage(id: string): boolean {
   );
 }
 
+function isClientOnlyModule(id: string): boolean {
+  return (
+    id === "~/lib/pdf/generate" ||
+    id === "~/lib/pdf/plugins" ||
+    CLIENT_ONLY_MODULE_SUFFIXES.some((suffix) => id.endsWith(suffix))
+  );
+}
+
 /** Minimal ESM stub so SSR/dynamic-import analysis stays happy. */
 const STUB_SOURCE = `
 export default {};
 export const Designer = class { constructor() {} destroy() {} getTemplate() { return null; } };
+export const generate = async () => new Uint8Array();
+export const text = {};
+export const multiVariableText = {};
+export const table = {};
+export const image = {};
+export const line = {};
+export const rectangle = {};
+export const pdfmePlugins = {};
 export const EmailEditor = () => null;
 export const StarterKit = { configure: () => ({}) };
 export const EmailTheming = { configure: () => ({}) };
@@ -64,6 +87,9 @@ export const Inspector = {
 };
 export const defaultSlashCommands = [];
 export const TableIcon = () => null;
+export const invalidatePdfTemplateOverrideCache = () => {};
+export const buildPdfBlobFromDocument = async () => new Blob();
+export const buildPdfBlobFromPolicy = async () => new Blob();
 `;
 
 /**
@@ -78,7 +104,7 @@ export function stubClientOnlySsr(): Plugin {
       return environment.name === "ssr";
     },
     resolveId(id) {
-      if (!isClientOnlyPackage(id)) return null;
+      if (!isClientOnlyPackage(id) && !isClientOnlyModule(id)) return null;
       return `\0client-only-stub:${id}`;
     },
     load(id) {

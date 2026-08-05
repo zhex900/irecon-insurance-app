@@ -6,7 +6,7 @@ import {
   plainTextFromWordingHtml,
   sanitizeWordingHtml,
   wordingHtmlToEstimateText,
-} from "~/lib/wording/html";
+} from "~/lib/policies/wording/html";
 
 describe("wording html", () => {
   it("converts plain text to paragraphs", () => {

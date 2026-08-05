@@ -13,7 +13,7 @@ import {
   flatCustomWordings,
   normalizeCustomWordings,
   type CustomWordingItem,
-} from "~/lib/custom-wordings";
+} from "~/lib/policies/custom-wordings";
 
 type PolicyRow = typeof policy.$inferSelect;
 type PolicyCarRow = typeof policyCar.$inferSelect;

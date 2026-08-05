@@ -25,7 +25,7 @@ import {
   looksLikeHtml,
   plainTextFromWordingHtml,
   plainTextToWordingHtml,
-} from "~/lib/wording/html";
+} from "~/lib/policies/wording/html";
 
 export const ENDORSEMENT_SUBJECT_FIELD = "EndorsementSubject";
 export const ENDORSEMENT_CONTENT_FIELD = "EndorsementContent";

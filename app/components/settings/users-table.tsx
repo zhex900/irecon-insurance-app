@@ -10,6 +10,10 @@ import {
   EmptyTitle,
 } from "~/components/ui/empty";
 import {
+  InteractiveTableActionsCell,
+  InteractiveTableRow,
+} from "~/components/ui/interactive-table-row";
+import {
   Table,
   TableBody,
   TableCell,
@@ -21,7 +25,7 @@ import { TablePagination } from "~/components/ui/table-pagination";
 import { UserAvatar } from "~/components/ui/user-avatar";
 import { formatRoleLabel } from "~/lib/auth/roles";
 import type { AppUser } from "~/lib/db/types";
-import { SearchHighlight } from "~/lib/search/highlight-cell";
+import { SearchHighlight } from "~/components/search/highlight-cell";
 
 export function UsersTable({
   users,
@@ -103,18 +107,10 @@ export function UsersTable({
               users.map((user) => {
                 const roleLabel = formatRoleLabel(user.role);
                 return (
-                  <TableRow
+                  <InteractiveTableRow
                     key={user.userId}
-                    className="cursor-pointer"
-                    tabIndex={0}
                     aria-label={`Edit ${user.fullName}`}
-                    onClick={() => onEdit(user)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
-                        onEdit(user);
-                      }
-                    }}
+                    onActivate={() => onEdit(user)}
                   >
                     <TableCell>
                       <div className="flex items-center gap-3">
@@ -150,11 +146,7 @@ export function UsersTable({
                         {user.disabled ? "Disabled" : "Active"}
                       </Badge>
                     </TableCell>
-                    <TableCell
-                      className="text-right"
-                      onClick={(event) => event.stopPropagation()}
-                      onKeyDown={(event) => event.stopPropagation()}
-                    >
+                    <InteractiveTableActionsCell className="text-right">
                       <div className="flex justify-end gap-1">
                         <Button
                           type="button"
@@ -179,8 +171,8 @@ export function UsersTable({
                           <Trash2Icon />
                         </Button>
                       </div>
-                    </TableCell>
-                  </TableRow>
+                    </InteractiveTableActionsCell>
+                  </InteractiveTableRow>
                 );
               })
             )}

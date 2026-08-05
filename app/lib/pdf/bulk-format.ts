@@ -4,7 +4,7 @@ import {
   pdfmeFontVariantsForFamily,
   resolvePdfmeFontName,
   type PdfmeFontWeight,
-} from "~/lib/pdf/fonts";
+} from "~/lib/pdf/font-config";
 
 export type BulkSchemaRef = {
   name: string;

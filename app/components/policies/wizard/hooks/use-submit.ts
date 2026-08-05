@@ -3,8 +3,8 @@ import type { useFetcher } from "react-router";
 import type { UseFormReturn } from "react-hook-form";
 import { focusFormIssue } from "~/lib/form-validation-ui";
 import type { Policy, PremiumBreakdown } from "~/lib/db/types";
-import { rollupPremiumTotals } from "~/lib/premium-totals";
-import { getTakenStatusErrors } from "~/lib/policy-taken-status";
+import { rollupPremiumTotals } from "~/lib/pricing/premium-totals";
+import { getTakenStatusErrors } from "~/lib/policies/taken-status";
 import { listReviewDocumentsForConfirm } from "~/lib/services/policy/documents";
 import {
   carPolicyPricingSchema,
@@ -123,6 +123,9 @@ export function usePolicySubmit({
       }
       await regenerateDocumentsIfNeeded({
         premiumOverride: premiumForDocs,
+        // Confirming generation is an explicit document event: retain the
+        // previous PDFs and append the newly generated pack as the next version.
+        force: true,
       });
       const saved = await savePolicy();
       setSubmitConfirmOpen(false);

@@ -1,4 +1,3 @@
-import { useEffect, useMemo, useRef, useState } from "react";
 import { Form, Link, useSearchParams } from "react-router";
 import { DownloadIcon, UsersIcon } from "lucide-react";
 import { PageHeader } from "~/components/layout/app-layout";
@@ -11,7 +10,7 @@ import {
   EmptyTitle,
 } from "~/components/ui/empty";
 import { Input } from "~/components/ui/input";
-import { Label } from "~/components/ui/label";
+import { Field, FieldGroup, FieldLabel } from "~/components/ui/field";
 import {
   Table,
   TableBody,
@@ -32,6 +31,8 @@ import { defaultClientReportPeriod } from "~/lib/services/reports/service";
 import { formatCurrency, formatDate } from "~/lib/utils";
 import type { Route } from "./+types/clients";
 import { pageTitle } from "~/lib/brand";
+import { requireAuth } from "~/lib/auth/session.server";
+import { optionalIsoDateSchema } from "~/lib/http/route-input";
 
 const PAGE_SIZE = 50;
 
@@ -40,17 +41,20 @@ export function meta() {
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
+  await requireAuth(request);
   const url = new URL(request.url);
   const defaults = defaultClientReportPeriod();
   // Missing params → this calendar year. Explicit empty string → all clients.
+  const rawFrom = url.searchParams.get("from");
+  const rawTo = url.searchParams.get("to");
   const dateFrom =
-    url.searchParams.get("from") === null
+    rawFrom === null
       ? defaults.dateFrom
-      : (url.searchParams.get("from") ?? "");
+      : (optionalIsoDateSchema.parse(rawFrom || undefined) ?? "");
   const dateTo =
-    url.searchParams.get("to") === null
+    rawTo === null
       ? defaults.dateTo
-      : (url.searchParams.get("to") ?? "");
+      : (optionalIsoDateSchema.parse(rawTo || undefined) ?? "");
   const pagination = parsePagination(url, { defaultSize: PAGE_SIZE });
 
   const page = await listClientReportPage({
@@ -73,36 +77,10 @@ export async function loader({ request }: Route.LoaderArgs) {
 export default function ClientReportRoute({
   loaderData,
 }: Route.ComponentProps) {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [dateFrom, setDateFrom] = useState(loaderData.dateFrom);
-  const [dateTo, setDateTo] = useState(loaderData.dateTo);
-
-  const lastPeriodRef = useRef(`${loaderData.dateFrom}|${loaderData.dateTo}`);
-  useEffect(() => {
-    const key = `${loaderData.dateFrom}|${loaderData.dateTo}`;
-    if (lastPeriodRef.current === key) return;
-    lastPeriodRef.current = key;
-    setDateFrom(loaderData.dateFrom);
-    setDateTo(loaderData.dateTo);
-  }, [loaderData.dateFrom, loaderData.dateTo]);
-
-  function applyFilters(event?: React.FormEvent) {
-    event?.preventDefault();
-    const params = new URLSearchParams();
-    params.set("from", dateFrom);
-    params.set("to", dateTo);
-    setSearchParams(params);
-  }
-
-  const pageHref = useMemo(
-    () => (nextPage: number) => pageSearchHref(searchParams, nextPage),
-    [searchParams],
-  );
-  const pageSizeHref = useMemo(
-    () => (nextPageSize: number) =>
-      pageSizeSearchHref(searchParams, nextPageSize, PAGE_SIZE),
-    [searchParams],
-  );
+  const [searchParams] = useSearchParams();
+  const pageHref = (nextPage: number) => pageSearchHref(searchParams, nextPage);
+  const pageSizeHref = (nextPageSize: number) =>
+    pageSizeSearchHref(searchParams, nextPageSize, PAGE_SIZE);
 
   function exportCsv() {
     const csv = toCsv(
@@ -154,34 +132,34 @@ export default function ClientReportRoute({
       />
 
       <Form
+        key={`${loaderData.dateFrom}|${loaderData.dateTo}`}
         method="get"
-        onSubmit={applyFilters}
         className="mb-4 flex flex-col gap-4 rounded-xl border bg-card p-4"
       >
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-          <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-end">
-            <div className="grid gap-1.5">
-              <Label htmlFor="dateFrom">From</Label>
+          <FieldGroup className="flex-1 gap-3 sm:flex-row sm:items-end">
+            <Field className="sm:w-44">
+              <FieldLabel htmlFor="dateFrom">From</FieldLabel>
               <Input
                 id="dateFrom"
+                name="from"
                 type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="w-full sm:w-44"
+                defaultValue={loaderData.dateFrom}
+                className="w-full"
               />
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="dateTo">To</Label>
+            </Field>
+            <Field className="sm:w-44">
+              <FieldLabel htmlFor="dateTo">To</FieldLabel>
               <Input
                 id="dateTo"
+                name="to"
                 type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="w-full sm:w-44"
+                defaultValue={loaderData.dateTo}
+                className="w-full"
               />
-            </div>
+            </Field>
             <Button type="submit">Apply</Button>
-          </div>
+          </FieldGroup>
           <Button
             type="button"
             variant="outline"

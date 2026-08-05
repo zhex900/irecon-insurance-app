@@ -1,4 +1,5 @@
 import { createContext } from "react-router";
+import type { DocumentServiceBinding } from "~/lib/pdf/document-worker.client.server";
 
 export type R2BucketLike = {
   put(
@@ -33,6 +34,7 @@ export type CloudflareEnv = {
   HYPERDRIVE?: { connectionString: string };
   AVATARS?: R2BucketLike;
   LIBRARY_DOCUMENTS?: R2BucketLike;
+  DOCUMENT_SERVICE?: DocumentServiceBinding;
 };
 
 export const cloudflareContext = createContext<{
@@ -65,4 +67,14 @@ export function getLibraryDocumentsBucket(
   context: CloudflareRouterContext,
 ): R2BucketLike | null {
   return getR2Bucket(context, "LIBRARY_DOCUMENTS");
+}
+
+export function getDocumentService(
+  context: CloudflareRouterContext,
+): DocumentServiceBinding | null {
+  try {
+    return context.get(cloudflareContext)?.env.DOCUMENT_SERVICE ?? null;
+  } catch {
+    return null;
+  }
 }

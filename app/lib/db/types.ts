@@ -1,4 +1,4 @@
-import type { CustomWordingItem } from "~/lib/custom-wordings";
+import type { CustomWordingItem } from "~/lib/policies/custom-wordings";
 
 export type State = {
   stateId: number;

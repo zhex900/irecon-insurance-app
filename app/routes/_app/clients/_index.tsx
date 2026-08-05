@@ -1,59 +1,21 @@
-import {
-  Form,
-  Link,
-  useActionData,
-  useNavigate,
-  useNavigation,
-} from "react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Trash2Icon, UsersIcon } from "lucide-react";
-import { FilterAutocomplete } from "~/components/clients/filter-autocomplete";
-import { ListSearchField } from "~/components/forms/list-search-field";
+import { Link, useActionData, useNavigation } from "react-router";
+import { useMemo, useState } from "react";
+import { ClientsIndexFilters } from "~/components/clients/clients-index-filters";
+import { ClientsIndexTable } from "~/components/clients/clients-index-table";
+import { DeleteClientDialog } from "~/components/clients/delete-client-dialog";
 import { PageHeader } from "~/components/layout/app-layout";
 import { Button } from "~/components/ui/button";
-import { LoadingButton } from "~/components/ui/loading-button";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "~/components/ui/empty";
-import { Label } from "~/components/ui/label";
-import { FilterTag } from "~/components/ui/status-badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "~/components/ui/dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "~/components/ui/table";
-import { TablePagination } from "~/components/ui/table-pagination";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "~/components/ui/tooltip";
+import { useHandledActionData } from "~/hooks/use-handled-action-data";
 import { useActionSuccessToast } from "~/hooks/use-success-toast";
 import { useDebouncedSearchQuery } from "~/hooks/use-debounced-search-query";
 import { requireAuth } from "~/lib/auth/session.server";
-import { SearchHighlight } from "~/lib/search/highlight-cell";
-import { fieldMatches } from "~/lib/search/match";
+import { publicErrorMessage } from "~/lib/http/public-error.server";
+import { parseFormIntent, parsePositiveInteger } from "~/lib/http/route-input";
 import {
   pageSearchHref,
   pageSizeSearchHref,
   parsePagination,
 } from "~/lib/pagination";
-import { formatDate } from "~/lib/utils";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import {
   listClientsPage,
@@ -77,6 +39,7 @@ function parsePositiveInt(value: string | null) {
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
+  await requireAuth(request);
   const url = new URL(request.url);
   const search = url.searchParams.get("q") ?? "";
   const accountManagerId = parsePositiveInt(
@@ -87,7 +50,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   );
   const arCompanyName = url.searchParams.get("arCompany")?.trim() ?? "";
   const policyFilterParam = url.searchParams.get("policies");
-  const policyFilter =
+  const policyFilter: "all" | "with" | "without" =
     policyFilterParam === "with" || policyFilterParam === "without"
       ? policyFilterParam
       : "all";
@@ -128,13 +91,13 @@ export async function loader({ request }: Route.LoaderArgs) {
 export async function action({ request }: Route.ActionArgs) {
   const actor = await requireAuth(request);
   const formData = await request.formData();
-  const intent = String(formData.get("intent") ?? "");
+  const intent = parseFormIntent(formData, ["delete"]);
 
   if (intent !== "delete") {
     return { ok: false as const, error: "Unknown action" };
   }
 
-  const id = Number(formData.get("id"));
+  const id = parsePositiveInteger(formData.get("id"));
   if (!id) return { ok: false as const, error: "Missing id" };
 
   try {
@@ -160,7 +123,10 @@ export async function action({ request }: Route.ActionArgs) {
   } catch (error) {
     return {
       ok: false as const,
-      error: error instanceof Error ? error.message : "Delete failed",
+      error: publicErrorMessage(error, {
+        fallback: "Delete failed",
+        operation: "client_bulk_delete",
+      }),
     };
   }
 }
@@ -176,39 +142,16 @@ export default function ClientsIndexRoute({
     searchParams,
     setSearchParams,
   } = useDebouncedSearchQuery(loaderData.filters.search);
-  const navigate = useNavigate();
   const navigation = useNavigation();
   const actionData = useActionData<typeof action>();
-  const [accountManagerId, setAccountManagerId] = useState<number | "">(
-    loaderData.filters.accountManagerId ?? "",
-  );
-  const [authorisedRepresentativeId, setAuthorisedRepresentativeId] = useState<
-    number | ""
-  >(loaderData.filters.authorisedRepresentativeId ?? "");
-  const [arCompanyName, setArCompanyName] = useState(
-    loaderData.filters.arCompanyName,
-  );
   const [deleting, setDeleting] = useState<ClientListItem | null>(null);
   useActionSuccessToast(actionData);
 
-  const lastFiltersRef = useRef(loaderData.filters);
-  useEffect(() => {
-    if (lastFiltersRef.current === loaderData.filters) return;
-    lastFiltersRef.current = loaderData.filters;
-    const filters = lastFiltersRef.current;
-    setAccountManagerId(filters.accountManagerId ?? "");
-    setAuthorisedRepresentativeId(filters.authorisedRepresentativeId ?? "");
-    setArCompanyName(filters.arCompanyName);
-  }, [loaderData.filters]);
-
-  const handledActionDataRef = useRef(actionData);
-  useEffect(() => {
-    if (handledActionDataRef.current === actionData) return;
-    handledActionDataRef.current = actionData;
-    const handled = handledActionDataRef.current;
-    if (!handled?.ok || handled.intent !== "delete") return;
-    setDeleting(null);
-  }, [actionData]);
+  useHandledActionData(actionData, {
+    waitForIdle: false,
+    intents: "delete",
+    onSuccess: () => setDeleting(null),
+  });
 
   const accountManagerOptions = useMemo(
     () =>
@@ -247,23 +190,31 @@ export default function ClientsIndexRoute({
 
   function buildParams(next?: {
     search?: string;
-    accountManagerId?: number | "";
-    authorisedRepresentativeId?: number | "";
+    accountManagerId?: number | null;
+    authorisedRepresentativeId?: number | null;
     arCompanyName?: string;
     policyFilter?: "all" | "with" | "without";
     page?: number;
   }) {
     const q = (next?.search ?? search).trim();
-    const manager = next?.accountManagerId ?? accountManagerId;
-    const ar = next?.authorisedRepresentativeId ?? authorisedRepresentativeId;
-    const company = (next?.arCompanyName ?? arCompanyName).trim();
+    const manager =
+      next?.accountManagerId !== undefined
+        ? next.accountManagerId
+        : loaderData.filters.accountManagerId;
+    const ar =
+      next?.authorisedRepresentativeId !== undefined
+        ? next.authorisedRepresentativeId
+        : loaderData.filters.authorisedRepresentativeId;
+    const company = (
+      next?.arCompanyName ?? loaderData.filters.arCompanyName
+    ).trim();
     const policyFilter = next?.policyFilter ?? loaderData.filters.policyFilter;
     const page = next?.page ?? 1;
 
     const params = new URLSearchParams();
     if (q) params.set("q", q);
-    if (manager !== "") params.set("accountManager", String(manager));
-    if (ar !== "") params.set("ar", String(ar));
+    if (manager != null) params.set("accountManager", String(manager));
+    if (ar != null) params.set("ar", String(ar));
     if (company) params.set("arCompany", company);
     if (policyFilter !== "all") params.set("policies", policyFilter);
     if (page > 1) params.set("page", String(page));
@@ -276,9 +227,6 @@ export default function ClientsIndexRoute({
 
   function clearFilters() {
     setSearch("");
-    setAccountManagerId("");
-    setAuthorisedRepresentativeId("");
-    setArCompanyName("");
     setSearchParams({});
   }
 
@@ -309,308 +257,52 @@ export default function ClientsIndexRoute({
         }
       />
 
-      <form
-        className="mb-4 flex flex-col gap-3 rounded-xl border bg-card p-4"
-        onSubmit={(event) => {
-          event.preventDefault();
-          applyFilters({ page: 1 });
-        }}
-      >
-        <div className="flex min-w-0 flex-col gap-1.5">
-          <Label htmlFor="client-search-q">Search</Label>
-          <ListSearchField
-            id="client-search-q"
-            value={search}
-            onChange={setSearch}
-            onClear={clearSearch}
-            placeholder="Name, trading name, ABN, phone…"
-            aria-label="Search clients"
-            className="max-w-none"
-          />
-        </div>
-        <div className="grid gap-3 md:grid-cols-3">
-          <FilterAutocomplete
-            id="filter-account-manager"
-            label="Account Manager"
-            value={accountManagerId}
-            onChange={(value) => {
-              const next = value === "" ? "" : Number(value);
-              setAccountManagerId(next);
-              applyFilters({ accountManagerId: next, page: 1 });
-            }}
-            options={accountManagerOptions}
-            placeholder="All account managers"
-          />
-          <FilterAutocomplete
-            id="filter-ar-company"
-            label="AR Company Name"
-            value={arCompanyName}
-            onChange={(value) => {
-              const next = value === "" ? "" : String(value);
-              setArCompanyName(next);
-              applyFilters({ arCompanyName: next, page: 1 });
-            }}
-            options={arCompanyOptions}
-            placeholder="All AR companies"
-          />
-          <FilterAutocomplete
-            id="filter-ar-name"
-            label="AR Name"
-            value={authorisedRepresentativeId}
-            onChange={(value) => {
-              const next = value === "" ? "" : Number(value);
-              setAuthorisedRepresentativeId(next);
-              applyFilters({ authorisedRepresentativeId: next, page: 1 });
-            }}
-            options={arNameOptions}
-            placeholder="All AR names"
-          />
-        </div>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap gap-2">
-            {hasActiveFilters ? (
-              <Button type="button" variant="outline" onClick={clearFilters}>
-                Clear filters
-              </Button>
-            ) : null}
-          </div>
-          <p className="text-sm text-muted-foreground">
-            {loaderData.total} clients found · {loaderData.withPolicies} with
-            policies
-          </p>
-        </div>
-      </form>
-
-      <div className="mb-4 flex flex-wrap gap-2">
-        <FilterTag
-          active={loaderData.filters.policyFilter === "all"}
-          onClick={() => applyFilters({ policyFilter: "all", page: 1 })}
-        >
-          All · {loaderData.allMatching}
-        </FilterTag>
-        <FilterTag
-          active={loaderData.filters.policyFilter === "with"}
-          onClick={() => applyFilters({ policyFilter: "with", page: 1 })}
-        >
-          With policies · {loaderData.withPolicies}
-        </FilterTag>
-        <FilterTag
-          active={loaderData.filters.policyFilter === "without"}
-          onClick={() => applyFilters({ policyFilter: "without", page: 1 })}
-        >
-          No policies · {loaderData.withoutPolicies}
-        </FilterTag>
-      </div>
+      <ClientsIndexFilters
+        search={search}
+        onSearchChange={setSearch}
+        onSearchClear={clearSearch}
+        accountManagerId={loaderData.filters.accountManagerId}
+        authorisedRepresentativeId={
+          loaderData.filters.authorisedRepresentativeId
+        }
+        arCompanyName={loaderData.filters.arCompanyName}
+        policyFilter={loaderData.filters.policyFilter}
+        accountManagerOptions={accountManagerOptions}
+        arCompanyOptions={arCompanyOptions}
+        arNameOptions={arNameOptions}
+        total={loaderData.total}
+        withPolicies={loaderData.withPolicies}
+        withoutPolicies={loaderData.withoutPolicies}
+        allMatching={loaderData.allMatching}
+        hasActiveFilters={hasActiveFilters}
+        onApplyFilters={applyFilters}
+        onClearFilters={clearFilters}
+      />
 
       {actionData && !actionData.ok && actionData.error ? (
         <p className="mb-3 text-sm text-destructive">{actionData.error}</p>
       ) : null}
 
-      <div className="overflow-hidden rounded-xl border bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Client Name</TableHead>
-              <TableHead>Account manager</TableHead>
-              <TableHead>Policies</TableHead>
-              <TableHead>Created</TableHead>
-              <TableHead className="w-20 text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loaderData.clients.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="py-10">
-                  <Empty>
-                    <EmptyHeader>
-                      <EmptyMedia variant="icon">
-                        <UsersIcon />
-                      </EmptyMedia>
-                      <EmptyTitle>
-                        {loaderData.filters.search
-                          ? "No match"
-                          : "No clients found"}
-                      </EmptyTitle>
-                      <EmptyDescription>
-                        {loaderData.filters.search
-                          ? `No match for “${loaderData.filters.search}”.`
-                          : "No clients match the current filters."}
-                      </EmptyDescription>
-                    </EmptyHeader>
-                  </Empty>
-                </TableCell>
-              </TableRow>
-            ) : (
-              loaderData.clients.map((client) => {
-                const manager = loaderData.reference.accountManagers.find(
-                  (item) => item.accountManagerId === client.accountManagerId,
-                );
-                const ar = loaderData.reference.wholesaleBrokers.find(
-                  (item) =>
-                    item.authorisedRepresentativeId ===
-                    client.authorisedRepresentativeId,
-                );
-                const canDelete = client.policyCount === 0;
-                const managerName = manager?.fullName ?? "";
-                // Fields searchable but not shown as their own columns — surface
-                // the matched value under the name so the hit is visible.
-                const offColumnMatches = searchQuery
-                  ? (
-                      [
-                        { label: "ABN", value: client.abn },
-                        { label: "Phone", value: client.phone },
-                        { label: "Email", value: client.email },
-                        { label: "AR Name", value: ar?.fullName ?? "" },
-                        {
-                          label: "AR Company",
-                          value: ar?.companyName ?? "",
-                        },
-                      ] as const
-                    ).filter((field) => fieldMatches(field.value, searchQuery))
-                  : [];
-                return (
-                  <TableRow
-                    key={client.clientId}
-                    className="cursor-pointer"
-                    onClick={() => navigate(`/clients/${client.clientId}`)}
-                  >
-                    <TableCell>
-                      <p className="font-medium">
-                        <SearchHighlight
-                          text={client.name || "—"}
-                          query={searchQuery}
-                        />
-                      </p>
-                      {client.tradingName ? (
-                        <p className="text-xs text-muted-foreground">
-                          <SearchHighlight
-                            text={client.tradingName}
-                            query={searchQuery}
-                          />
-                        </p>
-                      ) : null}
-                      {offColumnMatches.length > 0 ? (
-                        <div className="mt-0.5 flex min-w-0 flex-col gap-0.5">
-                          {offColumnMatches.map((field) => (
-                            <p
-                              key={field.label}
-                              className="truncate text-xs text-muted-foreground"
-                            >
-                              <span className="font-medium text-foreground/70">
-                                {field.label}:{" "}
-                              </span>
-                              <SearchHighlight
-                                text={field.value}
-                                query={searchQuery}
-                              />
-                            </p>
-                          ))}
-                        </div>
-                      ) : null}
-                    </TableCell>
-                    <TableCell>
-                      {managerName ? (
-                        <SearchHighlight
-                          text={managerName}
-                          query={searchQuery}
-                        />
-                      ) : (
-                        "—"
-                      )}
-                    </TableCell>
-                    <TableCell>{client.policyCount}</TableCell>
-                    <TableCell>{formatDate(client.createdWhen)}</TableCell>
-                    <TableCell
-                      className="text-right"
-                      onClick={(event) => event.stopPropagation()}
-                    >
-                      {canDelete ? (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-sm"
-                          className="text-destructive hover:text-destructive"
-                          aria-label={`Delete ${client.name}`}
-                          onClick={() => setDeleting(client)}
-                        >
-                          <Trash2Icon />
-                        </Button>
-                      ) : (
-                        <Tooltip>
-                          <TooltipTrigger
-                            render={<span className="inline-flex" />}
-                          >
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon-sm"
-                              disabled
-                              className="text-muted-foreground"
-                              aria-label={`Cannot delete ${client.name}`}
-                            >
-                              <Trash2Icon />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            Clients with policies cannot be deleted
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-        <TablePagination
-          total={loaderData.total}
-          page={loaderData.page}
-          pageSize={loaderData.pageSize}
-          pageHref={pageHref}
-          pageSizeHref={pageSizeHref}
-        />
-      </div>
+      <ClientsIndexTable
+        clients={loaderData.clients}
+        total={loaderData.total}
+        page={loaderData.page}
+        pageSize={loaderData.pageSize}
+        searchQuery={searchQuery}
+        searchFilter={loaderData.filters.search}
+        reference={loaderData.reference}
+        pageHref={pageHref}
+        pageSizeHref={pageSizeHref}
+        onDeleteRequest={setDeleting}
+      />
 
-      <Dialog
-        open={deleting != null}
+      <DeleteClientDialog
+        client={deleting}
+        deletingInFlight={deletingInFlight}
         onOpenChange={(open) => {
           if (!open) setDeleting(null);
         }}
-      >
-        <DialogContent className="sm:max-w-md" showCloseButton>
-          <DialogHeader>
-            <DialogTitle>Delete client?</DialogTitle>
-            <DialogDescription>
-              This permanently removes{" "}
-              <span className="font-medium text-foreground">
-                {deleting?.name}
-              </span>
-              . This cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setDeleting(null)}
-            >
-              Cancel
-            </Button>
-            <Form method="post">
-              <input type="hidden" name="intent" value="delete" />
-              <input type="hidden" name="id" value={deleting?.clientId ?? ""} />
-              <LoadingButton
-                type="submit"
-                variant="destructive"
-                loading={deletingInFlight}
-              >
-                Delete
-              </LoadingButton>
-            </Form>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      />
     </div>
   );
 }

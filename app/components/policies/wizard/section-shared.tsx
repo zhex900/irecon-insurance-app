@@ -16,8 +16,8 @@ import {
   useFieldSaveState,
 } from "~/components/forms/field-save-highlight";
 import type { ReferenceData } from "~/lib/db/types";
-import type { ExcessFieldConfig } from "~/lib/excesses";
-import type { SubLimitFieldConfig } from "~/lib/sub-limits";
+import type { ExcessFieldConfig } from "~/lib/policies/excesses";
+import type { SubLimitFieldConfig } from "~/lib/policies/sub-limits";
 import { cn } from "~/lib/utils";
 
 export function SubLimitField({ field }: { field: SubLimitFieldConfig }) {

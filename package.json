@@ -2,9 +2,15 @@
   "name": "insurance-app",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=24.0.0"
+  },
   "scripts": {
     "build": "react-router build",
+    "build:documents-worker": "wrangler deploy --config wrangler.documents.jsonc --dry-run",
+    "types:documents-worker": "wrangler types --config wrangler.documents.jsonc --env-file workers/documents-local.env --env-interface DocumentWorkerEnv --include-runtime false workers/document-worker-env.d.ts",
     "dev": "react-router dev",
+    "dev:documents-worker": "wrangler dev --config wrangler.documents.jsonc --env-file workers/documents-local.env",
     "db:start": "supabase start",
     "db:stop": "supabase stop",
     "db:status": "supabase status",
@@ -22,6 +28,7 @@
     "db:reset": "supabase db reset --yes && npm run db:seed",
     "deploy": "node --env-file=.env.staging scripts/deploy-staging.mjs",
     "deploy:staging": "node --env-file=.env.staging scripts/deploy-staging.mjs",
+    "deploy:documents:staging": "wrangler deploy --config wrangler.documents.jsonc",
     "deploy:secret": "node --env-file=.env.staging scripts/deploy-staging.mjs --secret-only",
     "start": "react-router-serve ./build/server/index.js",
     "typecheck": "react-router typegen && tsc",

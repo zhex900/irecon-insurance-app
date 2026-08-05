@@ -1,7 +1,7 @@
 import type { CarWording, Policy, PremiumBreakdown } from "~/lib/db/types";
-import { normalizeExcesses } from "~/lib/excesses";
+import { normalizeExcesses } from "~/lib/policies/excesses";
 import { collectEndorsementWordings } from "~/lib/pdf/merge-fields";
-import { normalizeSubLimits } from "~/lib/sub-limits";
+import { normalizeSubLimits } from "~/lib/policies/sub-limits";
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
 
 /** Prefer a finite form money value; fall back when blank/NaN (not when 0). */
@@ -97,7 +97,7 @@ export function policySnapshotFromForm(
       ),
       liabilityLimitBand: (() => {
         const raw = values.liabilityLimitBand;
-        const n = raw == null || raw === "" ? NaN : Number(raw);
+        const n = raw == null ? NaN : Number(raw);
         return Number.isFinite(n) && n > 0 ? n : policy.car.liabilityLimitBand;
       })(),
       hasExistingContractWorksCover:

@@ -7,7 +7,9 @@ import { stubClientOnlySsr } from "./vite.stub-client-only";
 export default defineConfig({
   plugins: [
     stubClientOnlySsr(),
-    cloudflare({ viteEnvironment: { name: "ssr" } }),
+    cloudflare({
+      viteEnvironment: { name: "ssr" },
+    }),
     tailwindcss(),
     reactRouter(),
   ],

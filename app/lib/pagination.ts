@@ -1,4 +1,5 @@
 /** Shared URL/query pagination helpers for backend-driven lists. */
+import { z } from "zod";
 
 export type PageResult<T> = {
   rows: T[];
@@ -30,11 +31,21 @@ export function parsePagination(
   url: URL,
   defaults: { defaultSize?: number; maxSize?: number } = {},
 ): PaginationParams {
-  const pageSize = clampPageSize(
-    Number(url.searchParams.get("pageSize") ?? defaults.defaultSize ?? 25),
-    defaults,
-  );
-  const page = Math.max(1, Number(url.searchParams.get("page") ?? "1") || 1);
+  const defaultSize = defaults.defaultSize ?? 25;
+  const maxSize = defaults.maxSize ?? 100;
+  const page = z.coerce
+    .number()
+    .int()
+    .min(1)
+    .catch(1)
+    .parse(url.searchParams.get("page") ?? 1);
+  const pageSize = z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(maxSize)
+    .catch(defaultSize)
+    .parse(url.searchParams.get("pageSize") ?? defaultSize);
   const offset = (page - 1) * pageSize;
   return { page, pageSize, limit: pageSize, offset };
 }

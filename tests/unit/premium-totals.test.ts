@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PremiumBreakdown } from "~/lib/db/types";
-import { rollupPremiumTotals } from "~/lib/premium-totals";
+import { rollupPremiumTotals } from "~/lib/pricing/premium-totals";
 
 function premium(partial: Partial<PremiumBreakdown> = {}): PremiumBreakdown {
   return {

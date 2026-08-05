@@ -2,7 +2,7 @@ import { z } from "zod";
 import {
   isWordingHtmlEmpty,
   normalizeWordingHtmlForSave,
-} from "~/lib/wording/html";
+} from "~/lib/policies/wording/html";
 
 export const carWordingFormSchema = z.object({
   subject: z

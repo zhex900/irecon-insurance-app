@@ -1,74 +1,20 @@
-import { useActionData, useNavigate, useNavigation } from "react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { FileTextIcon, Trash2Icon } from "lucide-react";
-import { ClientSummaryPopover } from "~/components/clients/client-summary-popover";
-import { ColumnClientFilterHeader } from "~/components/forms/column-client-filter-header";
-import { ColumnFilterHeader } from "~/components/forms/column-filter-header";
-import { ColumnDateFilterHeader } from "~/components/forms/column-date-filter-header";
+import { useActionData } from "react-router";
 import { ListSearchField } from "~/components/forms/list-search-field";
 import { PageHeader } from "~/components/layout/app-layout";
-import {
-  DeletePoliciesDialog,
-  type DeletablePolicyRef,
-} from "~/components/policies/delete-policies-dialog";
 import { NewPolicyClientDialog } from "~/components/policies/new-policy-client-dialog";
-import { Badge } from "~/components/reui/badge";
-import { Button } from "~/components/ui/button";
-import { Checkbox } from "~/components/ui/checkbox";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "~/components/ui/empty";
-import { StatusBadge } from "~/components/ui/status-badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "~/components/ui/table";
-import { TablePagination } from "~/components/ui/table-pagination";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "~/components/ui/tooltip";
+import { PolicyListTable } from "~/components/policies/policy-list-table";
 import { useActionSuccessToast } from "~/hooks/use-success-toast";
-import { useDebouncedSearchQuery } from "~/hooks/use-debounced-search-query";
+import { usePolicyListPage } from "~/hooks/use-policy-list-page";
 import { requireAuth } from "~/lib/auth/session.server";
-import {
-  pageSearchHref,
-  pageSizeSearchHref,
-  parsePagination,
-} from "~/lib/pagination";
-import { SearchHighlight } from "~/lib/search/highlight-cell";
-import {
-  EXPIRY_PRESETS,
-  INCEPTION_PRESETS,
-  rangeForExpiryPreset,
-  rangeForInceptionPreset,
-  type DateRangeValue,
-  type ExpiryPresetId,
-  type InceptionPresetId,
-} from "~/lib/search/date-range-filter";
-import { fieldMatches } from "~/lib/search/match";
-import {
-  parsePolicyListFiltersFromUrl,
-  policyListFiltersKey,
-  withDateRangeParam,
-  withIdListParam,
-} from "~/lib/search/policy-list-filters";
+import { publicErrorMessage } from "~/lib/http/public-error.server";
+import { parseFormIntent } from "~/lib/http/route-input";
+import { parsePagination } from "~/lib/pagination";
+import { parsePolicyListFiltersFromUrl } from "~/lib/search/policy-list-filters";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import { getClientsByIds } from "~/lib/services/clients/service";
 import { listPoliciesPage } from "~/lib/services/policies/list.service";
 import { deletePolicies } from "~/lib/services/policy/data.service";
 import { getReferenceData } from "~/lib/services/reference.service";
-import { formatCurrency, formatDate } from "~/lib/utils";
-import { isTerminalStatus } from "~/lib/zod/policy-car";
 import type { Route } from "./+types/_index";
 import { pageTitle } from "~/lib/brand";
 
@@ -84,6 +30,7 @@ export function shouldRevalidate() {
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
+  await requireAuth(request);
   const url = new URL(request.url);
   const filters = parsePolicyListFiltersFromUrl(url);
   const pagination = parsePagination(url, { defaultSize: PAGE_SIZE });
@@ -140,7 +87,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 export async function action({ request }: Route.ActionArgs) {
   const actor = await requireAuth(request);
   const formData = await request.formData();
-  const intent = String(formData.get("intent") ?? "");
+  const intent = parseFormIntent(formData, ["delete"]);
 
   if (intent !== "delete") {
     return { ok: false as const, error: "Unknown action" };
@@ -184,7 +131,10 @@ export async function action({ request }: Route.ActionArgs) {
   } catch (error) {
     return {
       ok: false as const,
-      error: error instanceof Error ? error.message : "Delete failed",
+      error: publicErrorMessage(error, {
+        fallback: "Delete failed",
+        operation: "policy_bulk_delete",
+      }),
     };
   }
 }
@@ -192,6 +142,9 @@ export async function action({ request }: Route.ActionArgs) {
 export default function PoliciesIndexRoute({
   loaderData,
 }: Route.ComponentProps) {
+  const actionData = useActionData<typeof action>();
+  useActionSuccessToast(actionData);
+
   const {
     search,
     setSearch,
@@ -199,120 +152,14 @@ export default function PoliciesIndexRoute({
     searchQuery,
     searchParams,
     setSearchParams,
-  } = useDebouncedSearchQuery(loaderData.q);
-  const navigate = useNavigate();
-  const navigation = useNavigation();
-  const actionData = useActionData<typeof action>();
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const [pendingDelete, setPendingDelete] = useState<
-    DeletablePolicyRef[] | null
-  >(null);
-  useActionSuccessToast(actionData);
-
-  const filterKey = policyListFiltersKey({
+    selection,
+  } = usePolicyListPage({
     q: loaderData.q,
-    statusIds: loaderData.filters.statusIds,
-    coverTypeIds: loaderData.filters.coverTypeIds,
-    policyCategoryIds: loaderData.filters.policyCategoryIds,
-    clientIds: loaderData.filters.clientIds,
-    inception: loaderData.filters.inception,
-    expiry: loaderData.filters.expiry,
+    filters: loaderData.filters,
+    policies: loaderData.policies,
+    page: loaderData.page,
+    deleteIntent: "delete",
   });
-
-  const lastSyncKeyRef = useRef<string | null>(null);
-  useEffect(() => {
-    const key = `${loaderData.q}|${filterKey}|${loaderData.page}`;
-    if (lastSyncKeyRef.current === key) return;
-    lastSyncKeyRef.current = key;
-    setSelectedIds([]);
-  }, [loaderData.q, filterKey, loaderData.page]);
-
-  const handledActionDataRef = useRef(actionData);
-  useEffect(() => {
-    if (handledActionDataRef.current === actionData) return;
-    handledActionDataRef.current = actionData;
-    const handled = handledActionDataRef.current;
-    if (!handled?.ok || handled.intent !== "delete") return;
-    setPendingDelete(null);
-    setSelectedIds([]);
-  }, [actionData]);
-
-  const deletableOnPage = useMemo(
-    () =>
-      loaderData.policies.filter(
-        (policy) => !isTerminalStatus(policy.policyStatusId),
-      ),
-    [loaderData.policies],
-  );
-
-  const allDeletableSelected =
-    deletableOnPage.length > 0 &&
-    deletableOnPage.every((policy) => selectedIds.includes(policy.policyId));
-
-  const selectedPolicies = useMemo(
-    () =>
-      loaderData.policies
-        .filter((policy) => selectedIds.includes(policy.policyId))
-        .map((policy) => ({
-          policyId: policy.policyId,
-          policyNumber: policy.policyNumber,
-        })),
-    [loaderData.policies, selectedIds],
-  );
-
-  function keepSearch(params: URLSearchParams) {
-    if (search.trim()) params.set("q", search.trim());
-    else params.delete("q");
-    return params;
-  }
-
-  function applyColumnFilter(
-    key: "status" | "cover" | "category" | "client",
-    nextIds: number[],
-  ) {
-    setSearchParams(keepSearch(withIdListParam(searchParams, key, nextIds)));
-  }
-
-  function applyDateRangeFilter(
-    key: "inception" | "expiry",
-    next: DateRangeValue,
-  ) {
-    setSearchParams(keepSearch(withDateRangeParam(searchParams, key, next)));
-  }
-
-  const pageHref = (nextPage: number) => pageSearchHref(searchParams, nextPage);
-  const pageSizeHref = (nextPageSize: number) =>
-    pageSizeSearchHref(searchParams, nextPageSize, PAGE_SIZE);
-
-  const deletingInFlight =
-    navigation.state !== "idle" &&
-    navigation.formData?.get("intent") === "delete";
-
-  function toggleSelected(policyId: number, checked: boolean) {
-    setSelectedIds((prev) =>
-      checked
-        ? prev.includes(policyId)
-          ? prev
-          : [...prev, policyId]
-        : prev.filter((id) => id !== policyId),
-    );
-  }
-
-  function toggleSelectAll(checked: boolean) {
-    if (!checked) {
-      setSelectedIds((prev) =>
-        prev.filter(
-          (id) => !deletableOnPage.some((policy) => policy.policyId === id),
-        ),
-      );
-      return;
-    }
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      for (const policy of deletableOnPage) next.add(policy.policyId);
-      return [...next];
-    });
-  }
 
   return (
     <div>
@@ -336,352 +183,41 @@ export default function PoliciesIndexRoute({
         </p>
       </div>
 
-      {selectedIds.length > 0 ? (
-        <div className="mb-3 flex flex-wrap items-center gap-3 rounded-xl border bg-muted/40 px-4 py-3">
-          <p className="text-sm">
-            <span className="font-medium">{selectedIds.length}</span> selected
-          </p>
-          <Button
-            type="button"
-            variant="destructive"
-            size="sm"
-            onClick={() => setPendingDelete(selectedPolicies)}
-          >
-            <Trash2Icon data-icon="inline-start" />
-            Delete selected
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => setSelectedIds([])}
-          >
-            Clear
-          </Button>
-        </div>
-      ) : null}
-
-      {actionData && !actionData.ok && actionData.error && !pendingDelete ? (
+      {actionData &&
+      !actionData.ok &&
+      actionData.error &&
+      !selection.pendingDelete ? (
         <p className="mb-3 text-sm text-destructive" role="alert">
           {actionData.error}
         </p>
       ) : null}
 
-      <div className="overflow-hidden rounded-xl border bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-10">
-                <Checkbox
-                  checked={allDeletableSelected}
-                  disabled={deletableOnPage.length === 0}
-                  onCheckedChange={(value) => toggleSelectAll(value === true)}
-                  aria-label="Select all deletable policies on this page"
-                />
-              </TableHead>
-              <TableHead>Policy #</TableHead>
-              <TableHead>
-                <ColumnClientFilterHeader
-                  selected={loaderData.filters.clientIds}
-                  selectedOptions={loaderData.filters.clients}
-                  countQuery={searchParams.toString()}
-                  onChange={(next) => applyColumnFilter("client", next)}
-                />
-              </TableHead>
-              <TableHead>
-                <ColumnFilterHeader
-                  label="Status"
-                  selected={loaderData.filters.statusIds.map(String)}
-                  onChange={(next) =>
-                    applyColumnFilter(
-                      "status",
-                      next.map(Number).filter((id) => id > 0),
-                    )
-                  }
-                  options={loaderData.reference.policyStatuses.map(
-                    (status) => ({
-                      value: String(status.policyStatusId),
-                      label: status.name,
-                      count:
-                        loaderData.statusCounts[status.policyStatusId] ?? 0,
-                    }),
-                  )}
-                />
-              </TableHead>
-              <TableHead>
-                <ColumnFilterHeader
-                  label="Cover"
-                  selected={loaderData.filters.coverTypeIds.map(String)}
-                  onChange={(next) =>
-                    applyColumnFilter(
-                      "cover",
-                      next.map(Number).filter((id) => id > 0),
-                    )
-                  }
-                  options={loaderData.reference.coverTypes.map((cover) => ({
-                    value: String(cover.coverTypeId),
-                    label: cover.name,
-                    count: loaderData.coverCounts[cover.coverTypeId] ?? 0,
-                  }))}
-                />
-              </TableHead>
-              <TableHead>
-                <ColumnFilterHeader
-                  label="Category"
-                  selected={loaderData.filters.policyCategoryIds.map(String)}
-                  onChange={(next) =>
-                    applyColumnFilter(
-                      "category",
-                      next.map(Number).filter((id) => id > 0),
-                    )
-                  }
-                  options={loaderData.reference.policyCategories.map(
-                    (category) => ({
-                      value: String(category.policyCategoryId),
-                      label: category.name,
-                      count:
-                        loaderData.categoryCounts[category.policyCategoryId] ??
-                        0,
-                    }),
-                  )}
-                />
-              </TableHead>
-              <TableHead>
-                <ColumnDateFilterHeader
-                  label="Inception"
-                  inputIdPrefix="inception"
-                  presets={INCEPTION_PRESETS}
-                  value={loaderData.filters.inception}
-                  presetCounts={loaderData.inceptionPresetCounts}
-                  rangeForPreset={(preset) =>
-                    rangeForInceptionPreset(preset as InceptionPresetId)
-                  }
-                  onChange={(next) => applyDateRangeFilter("inception", next)}
-                />
-              </TableHead>
-              <TableHead>
-                <ColumnDateFilterHeader
-                  label="Expiry"
-                  inputIdPrefix="expiry"
-                  presets={EXPIRY_PRESETS}
-                  value={loaderData.filters.expiry}
-                  presetCounts={loaderData.expiryPresetCounts}
-                  rangeForPreset={(preset) =>
-                    rangeForExpiryPreset(preset as ExpiryPresetId)
-                  }
-                  onChange={(next) => applyDateRangeFilter("expiry", next)}
-                />
-              </TableHead>
-              <TableHead className="text-right">Premium</TableHead>
-              <TableHead className="w-20 text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loaderData.policies.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={10} className="py-10">
-                  <Empty>
-                    <EmptyHeader>
-                      <EmptyMedia variant="icon">
-                        <FileTextIcon />
-                      </EmptyMedia>
-                      <EmptyTitle>
-                        {loaderData.q ? "No match" : "No policies found"}
-                      </EmptyTitle>
-                      <EmptyDescription>
-                        {loaderData.q
-                          ? `No match for “${loaderData.q}”.`
-                          : "No policies match the current filters."}
-                      </EmptyDescription>
-                    </EmptyHeader>
-                  </Empty>
-                </TableCell>
-              </TableRow>
-            ) : (
-              loaderData.policies.map((policy) => {
-                const status = loaderData.reference.policyStatuses.find(
-                  (item) => item.policyStatusId === policy.policyStatusId,
-                );
-                const cover = loaderData.reference.coverTypes.find(
-                  (item) => item.coverTypeId === policy.coverTypeId,
-                );
-                const category = loaderData.reference.policyCategories.find(
-                  (item) => item.policyCategoryId === policy.policyCategoryId,
-                );
-                const canDelete = !isTerminalStatus(policy.policyStatusId);
-                const checked = selectedIds.includes(policy.policyId);
-                const showInsured =
-                  Boolean(policy.insuredName) &&
-                  (!searchQuery ||
-                    fieldMatches(policy.insuredName, searchQuery));
-                const clientNameMatches =
-                  !searchQuery ||
-                  fieldMatches(policy.client.name, searchQuery) ||
-                  fieldMatches(policy.client.tradingName ?? "", searchQuery);
-                return (
-                  <TableRow
-                    key={policy.policyId}
-                    className="cursor-pointer"
-                    onClick={() => navigate(`/policies/${policy.policyId}`)}
-                  >
-                    <TableCell onClick={(event) => event.stopPropagation()}>
-                      <Checkbox
-                        checked={checked}
-                        disabled={!canDelete}
-                        onCheckedChange={(value) =>
-                          toggleSelected(policy.policyId, value === true)
-                        }
-                        aria-label={`Select ${policy.policyNumber}`}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-medium">
-                          {searchQuery ? (
-                            <SearchHighlight
-                              text={policy.policyNumber}
-                              query={searchQuery}
-                            />
-                          ) : (
-                            policy.policyNumber
-                          )}
-                        </span>
-                        {policy.adjusted ? (
-                          <Badge variant="info-light" size="sm">
-                            Adjusted
-                          </Badge>
-                        ) : null}
-                      </div>
-                      {showInsured ? (
-                        <p className="mt-0.5 text-xs text-muted-foreground">
-                          {searchQuery ? (
-                            <SearchHighlight
-                              text={policy.insuredName}
-                              query={searchQuery}
-                            />
-                          ) : (
-                            policy.insuredName
-                          )}
-                        </p>
-                      ) : null}
-                    </TableCell>
-                    <TableCell onClick={(event) => event.stopPropagation()}>
-                      <ClientSummaryPopover
-                        client={{
-                          ...policy.client,
-                          accountManagerName:
-                            loaderData.reference.accountManagers.find(
-                              (item) =>
-                                item.accountManagerId ===
-                                policy.client.accountManagerId,
-                            )?.fullName,
-                        }}
-                      >
-                        {searchQuery && clientNameMatches ? (
-                          fieldMatches(policy.client.name, searchQuery) ? (
-                            <SearchHighlight
-                              text={policy.client.name}
-                              query={searchQuery}
-                            />
-                          ) : (
-                            <SearchHighlight
-                              text={
-                                policy.client.tradingName || policy.client.name
-                              }
-                              query={searchQuery}
-                            />
-                          )
-                        ) : (
-                          policy.client.name || "—"
-                        )}
-                      </ClientSummaryPopover>
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge
-                        statusId={policy.policyStatusId}
-                        name={status?.name ?? "—"}
-                      />
-                    </TableCell>
-                    <TableCell>{cover?.name ?? "—"}</TableCell>
-                    <TableCell>{category?.name ?? "—"}</TableCell>
-                    <TableCell>{formatDate(policy.dateStart)}</TableCell>
-                    <TableCell>{formatDate(policy.dateEnd)}</TableCell>
-                    <TableCell className="text-right font-medium">
-                      {policy.originalTotalPremium != null
-                        ? formatCurrency(policy.originalTotalPremium)
-                        : "—"}
-                    </TableCell>
-                    <TableCell
-                      className="text-right"
-                      onClick={(event) => event.stopPropagation()}
-                    >
-                      {canDelete ? (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-sm"
-                          className="text-destructive hover:text-destructive"
-                          aria-label={`Delete ${policy.policyNumber}`}
-                          onClick={() =>
-                            setPendingDelete([
-                              {
-                                policyId: policy.policyId,
-                                policyNumber: policy.policyNumber,
-                              },
-                            ])
-                          }
-                        >
-                          <Trash2Icon />
-                        </Button>
-                      ) : (
-                        <Tooltip>
-                          <TooltipTrigger
-                            render={<span className="inline-flex" />}
-                          >
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon-sm"
-                              disabled
-                              className="text-muted-foreground"
-                              aria-label={`Cannot delete ${policy.policyNumber}`}
-                            >
-                              <Trash2Icon />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            Taken and not taken policies cannot be deleted
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-        <TablePagination
-          total={loaderData.total}
-          page={loaderData.page}
-          pageSize={loaderData.pageSize}
-          pageHref={pageHref}
-          pageSizeHref={pageSizeHref}
-        />
-      </div>
-
-      <DeletePoliciesDialog
-        policies={pendingDelete ?? []}
-        open={pendingDelete != null && pendingDelete.length > 0}
-        onOpenChange={(open) => {
-          if (!open) setPendingDelete(null);
+      <PolicyListTable
+        policies={loaderData.policies}
+        total={loaderData.total}
+        page={loaderData.page}
+        pageSize={loaderData.pageSize}
+        statusCounts={loaderData.statusCounts}
+        coverCounts={loaderData.coverCounts}
+        categoryCounts={loaderData.categoryCounts}
+        inceptionPresetCounts={loaderData.inceptionPresetCounts}
+        expiryPresetCounts={loaderData.expiryPresetCounts}
+        q={loaderData.q}
+        searchQuery={searchQuery}
+        filters={loaderData.filters}
+        reference={loaderData.reference}
+        selection={selection}
+        search={search}
+        searchParams={searchParams}
+        setSearchParams={setSearchParams}
+        defaultPageSize={PAGE_SIZE}
+        deleteIntent="delete"
+        showClientColumn
+        clientFilter={{
+          selected: loaderData.filters.clientIds,
+          selectedOptions: loaderData.filters.clients,
+          countQuery: searchParams.toString(),
         }}
-        loading={deletingInFlight}
-        error={
-          actionData && !actionData.ok && pendingDelete
-            ? actionData.error
-            : null
-        }
       />
     </div>
   );

@@ -1,4 +1,5 @@
 import type { CarAdjustmentRecord, PolicyNote, Policy } from "~/lib/db/types";
+import { ValidationError } from "~/lib/errors";
 import type { CarAdjustmentInput } from "~/lib/zod/policy-adjustment";
 import { POLICY_STATUS } from "~/lib/zod/policy-car";
 import { collectEndorsementWordings } from "~/lib/pdf/merge-fields";
@@ -16,12 +17,7 @@ import { getPolicy, savePolicy } from "~/lib/services/policy/data.service";
 import { getCarWording } from "~/lib/services/reference.service";
 import { resolveBrokerFeeLines } from "~/server/pricing/rate-resolver";
 
-export class AdjustmentError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "AdjustmentError";
-  }
-}
+export class AdjustmentError extends ValidationError {}
 
 export function calculateAdjustmentForPolicy(
   policy: Policy,

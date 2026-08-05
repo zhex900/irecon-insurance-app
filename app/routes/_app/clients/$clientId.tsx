@@ -21,6 +21,8 @@ import {
 import { PageHeader } from "~/components/layout/app-layout";
 import { withSuccessToast } from "~/hooks/use-success-toast";
 import { requireAuth } from "~/lib/auth/session.server";
+import { parseFormIntent, parsePositiveInteger } from "~/lib/http/route-input";
+import { publicErrorMessage } from "~/lib/http/public-error.server";
 import { parsePagination } from "~/lib/pagination";
 import { parsePolicyListFiltersFromUrl } from "~/lib/search/policy-list-filters";
 import { formatDate } from "~/lib/utils";
@@ -43,7 +45,9 @@ export function meta({ loaderData }: Route.MetaArgs) {
 }
 
 export async function loader({ params, request }: Route.LoaderArgs) {
-  const clientId = Number(params.clientId);
+  await requireAuth(request);
+  const clientId = parsePositiveInteger(params.clientId);
+  if (!clientId) throw new Response("Client not found", { status: 404 });
   const url = new URL(request.url);
   const filters = parsePolicyListFiltersFromUrl(url);
   const pagination = parsePagination(url, { defaultSize: PAGE_SIZE });
@@ -97,9 +101,10 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 
 export async function action({ request, params }: Route.ActionArgs) {
   const actor = await requireAuth(request);
-  const clientId = Number(params.clientId);
+  const clientId = parsePositiveInteger(params.clientId);
+  if (!clientId) return { ok: false as const, error: "Invalid client id" };
   const formData = await request.formData();
-  const intent = String(formData.get("intent") ?? "");
+  const intent = parseFormIntent(formData, ["delete", "delete-policies"]);
 
   if (intent === "delete-policies") {
     const ids = formData
@@ -141,7 +146,10 @@ export async function action({ request, params }: Route.ActionArgs) {
     } catch (error) {
       return {
         ok: false as const,
-        error: error instanceof Error ? error.message : "Delete failed",
+        error: publicErrorMessage(error, {
+          fallback: "Delete failed",
+          operation: "client_policy_delete",
+        }),
       };
     }
   }
@@ -171,7 +179,10 @@ export async function action({ request, params }: Route.ActionArgs) {
   } catch (error) {
     return {
       ok: false as const,
-      error: error instanceof Error ? error.message : "Delete failed",
+      error: publicErrorMessage(error, {
+        fallback: "Delete failed",
+        operation: "client_delete",
+      }),
     };
   }
 }

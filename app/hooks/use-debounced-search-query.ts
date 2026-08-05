@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect } from "react";
 import { useSearchParams } from "react-router";
+import { useUrlFilterDraft } from "~/hooks/use-url-filter-draft";
 
 const DEFAULT_DELAY_MS = 250;
 
 /**
- * Local search draft synced to the `q` URL param (debounced).
+ * Search draft debounced to the `q` URL param.
  * Preserves other search params; resets `page` when the query changes.
  */
 export function useDebouncedSearchQuery(
@@ -13,20 +14,18 @@ export function useDebouncedSearchQuery(
 ) {
   const delayMs = options?.delayMs ?? DEFAULT_DELAY_MS;
   const [searchParams, setSearchParams] = useSearchParams();
-  const [search, setSearch] = useState(committedQuery);
-  const lastCommittedRef = useRef(committedQuery);
-
-  useEffect(() => {
-    if (lastCommittedRef.current === committedQuery) return;
-    lastCommittedRef.current = committedQuery;
-    setSearch(committedQuery);
-  }, [committedQuery]);
+  const {
+    draft: search,
+    setDraft: setSearch,
+    commitDraft,
+  } = useUrlFilterDraft(committedQuery);
 
   useEffect(() => {
     const next = search.trim();
     const current = committedQuery.trim();
     if (next === current) return;
     const timer = window.setTimeout(() => {
+      commitDraft(next);
       setSearchParams(
         (prev) => {
           const params = new URLSearchParams(prev);
@@ -39,9 +38,10 @@ export function useDebouncedSearchQuery(
       );
     }, delayMs);
     return () => window.clearTimeout(timer);
-  }, [search, committedQuery, delayMs, setSearchParams]);
+  }, [search, committedQuery, delayMs, setSearchParams, commitDraft]);
 
   function clearSearch() {
+    commitDraft("");
     setSearch("");
     setSearchParams(
       (prev) => {

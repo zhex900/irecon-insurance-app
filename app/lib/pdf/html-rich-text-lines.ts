@@ -2,7 +2,7 @@
  * Parse Additional Wording HTML into wrapped draw lines / height estimates.
  * No pdf-lib or font-file imports — safe for endorsement expand + designer.
  */
-import type { PdfmeFontFamily } from "~/lib/pdf/fonts";
+import type { PdfmeFontFamily } from "~/lib/pdf/font-config";
 import {
   defaultListStyleForTag,
   formatWordingListMarker,
@@ -12,7 +12,7 @@ import {
   plainTextToWordingHtml,
   sanitizeWordingHtml,
   type WordingListStyle,
-} from "~/lib/wording/html";
+} from "~/lib/policies/wording/html";
 
 const MM_TO_PT = 72 / 25.4;
 

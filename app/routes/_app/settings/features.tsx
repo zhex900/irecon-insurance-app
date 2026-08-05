@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { redirect, useFetcher } from "react-router";
 import { SlidersHorizontalIcon } from "lucide-react";
 import { toast } from "sonner";
+import { z } from "zod";
 import { PageHeader } from "~/components/layout/app-layout";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Label } from "~/components/ui/label";
@@ -19,7 +20,6 @@ import {
   listFeatureFlags,
   setFeatureEnabled,
   type FeatureFlag,
-  type FeatureKey,
 } from "~/lib/services/feature-flags";
 import type { Route } from "./+types/features";
 import { pageTitle } from "~/lib/brand";
@@ -43,12 +43,17 @@ export async function action({ request }: Route.ActionArgs) {
   }
 
   const formData = await request.formData();
-  const key = String(formData.get("featureKey") ?? "") as FeatureKey;
-  if (!FEATURE_KEYS.includes(key)) {
+  const parsed = z
+    .object({
+      featureKey: z.enum(FEATURE_KEYS),
+      enabled: z.enum(["0", "1"]),
+    })
+    .safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
     return { ok: false as const, error: "Unknown feature" };
   }
-
-  const enabled = String(formData.get("enabled") ?? "") === "1";
+  const key = parsed.data.featureKey;
+  const enabled = parsed.data.enabled === "1";
   const updated = await setFeatureEnabled(key, enabled, viewer.email);
   await writeAuditLog({
     actor: viewer,

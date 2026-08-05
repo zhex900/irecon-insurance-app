@@ -6,7 +6,7 @@ import {
   PREMIUM_EXCEL_TEMPLATE_KEY,
   premiumExcelExportEnabled,
   premiumExcelFingerprint,
-} from "~/lib/premium-excel";
+} from "~/lib/pricing/premium-excel";
 
 function doc(partial: Partial<PolicyDocument>): PolicyDocument {
   return {

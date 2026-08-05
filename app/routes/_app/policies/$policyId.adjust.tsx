@@ -1,9 +1,10 @@
 import { redirect } from "react-router";
-import { CarAdjustmentWizard } from "~/components/forms/car-adjustment-wizard";
+import { CarAdjustmentWizard } from "~/components/policies/car-adjustment-wizard";
 import { PageHeader } from "~/components/layout/app-layout";
 import { Badge } from "~/components/reui/badge";
 import { withSuccessToast } from "~/hooks/use-success-toast";
 import { requireAuth } from "~/lib/auth/session.server";
+import { parseFormIntent, parsePositiveInteger } from "~/lib/http/route-input";
 import {
   AdjustmentError,
   calculateAdjustmentForPolicy,
@@ -22,8 +23,10 @@ export function meta({ loaderData }: Route.MetaArgs) {
   return [{ title: pageTitle(`Adjust ${loaderData.policy.policyNumber}`) }];
 }
 
-export async function loader({ params }: Route.LoaderArgs) {
-  const policyId = Number(params.policyId);
+export async function loader({ params, request }: Route.LoaderArgs) {
+  await requireAuth(request);
+  const policyId = parsePositiveInteger(params.policyId);
+  if (!policyId) throw new Response("Policy not found", { status: 404 });
   const policy = await getPolicy(policyId);
   if (!policy) throw new Response("Policy not found", { status: 404 });
 
@@ -56,14 +59,24 @@ export async function loader({ params }: Route.LoaderArgs) {
 }
 
 function parsePayload(raw: string) {
-  return JSON.parse(raw) as unknown;
+  try {
+    return JSON.parse(raw) as unknown;
+  } catch {
+    return null;
+  }
 }
 
 export async function action({ request, params }: Route.ActionArgs) {
   const actor = await requireAuth(request);
-  const policyId = Number(params.policyId);
+  const policyId = parsePositiveInteger(params.policyId);
+  if (!policyId) return { formError: "Invalid policy id." };
   const formData = await request.formData();
-  const intent = String(formData.get("intent") ?? "calculate");
+  const intent = parseFormIntent(
+    formData,
+    ["calculate", "finish"],
+    "calculate",
+  );
+  if (!intent) return { formError: "Unknown action." };
   const parsed = carAdjustmentInputSchema.safeParse(
     parsePayload(String(formData.get("payload") ?? "{}")),
   );

@@ -268,7 +268,18 @@ async function main() {
     }
   }
 
-  console.log("→ Deploying Worker…");
+  // The application version references this service binding, so deploy the
+  // private renderer first and only then publish the application Worker.
+  console.log("→ Deploying document Worker…");
+  await run("npx", [
+    "wrangler",
+    "deploy",
+    "--config",
+    "wrangler.documents.jsonc",
+  ]);
+  console.log("✓ Document Worker deployed");
+
+  console.log("→ Deploying application Worker…");
   await run("npx", ["wrangler", "deploy"]);
   console.log("✓ Deployed https://insurance-app-staging.zhex900.workers.dev");
 

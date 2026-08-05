@@ -18,7 +18,7 @@ Authz, secrets, or data-loss fails **block** merge.
 - [ ] Errors handled (typed domain errors → form/HTTP)
 - [ ] Accessible (label, description, error, keyboard, focus)
 - [ ] Responsive where the surface needs it
-- [ ] Secure (authz, ownership, Zod, no secrets/PII)
+- [ ] Secure (authz, documented product scope, Zod, no secrets/PII)
 - [ ] Tested or residual risk stated
 - [ ] Documentation updated if public behavior/API changed
 
@@ -34,7 +34,7 @@ Authz, secrets, or data-loss fails **block** merge.
 
 ## Security & data
 
-- [ ] Auth + ownership on every touched loader/action/`api/*`
+- [ ] Auth + documented product scope/role on every touched loader/action/`api/*`
 - [ ] Every input validated; client never trusted
 - [ ] No raw SQL with string concat; parameterized/Drizzle only
 - [ ] No secrets, tokens, or PII in logs/diff

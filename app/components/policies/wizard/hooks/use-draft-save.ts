@@ -13,7 +13,7 @@ import {
   type PolicySaveStatus,
 } from "~/components/forms/field-save-highlight";
 import type { Policy, PremiumBreakdown } from "~/lib/db/types";
-import { labelForPolicyFieldPath } from "~/lib/policy-field-labels";
+import { labelForPolicyFieldPath } from "~/lib/policies/field-labels";
 import { savePolicyDraftClient } from "~/lib/services/policy/draft.client";
 import { pricingFields, type CarPolicyFormValues } from "~/lib/zod/policy-car";
 

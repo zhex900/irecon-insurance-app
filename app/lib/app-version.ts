@@ -36,13 +36,13 @@ export function getAppEnvironment(version = getAppVersion()): AppEnvironment {
 export function getAppEnvironmentBadgeClass(env: AppEnvironment): string {
   switch (env) {
     case "local":
-      return "border-neutral-300/45 bg-neutral-100/15 text-neutral-100";
+      return "border-sidebar-border bg-sidebar-accent text-sidebar-foreground";
     case "pr":
-      return "border-red-400/50 bg-red-500/25 text-red-200";
+      return "border-destructive/50 bg-destructive/25 text-destructive";
     case "staging":
-      return "border-amber-300/55 bg-amber-400/25 text-amber-100";
+      return "border-warning/50 bg-warning/25 text-warning";
     case "prod":
-      return "border-emerald-400/50 bg-emerald-500/25 text-emerald-200";
+      return "border-success/50 bg-success/25 text-success";
     default:
       return "border-white/25 bg-white/10 text-sidebar-foreground";
   }

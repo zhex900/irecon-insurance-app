@@ -26,7 +26,7 @@ import {
   type TerminalStatusValidation,
 } from "~/components/policies/policy-status-menu";
 import { cn } from "~/lib/utils";
-import { listPolicyFieldSearchOptions } from "~/lib/policy-field-labels";
+import { listPolicyFieldSearchOptions } from "~/lib/policies/field-labels";
 import { wizardSteps } from "~/lib/zod/policy-car";
 
 export const POLICY_FORM_SECTIONS = [

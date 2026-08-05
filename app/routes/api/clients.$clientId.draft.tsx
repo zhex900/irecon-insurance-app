@@ -1,4 +1,7 @@
 import { clientDraftSchema, formValuesToClientInput } from "~/lib/zod/client";
+import { requireAuth } from "~/lib/auth/session.server";
+import { publicErrorMessage } from "~/lib/http/public-error.server";
+import { parsePositiveInteger } from "~/lib/http/route-input";
 import {
   deleteClient,
   getClient,
@@ -8,7 +11,14 @@ import type { Route } from "./+types/clients.$clientId.draft";
 
 /** Browser client draft-save / discard endpoint (Postgres via Drizzle). */
 export async function action({ request, params }: Route.ActionArgs) {
-  const clientId = Number(params.clientId);
+  await requireAuth(request);
+  const clientId = parsePositiveInteger(params.clientId);
+  if (!clientId) {
+    return Response.json(
+      { ok: false, formError: "Invalid client id." },
+      { status: 400 },
+    );
+  }
 
   if (request.method === "DELETE") {
     try {
@@ -18,8 +28,10 @@ export async function action({ request, params }: Route.ActionArgs) {
       return Response.json(
         {
           ok: false,
-          formError:
-            error instanceof Error ? error.message : "Could not discard client",
+          formError: publicErrorMessage(error, {
+            fallback: "Could not discard client",
+            operation: "client_draft_discard",
+          }),
         },
         { status: 400 },
       );
@@ -33,7 +45,7 @@ export async function action({ request, params }: Route.ActionArgs) {
     );
   }
 
-  const body = (await request.json()) as unknown;
+  const body = await request.json().catch(() => null);
   const parsed = clientDraftSchema.safeParse(body);
   if (!parsed.success) {
     return Response.json({

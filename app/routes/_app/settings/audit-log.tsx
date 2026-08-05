@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Form, redirect } from "react-router";
 import { format } from "date-fns";
 import { enAU } from "date-fns/locale";
@@ -7,6 +7,7 @@ import { ListSearchField } from "~/components/forms/list-search-field";
 import { PageHeader } from "~/components/layout/app-layout";
 import { useDebouncedSearchQuery } from "~/hooks/use-debounced-search-query";
 import { requireAuth } from "~/lib/auth/session.server";
+import { optionalIsoDateSchema, queryTextSchema } from "~/lib/http/route-input";
 import { isAdminRole, isSuperAdmin } from "~/lib/auth/roles";
 import { Button } from "~/components/ui/button";
 import {
@@ -17,8 +18,12 @@ import {
   DialogTitle,
 } from "~/components/ui/dialog";
 import { Input } from "~/components/ui/input";
-import { Label } from "~/components/ui/label";
-import { Select as NativeSelect } from "~/components/ui/form-controls";
+import { Field, FieldGroup, FieldLabel } from "~/components/ui/field";
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from "~/components/ui/native-select";
+import { InteractiveTableRow } from "~/components/ui/interactive-table-row";
 import {
   Table,
   TableBody,
@@ -40,7 +45,7 @@ import {
   pageSizeSearchHref,
   parsePagination,
 } from "~/lib/pagination";
-import { SearchHighlight } from "~/lib/search/highlight-cell";
+import { SearchHighlight } from "~/components/search/highlight-cell";
 import { fieldMatches } from "~/lib/search/match";
 import { AUDIT_ACTIONS } from "~/lib/services/audit/constants";
 import { listAuditLogs } from "~/lib/services/audit/service";
@@ -70,11 +75,16 @@ export async function loader({ request }: Route.LoaderArgs) {
   }
 
   const url = new URL(request.url);
-  const q = url.searchParams.get("q") ?? "";
-  const action = url.searchParams.get("action") ?? "";
-  const actorUserId = url.searchParams.get("actor") ?? "";
-  const from = url.searchParams.get("from") ?? "";
-  const to = url.searchParams.get("to") ?? "";
+  const q = queryTextSchema.parse(url.searchParams.get("q") ?? "");
+  const action = queryTextSchema.parse(url.searchParams.get("action") ?? "");
+  const actorUserId = queryTextSchema.parse(
+    url.searchParams.get("actor") ?? "",
+  );
+  const from =
+    optionalIsoDateSchema.parse(url.searchParams.get("from") ?? undefined) ??
+    "";
+  const to =
+    optionalIsoDateSchema.parse(url.searchParams.get("to") ?? undefined) ?? "";
   const pagination = parsePagination(url, { defaultSize: PAGE_SIZE });
   const adminViewer = isAdminRole(viewer);
 
@@ -131,15 +141,9 @@ export default function SettingsAuditLogRoute({
   const { search, setSearch, clearSearch, searchQuery, searchParams } =
     useDebouncedSearchQuery(q);
 
-  const pageHref = useMemo(
-    () => (nextPage: number) => pageSearchHref(searchParams, nextPage),
-    [searchParams],
-  );
-  const pageSizeHref = useMemo(
-    () => (nextPageSize: number) =>
-      pageSizeSearchHref(searchParams, nextPageSize, PAGE_SIZE),
-    [searchParams],
-  );
+  const pageHref = (nextPage: number) => pageSearchHref(searchParams, nextPage);
+  const pageSizeHref = (nextPageSize: number) =>
+    pageSizeSearchHref(searchParams, nextPageSize, PAGE_SIZE);
 
   const hasSearchFilters = Boolean(
     searchQuery || action || actorUserId || from || to,
@@ -164,66 +168,78 @@ export default function SettingsAuditLogRoute({
         method="get"
         className="mb-6 grid gap-3 md:grid-cols-2 xl:grid-cols-6"
       >
-        <div className="xl:col-span-2">
-          <Label htmlFor="audit-search-q" className="sr-only">
-            Search
-          </Label>
-          <input type="hidden" name="q" value={search.trim()} />
-          <ListSearchField
-            id="audit-search-q"
-            value={search}
-            onChange={setSearch}
-            onClear={clearSearch}
-            placeholder="Search summary, actor, action…"
-            aria-label="Search audit log"
-            className="max-w-none"
-          />
-        </div>
-        <div>
-          <Label htmlFor="action" className="sr-only">
+        <FieldGroup className="gap-3 xl:col-span-2">
+          <Field>
+            <FieldLabel htmlFor="audit-search-q" className="sr-only">
+              Search
+            </FieldLabel>
+            <input type="hidden" name="q" value={search.trim()} />
+            <ListSearchField
+              id="audit-search-q"
+              value={search}
+              onChange={setSearch}
+              onClear={clearSearch}
+              placeholder="Search summary, actor, action…"
+              aria-label="Search audit log"
+              className="max-w-none"
+            />
+          </Field>
+        </FieldGroup>
+        <Field>
+          <FieldLabel htmlFor="action" className="sr-only">
             Action
-          </Label>
-          <NativeSelect id="action" name="action" defaultValue={action}>
-            <option value="">All actions</option>
+          </FieldLabel>
+          <NativeSelect
+            id="action"
+            name="action"
+            defaultValue={action}
+            className="w-full"
+          >
+            <NativeSelectOption value="">All actions</NativeSelectOption>
             {AUDIT_ACTIONS.map((code) => (
-              <option key={code} value={code}>
+              <NativeSelectOption key={code} value={code}>
                 {code}
-              </option>
+              </NativeSelectOption>
             ))}
           </NativeSelect>
-        </div>
+        </Field>
         {isAdmin ? (
-          <div>
-            <Label htmlFor="actor" className="sr-only">
+          <Field>
+            <FieldLabel htmlFor="actor" className="sr-only">
               Actor
-            </Label>
-            <NativeSelect id="actor" name="actor" defaultValue={actorUserId}>
-              <option value="">All users</option>
+            </FieldLabel>
+            <NativeSelect
+              id="actor"
+              name="actor"
+              defaultValue={actorUserId}
+              className="w-full"
+            >
+              <NativeSelectOption value="">All users</NativeSelectOption>
               {users.map((user) => (
-                <option key={user.userId} value={user.userId}>
+                <NativeSelectOption key={user.userId} value={user.userId}>
                   {user.fullName || user.email}
-                </option>
+                </NativeSelectOption>
               ))}
             </NativeSelect>
-          </div>
+          </Field>
         ) : null}
-        <div>
-          <Label htmlFor="from" className="sr-only">
+        <Field>
+          <FieldLabel htmlFor="from" className="sr-only">
             From
-          </Label>
+          </FieldLabel>
           <Input id="from" name="from" type="date" defaultValue={from} />
-        </div>
-        <div className="flex items-end gap-2">
-          <div className="min-w-0 flex-1">
-            <Label htmlFor="to" className="sr-only">
+        </Field>
+        <Field className="flex-row items-end gap-2">
+          <Field className="min-w-0 flex-1">
+            <FieldLabel htmlFor="to" className="sr-only">
               To
-            </Label>
+            </FieldLabel>
             <Input id="to" name="to" type="date" defaultValue={to} />
-          </div>
+          </Field>
           <Button type="submit" variant="secondary">
             Filter
           </Button>
-        </div>
+        </Field>
       </Form>
 
       {rows.length === 0 ? (
@@ -258,10 +274,10 @@ export default function SettingsAuditLogRoute({
             </TableHeader>
             <TableBody>
               {rows.map((row) => (
-                <TableRow
+                <InteractiveTableRow
                   key={row.auditLogId}
-                  className="cursor-pointer"
-                  onClick={() => setDetail(row)}
+                  aria-label={`View audit entry ${row.action}`}
+                  onActivate={() => setDetail(row)}
                 >
                   <TableCell className="whitespace-nowrap text-muted-foreground">
                     {formatWhen(row.occurredAt)}
@@ -307,7 +323,7 @@ export default function SettingsAuditLogRoute({
                   <TableCell className="max-w-md truncate">
                     <SearchHighlight text={row.summary} query={searchQuery} />
                   </TableCell>
-                </TableRow>
+                </InteractiveTableRow>
               ))}
             </TableBody>
           </Table>

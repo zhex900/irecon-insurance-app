@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useActionData, useNavigation, useSubmit } from "react-router";
+import { useHandledActionData } from "~/hooks/use-handled-action-data";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CameraIcon } from "lucide-react";
@@ -96,16 +97,11 @@ export function UserFormDialog({
     }
   }, [open]);
 
-  useEffect(() => {
-    if (
-      open &&
-      actionData?.ok &&
-      (actionData.intent === "create" || actionData.intent === "update") &&
-      navigation.state === "idle"
-    ) {
-      onOpenChange(false);
-    }
-  }, [open, actionData, navigation.state, onOpenChange]);
+  useHandledActionData(actionData, {
+    enabled: open,
+    intents: ["create", "update"],
+    onSuccess: () => onOpenChange(false),
+  });
 
   function onPickAvatar(file: File | null) {
     setPreviewUrl((prev) => {

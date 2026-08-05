@@ -12,6 +12,8 @@ function formatErrorDetails(error: unknown): {
   status: number;
   stack?: string;
 } {
+  const showDebugDetails = import.meta.env.DEV;
+
   if (isRouteErrorResponse(error)) {
     if (error.status === 404) {
       return {
@@ -19,26 +21,31 @@ function formatErrorDetails(error: unknown): {
         subheading: "Page not found",
         details: "The requested page could not be found.",
         status: 404,
-        stack:
-          typeof error.data === "string"
+        stack: showDebugDetails
+          ? typeof error.data === "string"
             ? error.data
             : error.data != null
               ? JSON.stringify(error.data, null, 2)
-              : error.statusText || undefined,
+              : error.statusText || undefined
+          : undefined,
       };
     }
 
     return {
       heading: "Oops!",
       subheading: "Unexpected Server Error",
-      details: error.statusText || "An unexpected error occurred.",
+      details:
+        error.status >= 500
+          ? "An unexpected error occurred."
+          : error.statusText || "The request could not be completed.",
       status: error.status || 500,
-      stack:
-        typeof error.data === "string"
+      stack: showDebugDetails
+        ? typeof error.data === "string"
           ? error.data
           : error.data != null
             ? JSON.stringify(error.data, null, 2)
-            : undefined,
+            : undefined
+        : undefined,
     };
   }
 
@@ -46,9 +53,9 @@ function formatErrorDetails(error: unknown): {
     return {
       heading: "Oops!",
       subheading: "Unexpected Server Error",
-      details: error.message || "An unexpected error occurred.",
+      details: "An unexpected error occurred.",
       status: 500,
-      stack: error.stack,
+      stack: showDebugDetails ? error.stack : undefined,
     };
   }
 
@@ -58,7 +65,7 @@ function formatErrorDetails(error: unknown): {
       subheading: "Unexpected Server Error",
       details: "An unexpected error occurred.",
       status: 500,
-      stack: String(error),
+      stack: showDebugDetails ? String(error) : undefined,
     };
   }
 
@@ -79,6 +86,7 @@ export function AppErrorPage({ error }: { error: unknown }) {
   useEffect(() => {
     reportClientRouteError(error);
   }, [error]);
+  const showDebugDetails = import.meta.env.DEV;
   const errorDump =
     stack ||
     [
@@ -111,17 +119,19 @@ export function AppErrorPage({ error }: { error: unknown }) {
           <Link to="/dashboard" className={cn(buttonVariants())}>
             Go to dashboard
           </Link>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setShowError((open) => !open)}
-          >
-            {showError ? "Hide error" : "Show error"}
-          </Button>
+          {showDebugDetails ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowError((open) => !open)}
+            >
+              {showError ? "Hide error" : "Show error"}
+            </Button>
+          ) : null}
         </div>
       </div>
 
-      {showError ? (
+      {showDebugDetails && showError ? (
         <div className="mt-10 w-full max-w-3xl shrink-0">
           <p className="mb-2 text-left text-xs font-medium tracking-wide text-muted-foreground uppercase">
             Stack trace

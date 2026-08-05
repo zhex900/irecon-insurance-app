@@ -1,10 +1,16 @@
+import { z } from "zod";
+
+const positiveIdSchema = z.coerce.number().int().positive();
+
 /** Parse comma-separated positive int IDs from a URL search param. */
 export function parseIdListParam(value: string | null): number[] {
-  if (!value?.trim()) return [];
+  if (!value?.trim() || value.length > 10_000) return [];
   const ids = value
     .split(",")
-    .map((part) => Number(part.trim()))
-    .filter((id) => Number.isInteger(id) && id > 0);
+    .slice(0, 500)
+    .map((part) => positiveIdSchema.safeParse(part.trim()))
+    .filter((result) => result.success)
+    .map((result) => result.data);
   return [...new Set(ids)];
 }
 

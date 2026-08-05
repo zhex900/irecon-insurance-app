@@ -19,6 +19,9 @@ describe("roles", () => {
 
   it("detects admin and super-admin", () => {
     expect(isSuperAdmin({ role: "super-admin" })).toBe(true);
+    expect(isSuperAdmin({ role: "admin" })).toBe(false);
+    expect(isSuperAdmin({ role: "broker" })).toBe(false);
+    expect(isAdminRole({ role: "super-admin" })).toBe(true);
     expect(isAdminRole({ role: "admin" })).toBe(true);
     expect(isAdminRole({ role: "broker" })).toBe(false);
     expect(formatRoleLabel("super-admin")).toBe("Super admin");

@@ -16,7 +16,7 @@ import {
   type PdfmeFontFamily,
   type PdfmeFontStyle,
   type PdfmeFontWeight,
-} from "~/lib/pdf/fonts";
+} from "~/lib/pdf/font-config";
 import { ENDORSEMENT_PAGE_BOTTOM_MARGIN_MM } from "~/lib/pdf/endorsement-expand";
 import {
   countLinesFittingInBandMm,

@@ -1,7 +1,14 @@
 import { z } from "zod";
 import { requireAuth } from "~/lib/auth/session.server";
-import { getLibraryDocumentsBucket } from "~/lib/cloudflare.server";
-import { EMAIL_SEND_RECIPIENTS } from "~/lib/email-templates";
+import { ExternalServiceError } from "~/lib/errors";
+import { publicErrorMessage } from "~/lib/http/public-error.server";
+import { parsePositiveInteger } from "~/lib/http/route-input";
+import {
+  getDocumentService,
+  getLibraryDocumentsBucket,
+} from "~/lib/cloudflare.server";
+import { EMAIL_SEND_RECIPIENTS } from "~/lib/email/templates";
+import { DocumentRenderServiceError } from "~/lib/pdf/document-worker.client.server";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import { sendPolicyDocumentsEmail } from "~/lib/services/email/send-policy-documents.server";
 import { getPolicy } from "~/lib/services/policy/data.service";
@@ -38,7 +45,10 @@ export async function action({ request, params, context }: Route.ActionArgs) {
   }
 
   const actor = await requireAuth(request);
-  const policyId = Number(params.policyId);
+  const policyId = parsePositiveInteger(params.policyId);
+  if (!policyId) {
+    return Response.json({ error: "Invalid policy id." }, { status: 400 });
+  }
   if (!Number.isFinite(policyId) || policyId <= 0) {
     return Response.json({ error: "Invalid policy id" }, { status: 400 });
   }
@@ -67,6 +77,13 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 
   try {
     const libraryBucket = getLibraryDocumentsBucket(context);
+    const documentService = getDocumentService(context);
+    if (!documentService) {
+      return Response.json(
+        { error: "Document generation is temporarily unavailable." },
+        { status: 503 },
+      );
+    }
     const sent = await sendPolicyDocumentsEmail({
       policy,
       documents,
@@ -78,6 +95,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
       html: payload.html?.trim() || undefined,
       recipientType: payload.recipientType,
       libraryBucket,
+      documentService,
     });
 
     const attachmentCount = documents.length + payload.extraAttachments.length;
@@ -106,9 +124,17 @@ export async function action({ request, params, context }: Route.ActionArgs) {
       attachmentCount,
     });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Could not send email.";
-    const status = /not set|RESEND|EMAIL_FROM/i.test(message) ? 503 : 400;
+    const internalMessage = error instanceof Error ? error.message : "";
+    const message = publicErrorMessage(error, {
+      fallback: "Could not send email.",
+      operation: "policy_documents_email_send",
+    });
+    const status =
+      error instanceof DocumentRenderServiceError ||
+      error instanceof ExternalServiceError ||
+      /not set|RESEND|EMAIL_FROM/i.test(internalMessage)
+        ? 503
+        : 400;
     return Response.json({ error: message }, { status });
   }
 }

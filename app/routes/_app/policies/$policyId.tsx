@@ -34,6 +34,8 @@ import {
   type CarPolicyFormValues,
 } from "~/lib/zod/policy-car";
 import { requireAuth } from "~/lib/auth/session.server";
+import { parseFormIntent, parsePositiveInteger } from "~/lib/http/route-input";
+import { publicErrorMessage } from "~/lib/http/public-error.server";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import {
   addPolicyNote,
@@ -54,7 +56,7 @@ import { getClient } from "~/lib/services/clients/service";
 import { listEmailTemplates } from "~/lib/services/email/templates.server";
 import { getEmailFooterImage } from "~/lib/services/email/footer-image.server";
 import { listEmailDirectory } from "~/lib/services/email/directory.server";
-import { emailVarsFromAccountManager } from "~/lib/email-templates";
+import { emailVarsFromAccountManager } from "~/lib/email/templates";
 import { resolveNoteAuthors } from "~/lib/services/users/service";
 import type { Route } from "./+types/$policyId";
 import { pageTitle } from "~/lib/brand";
@@ -63,8 +65,10 @@ export function meta({ loaderData }: Route.MetaArgs) {
   return [{ title: pageTitle(`${loaderData.policy.policyNumber}`) }];
 }
 
-export async function loader({ params }: Route.LoaderArgs) {
-  const policyId = Number(params.policyId);
+export async function loader({ params, request }: Route.LoaderArgs) {
+  await requireAuth(request);
+  const policyId = parsePositiveInteger(params.policyId);
+  if (!policyId) throw new Response("Policy not found", { status: 404 });
   const policy = await getPolicy(policyId);
   if (!policy) throw new Response("Policy not found", { status: 404 });
   const client = await getClient(policy.clientId);
@@ -102,14 +106,33 @@ export async function loader({ params }: Route.LoaderArgs) {
 }
 
 function parsePayload(raw: string): unknown {
-  return JSON.parse(raw) as unknown;
+  try {
+    return JSON.parse(raw) as unknown;
+  } catch {
+    return null;
+  }
 }
 
 export async function action({ request, params }: Route.ActionArgs) {
   const actor = await requireAuth(request);
-  const policyId = Number(params.policyId);
+  const policyId = parsePositiveInteger(params.policyId);
+  if (!policyId) return { formError: "Invalid policy id." };
   const formData = await request.formData();
-  const intent = String(formData.get("intent") ?? "save");
+  const intent = parseFormIntent(
+    formData,
+    [
+      "save",
+      "clone",
+      "delete",
+      "add-note",
+      "update-note",
+      "draft",
+      "recalculate",
+      "calculate",
+    ],
+    "save",
+  );
+  if (!intent) return { formError: "Unknown action." };
 
   if (intent === "clone") {
     const source = await getPolicy(policyId);
@@ -163,8 +186,10 @@ export async function action({ request, params }: Route.ActionArgs) {
       );
     } catch (error) {
       return {
-        formError:
-          error instanceof Error ? error.message : "Could not delete policy.",
+        formError: publicErrorMessage(error, {
+          fallback: "Could not delete policy.",
+          operation: "policy_delete",
+        }),
       };
     }
   }
@@ -196,20 +221,18 @@ export async function action({ request, params }: Route.ActionArgs) {
       };
     } catch (error) {
       return {
-        formError:
-          error instanceof PolicySaveError
-            ? error.message
-            : error instanceof Error
-              ? error.message
-              : "Could not add note.",
+        formError: publicErrorMessage(error, {
+          fallback: "Could not add note.",
+          operation: "policy_note_add",
+        }),
       };
     }
   }
 
   if (intent === "update-note") {
     const description = String(formData.get("description") ?? "");
-    const policyNoteId = Number(formData.get("policyNoteId"));
-    if (!Number.isFinite(policyNoteId) || policyNoteId <= 0) {
+    const policyNoteId = parsePositiveInteger(formData.get("policyNoteId"));
+    if (!policyNoteId) {
       return { formError: "Invalid note." };
     }
     try {
@@ -237,12 +260,10 @@ export async function action({ request, params }: Route.ActionArgs) {
       };
     } catch (error) {
       return {
-        formError:
-          error instanceof PolicySaveError
-            ? error.message
-            : error instanceof Error
-              ? error.message
-              : "Could not update note.",
+        formError: publicErrorMessage(error, {
+          fallback: "Could not update note.",
+          operation: "policy_note_update",
+        }),
       };
     }
   }

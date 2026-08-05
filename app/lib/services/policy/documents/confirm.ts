@@ -1,5 +1,5 @@
 import type { Policy } from "~/lib/db/types";
-import type { LibraryDocumentRecord } from "~/lib/library-documents";
+import type { LibraryDocumentRecord } from "~/lib/documents/library-documents";
 import {
   policyHasLibraryDocuments,
   resolveLibraryAttachments,

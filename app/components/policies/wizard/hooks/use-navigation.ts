@@ -11,7 +11,7 @@ import {
   focusFormIssue,
   orderFormIssues,
 } from "~/lib/form-validation-ui";
-import { labelForPolicyFieldPath } from "~/lib/policy-field-labels";
+import { labelForPolicyFieldPath } from "~/lib/policies/field-labels";
 import {
   carPolicySchema,
   wizardStepFields,

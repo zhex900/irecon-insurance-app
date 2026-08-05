@@ -15,7 +15,7 @@ import {
   latestPremiumExcelDocument,
   premiumExcelExportEnabled,
   premiumExcelFingerprint,
-} from "~/lib/premium-excel";
+} from "~/lib/pricing/premium-excel";
 import {
   ensureReviewDocumentsClient,
   savePolicyDocumentsClient,
@@ -144,8 +144,13 @@ export function usePolicyDocuments({
             "Policy PDFs are ready. Open or download them from Premium Summary.",
         });
       }
-    } catch {
-      // Keep existing docs if persistence fails.
+    } catch (error: unknown) {
+      toast.error("Document generation failed", {
+        description:
+          error instanceof Error
+            ? error.message
+            : "Could not save generated documents.",
+      });
     } finally {
       if (!options?.cancelled?.()) setIsGeneratingDocuments(false);
     }
@@ -183,13 +188,23 @@ export function usePolicyDocuments({
         generatedBy,
         existing: documentsRef.current,
       });
-      const next = [...documentsRef.current, doc];
-      const saved = await savePolicyDocumentsClient(policy.policyId, next);
-      setDocuments(saved);
+      // Download as soon as generation succeeds. Persistence is useful for the
+      // Documents history, but a storage/API failure must not block the export.
       downloadPremiumExcelDocument(doc);
-      toast.success("Excel exported", {
-        description: "Saved to Documents and downloaded.",
-      });
+
+      const next = [...documentsRef.current, doc];
+      try {
+        const saved = await savePolicyDocumentsClient(policy.policyId, next);
+        setDocuments(saved);
+        toast.success("Excel exported", {
+          description: "Saved to Documents and downloaded.",
+        });
+      } catch {
+        toast.warning("Excel downloaded", {
+          description:
+            "The spreadsheet could not be saved to Documents. You can still use the downloaded file.",
+        });
+      }
     } catch (err: unknown) {
       toast.error("Excel export failed", {
         description:

@@ -8,18 +8,18 @@ import {
   documentLabelFromFilename,
   normalizeDocumentLabel,
 } from "~/lib/documents/document-label";
-import type { LibraryDocumentRecord } from "~/lib/library-documents";
+import type { LibraryDocumentRecord } from "~/lib/documents/library-documents";
 import { referenceData } from "~/lib/reference-data";
 import {
   deleteLibraryDocumentPdf,
   putLibraryDocumentPdf,
 } from "~/lib/storage/library-documents.server";
 
-export type { LibraryDocumentRecord } from "~/lib/library-documents";
+export type { LibraryDocumentRecord } from "~/lib/documents/library-documents";
 export {
   libraryDocumentMatchesPolicy,
   libraryDocumentPublicPath,
-} from "~/lib/library-documents";
+} from "~/lib/documents/library-documents";
 
 const VALID_COVER_TYPE_IDS = new Set(
   referenceData.coverTypes.map((cover) => cover.coverTypeId),

@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useFormContext, Controller } from "react-hook-form";
 import { PlusIcon } from "lucide-react";
-import { WordingHtmlView } from "~/components/forms/wording-html-view";
-import { WordingRichEditor } from "~/components/forms/wording-rich-editor";
+import { WordingHtmlView } from "~/components/policies/wording-html-view";
+import { WordingRichEditor } from "~/components/policies/wording-rich-editor";
 import { Button } from "~/components/ui/button";
 import {
   Dialog,
@@ -16,12 +16,12 @@ import { type CarPolicyFormValues } from "~/lib/zod/policy-car";
 import {
   createEmptyCustomWording,
   type CustomWordingItem,
-} from "~/lib/custom-wordings";
+} from "~/lib/policies/custom-wordings";
 import {
   isWordingHtmlEmpty,
   normalizeWordingHtmlForSave,
   plainTextFromWordingHtml,
-} from "~/lib/wording/html";
+} from "~/lib/policies/wording/html";
 
 export function CustomWordingsEditor() {
   const { control } = useFormContext<CarPolicyFormValues>();

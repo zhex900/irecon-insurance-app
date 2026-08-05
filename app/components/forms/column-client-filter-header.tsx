@@ -16,7 +16,12 @@ import {
   PopoverTrigger,
 } from "~/components/ui/popover";
 import { Spinner } from "~/components/ui/spinner";
-import { ClientSearchResultDetails } from "~/lib/search/client-result";
+import { ClientSearchResultDetails } from "~/components/search/client-result";
+import { useApiSearch } from "~/hooks/use-api-search";
+import {
+  CLIENT_FILTER_SEARCH_PARAMS,
+  type ClientsSearchApiResponse,
+} from "~/lib/search/api-search";
 import {
   clientHasVisibleMatch,
   type ClientSearchResult,
@@ -46,9 +51,6 @@ export function ColumnClientFilterHeader({
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [hits, setHits] = useState<ClientSearchResult[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [settledQuery, setSettledQuery] = useState<string | null>(null);
   const [localOptions, setLocalOptions] = useState<ColumnClientFilterOption[]>(
     [],
   );
@@ -56,63 +58,38 @@ export function ColumnClientFilterHeader({
   /** Local draft so multi-select (OR) stays responsive while the URL revalidates. */
   const [draft, setDraft] = useState(selected);
   const active = selected.length > 0;
-  const q = query.trim();
+
+  const {
+    trimmedQuery: q,
+    data,
+    isSearching,
+    isSettled,
+    reset: resetSearch,
+  } = useApiSearch<ClientsSearchApiResponse>({
+    enabled: open,
+    query,
+    debounceMs: 200,
+    searchParams: CLIENT_FILTER_SEARCH_PARAMS,
+  });
 
   function handleOpenChange(next: boolean) {
     if (next) {
       setDraft(selected);
     } else {
       setQuery("");
-      setHits([]);
-      setSettledQuery(null);
+      resetSearch();
       setPolicyCounts({});
     }
     setOpen(next);
   }
 
-  useEffect(() => {
-    if (!open || !q) return;
-
-    const controller = new AbortController();
-    const timer = window.setTimeout(async () => {
-      setLoading(true);
-      try {
-        const params = new URLSearchParams({
-          type: "clients",
-          limit: "20",
-          q,
-        });
-        const response = await fetch(`/api/search?${params}`, {
-          signal: controller.signal,
-        });
-        if (!response.ok) throw new Error("Search failed");
-        const data = (await response.json()) as {
-          clients: ClientSearchResult[];
-        };
-        setHits(data.clients ?? []);
-        setSettledQuery(q);
-      } catch (error) {
-        if ((error as Error).name === "AbortError") return;
-        setHits([]);
-        setSettledQuery(q);
-      } finally {
-        setLoading(false);
-      }
-    }, 200);
-
-    return () => {
-      controller.abort();
-      window.clearTimeout(timer);
-    };
-  }, [open, q]);
-
-  const searching = Boolean(q) && (loading || settledQuery !== q);
   const selectedSet = new Set(draft);
 
   const displayHits = useMemo(() => {
-    if (!q || settledQuery !== q) return [];
+    if (!q || !isSettled) return [];
+    const hits = data?.clients ?? [];
     return hits.filter((client) => clientHasVisibleMatch(client, q));
-  }, [hits, q, settledQuery]);
+  }, [data?.clients, isSettled, q]);
 
   const countIdsKey = useMemo(() => {
     const ids = new Set<number>([
@@ -290,14 +267,7 @@ export function ColumnClientFilterHeader({
           <SearchIcon className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={query}
-            onChange={(event) => {
-              const next = event.target.value;
-              setQuery(next);
-              if (!next.trim()) {
-                setHits([]);
-                setSettledQuery("");
-              }
-            }}
+            onChange={(event) => setQuery(event.target.value)}
             placeholder="Search by name, ABN, phone, email…"
             className="h-8 pl-7"
             autoFocus
@@ -309,7 +279,7 @@ export function ColumnClientFilterHeader({
             <p className="px-2 py-3 text-center text-xs text-muted-foreground">
               Type to find clients
             </p>
-          ) : searching ? (
+          ) : isSearching ? (
             <p className="flex items-center justify-center gap-2 px-2 py-3 text-xs text-muted-foreground">
               <Spinner className="size-3.5" />
               Searching…

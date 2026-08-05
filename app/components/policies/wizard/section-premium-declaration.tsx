@@ -40,22 +40,22 @@ import type {
 } from "~/lib/db/types";
 import { cn, formatCurrency } from "~/lib/utils";
 import { sanitizeAmountInput } from "~/lib/amount-input";
-import { PolicyViewAdjustmentCards } from "~/components/forms/car-adjustment-wizard";
+import { PolicyViewAdjustmentCards } from "~/components/policies/car-adjustment-wizard";
 import {
   buildPremiumLineWorking,
   isPremiumLineManual,
   type PremiumLineWorking,
   type PremiumWorkingInputs,
-} from "~/lib/premium-workings";
+} from "~/lib/pricing/premium-workings";
 import { useFieldSaveState } from "~/components/forms/field-save-highlight";
 import {
   combinedTrueBasePremium,
   rollupPremiumTotals,
-} from "~/lib/premium-totals";
+} from "~/lib/pricing/premium-totals";
 import {
   applyManualPremiumEdit,
   type ManualPremiumSessionRates,
-} from "~/lib/premium-manual-recalc";
+} from "~/lib/pricing/premium-manual-recalc";
 
 export function PricingDeclarationConfirmedStep({
   premium,
@@ -231,7 +231,7 @@ export function PricingDeclarationConfirmedStep({
                   >
                     <FileSpreadsheetIcon
                       className={cn(
-                        "size-4 text-emerald-700",
+                        "size-4 text-success",
                         isExportingExcel && "animate-pulse",
                       )}
                     />

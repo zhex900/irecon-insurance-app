@@ -2,7 +2,7 @@ import { asc } from "drizzle-orm";
 import { referenceData } from "~/lib/reference-data";
 import { getDb } from "~/lib/db/client";
 import { policyCarExcessDefault } from "~/lib/db/schema";
-import { defaultExcessesFromCatalogue } from "~/lib/excesses";
+import { defaultExcessesFromCatalogue } from "~/lib/policies/excesses";
 import { listAuthorisedRepresentatives } from "~/lib/services/authorised-representatives/service";
 import { listCarWordings } from "~/lib/services/car-wording/service";
 import type { CarWording, ReferenceData } from "~/lib/db/types";

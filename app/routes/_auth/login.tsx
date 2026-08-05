@@ -13,6 +13,7 @@ import {
   signInWithPassword,
 } from "~/lib/supabase/auth.server";
 import { writeAuditLog } from "~/lib/services/audit/service";
+import { publicErrorMessage } from "~/lib/http/public-error.server";
 import { getUser } from "~/lib/services/users/service";
 import type { Route } from "./+types/login";
 import { pageTitle } from "~/lib/brand";
@@ -35,7 +36,7 @@ export async function action({ request }: Route.ActionArgs) {
 
     const { data, error } = await signInWithPassword(email, password);
     if (error || !data.session || !data.user) {
-      return { error: error?.message ?? "Invalid email or password" };
+      return { error: "Invalid email or password" };
     }
 
     const profile = await getUser(data.user.id);
@@ -58,12 +59,11 @@ export async function action({ request }: Route.ActionArgs) {
     headers.set("Location", "/dashboard");
     return new Response(null, { status: 302, headers });
   } catch (error) {
-    console.error("login action failed", error);
     return {
-      error:
-        error instanceof Error
-          ? error.message
-          : "Sign in failed. Check server configuration.",
+      error: publicErrorMessage(error, {
+        fallback: "Sign in failed. Try again shortly.",
+        operation: "auth_login",
+      }),
     };
   }
 }

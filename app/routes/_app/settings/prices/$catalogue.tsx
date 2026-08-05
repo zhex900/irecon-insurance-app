@@ -1,4 +1,4 @@
-import type { ReactNode, MouseEvent } from "react";
+import type { ReactNode } from "react";
 import { Link, Outlet, redirect, useNavigate } from "react-router";
 import { PlusIcon, Trash2Icon } from "lucide-react";
 import { PageHeader } from "~/components/layout/app-layout";
@@ -11,6 +11,10 @@ import {
   CardTitle,
 } from "~/components/ui/card";
 import {
+  InteractiveTableActionsCell,
+  InteractiveTableRow,
+} from "~/components/ui/interactive-table-row";
+import {
   Table,
   TableBody,
   TableCell,
@@ -19,6 +23,7 @@ import {
   TableRow,
 } from "~/components/ui/table";
 import { requireAuth } from "~/lib/auth/session.server";
+import { publicErrorMessage } from "~/lib/http/public-error.server";
 import { isSuperAdmin } from "~/lib/auth/roles";
 import {
   emptyCatalogue,
@@ -32,7 +37,7 @@ import {
   slugToKind,
   type PriceCatalogueSlug,
   PRICE_CATALOGUE_SLUGS,
-} from "~/lib/prices/settings-shared";
+} from "~/lib/pricing/settings-shared";
 import {
   getPriceCatalogueSnapshot,
   type PriceCatalogueSnapshot,
@@ -65,12 +70,11 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   try {
     catalogue = await getPriceCatalogueSnapshot();
   } catch (error) {
-    console.error("settings/prices/$catalogue loader failed", error);
     catalogue = emptyCatalogue();
-    loadError =
-      error instanceof Error
-        ? error.message
-        : "Failed to load price catalogues";
+    loadError = publicErrorMessage(error, {
+      fallback: "Failed to load price catalogues",
+      operation: "price_catalogue_load",
+    });
   }
 
   return {
@@ -187,10 +191,6 @@ function CataloguePanel({
   }
 }
 
-/**
- * Whole-row open. Prefer a real ID link for middle-click / keyboard; row click
- * covers the rest (tr `position:relative` overlays are unreliable in tables).
- */
 function ClickableScheduleRow({
   href,
   deleteHref,
@@ -208,13 +208,12 @@ function ClickableScheduleRow({
 }) {
   const navigate = useNavigate();
 
-  function onRowClick(event: MouseEvent<HTMLTableRowElement>) {
-    if ((event.target as HTMLElement).closest("a, button")) return;
-    void navigate(href);
-  }
-
   return (
-    <TableRow className="cursor-pointer hover:bg-muted/50" onClick={onRowClick}>
+    <InteractiveTableRow
+      className="hover:bg-muted/50"
+      aria-label={`View schedule ${id}`}
+      onActivate={() => void navigate(href)}
+    >
       <TableCell className="text-foreground tabular-nums">
         <Link
           to={href}
@@ -226,7 +225,7 @@ function ClickableScheduleRow({
       </TableCell>
       {children}
       {canEdit ? (
-        <TableCell className="w-12 text-right">
+        <InteractiveTableActionsCell className="w-12 text-right">
           <Link
             to={deleteHref}
             aria-label={deleteLabel}
@@ -234,9 +233,9 @@ function ClickableScheduleRow({
           >
             <Trash2Icon className="size-4" />
           </Link>
-        </TableCell>
+        </InteractiveTableActionsCell>
       ) : null}
-    </TableRow>
+    </InteractiveTableRow>
   );
 }
 
@@ -262,7 +261,7 @@ function ListCard({
 
 function EmptyCatalogue({ label }: { label: string }) {
   return (
-    <div className="space-y-1 py-8 text-center text-sm text-muted-foreground">
+    <div className="flex flex-col gap-1 py-8 text-center text-sm text-muted-foreground">
       <p>No {label} loaded yet.</p>
       <p>
         Import from legacy MSSQL with{" "}

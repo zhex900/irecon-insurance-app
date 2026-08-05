@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useNavigation } from "react-router";
 import { SearchIcon } from "lucide-react";
 import { Button } from "~/components/ui/button";
@@ -16,7 +16,13 @@ import {
   clientHasVisibleMatch,
   type ClientSearchResult,
 } from "~/lib/search/client-match";
-import { ClientSearchResultDetails } from "~/lib/search/client-result";
+import { ClientSearchResultDetails } from "~/components/search/client-result";
+import { SearchResultsStatus } from "~/components/search/search-results-status";
+import { useApiSearch } from "~/hooks/use-api-search";
+import {
+  CLIENT_PICKER_SEARCH_PARAMS,
+  type ClientsSearchApiResponse,
+} from "~/lib/search/api-search";
 import { cn } from "~/lib/utils";
 
 type ClientHit = ClientSearchResult;
@@ -32,60 +38,35 @@ export function NewPolicyClientDialog({
   const navigation = useNavigation();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const [clients, setClients] = useState<ClientHit[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [settledQuery, setSettledQuery] = useState<string | null>(null);
   const [creatingClientId, setCreatingClientId] = useState<number | null>(null);
   const creating =
     creatingClientId != null &&
     navigation.state !== "idle" &&
     navigation.location?.pathname === "/policies/new";
 
-  const q = search.trim();
-  const active = open && q.length > 0;
-
-  useEffect(() => {
-    if (!active) return;
-
-    const controller = new AbortController();
-    const timer = window.setTimeout(async () => {
-      setLoading(true);
-      try {
-        const params = new URLSearchParams({
-          type: "clients",
-          limit: "25",
-          q,
-        });
-        const response = await fetch(`/api/search?${params}`, {
-          signal: controller.signal,
-        });
-        if (!response.ok) throw new Error("Search failed");
-        const data = (await response.json()) as { clients: ClientHit[] };
-        setClients(data.clients ?? []);
-        setSettledQuery(q);
-      } catch (error) {
-        if ((error as Error).name === "AbortError") return;
-        setClients([]);
-        setSettledQuery(q);
-      } finally {
-        setLoading(false);
-      }
-    }, 200);
-
-    return () => {
-      controller.abort();
-      window.clearTimeout(timer);
-    };
-  }, [active, q]);
+  const {
+    trimmedQuery: q,
+    active,
+    data,
+    isSearching,
+    isSettled,
+    hasError,
+    reset: resetSearch,
+  } = useApiSearch<ClientsSearchApiResponse>({
+    enabled: open,
+    query: search,
+    debounceMs: 200,
+    searchParams: CLIENT_PICKER_SEARCH_PARAMS,
+  });
 
   const displayClients = useMemo(() => {
-    if (!active || settledQuery !== q) return [];
+    if (!isSettled) return [];
+    const clients = data?.clients ?? [];
     return clients.filter((client) => clientHasVisibleMatch(client, q));
-  }, [active, clients, q, settledQuery]);
+  }, [data?.clients, isSettled, q]);
 
-  const searching = active && (loading || settledQuery !== q);
   const showEmpty =
-    active && !searching && settledQuery === q && displayClients.length === 0;
+    active && isSettled && !hasError && displayClients.length === 0;
 
   function selectClient(clientId: number) {
     setCreatingClientId(clientId);
@@ -99,8 +80,7 @@ export function NewPolicyClientDialog({
         setOpen(next);
         if (!next) {
           setSearch("");
-          setClients([]);
-          setSettledQuery(null);
+          resetSearch();
           setCreatingClientId(null);
         }
       }}
@@ -124,44 +104,44 @@ export function NewPolicyClientDialog({
             placeholder="Search by name, ABN, phone, email…"
             className="pl-8"
             autoFocus
+            aria-busy={isSearching}
           />
         </div>
 
         <div className="flex h-80 flex-col gap-0.5 overflow-auto rounded-lg border p-1">
-          {!active ? (
-            <p className="px-2.5 py-8 text-center text-sm text-muted-foreground">
-              Type to search clients…
-            </p>
-          ) : searching || (loading && displayClients.length === 0) ? (
-            <p className="px-2.5 py-8 text-center text-sm text-muted-foreground">
-              Searching…
-            </p>
-          ) : showEmpty ? (
-            <p className="px-2.5 py-8 text-center text-sm text-muted-foreground">
-              No match for “{q}”.
-            </p>
-          ) : (
-            displayClients.map((client) => (
-              <button
-                key={client.clientId}
-                type="button"
-                disabled={creating}
-                className={cn(
-                  "flex w-full items-start gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-muted",
-                  creating && "opacity-60",
-                )}
-                onClick={() => {
-                  if (creating) return;
-                  selectClient(client.clientId);
-                }}
-              >
-                {creatingClientId === client.clientId ? (
-                  <Spinner className="mt-0.5 size-3.5 shrink-0" />
-                ) : null}
-                <ClientSearchResultDetails client={client} query={q} />
-              </button>
-            ))
-          )}
+          <SearchResultsStatus
+            active={active}
+            isSearching={isSearching}
+            hasError={hasError}
+            showEmpty={showEmpty}
+            emptyQuery={q}
+            resultCount={
+              displayClients.length > 0 ? displayClients.length : undefined
+            }
+            idleMessage="Type to search clients…"
+          />
+          {active && !isSearching && !hasError && !showEmpty
+            ? displayClients.map((client: ClientHit) => (
+                <button
+                  key={client.clientId}
+                  type="button"
+                  disabled={creating}
+                  className={cn(
+                    "flex w-full items-start gap-2 rounded-md px-2.5 py-1.5 text-left hover:bg-muted",
+                    creating && "opacity-60",
+                  )}
+                  onClick={() => {
+                    if (creating) return;
+                    selectClient(client.clientId);
+                  }}
+                >
+                  {creatingClientId === client.clientId ? (
+                    <Spinner className="mt-0.5 size-3.5 shrink-0" />
+                  ) : null}
+                  <ClientSearchResultDetails client={client} query={q} />
+                </button>
+              ))
+            : null}
         </div>
 
         <p className="text-xs text-muted-foreground">
