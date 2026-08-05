@@ -57,6 +57,12 @@ import { isSuperAdmin } from "~/lib/auth/roles";
 import type { BrokerSession } from "~/lib/db/types";
 import { SentryUserSync } from "~/lib/observability/sentry-user-sync";
 import type { SideNavData } from "~/lib/services/navigation/side-nav.service";
+import {
+  writeNavSectionsCookie,
+  writeRecentsOpenCookie,
+  writeSidebarOpenCookie,
+  type NavSectionId,
+} from "~/lib/services/navigation/sidebar-state";
 import { cn } from "~/lib/utils";
 
 function SidebarBrand() {
@@ -138,22 +144,67 @@ function SidebarCollapseToggle() {
 export function AppLayout({
   broker,
   sideNav,
+  sidebarOpen = true,
+  recentsOpen = false,
+  navSectionsExpanded = [],
   content,
 }: {
   broker: BrokerSession;
   sideNav: SideNavData;
+  /** Pinned sidebar open state from cookie (SSR). */
+  sidebarOpen?: boolean;
+  /** Recents section open state from cookie (SSR). */
+  recentsOpen?: boolean;
+  /** Expanded Reports/Settings sections from cookie + path (SSR). */
+  navSectionsExpanded?: NavSectionId[];
   /** When set (e.g. layout ErrorBoundary), replace the route Outlet. */
   content?: React.ReactNode;
 }) {
   const [searchOpen, setSearchOpen] = React.useState(false);
+  const [shellNav, setShellNav] = React.useState({
+    sidebarOpen,
+    recentsOpen,
+    navSectionsExpanded,
+  });
   useSuccessToastFromSearch();
   const appVersion = getAppVersion();
   const appEnv = getAppEnvironment(appVersion);
 
+  const handleSidebarOpenChange = React.useCallback((open: boolean) => {
+    setShellNav((prev) => ({
+      ...prev,
+      sidebarOpen: open,
+      recentsOpen: open ? prev.recentsOpen : false,
+    }));
+    writeSidebarOpenCookie(open);
+    if (!open) writeRecentsOpenCookie(false);
+  }, []);
+
+  const handleRecentsOpenChange = React.useCallback((open: boolean) => {
+    setShellNav((prev) => ({
+      ...prev,
+      recentsOpen: open,
+      sidebarOpen: open ? true : prev.sidebarOpen,
+    }));
+    writeRecentsOpenCookie(open);
+    if (open) writeSidebarOpenCookie(true);
+  }, []);
+
+  const handleNavSectionsChange = React.useCallback(
+    (navSectionsExpanded: NavSectionId[]) => {
+      setShellNav((prev) => ({ ...prev, navSectionsExpanded }));
+      writeNavSectionsCookie(navSectionsExpanded);
+    },
+    [],
+  );
+
   return (
     <TooltipProvider>
       <SentryUserSync userId={broker.id} email={broker.email} />
-      <SidebarProvider>
+      <SidebarProvider
+        open={shellNav.sidebarOpen}
+        onOpenChange={handleSidebarOpenChange}
+      >
         <Sidebar collapsible="icon" variant="sidebar">
           <SidebarHeader className="flex h-14 w-full shrink-0 flex-row items-center gap-1 border-b border-sidebar-border px-2 group-data-[collapsible=icon]:justify-center">
             <SidebarBrand />
@@ -162,7 +213,14 @@ export function AppLayout({
           <SidebarContent>
             <SidebarGroup>
               <SidebarGroupContent>
-                <AppSideNav data={sideNav} />
+                <AppSideNav
+                  data={sideNav}
+                  recentsOpen={shellNav.recentsOpen}
+                  sidebarExpanded={shellNav.sidebarOpen}
+                  navSectionsExpanded={shellNav.navSectionsExpanded}
+                  onRecentsOpenChange={handleRecentsOpenChange}
+                  onNavSectionsChange={handleNavSectionsChange}
+                />
               </SidebarGroupContent>
             </SidebarGroup>
           </SidebarContent>

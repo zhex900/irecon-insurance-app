@@ -19,63 +19,23 @@ import {
   ClockIcon,
   type LucideIcon,
 } from "lucide-react";
-import { hotkeysCoreFeature, syncDataLoaderFeature } from "@headless-tree/core";
-import { useTree } from "@headless-tree/react";
-import { Tree, TreeItem, TreeItemLabel } from "~/components/reui/tree";
-import {
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  useSidebar,
-} from "~/components/ui/sidebar";
+import { useSidebar } from "~/components/ui/sidebar";
 import {
   normalizeRecentPath,
   pushRecentRouteLocalDetailed,
   recentIdForPath,
 } from "~/lib/services/navigation/recent-routes";
+import {
+  sectionFromPathname,
+  type NavSectionId,
+} from "~/lib/services/navigation/sidebar-state";
 import type {
   SideNavData,
   SideNavLink,
 } from "~/lib/services/navigation/side-nav.service";
 import { cn } from "~/lib/utils";
 
-type SectionId = "reports" | "settings";
-
-type NavItem = {
-  name: string;
-  href?: string;
-  icon?: LucideIcon;
-  children?: string[];
-};
-
-const RECENTS_OPEN_KEY = "irecon.side-nav.recents-open";
-const RECENTS_OPEN_EVENT = "irecon-side-nav-recents-open";
-
-function readRecentsOpen(): boolean {
-  try {
-    return sessionStorage.getItem(RECENTS_OPEN_KEY) === "1";
-  } catch {
-    return false;
-  }
-}
-
-function writeRecentsOpen(open: boolean) {
-  try {
-    sessionStorage.setItem(RECENTS_OPEN_KEY, open ? "1" : "0");
-    window.dispatchEvent(new Event(RECENTS_OPEN_EVENT));
-  } catch {
-    // ignore quota / private mode
-  }
-}
-
-function subscribeRecentsOpen(onStoreChange: () => void) {
-  window.addEventListener("storage", onStoreChange);
-  window.addEventListener(RECENTS_OPEN_EVENT, onStoreChange);
-  return () => {
-    window.removeEventListener("storage", onStoreChange);
-    window.removeEventListener(RECENTS_OPEN_EVENT, onStoreChange);
-  };
-}
+type SectionId = NavSectionId;
 
 const CHILD_ICONS: Record<string, LucideIcon> = {
   "report-clients": UsersIcon,
@@ -126,15 +86,11 @@ const indent = 16;
 /** Matches tree level-1: TreeItem `ps-(--tree-padding)` + label `px-2`. */
 const submenuStartClass = "ps-[calc(0.5rem+var(--side-nav-indent,16px))]";
 
-function sectionFromPath(pathname: string): SectionId | null {
-  if (pathname === "/reports" || pathname.startsWith("/reports/")) {
-    return "reports";
-  }
-  if (pathname === "/settings" || pathname.startsWith("/settings/")) {
-    return "settings";
-  }
-  return null;
-}
+const navRowClass =
+  "relative flex h-8 w-max cursor-pointer items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-sidebar-foreground outline-none hover:bg-sidebar-accent hover:text-primary focus-visible:ring-2 focus-visible:ring-sidebar-ring";
+
+const navRowActiveClass =
+  "bg-sidebar-accent font-medium text-primary before:absolute before:inset-x-0 before:-inset-y-0.5 before:-z-10 before:rounded-md before:bg-sidebar-accent";
 
 function pathMatches(pathname: string, href: string, end = false): boolean {
   if (end || href === "/dashboard") {
@@ -184,98 +140,6 @@ function iconForRecentPath(path: string): LucideIcon {
   }
 
   return FileTextIcon;
-}
-
-function buildNavItems(data: SideNavData): Record<string, NavItem> {
-  const items: Record<string, NavItem> = {
-    root: {
-      name: "Navigation",
-      children: TOP_LINKS.map((link) => link.id),
-    },
-  };
-
-  for (const link of TOP_LINKS) {
-    if (link.section === "reports") {
-      items[link.id] = {
-        name: link.label,
-        href: link.to,
-        icon: link.icon,
-        children: data.reports.map((child) => child.id),
-      };
-      for (const child of data.reports) {
-        items[child.id] = {
-          name: child.label,
-          href: child.href,
-          icon: CHILD_ICONS[child.id] ?? FileTextIcon,
-        };
-      }
-      continue;
-    }
-
-    if (link.section === "settings") {
-      items[link.id] = {
-        name: link.label,
-        href: link.to,
-        icon: link.icon,
-        children: data.settings.map((child) => child.id),
-      };
-      for (const child of data.settings) {
-        items[child.id] = {
-          name: child.label,
-          href: child.href,
-          icon: CHILD_ICONS[child.id] ?? FileTextIcon,
-        };
-      }
-      continue;
-    }
-
-    items[link.id] = {
-      name: link.label,
-      href: link.to,
-      icon: link.icon,
-    };
-  }
-
-  return items;
-}
-
-function collectActiveIds(
-  pathname: string,
-  items: Record<string, NavItem>,
-): string[] {
-  const active = new Set<string>();
-  let bestLeaf: { id: string; href: string } | null = null;
-
-  for (const [id, item] of Object.entries(items)) {
-    if (id === "root") continue;
-    if (!item.href) continue;
-    const isFolder = (item.children?.length ?? 0) > 0;
-    if (isFolder) continue;
-    if (!pathMatches(pathname, item.href)) continue;
-    if (!bestLeaf || item.href.length > bestLeaf.href.length) {
-      bestLeaf = { id, href: item.href };
-    }
-  }
-
-  if (bestLeaf) {
-    active.add(bestLeaf.id);
-  }
-
-  const section = sectionFromPath(pathname);
-  if (section) {
-    active.add(section);
-  }
-
-  if (!bestLeaf && !section) {
-    for (const link of TOP_LINKS) {
-      if (link.section) continue;
-      if (pathMatches(pathname, link.to, link.to === "/dashboard")) {
-        active.add(link.id);
-      }
-    }
-  }
-
-  return [...active];
 }
 
 const RECENTS_ENTER_MS = 320;
@@ -406,19 +270,14 @@ function RecentsSection({
         {iconRail ? null : (
           <ChevronRightIcon
             className={cn(
-              "size-3.5 shrink-0 text-sidebar-foreground/70 transition-transform duration-200",
+              "size-3.5 shrink-0 text-sidebar-foreground/70",
               listOpen && "rotate-90",
             )}
           />
         )}
       </button>
 
-      <div
-        className={cn(
-          "grid transition-[grid-template-rows] duration-200 ease-out",
-          listOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
-        )}
-      >
+      {listOpen ? (
         <div className="min-h-0 overflow-hidden">
           <div className="overflow-hidden" style={{ height: listHeightPx }}>
             {displayRoutes.length === 0 ? (
@@ -443,155 +302,180 @@ function RecentsSection({
             )}
           </div>
         </div>
-      </div>
+      ) : null}
     </div>
   );
 }
 
-function CollapsedSideNav({ pathname }: { pathname: string }) {
-  const navigate = useNavigate();
-
-  return (
-    <SidebarMenu>
-      {TOP_LINKS.map((item) => {
-        const Icon = item.icon;
-        const isActive = item.section
-          ? sectionFromPath(pathname) === item.section
-          : pathMatches(pathname, item.to, item.to === "/dashboard");
-        return (
-          <SidebarMenuItem key={item.to}>
-            <SidebarMenuButton
-              tooltip={item.label}
-              isActive={isActive}
-              aria-label={item.label}
-              className="cursor-pointer"
-              onClick={() => {
-                void navigate(item.to);
-              }}
-            >
-              <Icon />
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        );
-      })}
-    </SidebarMenu>
-  );
-}
-
-function SideNavTree({
+/** Plain React nav — same SSR/hydration model as RecentsSection (no headless-tree). */
+function MainNavSection({
   data,
   pathname,
+  iconRail,
+  expandedSections,
+  onToggleSection,
 }: {
   data: SideNavData;
   pathname: string;
+  iconRail: boolean;
+  /** Cookie-backed, controlled from AppLayout. */
+  expandedSections: SectionId[];
+  onToggleSection: (section: SectionId) => void;
 }) {
   const navigate = useNavigate();
-  const items = React.useMemo(() => buildNavItems(data), [data]);
-  const activeIds = React.useMemo(
-    () => collectActiveIds(pathname, items),
-    [pathname, items],
-  );
-  const activeSection = sectionFromPath(pathname);
-
-  const [expandedItems, setExpandedItems] = React.useState<string[]>(() =>
-    activeSection ? [activeSection] : [],
-  );
-  // Derive the active section instead of synchronizing it through an effect.
-  const visibleExpandedItems =
-    activeSection && !expandedItems.includes(activeSection)
-      ? [...expandedItems, activeSection]
-      : expandedItems;
-
-  const tree = useTree<NavItem>({
-    state: { expandedItems: visibleExpandedItems },
-    setExpandedItems,
-    indent,
-    rootItemId: "root",
-    getItemName: (item) => item.getItemData().name,
-    isItemFolder: (item) => (item.getItemData()?.children?.length ?? 0) > 0,
-    onPrimaryAction: (item) => {
-      const href = item.getItemData().href;
-      if (!href) return;
-      if (item.isFolder()) {
-        // Clicking an open section should only collapse — navigating would
-        // change the route and the active-section derivation would re-expand it.
-        if (item.isExpanded()) return;
-        if (!pathMatches(pathname, href)) {
-          void navigate(href);
-        }
-        return;
-      }
-      void navigate(href);
-    },
-    dataLoader: {
-      getItem: (itemId) => items[itemId],
-      getChildren: (itemId) => items[itemId]?.children ?? [],
-    },
-    features: [syncDataLoaderFeature, hotkeysCoreFeature],
-  });
 
   return (
-    <Tree
-      indent={indent}
-      tree={tree}
-      toggleIconType="chevron"
-      className="w-max"
+    <div
+      style={
+        {
+          ["--side-nav-indent" as string]: `${indent}px`,
+        } as React.CSSProperties
+      }
     >
-      {tree.getItems().map((item) => {
-        const navItem = item.getItemData();
-        const isFolder = item.isFolder();
-        const isActive = activeIds.includes(item.getId());
-        const Icon = navItem.icon;
+      <ul className="flex w-max flex-col">
+        {TOP_LINKS.map((link) => {
+          const Icon = link.icon;
+          const isSection = Boolean(link.section);
 
-        return (
-          <TreeItem
-            key={item.getId()}
-            item={item}
-            type="button"
-            data-active={isActive || undefined}
-            className="cursor-pointer"
-          >
-            <TreeItemLabel
-              showToggleIcon={false}
-              className={cn(
-                "relative w-max cursor-pointer gap-1.5 text-sidebar-foreground before:absolute before:inset-x-0 before:-inset-y-0.5 before:-z-10 before:rounded-md",
-                "hover:bg-sidebar-accent hover:text-primary hover:before:bg-sidebar-accent",
-                "in-focus-visible:ring-sidebar-ring",
-                isActive
-                  ? "bg-sidebar-accent font-medium text-primary before:bg-sidebar-accent"
-                  : "bg-transparent before:bg-sidebar",
-              )}
-            >
-              {Icon ? <Icon className="size-4 shrink-0" /> : null}
-              <span className="text-start whitespace-nowrap">
-                {navItem.name}
-              </span>
-              {isFolder ? (
-                <ChevronRightIcon
+          if (!isSection) {
+            const isActive = pathMatches(
+              pathname,
+              link.to,
+              link.to === "/dashboard",
+            );
+            return (
+              <li key={link.id}>
+                <button
+                  type="button"
+                  title={iconRail ? link.label : undefined}
+                  aria-label={iconRail ? link.label : undefined}
+                  onClick={() => {
+                    void navigate(link.to);
+                  }}
                   className={cn(
-                    "size-3.5 shrink-0 text-sidebar-foreground/70 transition-transform duration-200",
-                    item.isExpanded() && "rotate-90",
+                    navRowClass,
+                    "before:absolute before:inset-x-0 before:-inset-y-0.5 before:-z-10 before:rounded-md before:bg-sidebar",
+                    iconRail && "size-8 gap-0 overflow-hidden p-2",
+                    isActive && navRowActiveClass,
                   )}
-                />
+                >
+                  <Icon className="size-4 shrink-0" />
+                  <span
+                    className={cn(
+                      "text-start whitespace-nowrap",
+                      iconRail && "sr-only",
+                    )}
+                  >
+                    {link.label}
+                  </span>
+                </button>
+              </li>
+            );
+          }
+
+          const section = link.section!;
+          const children = section === "reports" ? data.reports : data.settings;
+          const sectionOpen = expandedSections.includes(section) && !iconRail;
+          const isSectionActive = sectionFromPathname(pathname) === section;
+
+          return (
+            <li key={link.id}>
+              <button
+                type="button"
+                title={iconRail ? link.label : undefined}
+                aria-label={iconRail ? link.label : undefined}
+                onClick={() => {
+                  if (iconRail) {
+                    void navigate(link.to);
+                    return;
+                  }
+                  onToggleSection(section);
+                }}
+                aria-expanded={sectionOpen}
+                className={cn(
+                  navRowClass,
+                  "before:absolute before:inset-x-0 before:-inset-y-0.5 before:-z-10 before:rounded-md before:bg-sidebar",
+                  iconRail && "size-8 gap-0 overflow-hidden p-2",
+                  isSectionActive && navRowActiveClass,
+                )}
+              >
+                <Icon className="size-4 shrink-0" />
+                <span
+                  className={cn(
+                    "text-start whitespace-nowrap",
+                    iconRail && "sr-only",
+                  )}
+                >
+                  {link.label}
+                </span>
+                {iconRail ? null : (
+                  <ChevronRightIcon
+                    className={cn(
+                      "size-3.5 shrink-0 text-sidebar-foreground/70",
+                      sectionOpen && "rotate-90",
+                    )}
+                  />
+                )}
+              </button>
+
+              {sectionOpen ? (
+                <ul className="flex flex-col">
+                  {children.map((child) => {
+                    const ChildIcon = CHILD_ICONS[child.id] ?? FileTextIcon;
+                    const isActive = pathMatches(pathname, child.href);
+                    return (
+                      <li key={child.id}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            void navigate(child.href);
+                          }}
+                          className={cn(
+                            navRowClass,
+                            "h-8 w-full before:absolute before:inset-x-0 before:-inset-y-0.5 before:-z-10 before:rounded-md before:bg-sidebar",
+                            submenuStartClass,
+                            isActive && navRowActiveClass,
+                          )}
+                        >
+                          <ChildIcon className="size-4 shrink-0" />
+                          <span className="text-start whitespace-nowrap">
+                            {child.label}
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
               ) : null}
-            </TreeItemLabel>
-          </TreeItem>
-        );
-      })}
-    </Tree>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
 
 export const AppSideNav = React.memo(function AppSideNav({
   data,
+  recentsOpen,
+  sidebarExpanded,
+  navSectionsExpanded,
+  onRecentsOpenChange,
+  onNavSectionsChange,
 }: {
   data: SideNavData;
+  recentsOpen: boolean;
+  sidebarExpanded: boolean;
+  navSectionsExpanded: SectionId[];
+  onRecentsOpenChange: (open: boolean) => void;
+  onNavSectionsChange: (sections: SectionId[]) => void;
 }) {
   const location = useLocation();
-  const { open, isMobile, setOpen } = useSidebar();
-  const showExpandedNav = open || isMobile;
+  const { isMobile, setOpen } = useSidebar();
+  const showExpandedNav = sidebarExpanded || isMobile;
   const lastRecordedPathRef = React.useRef("");
   const recentRoutesRef = React.useRef(data.recentRoutes);
+  const skipInitialPathEffectRef = React.useRef(true);
   const enterClearTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
@@ -602,25 +486,28 @@ export const AppSideNav = React.memo(function AppSideNav({
   const [spilledRoute, setSpilledRoute] = React.useState<SideNavLink | null>(
     null,
   );
-  const recentsOpen = React.useSyncExternalStore(
-    subscribeRecentsOpen,
-    readRecentsOpen,
-    () => false,
-  );
-
-  function handleRecentsOpenChange(next: boolean) {
-    writeRecentsOpen(next);
-  }
 
   function toggleRecentsSection() {
-    // Icon rail: pin the sidebar open and expand Recents in one click.
     if (!showExpandedNav) {
-      handleRecentsOpenChange(true);
+      onRecentsOpenChange(true);
       setOpen(true);
       return;
     }
-    handleRecentsOpenChange(!recentsOpen);
+    onRecentsOpenChange(!recentsOpen);
   }
+
+  function toggleNavSection(section: SectionId) {
+    const next = navSectionsExpanded.includes(section)
+      ? navSectionsExpanded.filter((id) => id !== section)
+      : [...navSectionsExpanded, section];
+    onNavSectionsChange(next);
+  }
+
+  React.useEffect(() => {
+    const active = sectionFromPathname(location.pathname);
+    if (!active || navSectionsExpanded.includes(active)) return;
+    onNavSectionsChange([...navSectionsExpanded, active]);
+  }, [location.pathname, navSectionsExpanded, onNavSectionsChange]);
 
   React.useEffect(() => {
     recentRoutesRef.current = recentRoutes;
@@ -639,6 +526,14 @@ export const AppSideNav = React.memo(function AppSideNav({
   React.useEffect(() => {
     const path = normalizeRecentPath(location.pathname);
     if (!path) return;
+
+    // Hard refresh: trust the layout loader; do not reorder, animate, or POST.
+    if (skipInitialPathEffectRef.current) {
+      skipInitialPathEffectRef.current = false;
+      lastRecordedPathRef.current = path;
+      return;
+    }
+
     if (lastRecordedPathRef.current === path) return;
     lastRecordedPathRef.current = path;
 
@@ -690,8 +585,6 @@ export const AppSideNav = React.memo(function AppSideNav({
 
   return (
     <>
-      {/* One Recents control always. Expanded: same `px-1` as the main tree.
-          Icon rail: no extra pad so the clock lines up with CollapsedSideNav. */}
       <nav
         aria-label="Recents"
         className={cn(showExpandedNav ? "px-1" : undefined)}
@@ -705,21 +598,18 @@ export const AppSideNav = React.memo(function AppSideNav({
           onToggle={toggleRecentsSection}
         />
       </nav>
-      <div
-        className={cn(!showExpandedNav && "hidden")}
-        // Keep mounted while icon-rail; only hide so hover expand does not remount.
-        inert={!showExpandedNav ? true : undefined}
+      <nav
+        aria-label="Main"
+        className={cn("w-max", showExpandedNav ? "px-1" : undefined)}
       >
-        <nav aria-label="Main" className="w-max px-1">
-          <SideNavTree data={data} pathname={location.pathname} />
-        </nav>
-      </div>
-      <div
-        className={cn(showExpandedNav && "hidden")}
-        inert={showExpandedNav ? true : undefined}
-      >
-        <CollapsedSideNav pathname={location.pathname} />
-      </div>
+        <MainNavSection
+          data={data}
+          pathname={location.pathname}
+          iconRail={!showExpandedNav}
+          expandedSections={navSectionsExpanded}
+          onToggleSection={toggleNavSection}
+        />
+      </nav>
     </>
   );
 });

@@ -52,6 +52,16 @@ function useSidebar() {
   return context;
 }
 
+/** Avoid width animation on first paint (SSR hydration / hard refresh). */
+function useSidebarWidthTransitionEnabled() {
+  const [enabled, setEnabled] = React.useState(false);
+  React.useEffect(() => {
+    const frame = requestAnimationFrame(() => setEnabled(true));
+    return () => cancelAnimationFrame(frame);
+  }, []);
+  return enabled;
+}
+
 function SidebarProvider({
   defaultOpen = true,
   open: openProp,
@@ -164,6 +174,7 @@ function Sidebar({
   collapsible?: "offcanvas" | "icon" | "none";
 }) {
   const { isMobile, state, open, openMobile, setOpenMobile } = useSidebar();
+  const widthTransitionEnabled = useSidebarWidthTransitionEnabled();
 
   if (collapsible === "none") {
     return (
@@ -224,7 +235,8 @@ function Sidebar({
     return (
       <div
         className={cn(
-          "group peer relative hidden h-svh shrink-0 text-sidebar-foreground transition-[width] duration-200 ease-out md:block",
+          "group peer relative hidden h-svh shrink-0 text-sidebar-foreground md:block",
+          widthTransitionEnabled && "transition-[width] duration-200 ease-out",
           open ? fullRail : iconRail,
         )}
         data-state={state}
