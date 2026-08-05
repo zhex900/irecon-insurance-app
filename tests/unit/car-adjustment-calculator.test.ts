@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   calculateCarAdjustment,
+  resolveAdjustmentRates,
   validateAdjustmentFinish,
 } from "~/server/pricing/car-adjustment-calculator";
 import type { PremiumBreakdown, RatingSnapshot } from "~/lib/db/types";
@@ -102,6 +103,54 @@ describe("calculateCarAdjustment", () => {
 
     expect(breakdown.delta.section1.trueBasePremium).toBe(-100);
     expect(breakdown.delta.section2.trueBasePremium).toBe(-50);
+  });
+
+  it("rounds ESL/GST before stamp duty so SD matches Excel ROUND chain", () => {
+    const prem = premium({
+      contractWorksBasePremium: 6700,
+      contractWorksCalculatedBasePremium: 6700,
+      contractWorksTerrorismPremium: 355.1,
+      contractWorksESL: 1904.88,
+      contractWorksGST: 896,
+      contractWorksStampDuty: 887.04,
+      liabilityBasePremium: 2000,
+      liabilityCalculatedBasePremium: 2000,
+      liabilityGST: 200,
+      liabilityStampDuty: 198,
+    });
+    const snap = rating({
+      contractWorksAppliedRate: 0.0067,
+      liabilityAppliedRate: 0.002,
+      contractWorksMinPremium: 0,
+      liabilityMinPremium: 0,
+      eslRate: 0.27,
+      terrorismRate: 0.053,
+      contractWorksStampDutyRate: 0.09,
+      liabilityStampDutyRate: 0.09,
+    });
+    const rates = resolveAdjustmentRates(prem, snap, 1_000_000);
+    const breakdown = calculateCarAdjustment({
+      originalTurnover: 1_000_000,
+      adjustmentTurnover: 1_100_000,
+      stampDutyExempt: false,
+      premium: prem,
+      rating: snap,
+    });
+
+    const s1 = breakdown.adjustment.section1;
+    const money = (n: number) => Math.round(n * 100) / 100;
+    expect(s1.esl).toBe(
+      money((s1.trueBasePremium + s1.terrorismPremium) * rates.eslRate),
+    );
+    expect(s1.gst).toBe(
+      money((s1.trueBasePremium + s1.terrorismPremium + s1.esl) * 0.1),
+    );
+    expect(s1.sd).toBe(
+      money(
+        (s1.trueBasePremium + s1.terrorismPremium + s1.esl + s1.gst) *
+          rates.contractWorksStampDutyRate,
+      ),
+    );
   });
 
   it("applies GST at 10% on section totals", () => {

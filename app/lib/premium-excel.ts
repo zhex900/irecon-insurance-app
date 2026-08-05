@@ -14,18 +14,25 @@ import type {
 import { getAppVersion } from "~/lib/app-version";
 import { APP_NAME } from "~/lib/brand";
 import { GST_RATE } from "~/lib/pricing/constants";
-import { reviewDocumentsFingerprint } from "~/lib/services/policy/documents/fingerprints";
+import {
+  adjustmentDocumentsFingerprint,
+  reviewDocumentsFingerprint,
+} from "~/lib/services/policy/documents/fingerprints";
 import {
   formatDocTimestamp,
   makeDoc,
   nextAmendmentNumber,
   nextDocumentId,
 } from "~/lib/services/policy/documents/content";
+import {
+  calculateCarAdjustment,
+  resolveAdjustmentRates,
+} from "~/server/pricing/car-adjustment-calculator";
 
 export const PREMIUM_EXCEL_TEMPLATE_KEY = "premium-breakdown-xlsx";
 
 /** Bump when Premium / Policy / Rates / Adjustment sheet layout or formulas change. */
-export const PREMIUM_EXCEL_SPREADSHEET_VERSION = "1.0";
+export const PREMIUM_EXCEL_SPREADSHEET_VERSION = "1.2";
 
 function uint8ToBase64(bytes: Uint8Array) {
   let binary = "";
@@ -65,7 +72,14 @@ export function premiumExcelExportEnabled(
 }
 
 export function premiumExcelFingerprint(policy: Policy): string {
-  return `excel|${reviewDocumentsFingerprint(policy)}`;
+  // Include adjustment so a post-bind adjust forces a new workbook with the Adjustment tab.
+  return [
+    "excel",
+    PREMIUM_EXCEL_SPREADSHEET_VERSION,
+    reviewDocumentsFingerprint(policy),
+    policy.car.adjusted ? "adjusted" : "unadjusted",
+    adjustmentDocumentsFingerprint(policy),
+  ].join("|");
 }
 
 function coverTypeLabel(coverTypeId: number): string {
@@ -118,8 +132,24 @@ function moneyCell(cell: import("exceljs").Cell, formula?: string, value = 0) {
   cell.alignment = { horizontal: "right" };
 }
 
-function percentCell(cell: import("exceljs").Cell, value: number) {
-  cell.value = value;
+/** Match app `roundRate` — 6 dp — so adjust taxes don't drift 1¢ vs the UI. */
+function roundRateFormula(formula: string) {
+  return `ROUND(${formula},6)`;
+}
+
+function percentCell(
+  cell: import("exceljs").Cell,
+  value: number,
+  formula?: string,
+  opts?: { roundRate?: boolean },
+) {
+  if (formula) {
+    const expr =
+      opts?.roundRate === false ? formula : roundRateFormula(formula);
+    cell.value = { formula: expr, result: value };
+  } else {
+    cell.value = value;
+  }
   cell.numFmt = PERCENT;
   cell.alignment = { horizontal: "right" };
 }
@@ -143,7 +173,7 @@ export async function buildPremiumExcelWorkbook(
   workbook.created = new Date();
   workbook.modified = new Date();
 
-  const { policy, premium, rating, adjustment } = input;
+  const { policy, premium, rating } = input;
   const generatedAt = new Date();
   const version = input.appVersion ?? getAppVersion();
   const car = policy.car;
@@ -152,6 +182,18 @@ export async function buildPremiumExcelWorkbook(
     car.coverTypeId === 2 || car.coverTypeId === 3
       ? "Project amount"
       : "Estimated turnover";
+
+  // Prefer a live recalculation so Excel cached results match the policy page.
+  const adjustment =
+    input.adjustment && rating
+      ? calculateCarAdjustment({
+          originalTurnover: input.adjustment.originalTurnover,
+          adjustmentTurnover: input.adjustment.adjustmentTurnover,
+          stampDutyExempt: input.adjustment.stampDutyExempt,
+          premium,
+          rating,
+        })
+      : input.adjustment;
 
   // Sheet order: Premium first (filled after Policy/Rates exist for formulas).
   const sheet = workbook.addWorksheet("Premium");
@@ -197,17 +239,68 @@ export async function buildPremiumExcelWorkbook(
     ["Postcode", policy.postcode || "", "text"],
     ["Site address", car.siteAddress || "", "text"],
   ];
+  if (adjustment) {
+    inputRows.push(
+      ["Adjustment turnover", adjustment.adjustmentTurnover, "money"],
+      ["Stamp duty exempt", adjustment.stampDutyExempt ? "Yes" : "No", "text"],
+      // Bind premium snapshot used by end-of-term adjust (matches policy page).
+      ["Bind CW true base premium", premium.contractWorksBasePremium, "money"],
+      [
+        "Bind CW terrorism levy",
+        premium.contractWorksTerrorismPremium,
+        "money",
+      ],
+      ["Bind LL true base premium", premium.liabilityBasePremium, "money"],
+      ["Bind CW ESL", premium.contractWorksESL, "money"],
+      ["Bind CW GST", premium.contractWorksGST, "money"],
+      ["Bind CW stamp duty", premium.contractWorksStampDuty, "money"],
+      ["Bind LL ESL", premium.liabilityESL, "money"],
+      ["Bind LL GST", premium.liabilityGST, "money"],
+      ["Bind LL stamp duty", premium.liabilityStampDuty, "money"],
+      [
+        "Bind CW base (calculated)",
+        premium.contractWorksCalculatedBasePremium,
+        "money",
+      ],
+      [
+        "Bind LL base (calculated)",
+        premium.liabilityCalculatedBasePremium,
+        "money",
+      ],
+      ["Bind CW plant", premium.contractWorksPlantPremium, "money"],
+      [
+        "Bind CW plant terrorism",
+        premium.contractWorksPlantTerrorismPremium,
+        "money",
+      ],
+      ["Bind CW plant ESL", premium.contractWorksPlantESL, "money"],
+    );
+  }
 
   // Row map (1-based data starts at row 3):
-  // 3 policy#, 4 insured, 5 cover, 6 start, 7 end,
-  // 8 turnover, 9 CW SI, 10 plant, 11 DH limits, 12 ES limits,
-  // 13 DH prem, 14 ES prem, 15 broker, 16 liability, 17 state, 18 postcode, 19 site
+  // 3–19 core policy fields; 20+ adjustment / bind snapshot when adjusted
   const INPUT = {
     turnover: "Policy!$B$8",
     plant: "Policy!$B$10",
     dhPremium: "Policy!$B$13",
     esPremium: "Policy!$B$14",
     brokerFee: "Policy!$B$15",
+    adjTurnover: "Policy!$B$20",
+    sdExempt: "Policy!$B$21",
+    bindCwTrue: "Policy!$B$22",
+    bindCwTerror: "Policy!$B$23",
+    bindLlTrue: "Policy!$B$24",
+    bindCwEsl: "Policy!$B$25",
+    bindCwGst: "Policy!$B$26",
+    bindCwSd: "Policy!$B$27",
+    bindLlEsl: "Policy!$B$28",
+    bindLlGst: "Policy!$B$29",
+    bindLlSd: "Policy!$B$30",
+    bindCwBase: "Policy!$B$31",
+    bindLlBase: "Policy!$B$32",
+    bindCwPlant: "Policy!$B$33",
+    bindCwPlantTerror: "Policy!$B$34",
+    bindCwPlantEsl: "Policy!$B$35",
   } as const;
 
   inputs.getCell("A2").value = "Field";
@@ -226,11 +319,16 @@ export async function buildPremiumExcelWorkbook(
       cell.value = value;
     }
   });
-  inputs.getCell("C8").value = "Drives base premium (turnover × rate)";
+  inputs.getCell("C8").value = "Original / estimated turnover (bind)";
   inputs.getCell("C13").value =
     "Broker-entered premium line (not rate-derived)";
   inputs.getCell("C14").value =
     "Broker-entered premium line (not rate-derived)";
+  if (adjustment) {
+    inputs.getCell("C20").value = "End-of-term adjustment turnover";
+    inputs.getCell("C21").value = "Yes → Section 2 stamp duty is zero";
+    inputs.getCell("C22").value = "Stored bind premium (adjust original)";
+  }
 
   // ── Rates ───────────────────────────────────────────────────────────
   const rates = workbook.addWorksheet("Rates");
@@ -557,107 +655,304 @@ export async function buildPremiumExcelWorkbook(
     italic: true,
   };
 
-  // ── Adjustment (optional) ───────────────────────────────────────────
+  // ── Adjustment (optional) — formula-driven from Policy / Rates / Premium ──
   if (adjustment) {
     const adj = workbook.addWorksheet("Adjustment");
-    adj.getColumn(1).width = 28;
-    adj.getColumn(2).width = 16;
-    adj.getColumn(3).width = 16;
-    adj.getColumn(4).width = 16;
-    adj.getColumn(5).width = 16;
-    adj.getColumn(6).width = 16;
-    adj.getColumn(7).width = 16;
+    for (let c = 1; c <= 7; c++) adj.getColumn(c).width = c === 1 ? 28 : 16;
 
     adj.mergeCells("A1:G1");
     adj.getCell("A1").value = "End-of-term adjustment";
     adj.getCell("A1").font = { bold: true, size: 14 };
 
-    adj.getCell("A2").value = "Original turnover";
-    moneyCell(adj.getCell("B2"), undefined, adjustment.originalTurnover);
-    adj.getCell("C2").value = "Adjusted turnover";
-    moneyCell(adj.getCell("D2"), undefined, adjustment.adjustmentTurnover);
-    adj.getCell("E2").value = "Stamp duty";
-    adj.getCell("F2").value = adjustment.stampDutyExempt ? "Exempt" : "Liable";
+    adj.getCell("A2").value = "Original Turnover";
+    moneyCell(adj.getCell("B2"), INPUT.turnover, adjustment.originalTurnover);
+    adj.getCell("A3").value = "Adjustment Turnover";
+    moneyCell(
+      adj.getCell("B3"),
+      INPUT.adjTurnover,
+      adjustment.adjustmentTurnover,
+    );
+    adj.getCell("A4").value = "Stamp Duty Exempt";
+    adj.getCell("B4").value = {
+      formula: INPUT.sdExempt,
+      result: adjustment.stampDutyExempt ? "Yes" : "No",
+    };
 
-    const blocks: Array<{
-      title: string;
-      data: AdjustmentBreakdown["original"];
-    }> = [
-      { title: "Original (at bind)", data: adjustment.original },
-      { title: "Absolute at adjusted turnover", data: adjustment.adjustment },
-      { title: "Delta (adjustment premium)", data: adjustment.delta },
+    // Bind snapshot on Policy (matches policy-page adjust) + Rates for mins/GST.
+    const P = {
+      cwBase: INPUT.bindCwBase,
+      cwTrue: INPUT.bindCwTrue,
+      cwTerror: INPUT.bindCwTerror,
+      cwPlant: INPUT.bindCwPlant,
+      cwPlantTerror: INPUT.bindCwPlantTerror,
+      cwPlantEsl: INPUT.bindCwPlantEsl,
+      cwEsl: INPUT.bindCwEsl,
+      cwGst: INPUT.bindCwGst,
+      cwSd: INPUT.bindCwSd,
+      llBase: INPUT.bindLlBase,
+      llTrue: INPUT.bindLlTrue,
+      llEsl: INPUT.bindLlEsl,
+      llGst: INPUT.bindLlGst,
+      llSd: INPUT.bindLlSd,
+    } as const;
+
+    const frozen = rating
+      ? resolveAdjustmentRates(premium, rating, adjustment.originalTurnover)
+      : null;
+
+    // Frozen rates (legacy adjust) derived from Premium ÷ bases; mins/GST from Rates.
+    adj.getCell("A6").value = "Frozen rates (from Premium / Rates)";
+    adj.getCell("A6").font = { bold: true };
+    adj.getCell("A7").value = "CW applied rate";
+    percentCell(
+      adj.getCell("B7"),
+      frozen?.contractWorksAppliedRate ?? rating?.contractWorksAppliedRate ?? 0,
+      `IF(${INPUT.turnover}>0,IF(${P.cwBase}<${P.cwTrue},${P.cwBase},${P.cwTrue})/${INPUT.turnover},${RATE.cwRate})`,
+    );
+    adj.getCell("A8").value = "LL applied rate";
+    percentCell(
+      adj.getCell("B8"),
+      frozen?.liabilityAppliedRate ?? rating?.liabilityAppliedRate ?? 0,
+      `IF(${INPUT.turnover}>0,IF(${P.llBase}<${P.llTrue},${P.llBase},${P.llTrue})/${INPUT.turnover},${RATE.llRate})`,
+    );
+    adj.getCell("A9").value = "CW min premium";
+    moneyCell(
+      adj.getCell("B9"),
+      RATE.cwMin,
+      rating?.contractWorksMinPremium ?? 0,
+    );
+    adj.getCell("A10").value = "LL min premium";
+    moneyCell(adj.getCell("B10"), RATE.llMin, rating?.liabilityMinPremium ?? 0);
+    adj.getCell("A11").value = "Terrorism rate";
+    percentCell(
+      adj.getCell("B11"),
+      frozen?.terrorismRate ?? rating?.terrorismRate ?? 0,
+      `IF(${P.cwTrue}>0,${P.cwTerror}/${P.cwTrue},${RATE.terror})`,
+    );
+    adj.getCell("A12").value = "ESL rate";
+    percentCell(
+      adj.getCell("B12"),
+      frozen?.eslRate ?? rating?.eslRate ?? 0,
+      `IF(SUM(${P.cwTrue},${P.cwTerror})>0,${P.cwEsl}/SUM(${P.cwTrue},${P.cwTerror}),${RATE.esl})`,
+    );
+    adj.getCell("A13").value = "CW stamp duty rate";
+    percentCell(
+      adj.getCell("B13"),
+      frozen?.contractWorksStampDutyRate ??
+        rating?.contractWorksStampDutyRate ??
+        0,
+      `IF(SUM(${P.cwTrue},${P.cwTerror},${P.cwPlant},${P.cwPlantTerror},${P.cwPlantEsl},${P.cwEsl},${P.cwGst})>0,${P.cwSd}/SUM(${P.cwTrue},${P.cwTerror},${P.cwPlant},${P.cwPlantTerror},${P.cwPlantEsl},${P.cwEsl},${P.cwGst}),${RATE.sd1})`,
+    );
+    adj.getCell("A14").value = "LL stamp duty rate";
+    percentCell(
+      adj.getCell("B14"),
+      frozen?.liabilityStampDutyRate ?? rating?.liabilityStampDutyRate ?? 0,
+      `IF(SUM(${P.llTrue},${P.llEsl},${P.llGst})>0,${P.llSd}/SUM(${P.llTrue},${P.llEsl},${P.llGst}),${RATE.sd2})`,
+    );
+    adj.getCell("A15").value = "GST rate";
+    // Constant — do not ROUND(lookup) or it can pick up float noise from Rates.
+    percentCell(adj.getCell("B15"), GST_RATE, RATE.gst, { roundRate: false });
+
+    const FR = {
+      cwRate: "Adjustment!$B$7",
+      llRate: "Adjustment!$B$8",
+      cwMin: "Adjustment!$B$9",
+      llMin: "Adjustment!$B$10",
+      terror: "Adjustment!$B$11",
+      esl: "Adjustment!$B$12",
+      sd1: "Adjustment!$B$13",
+      sd2: "Adjustment!$B$14",
+      gst: "Adjustment!$B$15",
+      origTo: "Adjustment!$B$2",
+      adjTo: "Adjustment!$B$3",
+      sdExempt: "Adjustment!$B$4",
+    } as const;
+
+    const headers = [
+      "Cover",
+      "Total Premium",
+      "True Base Premium",
+      "Terrorism Levy",
+      "ESL",
+      "GST",
+      "Stamp Duty",
     ];
 
-    let start = 4;
-    for (const block of blocks) {
-      adj.mergeCells(`A${start}:G${start}`);
-      adj.getCell(`A${start}`).value = block.title;
-      adj.getCell(`A${start}`).font = { bold: true };
+    type AdjRow = {
+      label: string;
+      total: string;
+      base: string;
+      terror: string;
+      esl: string;
+      gst: string;
+      sd: string;
+      result: AdjustmentBreakdown["original"]["section1"];
+      strong?: boolean;
+    };
 
-      const head = start + 1;
-      const headers = [
-        "Section",
-        "True base",
-        "Terrorism",
-        "ESL",
-        "GST",
-        "Stamp duty",
-        "Total",
-      ];
+    function writeAdjTable(
+      title: string,
+      startRow: number,
+      rows: [AdjRow, AdjRow, AdjRow],
+    ) {
+      adj.mergeCells(`A${startRow}:G${startRow}`);
+      adj.getCell(`A${startRow}`).value = title;
+      adj.getCell(`A${startRow}`).font = { bold: true };
+      const head = startRow + 1;
       headers.forEach((h, i) => {
         adj.getCell(head, i + 1).value = h;
       });
       styleHeaderRow(adj.getRow(head), 7);
-
-      const s1 = head + 1;
-      const s2 = head + 2;
-      const tot = head + 3;
-
-      const sections: Array<
-        [string, AdjustmentBreakdown["original"]["section1"], number]
-      > = [
-        ["Section 1 — Contract works", block.data.section1, s1],
-        ["Section 2 — Legal liability", block.data.section2, s2],
-        ["Total", block.data.total, tot],
-      ];
-
-      sections.forEach(([label, row, r]) => {
-        adj.getCell(`A${r}`).value = label;
-        if (label === "Total") {
-          adj.getCell(`A${r}`).font = { bold: true };
-          moneyCell(
-            adj.getCell(`B${r}`),
-            `SUM(B${s1}:B${s2})`,
-            row.trueBasePremium,
-          );
-          moneyCell(
-            adj.getCell(`C${r}`),
-            `SUM(C${s1}:C${s2})`,
-            row.terrorismPremium,
-          );
-          moneyCell(adj.getCell(`D${r}`), `SUM(D${s1}:D${s2})`, row.esl);
-          moneyCell(adj.getCell(`E${r}`), `SUM(E${s1}:E${s2})`, row.gst);
-          moneyCell(adj.getCell(`F${r}`), `SUM(F${s1}:F${s2})`, row.sd);
-          moneyCell(
-            adj.getCell(`G${r}`),
-            `SUM(G${s1}:G${s2})`,
-            row.totalPremium,
-          );
+      rows.forEach((row, idx) => {
+        const r = head + 1 + idx;
+        adj.getCell(`A${r}`).value = row.label;
+        if (row.strong) adj.getCell(`A${r}`).font = { bold: true };
+        // Column order matches policy page: Total, True Base, Terror, ESL, GST, SD
+        moneyCell(adj.getCell(`B${r}`), row.total, row.result.totalPremium);
+        moneyCell(adj.getCell(`C${r}`), row.base, row.result.trueBasePremium);
+        moneyCell(
+          adj.getCell(`D${r}`),
+          row.terror,
+          row.result.terrorismPremium,
+        );
+        moneyCell(adj.getCell(`E${r}`), row.esl, row.result.esl);
+        moneyCell(adj.getCell(`F${r}`), row.gst, row.result.gst);
+        moneyCell(adj.getCell(`G${r}`), row.sd, row.result.sd);
+        if (row.strong) {
           for (const col of ["B", "C", "D", "E", "F", "G"] as const) {
             adj.getCell(`${col}${r}`).font = { bold: true };
           }
-        } else {
-          moneyCell(adj.getCell(`B${r}`), undefined, row.trueBasePremium);
-          moneyCell(adj.getCell(`C${r}`), undefined, row.terrorismPremium);
-          moneyCell(adj.getCell(`D${r}`), undefined, row.esl);
-          moneyCell(adj.getCell(`E${r}`), undefined, row.gst);
-          moneyCell(adj.getCell(`F${r}`), undefined, row.sd);
-          moneyCell(adj.getCell(`G${r}`), `SUM(B${r}:F${r})`, row.totalPremium);
         }
       });
-
-      start = tot + 2;
+      return head + 3;
     }
+
+    // Table layout: title row T, header T+1, CW T+2, LL T+3, TOTAL T+4
+    const originalStart = 17;
+    const oCw = originalStart + 2;
+    const oLl = originalStart + 3;
+    writeAdjTable("Original", originalStart, [
+      {
+        label: "Contract Works",
+        base: P.cwTrue,
+        terror: P.cwTerror,
+        esl: `SUM(C${oCw},D${oCw})*${FR.esl}`,
+        gst: `SUM(C${oCw},D${oCw},E${oCw})*${FR.gst}`,
+        sd: `SUM(C${oCw},D${oCw},E${oCw},F${oCw})*${FR.sd1}`,
+        total: `SUM(C${oCw}:G${oCw})`,
+        result: adjustment.original.section1,
+      },
+      {
+        label: "Legal Liability",
+        base: P.llTrue,
+        terror: "0",
+        esl: "0",
+        gst: `SUM(C${oLl},D${oLl},E${oLl})*${FR.gst}`,
+        sd: `IF(UPPER(${FR.sdExempt})="YES",0,SUM(C${oLl},D${oLl},E${oLl},F${oLl})*${FR.sd2})`,
+        total: `SUM(C${oLl}:G${oLl})`,
+        result: adjustment.original.section2,
+      },
+      {
+        label: "TOTAL",
+        base: `SUM(C${oCw}:C${oLl})`,
+        terror: `SUM(D${oCw}:D${oLl})`,
+        esl: `SUM(E${oCw}:E${oLl})`,
+        gst: `SUM(F${oCw}:F${oLl})`,
+        sd: `SUM(G${oCw}:G${oLl})`,
+        total: `SUM(B${oCw}:B${oLl})`,
+        result: adjustment.original.total,
+        strong: true,
+      },
+    ]);
+
+    // Adjustment Turnover (absolute premium at T_adj)
+    const adjStart = originalStart + 6;
+    const aCw = adjStart + 2;
+    const aLl = adjStart + 3;
+    writeAdjTable("Adjustment Turnover", adjStart, [
+      {
+        label: "Contract Works",
+        base: `MAX(${FR.adjTo}*${FR.cwRate},${FR.cwMin})`,
+        terror: `C${aCw}*${FR.terror}`,
+        esl: `SUM(C${aCw},D${aCw})*${FR.esl}`,
+        gst: `SUM(C${aCw},D${aCw},E${aCw})*${FR.gst}`,
+        sd: `SUM(C${aCw},D${aCw},E${aCw},F${aCw})*${FR.sd1}`,
+        total: `SUM(C${aCw}:G${aCw})`,
+        result: adjustment.adjustment.section1,
+      },
+      {
+        label: "Legal Liability",
+        base: `MAX(${FR.adjTo}*${FR.llRate},${FR.llMin})`,
+        terror: "0",
+        esl: "0",
+        gst: `SUM(C${aLl},D${aLl},E${aLl})*${FR.gst}`,
+        sd: `IF(UPPER(${FR.sdExempt})="YES",0,SUM(C${aLl},D${aLl},E${aLl},F${aLl})*${FR.sd2})`,
+        total: `SUM(C${aLl}:G${aLl})`,
+        result: adjustment.adjustment.section2,
+      },
+      {
+        label: "TOTAL",
+        base: `SUM(C${aCw}:C${aLl})`,
+        terror: `SUM(D${aCw}:D${aLl})`,
+        esl: `SUM(E${aCw}:E${aLl})`,
+        gst: `SUM(F${aCw}:F${aLl})`,
+        sd: `SUM(G${aCw}:G${aLl})`,
+        total: `SUM(B${aCw}:B${aLl})`,
+        result: adjustment.adjustment.total,
+        strong: true,
+      },
+    ]);
+
+    // Total Adjustment Premium (delta with 25% base refund cap)
+    const deltaStart = adjStart + 6;
+    const dCw = deltaStart + 2;
+    const dLl = deltaStart + 3;
+    const deltaBase = (origCell: string, adjCell: string) =>
+      `IF(AND(${adjCell}<${origCell},${origCell}>0,(${origCell}-${adjCell})/${origCell}>0.25),-${origCell}*0.25,${adjCell}-${origCell})`;
+
+    writeAdjTable("Total Adjustment Premium", deltaStart, [
+      {
+        label: "Contract Works",
+        base: deltaBase(`C${oCw}`, `C${aCw}`),
+        terror: `C${dCw}*${FR.terror}`,
+        esl: `SUM(C${dCw},D${dCw})*${FR.esl}`,
+        gst: `SUM(C${dCw},D${dCw},E${dCw})*${FR.gst}`,
+        sd: `SUM(C${dCw},D${dCw},E${dCw},F${dCw})*${FR.sd1}`,
+        total: `SUM(C${dCw}:G${dCw})`,
+        result: adjustment.delta.section1,
+      },
+      {
+        label: "Legal Liability",
+        base: deltaBase(`C${oLl}`, `C${aLl}`),
+        terror: "0",
+        esl: "0",
+        gst: `SUM(C${dLl},D${dLl},E${dLl})*${FR.gst}`,
+        sd: `IF(UPPER(${FR.sdExempt})="YES",0,SUM(C${dLl},D${dLl},E${dLl},F${dLl})*${FR.sd2})`,
+        total: `SUM(C${dLl}:G${dLl})`,
+        result: adjustment.delta.section2,
+      },
+      {
+        label: "TOTAL",
+        base: `SUM(C${dCw}:C${dLl})`,
+        terror: `SUM(D${dCw}:D${dLl})`,
+        esl: `SUM(E${dCw}:E${dLl})`,
+        gst: `SUM(F${dCw}:F${dLl})`,
+        sd: `SUM(G${dCw}:G${dLl})`,
+        total: `SUM(B${dCw}:B${dLl})`,
+        result: adjustment.delta.total,
+        strong: true,
+      },
+    ]);
+
+    const noteRow = deltaStart + 6;
+    adj.getCell(`A${noteRow}`).value =
+      "All policies are subject to a minimum premium of 75% of original estimated premium paid";
+    adj.mergeCells(`A${noteRow}:G${noteRow}`);
+    adj.getCell(`A${noteRow}`).font = {
+      size: 9,
+      italic: true,
+      color: { argb: "FF6B7280" },
+    };
   }
 
   const buffer = await workbook.xlsx.writeBuffer();

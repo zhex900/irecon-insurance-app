@@ -47,13 +47,18 @@ export function calculateCarAdjustment({
     isSection2: true,
   });
 
-  const adjustedSection1Base = Math.max(
-    adjustmentTurnover * rates.contractWorksAppliedRate,
-    rates.contractWorksMinPremium,
+  // Round bases to cents before tax lines (matches Excel ROUND on each step).
+  const adjustedSection1Base = round(
+    Math.max(
+      adjustmentTurnover * rates.contractWorksAppliedRate,
+      rates.contractWorksMinPremium,
+    ),
   );
-  const adjustedSection2Base = Math.max(
-    adjustmentTurnover * rates.liabilityAppliedRate,
-    rates.liabilityMinPremium,
+  const adjustedSection2Base = round(
+    Math.max(
+      adjustmentTurnover * rates.liabilityAppliedRate,
+      rates.liabilityMinPremium,
+    ),
   );
 
   const adjustmentSection1 = buildSectionRow({
@@ -243,18 +248,18 @@ function buildSectionRow({
   stampDutyExempt: boolean;
   isSection2: boolean;
 }): AdjustmentSectionRow {
-  const eslRaw = isSection2 ? 0 : (base + terror) * eslRate;
-  const gstRaw = (base + terror + eslRaw) * GST_RATE;
-  const sdRaw =
-    isSection2 && stampDutyExempt
-      ? 0
-      : (base + terror + eslRaw + gstRaw) * sdRate;
-
+  // Round each line to cents before feeding the next tax (Excel ROUND chain).
+  // Using unrounded ESL/GST in the SD base caused 1¢ drift vs the spreadsheet.
   const trueBasePremium = round(base);
   const terrorismPremium = round(terror);
-  const esl = round(eslRaw);
-  const gst = round(gstRaw);
-  const sd = round(sdRaw);
+  const esl = isSection2
+    ? 0
+    : round((trueBasePremium + terrorismPremium) * eslRate);
+  const gst = round((trueBasePremium + terrorismPremium + esl) * GST_RATE);
+  const sd =
+    isSection2 && stampDutyExempt
+      ? 0
+      : round((trueBasePremium + terrorismPremium + esl + gst) * sdRate);
 
   return {
     trueBasePremium,
