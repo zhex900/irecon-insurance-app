@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { requireAuth } from "~/lib/auth/session.server";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
 import { parseFormIntent } from "~/lib/http/route-input";
@@ -15,6 +16,7 @@ const displayWidthSchema = z.coerce.number().finite();
 
 /** GET — footer image bytes (or JSON meta with ?format=meta / data-uri). */
 export async function loader({ request }: Route.LoaderArgs) {
+  await requireAuth(request);
   const url = new URL(request.url);
   const footer = await getEmailFooterImage();
 
@@ -128,4 +130,3 @@ export async function action({ request }: Route.ActionArgs) {
     );
   }
 }
-import { z } from "zod";
