@@ -68,7 +68,11 @@ export async function savePolicyDraft(policyId: number, values: DraftValues) {
         ? existing.policyStatusId
         : POLICY_STATUS.Pending,
     },
-    { draft: existing.isDraft ?? true, premium: premiumOverride },
+    {
+      draft: existing.isDraft ?? true,
+      premium: premiumOverride,
+      premiumManualKeys: values.premiumManualKeys,
+    },
   );
   return savePolicy({ ...policy, isDraft: existing.isDraft ?? true });
 }
@@ -147,6 +151,8 @@ export async function applyPremiumCalculation(
     premium,
     rating,
     referralReasons,
+    // Recalculate clears manual Premium Breakdown edits.
+    premiumManualKeys: [],
     notes: mergeReferralNotes(
       existing.notes,
       policyId,
@@ -272,6 +278,7 @@ function applyFormValues(
     rating?: Policy["car"]["rating"];
     referralReasons?: string[];
     notes?: Policy["notes"];
+    premiumManualKeys?: string[];
   },
 ): Policy {
   const customWordings = values.customWordings
@@ -369,6 +376,10 @@ function applyFormValues(
       ...flatCustomWordings(customWordings),
       referralReasons: extras.referralReasons ?? existing.car.referralReasons,
       premium: extras.premium ?? existing.car.premium,
+      premiumManualKeys:
+        extras.premiumManualKeys !== undefined
+          ? extras.premiumManualKeys
+          : (values.premiumManualKeys ?? existing.car.premiumManualKeys),
       rating: extras.rating ?? existing.car.rating,
     },
   };

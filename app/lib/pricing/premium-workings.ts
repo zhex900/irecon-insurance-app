@@ -301,6 +301,10 @@ export function expectedPremiumValue(
   }
 }
 
+/**
+ * True when the broker explicitly click-edited this Premium Breakdown line.
+ * Cascaded dependents (recalculated from a manual edit) are not marked manual.
+ */
 export function isPremiumLineManual(
   key: keyof PremiumBreakdown,
   explicitManualKeys: ReadonlySet<string>,

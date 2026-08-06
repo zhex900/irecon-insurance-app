@@ -263,7 +263,7 @@ export function PolicySectionNav({
   items?: { id: string; label: string }[];
   className?: string;
 }) {
-  const [invalidOpen, setInvalidOpen] = useState(false);
+  const [invalidOpen, setInvalidOpen] = useState(true);
   const [fieldQuery, setFieldQuery] = useState<string | number | "">("");
   const invalidCount = invalidIssues.length;
   const lastInvalidCountRef = useRef(invalidCount);
@@ -272,7 +272,8 @@ export function PolicySectionNav({
   useEffect(() => {
     if (lastInvalidCountRef.current === invalidCount) return;
     lastInvalidCountRef.current = invalidCount;
-    if (lastInvalidCountRef.current === 0) setInvalidOpen(false);
+    // Expand when issues appear; collapse/hide when cleared.
+    setInvalidOpen(invalidCount > 0);
   }, [invalidCount]);
 
   function goToSection(sectionId: string, opts?: { ensureOpen?: boolean }) {

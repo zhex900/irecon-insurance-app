@@ -65,7 +65,9 @@ export function PricingDeclarationConfirmedStep({
   rating,
   adjustmentBreakdown,
   premiumEditable = false,
+  initialManualKeys,
   onPremiumChange,
+  onManualKeysChange,
   onResetPremium,
   isCalculating = false,
   onExportExcel,
@@ -79,7 +81,11 @@ export function PricingDeclarationConfirmedStep({
   adjustmentBreakdown?: AdjustmentBreakdown;
   /** When true, premium breakdown cells are click-to-edit. */
   premiumEditable?: boolean;
+  /** Persisted Premium Breakdown keys the broker previously edited. */
+  initialManualKeys?: string[];
   onPremiumChange?: (next: PremiumBreakdown) => void;
+  /** Keep draft snapshot / app_extras in sync with session manual keys. */
+  onManualKeysChange?: (keys: string[]) => void;
   /** Clear manual overrides and recalculate from rates. */
   onResetPremium?: () => void;
   isCalculating?: boolean;
@@ -92,7 +98,9 @@ export function PricingDeclarationConfirmedStep({
   const plantEquipment = Number(watch("plantEquipment") || 0);
   const contractWorksSumInsured = Number(watch("contractWorksSumInsured") || 0);
   const dateStart = String(watch("dateStart") || "");
-  const [manualKeys, setManualKeys] = useState<Set<string>>(() => new Set());
+  const [manualKeys, setManualKeys] = useState<Set<string>>(
+    () => new Set(initialManualKeys ?? []),
+  );
   /** Session τ / plant ESL rate for subsequent Premium Breakdown edits. */
   const [sessionRates, setSessionRates] = useState<
     ManualPremiumSessionRates | undefined
@@ -134,6 +142,7 @@ export function PricingDeclarationConfirmedStep({
     setManualKeys((prev) => {
       const next = new Set(prev);
       next.add(key);
+      onManualKeysChange?.([...next]);
       return next;
     });
     const result = applyManualPremiumEdit({
@@ -182,6 +191,7 @@ export function PricingDeclarationConfirmedStep({
                         disabled={isCalculating}
                         onClick={() => {
                           setManualKeys(new Set());
+                          onManualKeysChange?.([]);
                           setSessionRates(undefined);
                           setWorking(null);
                           onResetPremium();
@@ -248,16 +258,14 @@ export function PricingDeclarationConfirmedStep({
           <table className="w-full table-fixed text-sm">
             <thead>
               <tr className="border-b border-border text-left text-muted-foreground">
-                <th className="w-auto py-2 pr-2">Component</th>
-                <th className="w-28 py-2 pl-4 text-right whitespace-nowrap">
+                <th className="w-1/2 py-2 pr-2">Component</th>
+                <th className="w-[16.666%] py-2 pl-4 text-right">
                   Contract works
                 </th>
-                <th className="w-28 py-2 pl-4 text-right whitespace-nowrap">
+                <th className="w-[16.666%] py-2 pl-4 text-right">
                   Legal liability
                 </th>
-                <th className="w-28 py-2 pl-4 text-right whitespace-nowrap">
-                  Combined
-                </th>
+                <th className="w-[16.666%] py-2 pl-4 text-right">Combined</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -377,7 +385,7 @@ export function PricingDeclarationConfirmedStep({
               />
               {reference.feeNames.map((fee) => (
                 <tr key={fee.name}>
-                  <td className="w-full py-2 pr-2">
+                  <td className="py-2 pr-2">
                     <span className="wrap-break-word">
                       {fee.name}{" "}
                       <PremiumExplainTrigger
@@ -410,9 +418,9 @@ export function PricingDeclarationConfirmedStep({
                       </PremiumExplainTrigger>
                     </span>
                   </td>
-                  <td className="w-28 py-2 pl-4" />
-                  <td className="w-28 py-2 pl-4" />
-                  <td className="w-28 py-2 pl-4 text-right whitespace-nowrap tabular-nums">
+                  <td className="py-2 pl-4" />
+                  <td className="py-2 pl-4" />
+                  <td className="py-2 pl-4 text-right whitespace-nowrap tabular-nums">
                     {formatCurrency(fee.fee + fee.feeGst)}
                   </td>
                 </tr>
@@ -685,7 +693,7 @@ function PremiumValueCell({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
 
-  const cellClass = "w-28 py-2 pl-4 text-right whitespace-nowrap tabular-nums";
+  const cellClass = "py-2 pl-4 text-right whitespace-nowrap tabular-nums";
 
   if (value == null) {
     return <td className={cellClass} />;
@@ -704,7 +712,7 @@ function PremiumValueCell({
 
   if (editing) {
     return (
-      <td className="w-28 py-1 pl-4 text-right">
+      <td className="py-1 pl-4 text-right">
         <Input
           autoFocus
           type="text"

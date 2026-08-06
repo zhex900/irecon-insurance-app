@@ -377,6 +377,8 @@ const draftFields = {
   ),
   /** Optional manual premium override saved with the draft. */
   premium: z.record(z.string(), z.number()).optional(),
+  /** Premium Breakdown lines the broker click-edited (yellow highlight). */
+  premiumManualKeys: z.array(z.string()).optional(),
 };
 
 /** Autosave / leave-without-full-validation — do not enforce Taken-gate rules. */

@@ -7,6 +7,16 @@ import {
 } from "~/components/ui/dialog";
 import { Spinner } from "~/components/ui/spinner";
 
+/** Hide browser PDF viewer page thumbnails / nav panes when supported. */
+function pdfSrcWithoutNavPanes(src: string) {
+  const hashIndex = src.indexOf("#");
+  if (hashIndex === -1) return `${src}#navpanes=0`;
+  const base = src.slice(0, hashIndex);
+  const hash = src.slice(hashIndex + 1);
+  if (/(?:^|&)navpanes=/.test(hash)) return src;
+  return `${base}#${hash ? `${hash}&` : ""}navpanes=0`;
+}
+
 export function PdfPreviewDialog({
   open,
   onOpenChange,
@@ -45,7 +55,7 @@ export function PdfPreviewDialog({
         ) : (
           <iframe
             title={title}
-            src={src}
+            src={pdfSrcWithoutNavPanes(src)}
             className="h-[min(70vh,720px)] w-full rounded-md border bg-muted"
           />
         )}

@@ -307,6 +307,8 @@ export type Policy = {
     customWordingContent2?: string;
     referralReasons?: string[];
     premium?: PremiumBreakdown;
+    /** Premium Breakdown keys the broker manually edited (persisted in app_extras). */
+    premiumManualKeys?: string[];
     rating?: RatingSnapshot;
     adjusted?: boolean;
     adjustment?: CarAdjustmentRecord;

@@ -240,26 +240,14 @@ export function usePolicyWizardNavigation({
     [],
   );
 
-  const invalidIssues = useMemo(() => {
-    const issues = orderFormIssues(
-      flattenFieldErrors(form.formState.errors),
-      fieldOrder,
-    );
-    // Include any errors outside wizard step map (e.g. review status).
-    const extras = flattenFieldErrors(form.formState.errors).filter(
-      (issue) => !issues.some((ordered) => ordered.path === issue.path),
-    );
-    return [...issues, ...extras].map((issue) => ({
-      path: issue.path,
-      label: labelForPolicyFieldPath(issue.path),
-      message: issue.message,
-    }));
-  }, [form.formState.errors, fieldOrder]);
-
-  // Live schema completeness for side-nav badges and Submit (`isFormValid`).
+  // Live schema completeness for side-nav list/badges and Submit (`isFormValid`).
+  // Prefer schema issues over RHF formState.errors so the Invalid fields list
+  // appears whenever sections show incomplete counts — not only after trigger/submit.
   const watchedValues = useWatch({ control: form.control });
   const watchedKey = JSON.stringify(watchedValues);
+  const rhfErrors = form.formState.errors;
   const {
+    invalidIssues,
     sectionIssueCounts,
     sectionFirstIssuePaths,
     sectionIssuePaths,
@@ -275,8 +263,21 @@ export function usePolicyWizardNavigation({
 
     const values = JSON.parse(watchedKey) as CarPolicyFormValues;
     const parsed = carPolicySchema.safeParse(values);
+    const rhfIssues = flattenFieldErrors(rhfErrors);
+    const rhfByPath = new Map(rhfIssues.map((issue) => [issue.path, issue]));
+
     if (parsed.success) {
+      // Schema clean — still surface any RHF-only errors (e.g. review status).
+      const extras = orderFormIssues(rhfIssues, fieldOrder);
+      const leftover = rhfIssues.filter(
+        (issue) => !extras.some((ordered) => ordered.path === issue.path),
+      );
       return {
+        invalidIssues: [...extras, ...leftover].map((issue) => ({
+          path: issue.path,
+          label: labelForPolicyFieldPath(issue.path),
+          message: issue.message,
+        })),
         sectionIssueCounts: counts,
         sectionFirstIssuePaths: firstPaths,
         sectionIssuePaths: allPaths,
@@ -284,10 +285,14 @@ export function usePolicyWizardNavigation({
       };
     }
 
+    const messageByPath = new Map<string, string>();
     const pathsBySection = new Map<string, Set<string>>();
     for (const issue of parsed.error.issues) {
       const path = issue.path.map(String).join(".");
       if (!path) continue;
+      if (!messageByPath.has(path)) {
+        messageByPath.set(path, issue.message);
+      }
       const stepIndex = findStepForFieldPath(path);
       if (stepIndex == null) continue;
       const sectionId = sectionIdForStep(stepIndex);
@@ -300,7 +305,10 @@ export function usePolicyWizardNavigation({
     }
     for (const [sectionId, paths] of pathsBySection) {
       const ordered = orderFormIssues(
-        [...paths].map((path) => ({ path, message: "" })),
+        [...paths].map((path) => ({
+          path,
+          message: messageByPath.get(path) ?? "",
+        })),
         fieldOrder,
       );
       const orderedPaths = ordered.map((item) => item.path);
@@ -308,13 +316,48 @@ export function usePolicyWizardNavigation({
       allPaths[sectionId] = orderedPaths;
       if (orderedPaths[0]) firstPaths[sectionId] = orderedPaths[0];
     }
+
+    const orderedSchemaIssues = orderFormIssues(
+      [...messageByPath.entries()].map(([path, message]) => ({
+        path,
+        message,
+      })),
+      fieldOrder,
+    );
+    const unorderedSchemaIssues = [...messageByPath.entries()]
+      .filter(
+        ([path]) => !orderedSchemaIssues.some((issue) => issue.path === path),
+      )
+      .map(([path, message]) => ({ path, message }));
+    // Prefer RHF message when present (post-trigger wording), else Zod message.
+    const listed = [...orderedSchemaIssues, ...unorderedSchemaIssues].map(
+      (issue) => {
+        const rhf = rhfByPath.get(issue.path);
+        return {
+          path: issue.path,
+          label: labelForPolicyFieldPath(issue.path),
+          message: rhf?.message || issue.message,
+        };
+      },
+    );
+    // RHF-only paths outside the schema map (e.g. review status).
+    for (const issue of rhfIssues) {
+      if (listed.some((item) => item.path === issue.path)) continue;
+      listed.push({
+        path: issue.path,
+        label: labelForPolicyFieldPath(issue.path),
+        message: issue.message,
+      });
+    }
+
     return {
+      invalidIssues: listed,
       sectionIssueCounts: counts,
       sectionFirstIssuePaths: firstPaths,
       sectionIssuePaths: allPaths,
       isFormValid: false,
     };
-  }, [watchedKey, fieldOrder]);
+  }, [watchedKey, fieldOrder, rhfErrors]);
 
   function navigateToSectionFirstIssue(sectionId: string) {
     const path = sectionFirstIssuePaths[sectionId];

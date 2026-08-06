@@ -148,6 +148,7 @@ export function CarPolicyWizardInner({
     setPremium,
     premiumRef,
     premiumManuallyEditedRef,
+    premiumManualKeysRef,
     referralReasons,
     setReferralReasons,
     isFetcherBusy,
@@ -180,6 +181,7 @@ export function CarPolicyWizardInner({
     fieldsLocked,
     premiumRef,
     premiumManuallyEditedRef,
+    premiumManualKeysRef,
     getDirtyPaths,
     commitSavedPaths,
     rollbackSavedPaths,
@@ -275,6 +277,13 @@ export function CarPolicyWizardInner({
     markAttentionPaths(paths);
   }
 
+  function handleNavigateToIssue(path: string) {
+    navigateToIssue(path);
+    // Same yellow border cue as section counters (not red invalid).
+    form.clearErrors(path as never);
+    markAttentionPaths([path]);
+  }
+
   const wizardMode: WizardMode = isNew ? "new" : fieldsLocked ? "view" : "edit";
 
   // Submit enablement:
@@ -362,7 +371,7 @@ export function CarPolicyWizardInner({
           }}
           invalidIssues={invalidIssues}
           sectionIssueCounts={sectionIssueCounts}
-          onNavigateToIssue={navigateToIssue}
+          onNavigateToIssue={handleNavigateToIssue}
           onNavigateToSectionFirstIssue={handleSectionIssueCounter}
           notes={notes}
           noteAuthors={noteAuthors}
@@ -431,6 +440,7 @@ export function CarPolicyWizardInner({
             policy={policy}
             rating={fetcher.data?.rating ?? policy.car.rating}
             premiumManuallyEditedRef={premiumManuallyEditedRef}
+            premiumManualKeysRef={premiumManualKeysRef}
             premiumRef={premiumRef}
             setPremium={setPremium}
             hasUnsavedChangesRef={hasUnsavedChangesRef}

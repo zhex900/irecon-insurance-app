@@ -56,6 +56,10 @@ export function usePolicyPremiumCalc({
   });
   /** When true, skip auto-recalculate so click-to-edit premium values stick. */
   const premiumManuallyEditedRef = useRef(false);
+  /** Premium Breakdown lines the broker click-edited (persisted with draft). */
+  const premiumManualKeysRef = useRef<string[]>(
+    policy.car.premiumManualKeys ?? [],
+  );
   const rating = fetcher.data?.rating ?? policy.car.rating;
 
   const isFetcherBusy = fetcher.state !== "idle";
@@ -72,8 +76,9 @@ export function usePolicyPremiumCalc({
     lastPolicyIdRef.current = policy.policyId;
     lastPremiumFromPolicyRef.current = policy.car.premium;
     premiumManuallyEditedRef.current = false;
+    premiumManualKeysRef.current = policy.car.premiumManualKeys ?? [];
     setPremium(withRolledTotals(policy.car.premium));
-  }, [policy.policyId, policy.car.premium]);
+  }, [policy.policyId, policy.car.premium, policy.car.premiumManualKeys]);
 
   const lastFetcherDataRef = useRef(fetcher.data);
   useEffect(() => {
@@ -167,6 +172,7 @@ export function usePolicyPremiumCalc({
   function resetManualPremium() {
     if (fieldsLocked) return;
     premiumManuallyEditedRef.current = false;
+    premiumManualKeysRef.current = [];
     const parsed = carPolicyPricingSchema.safeParse(form.getValues());
     if (!parsed.success) return;
     submitIntent("recalculate");
@@ -192,6 +198,7 @@ export function usePolicyPremiumCalc({
     setPremium,
     premiumRef,
     premiumManuallyEditedRef,
+    premiumManualKeysRef,
     referralReasons,
     setReferralReasons,
     isFetcherBusy,

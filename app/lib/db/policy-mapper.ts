@@ -55,6 +55,7 @@ type AppExtras = {
   combinedBrokerFee?: number;
   terrorismTier?: string;
   isTerrorismRateExist?: boolean;
+  premiumManualKeys?: string[];
 };
 
 function hasPremium(car: PolicyCarRow): boolean {
@@ -241,6 +242,9 @@ export function rowsToPolicy(
       ...flatCustomWordings(customWordings),
       referralReasons: extras.referralReasons ?? [],
       premium,
+      premiumManualKeys: Array.isArray(extras.premiumManualKeys)
+        ? extras.premiumManualKeys.filter((key) => typeof key === "string")
+        : undefined,
       rating,
       adjusted: Boolean(adjustment),
       adjustment: adj,
@@ -282,6 +286,7 @@ export function policyToRows(policyDoc: Policy): {
     combinedBrokerFee: premium?.combinedBrokerFee,
     terrorismTier: rating?.terrorismTier,
     isTerrorismRateExist: rating?.isTerrorismRateExist,
+    premiumManualKeys: policyDoc.car.premiumManualKeys,
   };
 
   const wordings: unknown[] = customWordings.map((item) => ({

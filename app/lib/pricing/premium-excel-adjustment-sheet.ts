@@ -28,7 +28,7 @@ export function addPremiumExcelAdjustmentSheet(
   workbook: import("exceljs").Workbook,
   ctx: PremiumExcelSheetContext,
   INPUT: PremiumExcelPolicyRefs,
-  RATE: PremiumExcelRateRefs,
+  _RATE: PremiumExcelRateRefs,
 ) {
   const { premium, rating, adjustment } = ctx;
   if (!adjustment) return;
@@ -71,60 +71,58 @@ export function addPremiumExcelAdjustmentSheet(
     llSd: INPUT.bindLlSd,
   } as const;
 
+  // Exact app rates (resolveAdjustmentRates → 6 dp). Values only — do not
+  // re-derive in Excel or float divide can drift 1¢ from the policy UI.
   const frozen = rating
     ? resolveAdjustmentRates(premium, rating, adjustment.originalTurnover)
     : null;
 
-  adj.getCell("A6").value = "Frozen rates (from Premium / Rates)";
+  adj.getCell("A6").value =
+    "Frozen rates (same as app — 6 dp; amounts use ROUND to cents)";
   adj.getCell("A6").font = { bold: true };
   adj.getCell("A7").value = "CW applied rate";
   percentCell(
     adj.getCell("B7"),
     frozen?.contractWorksAppliedRate ?? rating?.contractWorksAppliedRate ?? 0,
-    `IF(${INPUT.turnover}>0,IF(${P.cwBase}<${P.cwTrue},${P.cwBase},${P.cwTrue})/${INPUT.turnover},${RATE.cwRate})`,
   );
   adj.getCell("A8").value = "LL applied rate";
   percentCell(
     adj.getCell("B8"),
     frozen?.liabilityAppliedRate ?? rating?.liabilityAppliedRate ?? 0,
-    `IF(${INPUT.turnover}>0,IF(${P.llBase}<${P.llTrue},${P.llBase},${P.llTrue})/${INPUT.turnover},${RATE.llRate})`,
   );
   adj.getCell("A9").value = "CW min premium";
   moneyCell(
     adj.getCell("B9"),
-    RATE.cwMin,
-    rating?.contractWorksMinPremium ?? 0,
+    undefined,
+    frozen?.contractWorksMinPremium ?? rating?.contractWorksMinPremium ?? 0,
   );
   adj.getCell("A10").value = "LL min premium";
-  moneyCell(adj.getCell("B10"), RATE.llMin, rating?.liabilityMinPremium ?? 0);
+  moneyCell(
+    adj.getCell("B10"),
+    undefined,
+    frozen?.liabilityMinPremium ?? rating?.liabilityMinPremium ?? 0,
+  );
   adj.getCell("A11").value = "Terrorism rate";
   percentCell(
     adj.getCell("B11"),
     frozen?.terrorismRate ?? rating?.terrorismRate ?? 0,
-    `IF(${P.cwTrue}>0,${P.cwTerror}/${P.cwTrue},${RATE.terror})`,
   );
   adj.getCell("A12").value = "ESL rate";
-  percentCell(
-    adj.getCell("B12"),
-    frozen?.eslRate ?? rating?.eslRate ?? 0,
-    `IF(SUM(${P.cwTrue},${P.cwTerror})>0,${P.cwEsl}/SUM(${P.cwTrue},${P.cwTerror}),${RATE.esl})`,
-  );
+  percentCell(adj.getCell("B12"), frozen?.eslRate ?? rating?.eslRate ?? 0);
   adj.getCell("A13").value = "CW stamp duty rate";
   percentCell(
     adj.getCell("B13"),
     frozen?.contractWorksStampDutyRate ??
       rating?.contractWorksStampDutyRate ??
       0,
-    `IF(SUM(${P.cwTrue},${P.cwTerror},${P.cwPlant},${P.cwPlantTerror},${P.cwPlantEsl},${P.cwEsl},${P.cwGst})>0,${P.cwSd}/SUM(${P.cwTrue},${P.cwTerror},${P.cwPlant},${P.cwPlantTerror},${P.cwPlantEsl},${P.cwEsl},${P.cwGst}),${RATE.sd1})`,
   );
   adj.getCell("A14").value = "LL stamp duty rate";
   percentCell(
     adj.getCell("B14"),
     frozen?.liabilityStampDutyRate ?? rating?.liabilityStampDutyRate ?? 0,
-    `IF(SUM(${P.llTrue},${P.llEsl},${P.llGst})>0,${P.llSd}/SUM(${P.llTrue},${P.llEsl},${P.llGst}),${RATE.sd2})`,
   );
   adj.getCell("A15").value = "GST rate";
-  percentCell(adj.getCell("B15"), GST_RATE, RATE.gst, { roundRate: false });
+  percentCell(adj.getCell("B15"), GST_RATE);
 
   const FR = {
     cwRate: "Adjustment!$B$7",

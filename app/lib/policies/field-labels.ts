@@ -41,7 +41,7 @@ const TOP_LEVEL_LABELS: Record<string, string> = {
   excludedContracts1: "Excluded contracts",
   excludedContracts2: "Excluded contracts (activities)",
   excludedContracts3: "Excluded contracts (definitions)",
-  declarationConfirmed: "Duty of Disclosure",
+  declarationConfirmed: "General Disclosure",
   selectedWordingIds: "Additional Wording",
   customWordings: "Custom Wording",
   policyStatusId: "Policy status",
@@ -55,6 +55,8 @@ const FORM_LABEL_EXTRAS: Array<{
   sectionId: string;
   label: string;
   searchText?: string;
+  /** When set, search jumps to this field path instead of the section. */
+  path?: string;
 }> = [
   {
     sectionId: "policy-information",
@@ -122,6 +124,7 @@ const FORM_LABEL_EXTRAS: Array<{
     sectionId: "claims",
     label: "General Disclosure",
     searchText: "duty of disclosure declaration confirmed",
+    path: "declarationConfirmed",
   },
   {
     sectionId: "claims",
@@ -265,10 +268,10 @@ export function listPolicyFieldSearchOptions(): PolicyFieldSearchOption[] {
     });
   }
 
-  // Visible group titles / other form copy → jump to containing section.
+  // Visible group titles / other form copy → jump to field or containing section.
   for (const extra of FORM_LABEL_EXTRAS) {
     push({
-      value: `#${extra.sectionId}`,
+      value: extra.path ?? `#${extra.sectionId}`,
       label: extra.label,
       secondary: SECTION_LABELS[extra.sectionId] ?? extra.sectionId,
       searchText: [

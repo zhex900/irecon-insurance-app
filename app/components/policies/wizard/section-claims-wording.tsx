@@ -94,12 +94,10 @@ export function ClaimsWordingStep({
         </p>
       </Section>
 
-      <Section title="General Disclosure" className="bg-muted/40">
-        <GeneralDisclosureField
-          control={control}
-          error={errors.declarationConfirmed}
-        />
-      </Section>
+      <GeneralDisclosureSection
+        control={control}
+        error={errors.declarationConfirmed}
+      />
 
       <Section title="Additional Wording">
         <div className="flex flex-col gap-3">
@@ -181,7 +179,7 @@ export function ClaimsWordingStep({
   );
 }
 
-function GeneralDisclosureField({
+function GeneralDisclosureSection({
   control,
   error,
 }: {
@@ -193,16 +191,20 @@ function GeneralDisclosureField({
   );
 
   return (
-    <Controller
-      control={control}
-      name="declarationConfirmed"
-      render={({ field }) => (
-        <div
-          className={cn(
-            "rounded-lg transition-[border-color,box-shadow] duration-300",
-            attention && "border border-warning p-3 ring-2 ring-warning/25",
-          )}
-        >
+    <Section
+      title="General Disclosure"
+      className={cn(
+        // Transparent base border so shared `border-warning` highlight shows
+        // the same yellow outline as text inputs (cards use ring by default).
+        "border border-transparent bg-muted/40 transition-[border-color,box-shadow] duration-300",
+        highlight,
+        attention && "ring-warning",
+      )}
+    >
+      <Controller
+        control={control}
+        name="declarationConfirmed"
+        render={({ field }) => (
           <Field
             orientation="horizontal"
             data-invalid={!attention && error ? true : undefined}
@@ -228,8 +230,8 @@ function GeneralDisclosureField({
               <FieldError>{error.message}</FieldError>
             ) : null}
           </Field>
-        </div>
-      )}
-    />
+        )}
+      />
+    </Section>
   );
 }

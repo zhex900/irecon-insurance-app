@@ -135,6 +135,10 @@ export function mergeDraftIntoPolicy(
       customWordings,
       ...flatCustomWordings(customWordings),
       premium: premiumOverride,
+      premiumManualKeys:
+        values.premiumManualKeys !== undefined
+          ? values.premiumManualKeys
+          : existing.car.premiumManualKeys,
     },
   };
 }

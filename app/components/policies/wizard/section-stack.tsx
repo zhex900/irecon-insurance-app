@@ -133,6 +133,7 @@ export type WizardSectionStackProps = {
   /** Latest rating snapshot (fetcher may be newer than policy.car.rating). */
   rating?: Policy["car"]["rating"];
   premiumManuallyEditedRef: MutableRefObject<boolean>;
+  premiumManualKeysRef: MutableRefObject<string[]>;
   premiumRef: MutableRefObject<PremiumBreakdown | undefined>;
   setPremium: Dispatch<SetStateAction<PremiumBreakdown | undefined>>;
   hasUnsavedChangesRef: MutableRefObject<boolean>;
@@ -162,6 +163,7 @@ export function WizardSectionStack({
   policy,
   rating,
   premiumManuallyEditedRef,
+  premiumManualKeysRef,
   premiumRef,
   setPremium,
   hasUnsavedChangesRef,
@@ -197,6 +199,7 @@ export function WizardSectionStack({
             reference={reference}
             notes={notes}
             rating={rating ?? policy.car.rating}
+            initialManualKeys={policy.car.premiumManualKeys}
             premiumEditable={!fieldsLocked}
             onPremiumChange={
               fieldsLocked
@@ -211,6 +214,13 @@ export function WizardSectionStack({
                       force: true,
                       skipPremiumRefresh: true,
                     });
+                  }
+            }
+            onManualKeysChange={
+              fieldsLocked
+                ? undefined
+                : (keys) => {
+                    premiumManualKeysRef.current = keys;
                   }
             }
             onResetPremium={fieldsLocked ? undefined : onResetPremium}
@@ -296,6 +306,7 @@ export function WizardSectionStack({
             reference={reference}
             notes={notes}
             rating={rating ?? policy.car.rating}
+            initialManualKeys={policy.car.premiumManualKeys}
             premiumEditable={!fieldsLocked}
             onPremiumChange={(next) => {
               premiumManuallyEditedRef.current = true;
@@ -304,6 +315,9 @@ export function WizardSectionStack({
               hasUnsavedChangesRef.current = true;
               setHasUnsavedChanges(true);
               void persistDraft({ force: true, skipPremiumRefresh: true });
+            }}
+            onManualKeysChange={(keys) => {
+              premiumManualKeysRef.current = keys;
             }}
             onResetPremium={fieldsLocked ? undefined : onResetPremium}
             isCalculating={isCalculating}

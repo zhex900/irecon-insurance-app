@@ -16,7 +16,10 @@ export type PolicyDraftSaveResult = DraftSaveResult;
  */
 export async function savePolicyDraftClient(
   policyId: number,
-  values: CarPolicyFormValues & { premium?: Record<string, number> },
+  values: CarPolicyFormValues & {
+    premium?: Record<string, number>;
+    premiumManualKeys?: string[];
+  },
 ): Promise<PolicyDraftSaveResult> {
   const parsed = carPolicyDraftSchema.safeParse(values);
   if (!parsed.success) {

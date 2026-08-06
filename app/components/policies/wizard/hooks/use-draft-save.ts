@@ -52,6 +52,7 @@ export function usePolicyDraftSave({
   fieldsLocked,
   premiumRef,
   premiumManuallyEditedRef,
+  premiumManualKeysRef,
   getDirtyPaths,
   commitSavedPaths,
   rollbackSavedPaths,
@@ -64,6 +65,7 @@ export function usePolicyDraftSave({
   fieldsLocked: boolean;
   premiumRef: MutableRefObject<PremiumBreakdown | undefined>;
   premiumManuallyEditedRef: MutableRefObject<boolean>;
+  premiumManualKeysRef: MutableRefObject<string[]>;
   getDirtyPaths: () => string[];
   commitSavedPaths: (paths: string[]) => void;
   rollbackSavedPaths: (paths: string[]) => void;
@@ -98,9 +100,10 @@ export function usePolicyDraftSave({
       return JSON.stringify({
         ...values,
         ...(premiumRef.current ? { premium: premiumRef.current } : {}),
+        premiumManualKeys: premiumManualKeysRef.current,
       });
     },
-    [form, premiumRef],
+    [form, premiumRef, premiumManualKeysRef],
   );
   const savedSnapshotRef = useRef("");
   const previousSnapshotRef = useRef("");
@@ -203,6 +206,7 @@ export function usePolicyDraftSave({
     const values = {
       ...form.getValues(),
       ...(premiumRef.current ? { premium: premiumRef.current } : {}),
+      premiumManualKeys: premiumManualKeysRef.current,
     };
     const payload = draftSnapshot();
     pendingDraftPayloadRef.current = payload;
