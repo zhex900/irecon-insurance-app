@@ -13,7 +13,7 @@ import {
 import { cn } from "~/lib/utils";
 
 export type ClientSummaryPopoverClient = {
-  clientId: number;
+  clientId: string;
   name: string;
   tradingName?: string | null;
   abn?: string | null;

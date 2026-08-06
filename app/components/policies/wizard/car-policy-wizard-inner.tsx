@@ -78,6 +78,8 @@ export function CarPolicyWizardInner({
   const selectedStatus = reference.policyStatuses.find(
     (item) => item.policyStatusId === selectedStatusId,
   );
+  const livePolicyNumber =
+    form.watch("policyNumber")?.trim() || policy.policyNumber;
   const insurerCode = form.watch("insurerCode");
   const insurerName =
     reference.insurers.find((item) => item.code === insurerCode)?.name ??
@@ -85,6 +87,9 @@ export function CarPolicyWizardInner({
   const isFormTerminal = isTerminalStatus(selectedStatusId);
   /** Fields lock once Taken/Not taken is chosen or already saved. */
   const fieldsLocked = readOnly || isFormTerminal;
+  /** Policy number follows saved status only — editable until Taken / Not taken. */
+  const policyNumberEditable =
+    !readOnly && !isTerminalStatus(policy.policyStatusId);
   /**
    * After the first successful Submit, keep Submit off until values change again.
    * Draft autosave must NOT clear this — only a successful Submit resets it.
@@ -169,6 +174,8 @@ export function CarPolicyWizardInner({
     policy,
     form,
     premium,
+    premiumRef,
+    premiumManualKeysRef,
     referralReasons,
     rating: fetcher.data?.rating,
     carWording,
@@ -306,7 +313,7 @@ export function CarPolicyWizardInner({
     isCalculating,
     documents,
     isGeneratingDocuments,
-    policyNumber: policy.policyNumber,
+    policyNumber: livePolicyNumber,
     clientName,
     brokerName,
     brokerEmail,
@@ -337,7 +344,7 @@ export function CarPolicyWizardInner({
     >
       <CarPolicyWizardHeader
         wizardMode={wizardMode}
-        policyNumber={policy.policyNumber}
+        policyNumber={livePolicyNumber}
         clientId={policy.clientId}
         clientName={clientName}
         selectedStatus={selectedStatus}
@@ -395,6 +402,8 @@ export function CarPolicyWizardInner({
             }
             selectedStatusName={selectedStatus?.name ?? "Pending"}
             canChangeStatus={canChangeStatus}
+            policyNumberEditable={policyNumberEditable}
+            onPolicyNumberBlur={handleFieldBlur}
             premium={premium}
             premiumRef={premiumRef}
             isFetcherBusy={isFetcherBusy}

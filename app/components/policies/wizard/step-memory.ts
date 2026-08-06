@@ -4,7 +4,7 @@ export const PRICING_CONFIRMATION_STEP = wizardSteps.length - 1;
 
 /** Survives remounts within the same JS realm (HMR may clear this). */
 export const wizardStepMemory = new Map<
-  number,
+  string,
   { step: number; maxStep: number }
 >();
 
@@ -20,7 +20,7 @@ export function parseStep(raw: string | null): number | null {
   return clampStep(Number(raw));
 }
 
-export function readStoredStep(policyId: number): number | null {
+export function readStoredStep(policyId: string): number | null {
   const memorized = wizardStepMemory.get(policyId)?.step;
   if (memorized != null) {
     const clamped = clampStep(memorized);
@@ -30,7 +30,7 @@ export function readStoredStep(policyId: number): number | null {
   return parseStep(sessionStorage.getItem(`car-policy-step:${policyId}`));
 }
 
-export function readStoredMaxStep(policyId: number, fallback: number): number {
+export function readStoredMaxStep(policyId: string, fallback: number): number {
   const memorized = wizardStepMemory.get(policyId)?.maxStep;
   if (memorized != null) {
     const clamped = clampStep(memorized);
@@ -47,7 +47,7 @@ export function readStoredMaxStep(policyId: number, fallback: number): number {
 
 /** Only call from explicit navigation — never from mount defaults. */
 export function rememberWizardStep(
-  policyId: number,
+  policyId: string,
   step: number,
   maxStep: number,
 ) {
@@ -59,7 +59,7 @@ export function rememberWizardStep(
 }
 
 /** Reset wizard progress for a policy (e.g. after clone). */
-export function clearWizardStepState(policyId: number) {
+export function clearWizardStepState(policyId: string) {
   wizardStepMemory.delete(policyId);
   if (typeof window !== "undefined") {
     sessionStorage.removeItem(`car-policy-step:${policyId}`);
@@ -69,29 +69,29 @@ export function clearWizardStepState(policyId: number) {
 }
 
 /** After submit redirect, land on this section once. */
-export function rememberFocusSection(policyId: number, sectionId: string) {
+export function rememberFocusSection(policyId: string, sectionId: string) {
   if (typeof window === "undefined") return;
   sessionStorage.setItem(`car-policy-focus-section:${policyId}`, sectionId);
 }
 
-export function peekFocusSection(policyId: number): string | null {
+export function peekFocusSection(policyId: string): string | null {
   if (typeof window === "undefined") return null;
   return sessionStorage.getItem(`car-policy-focus-section:${policyId}`);
 }
 
-export function clearFocusSection(policyId: number) {
+export function clearFocusSection(policyId: string) {
   if (typeof window === "undefined") return;
   sessionStorage.removeItem(`car-policy-focus-section:${policyId}`);
 }
 
 /** One-shot leave allowlist for destructive actions (e.g. delete). */
-export const allowLeavePolicyIds = new Set<number>();
+export const allowLeavePolicyIds = new Set<string>();
 
-export function allowWizardLeave(policyId: number) {
+export function allowWizardLeave(policyId: string) {
   allowLeavePolicyIds.add(policyId);
 }
 
-export function consumeWizardLeave(policyId: number) {
+export function consumeWizardLeave(policyId: string) {
   if (!allowLeavePolicyIds.has(policyId)) return false;
   allowLeavePolicyIds.delete(policyId);
   return true;

@@ -34,7 +34,11 @@ import {
   type CarPolicyFormValues,
 } from "~/lib/zod/policy-car";
 import { requireAuth } from "~/lib/auth/session.server";
-import { parseFormIntent, parsePositiveInteger } from "~/lib/http/route-input";
+import {
+  parseFormIntent,
+  parsePositiveInteger,
+  parseUuid,
+} from "~/lib/http/route-input";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import {
@@ -67,7 +71,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
 
 export async function loader({ params, request }: Route.LoaderArgs) {
   await requireAuth(request);
-  const policyId = parsePositiveInteger(params.policyId);
+  const policyId = parseUuid(params.policyId);
   if (!policyId) throw new Response("Policy not found", { status: 404 });
   const policy = await getPolicy(policyId);
   if (!policy) throw new Response("Policy not found", { status: 404 });
@@ -115,7 +119,7 @@ function parsePayload(raw: string): unknown {
 
 export async function action({ request, params }: Route.ActionArgs) {
   const actor = await requireAuth(request);
-  const policyId = parsePositiveInteger(params.policyId);
+  const policyId = parseUuid(params.policyId);
   if (!policyId) return { formError: "Invalid policy id." };
   const formData = await request.formData();
   const intent = parseFormIntent(
@@ -415,7 +419,7 @@ export default function PolicyDetailRoute({
     navigation.formData?.get("intent") === "delete";
   const wasCloned = searchParams.get("cloned") === "1";
   const isNew = searchParams.get("new") === "1";
-  const clearedCloneForPolicyId = useRef<number | null>(null);
+  const clearedCloneForPolicyId = useRef<string | null>(null);
   const deleteError =
     actionData && "formError" in actionData ? actionData.formError : null;
 

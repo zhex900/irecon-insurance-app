@@ -61,7 +61,7 @@ export function EmailDocumentsDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  policyId: number;
+  policyId: string;
   documents: PolicyDocument[];
   policyNumber: string;
   clientName?: string;

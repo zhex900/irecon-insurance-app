@@ -44,7 +44,7 @@ async function fetchPublishedTemplatesForCover(
 
 /** Persist documents on the policy via the app API. */
 export async function savePolicyDocumentsClient(
-  policyId: number,
+  policyId: string,
   documents: PolicyDocument[],
 ): Promise<PolicyDocument[]> {
   const response = await fetch(`/api/policies/${policyId}/documents`, {

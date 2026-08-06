@@ -1,6 +1,6 @@
 /**
- * Additional Wording stores TipTap HTML for subject + content.
- * Legacy plain text is accepted and converted on read/edit.
+ * Additional Wording: subject is plain text (fixed bold HTML on save);
+ * content is TipTap HTML. Legacy plain text is accepted and converted on read/edit.
  */
 
 const BLOCK_TAGS = new Set([
@@ -436,4 +436,14 @@ export function wordingHtmlToEstimateText(html: string): string {
 export function normalizeWordingHtmlForSave(value: string): string {
   if (isWordingHtmlEmpty(value)) return "";
   return sanitizeWordingHtml(ensureWordingHtml(value));
+}
+
+/**
+ * Subject is always a single bold line on schedules — no rich formatting.
+ * Accepts plain text or legacy HTML; stores `<p><strong>…</strong></p>`.
+ */
+export function normalizeWordingSubjectForSave(value: string): string {
+  const text = plainTextFromWordingHtml(value).replace(/\s+/g, " ").trim();
+  if (!text) return "";
+  return `<p><strong>${escapeHtml(text)}</strong></p>`;
 }

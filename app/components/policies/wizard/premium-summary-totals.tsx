@@ -90,13 +90,19 @@ export function PremiumSummaryTotals({
 
 function ReferralReasons({ reasons }: { reasons: string[] }) {
   return (
-    <div className="rounded-md border border-warning/30 bg-warning/10 p-3 text-warning-foreground">
-      <p className="font-medium">Referral reasons</p>
-      <ul className="mt-2 list-disc pl-5">
-        {reasons.map((reason) => (
-          <li key={reason}>{reason}</li>
-        ))}
-      </ul>
+    <div className="relative overflow-hidden rounded-md border border-warning/30 p-px">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 animate-border-rotate rounded-full bg-[conic-gradient(var(--warning)_20deg,transparent_120deg)] motion-reduce:animate-none"
+      />
+      <div className="relative z-10 rounded-[calc(var(--radius-md)-1px)] bg-[color-mix(in_oklab,var(--warning)_10%,var(--card))] p-3 text-warning-foreground">
+        <p className="font-medium">Referral reasons</p>
+        <ul className="mt-2 list-disc pl-5">
+          {reasons.map((reason) => (
+            <li key={reason}>{reason}</li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }

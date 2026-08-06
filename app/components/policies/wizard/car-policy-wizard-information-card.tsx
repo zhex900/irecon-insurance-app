@@ -12,6 +12,9 @@ export type CarPolicyWizardInformationCardProps = {
   selectedStatusId: number;
   selectedStatusName: string;
   canChangeStatus: boolean;
+  /** When false (Taken / Not taken, or read-only view), policy number is display-only. */
+  policyNumberEditable: boolean;
+  onPolicyNumberBlur?: () => void;
   premium: PremiumBreakdown | undefined;
   premiumRef: MutableRefObject<PremiumBreakdown | undefined>;
   isFetcherBusy: boolean;
@@ -29,6 +32,8 @@ export function CarPolicyWizardInformationCard({
   selectedStatusId,
   selectedStatusName,
   canChangeStatus,
+  policyNumberEditable,
+  onPolicyNumberBlur,
   premium,
   premiumRef,
   isFetcherBusy,
@@ -39,6 +44,8 @@ export function CarPolicyWizardInformationCard({
   onMarkAttentionPaths,
 }: CarPolicyWizardInformationCardProps) {
   const form = useFormContext<CarPolicyFormValues>();
+  const policyNumber = form.watch("policyNumber") || policy.policyNumber;
+  const policyNumberError = form.formState.errors.policyNumber?.message;
 
   function takenStatusIssues() {
     const values = form.getValues();
@@ -53,7 +60,17 @@ export function CarPolicyWizardInformationCard({
   return (
     <PolicyInformationCard
       insurerName={insurerName}
-      policyNumber={policy.policyNumber}
+      policyNumber={policyNumber}
+      policyNumberEditable={policyNumberEditable}
+      onPolicyNumberChange={(next) => {
+        form.clearErrors("policyNumber");
+        form.setValue("policyNumber", next, {
+          shouldDirty: true,
+          shouldValidate: false,
+        });
+      }}
+      onPolicyNumberBlur={onPolicyNumberBlur}
+      policyNumberError={policyNumberError}
       statusId={selectedStatusId}
       statusName={selectedStatusName}
       statusOptions={reference.policyStatuses}

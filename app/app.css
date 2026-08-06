@@ -57,6 +57,16 @@
   --color-success-foreground: var(--success-foreground);
   --color-success: var(--success);
   --color-destructive-foreground: var(--destructive-foreground);
+  --animate-border-rotate: border-rotate 8s linear infinite;
+}
+
+@keyframes border-rotate {
+  from {
+    transform: rotate(0deg) scale(10);
+  }
+  to {
+    transform: rotate(-360deg) scale(10);
+  }
 }
 
 /* IRECON Night Ops — red + black (light & dark) */

@@ -1,9 +1,6 @@
 import { redirect } from "react-router";
 import { requireAuth } from "~/lib/auth/session.server";
-import {
-  positiveIntegerSchema,
-  searchParamsObject,
-} from "~/lib/http/route-input";
+import { searchParamsObject, uuidParamSchema } from "~/lib/http/route-input";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import { getClient } from "~/lib/services/clients/service";
 import { createPolicyDraft } from "~/lib/services/policy/data.service";
@@ -11,7 +8,7 @@ import type { Route } from "./+types/new";
 
 export async function loader({ request }: Route.LoaderArgs) {
   const actor = await requireAuth(request);
-  const parsedClientId = positiveIntegerSchema.safeParse(
+  const parsedClientId = uuidParamSchema.safeParse(
     searchParamsObject(request).clientId,
   );
   if (!parsedClientId.success) throw redirect("/clients");
@@ -25,7 +22,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     action: "policy.create",
     entityType: "policy",
     entityId: policy.policyId,
-    summary: `Created policy ${policy.policyNumber} for client #${clientId}`,
+    summary: `Created policy ${policy.policyNumber} for ${client.name}`,
     metadata: { clientId, policyNumber: policy.policyNumber },
     request,
   });

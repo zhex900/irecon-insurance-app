@@ -81,7 +81,7 @@ export function isTerminalStatus(policyStatusId: number) {
 }
 
 const baseFields = {
-  clientId: z.coerce.number(),
+  clientId: z.string().uuid(),
   policyStatusId: z.coerce
     .number()
     .int()
@@ -297,7 +297,7 @@ function applyExcessRules(
 }
 
 const draftFields = {
-  clientId: z.coerce.number(),
+  clientId: z.string().uuid(),
   policyStatusId: z.coerce.number().optional(),
   insurerCode: z.string().optional(),
   insuredName: z.string().optional(),

@@ -11,7 +11,7 @@ import {
 } from "~/components/ui/dialog";
 
 export type DeletablePolicyRef = {
-  policyId: number;
+  policyId: string;
   policyNumber: string;
 };
 

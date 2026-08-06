@@ -30,7 +30,7 @@ export async function sendPolicyDocumentsEmail({
   recipientType,
   onSuccess,
 }: {
-  policyId: number;
+  policyId: string;
   attachments: PolicyDocument[];
   extraFiles: FileWithPreview[];
   to: string;
@@ -53,7 +53,7 @@ export async function sendPolicyDocumentsEmail({
     toast.error("Attach at least one document.");
     return;
   }
-  if (!Number.isFinite(policyId) || policyId <= 0) {
+  if (!policyId) {
     toast.error("Policy is missing. Reload and try again.");
     return;
   }

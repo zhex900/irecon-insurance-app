@@ -4,6 +4,7 @@ import { PlusIcon } from "lucide-react";
 import { WordingHtmlView } from "~/components/policies/wording-html-view";
 import { WordingRichEditor } from "~/components/policies/wording-rich-editor";
 import { Button } from "~/components/ui/button";
+import { FieldInput } from "~/components/ui/form-controls";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +21,7 @@ import {
 import {
   isWordingHtmlEmpty,
   normalizeWordingHtmlForSave,
+  normalizeWordingSubjectForSave,
   plainTextFromWordingHtml,
 } from "~/lib/policies/wording/html";
 
@@ -53,15 +55,13 @@ export function CustomWordingsEditor() {
   function startEdit(item: CustomWordingItem) {
     setMode("editing");
     setEditingId(item.id);
-    setDraftSubject(item.subject);
+    setDraftSubject(plainTextFromWordingHtml(item.subject));
     setDraftContent(item.content);
     setDraftError(null);
   }
 
   function isDraftDirty() {
-    return (
-      !isWordingHtmlEmpty(draftSubject) || !isWordingHtmlEmpty(draftContent)
-    );
+    return draftSubject.trim() !== "" || !isWordingHtmlEmpty(draftContent);
   }
 
   function requestCancel() {
@@ -77,7 +77,7 @@ export function CustomWordingsEditor() {
     onChange: (next: CustomWordingItem[]) => void,
     existingId?: string,
   ) {
-    const subject = normalizeWordingHtmlForSave(draftSubject);
+    const subject = normalizeWordingSubjectForSave(draftSubject);
     const content = normalizeWordingHtmlForSave(draftContent);
     if (isWordingHtmlEmpty(subject) && isWordingHtmlEmpty(content)) {
       setDraftError("Enter a subject or content before saving.");
@@ -132,14 +132,15 @@ export function CustomWordingsEditor() {
                       aria-label="Custom wording"
                     />
                     <div className="flex w-full flex-col gap-3">
-                      <WordingRichEditor
+                      <FieldInput
                         label="Custom Wording Subject"
-                        variant="subject"
                         value={draftSubject}
-                        onChange={(html) => {
-                          setDraftSubject(html);
+                        onChange={(e) => {
+                          setDraftSubject(e.target.value);
                           setDraftError(null);
                         }}
+                        className="[&_input]:font-semibold"
+                        placeholder="Endorsement title (always bold on schedules)"
                       />
                       <WordingRichEditor
                         label="Custom Wording Content"
@@ -201,7 +202,7 @@ export function CustomWordingsEditor() {
                     aria-label={`Remove ${plainTextFromWordingHtml(item.subject) || "custom wording"}`}
                   />
                   <div className="min-w-0 flex-1">
-                    <span className="font-medium text-foreground">
+                    <span className="font-semibold text-foreground">
                       {plainTextFromWordingHtml(item.subject) || "Untitled"}
                     </span>
                     {item.content ? (
@@ -246,14 +247,15 @@ export function CustomWordingsEditor() {
                   aria-label="New custom wording"
                 />
                 <div className="flex w-full flex-col gap-3">
-                  <WordingRichEditor
+                  <FieldInput
                     label="Custom Wording Subject"
-                    variant="subject"
                     value={draftSubject}
-                    onChange={(html) => {
-                      setDraftSubject(html);
+                    onChange={(e) => {
+                      setDraftSubject(e.target.value);
                       setDraftError(null);
                     }}
+                    className="[&_input]:font-semibold"
+                    placeholder="Endorsement title (always bold on schedules)"
                   />
                   <WordingRichEditor
                     label="Custom Wording Content"

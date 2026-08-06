@@ -29,7 +29,7 @@ export type PolicyListTableRowProps = {
   showClientColumn: boolean;
   showDraftBadge: boolean;
   selected: boolean;
-  onToggleSelected: (policyId: number, checked: boolean) => void;
+  onToggleSelected: (policyId: string, checked: boolean) => void;
   onActivate: () => void;
   onDeleteRequest: (policy: DeletablePolicyRef) => void;
 };

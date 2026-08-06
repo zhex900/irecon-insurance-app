@@ -15,7 +15,7 @@ export type ClientDraftSaveResult = DraftSaveResult;
  * Pass `requireComplete` for new-client Save (blocks empty / incomplete forms).
  */
 export async function saveClientDraftClient(
-  clientId: number,
+  clientId: string,
   values: ClientFormValues,
   options?: { requireComplete?: boolean },
 ): Promise<ClientDraftSaveResult> {
@@ -40,7 +40,7 @@ export async function saveClientDraftClient(
 
 /** Discard an unsaved new-client draft (0 policies only). */
 export async function discardClientDraftClient(
-  clientId: number,
+  clientId: string,
 ): Promise<DraftDiscardResult> {
   const response = await fetch(`/api/clients/${clientId}/draft`, {
     method: "DELETE",

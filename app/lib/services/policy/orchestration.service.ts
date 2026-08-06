@@ -24,8 +24,14 @@ import {
 import {
   createPolicyDraft,
   getPolicy,
+  isPolicyNumberTaken,
   savePolicy,
 } from "~/lib/services/policy/data.service";
+import {
+  POLICY_NUMBER_TAKEN_MESSAGE,
+  resolvePolicyNumberForSave,
+  validatePolicyNumberInput,
+} from "~/lib/policies/policy-number";
 import {
   formatTakenStatusBlockMessage,
   getTakenStatusErrors,
@@ -45,7 +51,23 @@ type DraftValues = z.infer<typeof carPolicyDraftSchema>;
 
 export class PolicySaveError extends ValidationError {}
 
-export async function savePolicyDraft(policyId: number, values: DraftValues) {
+/**
+ * Validate shape + uniqueness when a save changes the policy number.
+ * No-op when the number is unchanged.
+ */
+export async function assertPolicyNumberAvailable(
+  next: Policy,
+  existing: Policy,
+) {
+  if (next.policyNumber === existing.policyNumber) return;
+  const validated = validatePolicyNumberInput(next.policyNumber);
+  if (!validated.ok) throw new PolicySaveError(validated.message);
+  if (await isPolicyNumberTaken(validated.policyNumber, existing.policyId)) {
+    throw new PolicySaveError(POLICY_NUMBER_TAKEN_MESSAGE);
+  }
+}
+
+export async function savePolicyDraft(policyId: string, values: DraftValues) {
   const existing = await getPolicy(policyId);
   if (!existing) throw new Error("Policy not found");
   if (isTerminalStatus(existing.policyStatusId)) {
@@ -74,11 +96,12 @@ export async function savePolicyDraft(policyId: number, values: DraftValues) {
       premiumManualKeys: values.premiumManualKeys,
     },
   );
+  await assertPolicyNumberAvailable(policy, existing);
   return savePolicy({ ...policy, isDraft: existing.isDraft ?? true });
 }
 
 export async function upsertPolicyFromForm(
-  policyId: number,
+  policyId: string,
   values: CarPolicyFormValues & {
     premium?: NonNullable<Policy["car"]["premium"]> | Record<string, number>;
   },
@@ -132,11 +155,12 @@ export async function upsertPolicyFromForm(
     ),
   });
 
+  await assertPolicyNumberAvailable(policy, existing);
   return savePolicy({ ...policy, isDraft: false });
 }
 
 export async function applyPremiumCalculation(
-  policyId: number,
+  policyId: string,
   values: CarPolicyFormValues,
   createdBy: string,
 ) {
@@ -161,11 +185,12 @@ export async function applyPremiumCalculation(
     ),
   });
 
+  await assertPolicyNumberAvailable(policy, existing);
   return savePolicy(policy);
 }
 
 export async function addPolicyNote(
-  policyId: number,
+  policyId: string,
   description: string,
   createdBy: string,
 ) {
@@ -183,7 +208,7 @@ export async function addPolicyNote(
 }
 
 export async function updatePolicyNote(
-  policyId: number,
+  policyId: string,
   policyNoteId: number,
   description: string,
 ) {
@@ -210,7 +235,7 @@ export async function updatePolicyNote(
   });
 }
 
-export async function clonePolicy(sourcePolicyId: number, createdBy: string) {
+export async function clonePolicy(sourcePolicyId: string, createdBy: string) {
   const source = await getPolicy(sourcePolicyId);
   if (!source) throw new Error("Policy not found");
 
@@ -289,10 +314,11 @@ function applyFormValues(
     ...existing,
     policyCategoryId: values.policyCategoryId ?? existing.policyCategoryId,
     policyStatusId: values.policyStatusId ?? existing.policyStatusId,
-    policyNumber:
-      values.policyCategoryId === 2 && values.policyNumber
-        ? values.policyNumber
-        : existing.policyNumber,
+    policyNumber: resolvePolicyNumberForSave(
+      existing.policyNumber,
+      values.policyNumber,
+      isTerminalStatus(existing.policyStatusId),
+    ),
     postcode: values.postcode ?? existing.postcode,
     stateId: values.stateId ?? existing.stateId,
     dateStart: values.dateStart ?? existing.dateStart,

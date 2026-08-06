@@ -7,6 +7,7 @@ import {
 import {
   formatIdListParam,
   parseIdListParam,
+  parseUuidListParam,
 } from "~/lib/search/id-list-param";
 import { queryTextSchema } from "~/lib/http/route-input";
 
@@ -15,7 +16,7 @@ export type PolicyListUrlFilters = {
   statusIds: number[];
   coverTypeIds: number[];
   policyCategoryIds: number[];
-  clientIds: number[];
+  clientIds: string[];
   inception: DateRangeValue;
   expiry: DateRangeValue;
 };
@@ -26,7 +27,7 @@ export function parsePolicyListFiltersFromUrl(url: URL): PolicyListUrlFilters {
     statusIds: parseIdListParam(url.searchParams.get("status")),
     coverTypeIds: parseIdListParam(url.searchParams.get("cover")),
     policyCategoryIds: parseIdListParam(url.searchParams.get("category")),
-    clientIds: parseIdListParam(url.searchParams.get("client")),
+    clientIds: parseUuidListParam(url.searchParams.get("client")),
     inception: resolveInceptionRange({
       preset: url.searchParams.get("inception"),
       from: url.searchParams.get("inceptionFrom"),
@@ -59,7 +60,7 @@ export function policyListFiltersKey(filters: PolicyListUrlFilters): string {
 export function withIdListParam(
   params: URLSearchParams,
   key: "status" | "cover" | "category" | "client",
-  nextIds: number[],
+  nextIds: Array<number | string>,
 ): URLSearchParams {
   const next = new URLSearchParams(params);
   const encoded = formatIdListParam(nextIds);

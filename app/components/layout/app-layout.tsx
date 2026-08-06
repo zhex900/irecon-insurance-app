@@ -53,7 +53,7 @@ import {
   getAppVersion,
 } from "~/lib/app-version";
 import { APP_NAME } from "~/lib/brand";
-import { isSuperAdmin } from "~/lib/auth/roles";
+import { isAdminRole } from "~/lib/auth/roles";
 import type { BrokerSession } from "~/lib/db/types";
 import { SentryUserSync } from "~/lib/observability/sentry-user-sync";
 import type { SideNavData } from "~/lib/services/navigation/side-nav.service";
@@ -299,7 +299,7 @@ function AccountMenu({ broker }: { broker: BrokerSession }) {
           </DropdownMenuLabel>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        {isSuperAdmin(broker) ? (
+        {isAdminRole(broker) ? (
           <>
             <DropdownMenuGroup>
               <DropdownMenuItem

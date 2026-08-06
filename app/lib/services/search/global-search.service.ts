@@ -10,7 +10,7 @@ import { getReferenceData } from "~/lib/services/reference.service";
 import { normalizeAuthorisedRepresentative } from "~/lib/services/authorised-representatives/normalize";
 
 export type GlobalSearchClientHit = {
-  clientId: number;
+  clientId: string;
   name: string;
   tradingName: string;
   abn: string;
@@ -22,12 +22,12 @@ export type GlobalSearchClientHit = {
 };
 
 export type GlobalSearchPolicyHit = {
-  policyId: number;
+  policyId: string;
   policyNumber: string;
   insuredName: string;
   clientName: string;
   clientTradingName: string;
-  clientId: number;
+  clientId: string;
   statusName: string;
 };
 

@@ -27,7 +27,7 @@ export function usePolicyLeaveGuard({
   hasUnsavedChanges: boolean;
   hasUnsavedChangesRef: MutableRefObject<boolean>;
   setHasUnsavedChanges: (value: boolean) => void;
-  saveDraftNow: () => void;
+  saveDraftNow: () => Promise<boolean | void>;
   savePolicy: (overrides?: Partial<CarPolicyFormValues>) => Promise<boolean>;
   setDraftSaveError: (error: string | null) => void;
   fetcher: ReturnType<typeof useFetcher<PolicyWizardActionData>>;
@@ -39,7 +39,7 @@ export function usePolicyLeaveGuard({
   leaveDialogOpen: boolean;
   discardNewPolicy: () => Promise<void>;
   leaveWithoutSaving: () => void;
-  saveAndLeave: () => void;
+  saveAndLeave: () => Promise<void>;
   stayOnPage: () => void;
   handleCancelClick: () => void;
 } {
@@ -82,20 +82,20 @@ export function usePolicyLeaveGuard({
     if (pendingLeaveAfterSaveRef.current) setPendingLeaveAfterSave(false);
   }, [fetcher.state, fetcher.data, hasUnsavedChangesRef, setHasUnsavedChanges]);
 
-  // If unsaved clears while blocked: proceed when leaving was requested, else stay.
-  // New policies stay blocked even with a clean form so discard can run.
+  // If unsaved clears while blocked: stay on new policies so discard can run;
+  // existing policies with a clean form can dismiss the block. Never proceed
+  // solely because a leave-save is in flight — wait for allowLeaveRef after success.
   useEffect(() => {
     if (blocker.state !== "blocked") return;
-    if (pendingLeaveAfterSave || allowLeaveRef.current) {
+    if (allowLeaveRef.current) {
       setPendingLeaveAfterSave(false);
-      allowLeaveRef.current = true;
       blocker.proceed();
       return;
     }
     if (!isNew && !hasUnsavedChanges) {
       blocker.reset();
     }
-  }, [blocker, hasUnsavedChanges, pendingLeaveAfterSave, isNew]);
+  }, [blocker, hasUnsavedChanges, isNew]);
 
   async function discardNewPolicy() {
     setDiscarding(true);
@@ -142,14 +142,28 @@ export function usePolicyLeaveGuard({
     }
   }
 
-  function saveAndLeave() {
+  async function saveAndLeave() {
     pendingLeaveAfterSaveRef.current = true;
     setPendingLeaveAfterSave(true);
-    if (isFormTerminal) {
-      void savePolicy();
-      return;
+    try {
+      if (isFormTerminal) {
+        const ok = await savePolicy();
+        if (!ok) {
+          pendingLeaveAfterSaveRef.current = false;
+          setPendingLeaveAfterSave(false);
+        }
+        return;
+      }
+      // Await the draft save. Leave navigation runs inside persistDraft on
+      // success; do not clear pending here if a follow-up save was queued.
+      await saveDraftNow();
+      if (!pendingLeaveAfterSaveRef.current) {
+        setPendingLeaveAfterSave(false);
+      }
+    } catch {
+      pendingLeaveAfterSaveRef.current = false;
+      setPendingLeaveAfterSave(false);
     }
-    saveDraftNow();
   }
 
   function stayOnPage() {

@@ -38,7 +38,7 @@ export function NewPolicyClientDialog({
   const navigation = useNavigation();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const [creatingClientId, setCreatingClientId] = useState<number | null>(null);
+  const [creatingClientId, setCreatingClientId] = useState<string | null>(null);
   const creating =
     creatingClientId != null &&
     navigation.state !== "idle" &&
@@ -68,7 +68,7 @@ export function NewPolicyClientDialog({
   const showEmpty =
     active && isSettled && !hasError && displayClients.length === 0;
 
-  function selectClient(clientId: number) {
+  function selectClient(clientId: string) {
     setCreatingClientId(clientId);
     navigate(`/policies/new?clientId=${clientId}`);
   }

@@ -7,7 +7,7 @@ import { useActionSuccessToast } from "~/hooks/use-success-toast";
 import { usePolicyListPage } from "~/hooks/use-policy-list-page";
 import { requireAuth } from "~/lib/auth/session.server";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
-import { parseFormIntent } from "~/lib/http/route-input";
+import { parseFormIntent, parseUuid } from "~/lib/http/route-input";
 import { parsePagination } from "~/lib/pagination";
 import { parsePolicyListFiltersFromUrl } from "~/lib/search/policy-list-filters";
 import { writeAuditLog } from "~/lib/services/audit/service";
@@ -95,8 +95,8 @@ export async function action({ request }: Route.ActionArgs) {
 
   const ids = formData
     .getAll("ids")
-    .map((value) => Number(value))
-    .filter((id) => Number.isInteger(id) && id > 0);
+    .map((value) => parseUuid(value))
+    .filter((id) => id != null);
 
   if (ids.length === 0) {
     return { ok: false as const, error: "No policies selected" };

@@ -77,7 +77,7 @@ export type PolicyListTableProps = {
   showClientColumn?: boolean;
   showDraftBadge?: boolean;
   clientFilter?: {
-    selected: number[];
+    selected: string[];
     selectedOptions: ColumnClientFilterOption[];
     countQuery: string;
   };
@@ -178,7 +178,7 @@ export function PolicyListTable({
 
   function applyColumnFilter(
     key: "status" | "cover" | "category" | "client",
-    nextIds: number[],
+    nextIds: Array<number | string>,
   ) {
     setSearchParams(keepSearch(withIdListParam(searchParams, key, nextIds)));
   }

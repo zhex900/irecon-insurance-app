@@ -46,7 +46,7 @@ export function calculateAdjustmentForPolicy(
 }
 
 export async function submitPolicyAdjustment(
-  policyId: number,
+  policyId: string,
   input: CarAdjustmentInput,
   createdBy: string,
 ) {

@@ -13,7 +13,7 @@ import { UserFormDialog } from "~/components/settings/user-form-dialog";
 import { UsersTable } from "~/components/settings/users-table";
 import { Button } from "~/components/ui/button";
 import { requireAuth } from "~/lib/auth/session.server";
-import { isSuperAdmin } from "~/lib/auth/roles";
+import { isAdminRole } from "~/lib/auth/roles";
 import { getAvatarsBucket } from "~/lib/cloudflare.server";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
 import {
@@ -50,7 +50,7 @@ const PAGE_SIZE = 25;
 
 export async function loader({ request }: Route.LoaderArgs) {
   const viewer = await requireAuth(request);
-  if (!isSuperAdmin(viewer)) {
+  if (!isAdminRole(viewer)) {
     throw new Response("Not Found", { status: 404 });
   }
   const url = new URL(request.url);
@@ -106,7 +106,7 @@ async function applyAvatarUpload(
 
 export async function action({ request, context }: Route.ActionArgs) {
   const actor = await requireAuth(request);
-  if (!isSuperAdmin(actor)) {
+  if (!isAdminRole(actor)) {
     throw new Response("Not Found", { status: 404 });
   }
   const formData = await request.formData();

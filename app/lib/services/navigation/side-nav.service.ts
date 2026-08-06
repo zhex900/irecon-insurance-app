@@ -59,7 +59,7 @@ async function listSettingsLinks(viewer: AppUser): Promise<SideNavLink[]> {
 
   const links: SideNavLink[] = [];
 
-  if (superAdmin) {
+  if (admin) {
     links.push({
       id: "settings-users",
       label: "User Management",

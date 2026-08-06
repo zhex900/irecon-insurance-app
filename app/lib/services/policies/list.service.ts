@@ -33,7 +33,7 @@ import {
 import { likePattern, resolvePage } from "~/lib/services/shared/list-query";
 
 export type PolicyListClientSummary = {
-  clientId: number;
+  clientId: string;
   name: string;
   tradingName: string;
   abn: string;
@@ -43,9 +43,9 @@ export type PolicyListClientSummary = {
 };
 
 export type PolicyListItem = {
-  policyId: number;
+  policyId: string;
   policyNumber: string;
-  clientId: number;
+  clientId: string;
   clientName: string;
   client: PolicyListClientSummary;
   policyStatusId: number;
@@ -68,8 +68,8 @@ export type ListPoliciesPageInput = {
   coverTypeIds?: number[];
   policyCategoryIds?: number[];
   /** @deprecated Prefer `clientIds`. */
-  clientId?: number | null;
-  clientIds?: number[];
+  clientId?: string | null;
+  clientIds?: string[];
   /** Inclusive inception date bounds as `YYYY-MM-DD`. */
   inceptionFrom?: string | null;
   inceptionTo?: string | null;
@@ -80,11 +80,11 @@ export type ListPoliciesPageInput = {
   offset?: number;
 };
 
-function resolveClientIds(input: ListPoliciesPageInput): number[] {
+function resolveClientIds(input: ListPoliciesPageInput): string[] {
   if (input.clientIds && input.clientIds.length > 0) {
-    return [...new Set(input.clientIds.filter((id) => id > 0))];
+    return [...new Set(input.clientIds.filter(Boolean))];
   }
-  if (input.clientId != null && input.clientId > 0) {
+  if (input.clientId) {
     return [input.clientId];
   }
   return [];
@@ -173,9 +173,6 @@ function buildPolicyListFilters(
       ilike(client.name, pattern),
       ilike(client.tradingName, pattern),
     ];
-    if (/^\d+$/.test(q)) {
-      textOr.push(eq(policy.policyId, Number(q)));
-    }
     if (q.toLowerCase() === "adjusted") {
       textOr.push(isNotNull(policyCarAdjustment.policyId));
     }
@@ -192,8 +189,7 @@ async function countByGroup(
     column:
       | typeof policy.policyStatusId
       | typeof policy.policyCategoryId
-      | typeof policyCar.coverTypeId
-      | typeof policy.clientId;
+      | typeof policyCar.coverTypeId;
   },
 ): Promise<Record<number, number>> {
   const db = getDb();
@@ -245,9 +241,9 @@ async function countWithFilters(
 /** Policy counts for specific clients under current filters (client filter omitted). */
 export async function countPoliciesForClientIds(
   input: ListPoliciesPageInput,
-  clientIds: number[],
-): Promise<Record<number, number>> {
-  const ids = [...new Set(clientIds.filter((id) => id > 0))];
+  clientIds: string[],
+): Promise<Record<string, number>> {
+  const ids = [...new Set(clientIds.filter(Boolean))];
   if (ids.length === 0) return {};
   const db = getDb();
   const filters = buildPolicyListFilters(input, { omitClient: true });
@@ -267,7 +263,7 @@ export async function countPoliciesForClientIds(
     )
     .where(where)
     .groupBy(policy.clientId);
-  const counts: Record<number, number> = {};
+  const counts: Record<string, number> = {};
   for (const row of rows) {
     counts[row.clientId] = Number(row.count);
   }

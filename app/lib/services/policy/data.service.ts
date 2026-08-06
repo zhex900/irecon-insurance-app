@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { getClient } from "~/lib/services/clients/service";
 import {
   getDefaultExcesses,
@@ -8,12 +8,38 @@ import { getDb } from "~/lib/db/client";
 import { policy, policyCar, policyCarAdjustment } from "~/lib/db/schema";
 import { policyToRows, rowsToPolicy } from "~/lib/db/policy-mapper";
 import { normalizeExcesses } from "~/lib/policies/excesses";
+import { formatPolicyNumberFromSeq } from "~/lib/policies/policy-number";
 import { normalizeSubLimits } from "~/lib/policies/sub-limits";
 import type { Policy, PolicySummary } from "~/lib/db/types";
 import { listClients } from "~/lib/services/clients/service";
 
+/**
+ * True when another policy already holds this number (case-insensitive).
+ * `excludePolicyId` keeps a policy from colliding with itself.
+ */
+export async function isPolicyNumberTaken(
+  policyNumber: string,
+  excludePolicyId: string,
+): Promise<boolean> {
+  const trimmed = policyNumber.trim();
+  if (!trimmed) return false;
+
+  const db = getDb();
+  const rows = await db
+    .select({ policyId: policy.policyId })
+    .from(policy)
+    .where(
+      and(
+        sql`lower(${policy.policyNumber}) = lower(${trimmed})`,
+        ne(policy.policyId, excludePolicyId),
+      ),
+    )
+    .limit(1);
+  return rows.length > 0;
+}
+
 /** Delete an unsaved new-policy draft (Pending + isDraft only). */
-export async function deletePolicyDraft(policyId: number) {
+export async function deletePolicyDraft(policyId: string) {
   const existing = await getPolicy(policyId);
   if (!existing) throw new Error("Policy not found");
   if (existing.policyStatusId !== 1 || !existing.isDraft) {
@@ -31,16 +57,10 @@ export async function deletePolicyDraft(policyId: number) {
  * Pass `clientId` to require all policies belong to that client.
  */
 export async function deletePolicies(
-  policyIds: number[],
-  options?: { clientId?: number },
+  policyIds: string[],
+  options?: { clientId?: string },
 ) {
-  const ids = [
-    ...new Set(
-      policyIds
-        .map((id) => Number(id))
-        .filter((id) => Number.isInteger(id) && id > 0),
-    ),
-  ];
+  const ids = [...new Set(policyIds.map((id) => id.trim()).filter(Boolean))];
   if (ids.length === 0) throw new Error("No policies selected");
 
   const db = getDb();
@@ -78,7 +98,7 @@ export async function deletePolicies(
   return rows;
 }
 
-async function loadPolicyById(policyId: number): Promise<Policy | null> {
+async function loadPolicyById(policyId: string): Promise<Policy | null> {
   const db = getDb();
   const [row] = await db
     .select()
@@ -97,7 +117,7 @@ async function loadPolicyById(policyId: number): Promise<Policy | null> {
   );
 }
 
-export async function listPolicies(clientId?: number) {
+export async function listPolicies(clientId?: string) {
   const db = getDb();
   const rows = await db
     .select()
@@ -150,13 +170,12 @@ export async function listPolicySummaries(
       (summary) =>
         summary.policyNumber.toLowerCase().includes(q) ||
         summary.insuredName.toLowerCase().includes(q) ||
-        summary.clientName.toLowerCase().includes(q) ||
-        String(summary.policyId).includes(q),
+        summary.clientName.toLowerCase().includes(q),
     )
     .map(({ createdWhen: _createdWhen, ...summary }) => summary);
 }
 
-export async function getPolicy(policyId: number) {
+export async function getPolicy(policyId: string) {
   return loadPolicyById(policyId);
 }
 
@@ -242,7 +261,7 @@ export async function savePolicy(policyDoc: Policy) {
 }
 
 export async function createPolicyDraft(
-  clientId: number,
+  clientId: string,
   partial: Partial<Policy> = {},
   createdBy: string,
 ) {
@@ -252,12 +271,12 @@ export async function createPolicyDraft(
   if (!existingClient) throw new Error("Client not found");
 
   const db = getDb();
-  const [{ nextId }] = await db.execute<{ nextId: number }>(sql`
-    SELECT GREATEST(1000, COALESCE(MAX(policy_id), 1000)) + 1 AS "nextId"
-    FROM policy
-  `);
-  const policyId = Number(nextId);
-  const policyNumber = `ATCCW${String(policyId).padStart(4, "0")}`;
+  const policyId = crypto.randomUUID();
+  // Human policy numbers come from their own sequence, not the UUID key.
+  const [seqRow] = await db.execute<{ seq: number | string }>(
+    sql`SELECT nextval('policy_number_seq') AS "seq"`,
+  );
+  const policyNumber = formatPolicyNumberFromSeq(Number(seqRow?.seq ?? 1000));
   const today = new Date();
   const nextYear = new Date(today);
   nextYear.setFullYear(nextYear.getFullYear() + 1);
@@ -315,14 +334,6 @@ export async function createPolicyDraft(
     clientId,
     policyNumber: partial.policyNumber ?? policyNumber,
   };
-
-  // Ensure serial sequence can accept explicit IDs then continue.
-  await db.execute(sql`
-    SELECT setval(
-      pg_get_serial_sequence('policy', 'policy_id'),
-      GREATEST(${policyId}, (SELECT COALESCE(MAX(policy_id), 1) FROM policy))
-    )
-  `);
 
   return savePolicy(draft);
 }

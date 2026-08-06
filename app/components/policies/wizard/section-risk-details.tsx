@@ -4,6 +4,7 @@ import {
   FieldTextarea,
   Select,
 } from "~/components/ui/form-controls";
+import { PolicyNumberField } from "~/components/policies/policy-number-field";
 import { type CarPolicyFormValues } from "~/lib/zod/policy-car";
 import type { ReferenceData } from "~/lib/db/types";
 import { SiteAddressAutocomplete } from "~/components/policies/wizard/site-address-autocomplete";
@@ -18,11 +19,13 @@ export function RiskDetailsStep({ reference }: { reference: ReferenceData }) {
     watch,
     setValue,
     getValues,
+    clearErrors,
     formState: { errors },
   } = useFormContext<CarPolicyFormValues>();
 
   const coverTypeId = Number(watch("coverTypeId"));
   const policyCategoryId = Number(watch("policyCategoryId"));
+  const policyNumber = watch("policyNumber") ?? "";
   const holdCurrent = watch("hasExistingContractWorksCover");
   const isRenewal = policyCategoryId === 2;
   const showCurrentInsurer = String(holdCurrent) === "true";
@@ -106,11 +109,17 @@ export function RiskDetailsStep({ reference }: { reference: ReferenceData }) {
         ))}
       </Select>
       {isRenewal ? (
-        <FieldInput
-          label="Policy Number"
+        <PolicyNumberField
+          value={policyNumber}
           required
           error={errors.policyNumber?.message}
-          {...register("policyNumber")}
+          onChange={(next) => {
+            clearErrors("policyNumber");
+            setValue("policyNumber", next, {
+              shouldDirty: true,
+              shouldValidate: false,
+            });
+          }}
         />
       ) : null}
       <div className="rounded-lg border border-border bg-muted/20 p-4 md:col-span-2">

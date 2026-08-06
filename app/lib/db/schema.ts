@@ -74,7 +74,7 @@ export const appUserRecentRoute = pgTable(
 );
 
 export const client = pgTable("client", {
-  clientId: serial("client_id").primaryKey(),
+  clientId: uuid("client_id").primaryKey().defaultRandom(),
   name: varchar("name", { length: 255 }).notNull().default(""),
   tradingName: varchar("trading_name", { length: 255 }).notNull().default(""),
   abn: varchar("abn", { length: 32 }).notNull().default(""),
@@ -92,19 +92,20 @@ export const client = pgTable("client", {
 });
 
 export const policy = pgTable("policy", {
-  policyId: serial("policy_id").primaryKey(),
-  clientId: integer("client_id").notNull(),
+  policyId: uuid("policy_id").primaryKey().defaultRandom(),
+  clientId: uuid("client_id").notNull(),
   policyTypeId: integer("policy_type_id").notNull().default(1),
   policyStatusId: integer("policy_status_id").notNull().default(1),
   postcode: varchar("postcode", { length: 16 }).notNull().default(""),
   stateId: integer("state_id").notNull().default(2),
   policyCategoryId: integer("policy_category_id").notNull().default(1),
+  /** Human-facing unique number (ATCCWI…); routes use policyId UUID. */
   policyNumber: varchar("policy_number", { length: 64 }).notNull(),
   dateStart: timestamp("date_start", { withTimezone: true }).notNull(),
   dateEnd: timestamp("date_end", { withTimezone: true }).notNull(),
   insurerCode: varchar("insurer_code", { length: 32 }).notNull().default("ATC"),
   policyGroupId: integer("policy_group_id"),
-  copiedFromPolicyId: integer("copied_from_policy_id"),
+  copiedFromPolicyId: uuid("copied_from_policy_id"),
   takenAt: timestamp("taken_at", { withTimezone: true }),
   takenBy: varchar("taken_by", { length: 255 }),
   /** App convenience — not in db.txt; derive from !premium later. */
@@ -121,7 +122,7 @@ export const policy = pgTable("policy", {
  * jsonb holds sub-limits, wordings, and interim app fields (excesses, docs, notes, rating).
  */
 export const policyCar = pgTable("policy_car", {
-  policyId: integer("policy_id").primaryKey(),
+  policyId: uuid("policy_id").primaryKey(),
   coverTypeId: integer("cover_type_id").notNull().default(1),
   siteAddress: text("site_address").notNull().default(""),
   insuredName: varchar("insured_name", { length: 255 }).notNull().default(""),
@@ -288,7 +289,7 @@ export const policyCar = pgTable("policy_car", {
 });
 
 export const policyCarAdjustment = pgTable("policy_car_adjustment", {
-  policyId: integer("policy_id").primaryKey(),
+  policyId: uuid("policy_id").primaryKey(),
   adjustedTurnover: numeric("adjusted_turnover", { precision: 18, scale: 2 })
     .notNull()
     .default("0"),

@@ -121,6 +121,10 @@ export function normalizeRecentPath(raw: string): string | null {
   return path;
 }
 
+const UUID_SEGMENT = "[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}";
+const CLIENT_PATH_PATTERN = new RegExp(`^/clients/${UUID_SEGMENT}(?:/|$)`);
+const POLICY_PATH_PATTERN = new RegExp(`^/policies/${UUID_SEGMENT}(?:/|$)`);
+
 export function recentIdForPath(path: string): string {
   return `recent-${encodeURIComponent(path)}`;
 }
@@ -133,8 +137,8 @@ export function recentCaptionForPath(path: string): string | undefined {
   const leaf = matchRecentLeafSection(path);
   if (leaf) return leaf.section.rootLabel;
 
-  if (/^\/clients\/\d+(?:\/|$)/.test(path)) return "Client";
-  if (/^\/policies\/\d+(?:\/|$)/.test(path)) return "Policy";
+  if (CLIENT_PATH_PATTERN.test(path)) return "Client";
+  if (POLICY_PATH_PATTERN.test(path)) return "Policy";
 
   return undefined;
 }
@@ -157,12 +161,9 @@ export function recentLabelFallback(path: string, previous?: string): string {
   }
 
   if (previous?.trim()) return previous.trim();
-  if (/^\/clients\/\d+(?:\/|$)/.test(path)) {
-    return `Client ${path.split("/")[2] ?? ""}`.trim();
-  }
-  if (/^\/policies\/\d+(?:\/|$)/.test(path)) {
-    return `Policy ${path.split("/")[2] ?? ""}`.trim();
-  }
+  // UUID ids are meaningless to read — wait for the API to resolve a name.
+  if (CLIENT_PATH_PATTERN.test(path)) return "Client";
+  if (POLICY_PATH_PATTERN.test(path)) return "Policy";
   const segment = path.split("/").filter(Boolean).pop() ?? path;
   return decodeURIComponent(segment).replace(/[-_]/g, " ");
 }

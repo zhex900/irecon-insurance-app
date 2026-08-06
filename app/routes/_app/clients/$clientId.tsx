@@ -21,7 +21,7 @@ import {
 import { PageHeader } from "~/components/layout/app-layout";
 import { withSuccessToast } from "~/hooks/use-success-toast";
 import { requireAuth } from "~/lib/auth/session.server";
-import { parseFormIntent, parsePositiveInteger } from "~/lib/http/route-input";
+import { parseFormIntent, parseUuid } from "~/lib/http/route-input";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
 import { parsePagination } from "~/lib/pagination";
 import { parsePolicyListFiltersFromUrl } from "~/lib/search/policy-list-filters";
@@ -46,7 +46,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
 
 export async function loader({ params, request }: Route.LoaderArgs) {
   await requireAuth(request);
-  const clientId = parsePositiveInteger(params.clientId);
+  const clientId = parseUuid(params.clientId);
   if (!clientId) throw new Response("Client not found", { status: 404 });
   const url = new URL(request.url);
   const filters = parsePolicyListFiltersFromUrl(url);
@@ -101,7 +101,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 
 export async function action({ request, params }: Route.ActionArgs) {
   const actor = await requireAuth(request);
-  const clientId = parsePositiveInteger(params.clientId);
+  const clientId = parseUuid(params.clientId);
   if (!clientId) return { ok: false as const, error: "Invalid client id" };
   const formData = await request.formData();
   const intent = parseFormIntent(formData, ["delete", "delete-policies"]);
@@ -109,8 +109,8 @@ export async function action({ request, params }: Route.ActionArgs) {
   if (intent === "delete-policies") {
     const ids = formData
       .getAll("ids")
-      .map((value) => Number(value))
-      .filter((id) => Number.isInteger(id) && id > 0);
+      .map((value) => parseUuid(value))
+      .filter((id) => id != null);
 
     if (ids.length === 0) {
       return { ok: false as const, error: "No policies selected" };

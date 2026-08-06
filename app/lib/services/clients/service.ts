@@ -89,7 +89,7 @@ export async function listClients(options?: string | ListClientsOptions) {
   });
 }
 
-export async function getClient(clientId: number) {
+export async function getClient(clientId: string) {
   const db = getDb();
   const [row] = await db
     .select()
@@ -99,10 +99,8 @@ export async function getClient(clientId: number) {
   return row ? normalizeClient(row) : null;
 }
 
-export async function getClientsByIds(clientIds: number[]) {
-  const ids = [
-    ...new Set(clientIds.filter((id) => Number.isInteger(id) && id > 0)),
-  ];
+export async function getClientsByIds(clientIds: string[]) {
+  const ids = [...new Set(clientIds.map((id) => id.trim()).filter(Boolean))];
   if (ids.length === 0) return [];
   const db = getDb();
   const rows = await db
@@ -152,7 +150,7 @@ export async function createClientDraft(createdBy: string) {
   );
 }
 
-export async function updateClient(clientId: number, input: ClientWritable) {
+export async function updateClient(clientId: string, input: ClientWritable) {
   const db = getDb();
   const [updated] = await db
     .update(client)
@@ -163,7 +161,7 @@ export async function updateClient(clientId: number, input: ClientWritable) {
   return normalizeClient(updated);
 }
 
-export async function countClientPolicies(clientId: number) {
+export async function countClientPolicies(clientId: string) {
   const db = getDb();
   const [countRow] = await db
     .select({ count: sql<number>`count(*)::int` })
@@ -173,7 +171,7 @@ export async function countClientPolicies(clientId: number) {
 }
 
 /** Delete a client only when they have no policies. */
-export async function deleteClient(clientId: number) {
+export async function deleteClient(clientId: string) {
   const existing = await getClient(clientId);
   if (!existing) throw new Error("Client not found");
 

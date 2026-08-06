@@ -1,10 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  ChevronDownIcon,
-  FileSpreadsheetIcon,
-  FileTypeIcon,
-  MailIcon,
-} from "lucide-react";
+import { ChevronDownIcon, FileTypeIcon, MailIcon } from "lucide-react";
 import { PdfPreviewDialog } from "~/components/documents/pdf-preview-dialog";
 import { EmailDocumentsDialog } from "~/components/email/email-documents-dialog";
 import { Badge } from "~/components/reui/badge";
@@ -35,10 +30,7 @@ import {
   type EmailTemplateVars,
 } from "~/lib/email/templates";
 import type { EmailDirectoryEntry } from "~/lib/email/directory";
-import {
-  downloadPremiumExcelDocument,
-  isPremiumExcelDocument,
-} from "~/lib/pricing/premium-excel";
+import { isPremiumExcelDocument } from "~/lib/pricing/premium-excel";
 import { versionPolicyDocuments } from "~/lib/services/policy/documents/versions";
 
 export function PremiumSummaryDocuments({
@@ -97,7 +89,9 @@ export function PremiumSummaryDocuments({
   );
 
   const { documentRows, hasPreviousVersions, visibleIdKey } = useMemo(() => {
-    const allRows = versionPolicyDocuments(documents);
+    const allRows = versionPolicyDocuments(documents).filter(
+      (row) => !isPremiumExcelDocument(row.doc),
+    );
     const rows = showPreviousVersions
       ? allRows
       : allRows.filter((row) => row.isLatest);
@@ -125,22 +119,12 @@ export function PremiumSummaryDocuments({
     });
   }, [visibleIdKey]);
 
-  const selectableRows = documentRows.filter(
-    (row) => !isPremiumExcelDocument(row.doc),
-  );
-
   const allSelected =
-    selectableRows.length > 0 &&
-    selectableRows.every((row) =>
-      selectedIds.includes(row.doc.policyDocumentId),
-    );
+    documentRows.length > 0 &&
+    documentRows.every((row) => selectedIds.includes(row.doc.policyDocumentId));
 
   const selectedDocs = documentRows
-    .filter(
-      (row) =>
-        selectedIds.includes(row.doc.policyDocumentId) &&
-        !isPremiumExcelDocument(row.doc),
-    )
+    .filter((row) => selectedIds.includes(row.doc.policyDocumentId))
     .map((row) => row.doc);
 
   const brokerTemplateKey = resolveBrokerTemplateKey({
@@ -172,19 +156,11 @@ export function PremiumSummaryDocuments({
 
   function toggleAll(checked: boolean) {
     setSelectedIds(
-      checked ? selectableRows.map((row) => row.doc.policyDocumentId) : [],
+      checked ? documentRows.map((row) => row.doc.policyDocumentId) : [],
     );
   }
 
   function handleDocumentActivate(doc: PolicyDocument) {
-    if (isPremiumExcelDocument(doc)) {
-      try {
-        downloadPremiumExcelDocument(doc);
-      } catch {
-        // Missing bytes — ignore; list still shows the row.
-      }
-      return;
-    }
     setPreviewDoc(doc);
   }
 
@@ -266,7 +242,7 @@ export function PremiumSummaryDocuments({
         ) : null}
       </div>
 
-      {documents.length === 0 ? (
+      {documentRows.length === 0 ? (
         <p className="text-xs text-muted-foreground">
           {isGeneratingDocuments
             ? "Generating PDFs…"
@@ -277,24 +253,19 @@ export function PremiumSummaryDocuments({
           <ScrollArea className="h-48 rounded-md border border-border">
             <ul className="flex flex-col gap-1 p-2">
               {documentRows.map(({ doc, version }) => {
-                const isExcel = isPremiumExcelDocument(doc);
                 const checked = selectedIds.includes(doc.policyDocumentId);
                 const shortName = formatDocumentLabel(doc.name);
                 return (
                   <li key={doc.policyDocumentId}>
                     <div className="relative flex items-start gap-2 rounded-md px-1 py-1 pe-9 hover:bg-muted/60">
-                      {isExcel ? (
-                        <span className="mt-0.5 size-4 shrink-0" aria-hidden />
-                      ) : (
-                        <Checkbox
-                          className="mt-0.5"
-                          checked={checked}
-                          onCheckedChange={(value) =>
-                            toggleDoc(doc.policyDocumentId, Boolean(value))
-                          }
-                          aria-label={`Select ${shortName} version ${version}`}
-                        />
-                      )}
+                      <Checkbox
+                        className="mt-0.5"
+                        checked={checked}
+                        onCheckedChange={(value) =>
+                          toggleDoc(doc.policyDocumentId, Boolean(value))
+                        }
+                        aria-label={`Select ${shortName} version ${version}`}
+                      />
                       <Tooltip>
                         <TooltipTrigger
                           render={
@@ -305,11 +276,7 @@ export function PremiumSummaryDocuments({
                             />
                           }
                         >
-                          {isExcel ? (
-                            <FileSpreadsheetIcon className="mt-0.5 size-3.5 shrink-0 text-success" />
-                          ) : (
-                            <FileTypeIcon className="mt-0.5 size-3.5 shrink-0 text-destructive" />
-                          )}
+                          <FileTypeIcon className="mt-0.5 size-3.5 shrink-0 text-destructive" />
                           <span className="min-w-0 flex-1">
                             <span className="block truncate font-medium text-foreground underline-offset-2 hover:underline">
                               {shortName}
@@ -320,7 +287,7 @@ export function PremiumSummaryDocuments({
                           </span>
                         </TooltipTrigger>
                         <TooltipContent side="left" className="max-w-xs">
-                          {isExcel ? `Download ${doc.filename}` : doc.filename}
+                          {doc.filename}
                         </TooltipContent>
                       </Tooltip>
                       <Badge
@@ -383,7 +350,7 @@ export function PremiumSummaryDocuments({
           <EmailDocumentsDialog
             open={emailOpen}
             onOpenChange={setEmailOpen}
-            policyId={policy?.policyId ?? 0}
+            policyId={policy?.policyId ?? ""}
             documents={selectedDocs}
             policyNumber={policyNumber}
             clientName={clientName}

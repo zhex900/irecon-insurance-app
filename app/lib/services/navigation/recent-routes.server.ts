@@ -22,6 +22,10 @@ export {
   RECENT_ROUTES_MAX,
 } from "~/lib/services/navigation/recent-routes";
 
+const UUID_SEGMENT = "[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}";
+const CLIENT_PATH_PATTERN = new RegExp(`^/clients/(${UUID_SEGMENT})(?:/|$)`);
+const POLICY_PATH_PATTERN = new RegExp(`^/policies/(${UUID_SEGMENT})(?:/|$)`);
+
 const STATIC_LABELS: Record<string, string> = {
   "/clients": "Clients",
   "/policies": "Policies",
@@ -74,9 +78,9 @@ export async function resolveRecentRouteLabel(path: string): Promise<string> {
   const leaf = matchRecentLeafSection(path);
   if (leaf) return resolveLeafLabel(leaf.section, leaf.leafId);
 
-  const clientMatch = /^\/clients\/(\d+)(?:\/|$)/.exec(path);
+  const clientMatch = CLIENT_PATH_PATTERN.exec(path);
   if (clientMatch) {
-    const clientId = Number(clientMatch[1]);
+    const clientId = clientMatch[1]!;
     const db = getDb();
     const [row] = await db
       .select({ name: client.name, tradingName: client.tradingName })
@@ -86,12 +90,12 @@ export async function resolveRecentRouteLabel(path: string): Promise<string> {
     const name =
       row?.name.replace(/\s+/g, " ").trim() ||
       row?.tradingName.replace(/\s+/g, " ").trim();
-    return name || `Client ${clientId}`;
+    return name || "Client";
   }
 
-  const policyMatch = /^\/policies\/(\d+)(?:\/|$)/.exec(path);
+  const policyMatch = POLICY_PATH_PATTERN.exec(path);
   if (policyMatch) {
-    const policyId = Number(policyMatch[1]);
+    const policyId = policyMatch[1]!;
     const db = getDb();
     const [row] = await db
       .select({
@@ -104,7 +108,7 @@ export async function resolveRecentRouteLabel(path: string): Promise<string> {
       .limit(1);
     const number = (row?.policyNumber ?? "").replace(/\s+/g, " ").trim();
     const insured = (row?.insuredName ?? "").replace(/\s+/g, " ").trim();
-    return number || insured || `Policy ${policyId}`;
+    return number || insured || "Policy";
   }
 
   const segment = path.split("/").filter(Boolean).pop() ?? path;

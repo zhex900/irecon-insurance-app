@@ -1,5 +1,6 @@
 import { useMemo, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useFormContext } from "react-hook-form";
+import { toast } from "sonner";
 import {
   FileSpreadsheetIcon,
   InfoIcon,
@@ -139,6 +140,13 @@ export function PricingDeclarationConfirmedStep({
 
   function patchPremium(key: keyof PremiumBreakdown, value: number) {
     if (!onPremiumChange) return;
+    if (key === "contractWorksBasePremium" || key === "liabilityBasePremium") {
+      const current = Number(currentPremium[key]) || 0;
+      if (value < current) {
+        toast.error("True base premium cannot be decreased.");
+        return;
+      }
+    }
     setManualKeys((prev) => {
       const next = new Set(prev);
       next.add(key);

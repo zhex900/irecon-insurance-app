@@ -152,7 +152,7 @@ export function buildAdjustmentContent(policy: Policy): string {
 
 export function makeDoc(input: {
   id: number;
-  policyId: number;
+  policyId: string;
   name: string;
   filename: string;
   generationKey: string;

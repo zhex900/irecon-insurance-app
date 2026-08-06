@@ -14,7 +14,7 @@ export async function calculatePremiumForPolicy(input: CarPolicyFormValues) {
 }
 
 export function buildReferralNotes(
-  policyId: number,
+  policyId: string,
   reasons: string[],
   createdBy: string,
 ): PolicyNote[] {
@@ -34,7 +34,7 @@ export function buildReferralNotes(
 /** Append referral notes without wiping broker/system notes or duplicating the same text. */
 export function mergeReferralNotes(
   existing: PolicyNote[] | undefined,
-  policyId: number,
+  policyId: string,
   reasons: string[],
   createdBy: string,
 ): PolicyNote[] | undefined {
@@ -53,7 +53,7 @@ export function mergeReferralNotes(
 }
 
 export function createMessageNote(
-  policyId: number,
+  policyId: string,
   description: string,
   createdBy: string,
 ): PolicyNote {

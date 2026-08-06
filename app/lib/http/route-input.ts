@@ -7,6 +7,8 @@ export const optionalIsoDateSchema = z
   .optional()
   .catch(undefined);
 export const positiveIntegerSchema = z.coerce.number().int().positive();
+/** Route / API ids for client + policy (UUID primary keys). */
+export const uuidParamSchema = z.string().uuid();
 export const booleanFlagSchema = z.enum(["0", "1"]).catch("0");
 
 export function searchParamsObject(request: Request): Record<string, string> {
@@ -15,6 +17,11 @@ export function searchParamsObject(request: Request): Record<string, string> {
 
 export function parsePositiveInteger(value: unknown): number | undefined {
   const parsed = positiveIntegerSchema.safeParse(value);
+  return parsed.success ? parsed.data : undefined;
+}
+
+export function parseUuid(value: unknown): string | undefined {
+  const parsed = uuidParamSchema.safeParse(value);
   return parsed.success ? parsed.data : undefined;
 }
 

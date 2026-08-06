@@ -53,7 +53,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   ]);
   const superAdmin = isSuperAdmin(viewer);
   return {
-    showUsers: superAdmin,
+    showUsers: isAdminRole(viewer),
     showAuthorisedRepresentatives: isAdminRole(viewer),
     showFeatures: superAdmin,
     showEmailTemplates: emailTemplatesEnabled || superAdmin,

@@ -1,7 +1,7 @@
 import { clientDraftSchema, formValuesToClientInput } from "~/lib/zod/client";
 import { requireAuth } from "~/lib/auth/session.server";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
-import { parsePositiveInteger } from "~/lib/http/route-input";
+import { parseUuid } from "~/lib/http/route-input";
 import {
   deleteClient,
   getClient,
@@ -12,7 +12,7 @@ import type { Route } from "./+types/clients.$clientId.draft";
 /** Browser client draft-save / discard endpoint (Postgres via Drizzle). */
 export async function action({ request, params }: Route.ActionArgs) {
   await requireAuth(request);
-  const clientId = parsePositiveInteger(params.clientId);
+  const clientId = parseUuid(params.clientId);
   if (!clientId) {
     return Response.json(
       { ok: false, formError: "Invalid client id." },

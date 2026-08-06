@@ -1,6 +1,7 @@
-import { POLICY_STATUS } from "~/lib/zod/policy-car";
+import { isTerminalStatus, POLICY_STATUS } from "~/lib/zod/policy-car";
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
 import type { Policy } from "~/lib/db/types";
+import { resolvePolicyNumberForSave } from "~/lib/policies/policy-number";
 import { carPolicyDraftSchema } from "~/lib/zod/policy-car";
 import type { z } from "zod";
 import {
@@ -37,10 +38,11 @@ export function mergeDraftIntoPolicy(
     policyStatusId: keepSubmitted
       ? existing.policyStatusId
       : POLICY_STATUS.Pending,
-    policyNumber:
-      values.policyCategoryId === 2 && values.policyNumber
-        ? values.policyNumber
-        : existing.policyNumber,
+    policyNumber: resolvePolicyNumberForSave(
+      existing.policyNumber,
+      values.policyNumber,
+      isTerminalStatus(existing.policyStatusId),
+    ),
     postcode: values.postcode ?? existing.postcode,
     stateId:
       values.stateId != null && Number(values.stateId) > 0

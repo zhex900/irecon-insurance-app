@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Form, Link, useFetcher, useNavigation } from "react-router";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -7,11 +7,17 @@ import {
   useForm,
   type Resolver,
 } from "react-hook-form";
+import { ChevronDownIcon } from "lucide-react";
 import { Alert, AlertDescription } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { LoadingButton } from "~/components/ui/loading-button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Checkbox } from "~/components/ui/checkbox";
+import {
+  Collapsible,
+  CollapsiblePanel,
+  CollapsibleTrigger,
+} from "~/components/ui/collapsible";
 import { Field, FieldError, FieldLabel } from "~/components/ui/field";
 import { FieldInput } from "~/components/ui/form-controls";
 import { FormulaTooltip } from "~/components/ui/formula-tooltip";
@@ -345,47 +351,94 @@ export function PolicyViewAdjustmentCards({
 }) {
   return (
     <div className="flex flex-col gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            Adjustment Turnover
-            <FormulaTooltip label="How Adjustment Turnover premiums are calculated">
-              <AdjustmentTurnoverFormula />
-            </FormulaTooltip>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          <p className="text-sm text-muted-foreground">
-            Adjusted turnover: {formatCurrency(breakdown.adjustmentTurnover)}
-          </p>
-          <AdjustmentTable
-            title=""
-            section1={breakdown.adjustment.section1}
-            section2={breakdown.adjustment.section2}
-            total={breakdown.adjustment.total}
-          />
-        </CardContent>
-      </Card>
+      <AdjustmentCollapsibleCard
+        title="Adjustment Turnover"
+        formulaLabel="How Adjustment Turnover premiums are calculated"
+        formula={<AdjustmentTurnoverFormula />}
+      >
+        <p className="text-sm text-muted-foreground">
+          Adjusted turnover: {formatCurrency(breakdown.adjustmentTurnover)}
+        </p>
+        <AdjustmentTable
+          title=""
+          section1={breakdown.adjustment.section1}
+          section2={breakdown.adjustment.section2}
+          total={breakdown.adjustment.total}
+        />
+      </AdjustmentCollapsibleCard>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            Total Adjustment Premium
-            <FormulaTooltip label="How Total Adjustment Premium is calculated">
-              <TotalAdjustmentPremiumFormula />
-            </FormulaTooltip>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <AdjustmentTable
-            title=""
-            section1={breakdown.delta.section1}
-            section2={breakdown.delta.section2}
-            total={breakdown.delta.total}
-          />
-        </CardContent>
-      </Card>
+      <AdjustmentCollapsibleCard
+        title="Total Adjustment Premium"
+        formulaLabel="How Total Adjustment Premium is calculated"
+        formula={<TotalAdjustmentPremiumFormula />}
+      >
+        <AdjustmentTable
+          title=""
+          section1={breakdown.delta.section1}
+          section2={breakdown.delta.section2}
+          total={breakdown.delta.total}
+        />
+      </AdjustmentCollapsibleCard>
     </div>
+  );
+}
+
+/**
+ * Collapsed by default. Trigger is not a native <button> so expand/collapse
+ * still works inside the Taken/view-only disabled fieldset.
+ */
+function AdjustmentCollapsibleCard({
+  title,
+  formulaLabel,
+  formula,
+  children,
+}: {
+  title: string;
+  formulaLabel: string;
+  formula: ReactNode;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <Card>
+        <CardHeader className="border-b p-0">
+          <CollapsibleTrigger
+            nativeButton={false}
+            render={<div />}
+            className="flex w-full cursor-pointer items-center justify-between gap-3 px-(--card-spacing) py-(--card-spacing) text-left transition-colors outline-none hover:bg-muted/40 focus-visible:bg-muted/40 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
+            aria-label={open ? `Collapse ${title}` : `Expand ${title}`}
+          >
+            <CardTitle className="flex min-w-0 items-center gap-2">
+              {title}
+              <span
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                }}
+                onKeyDown={(event) => {
+                  event.stopPropagation();
+                }}
+              >
+                <FormulaTooltip label={formulaLabel}>{formula}</FormulaTooltip>
+              </span>
+            </CardTitle>
+            <ChevronDownIcon
+              className={cn(
+                "size-4 shrink-0 text-muted-foreground transition-transform duration-200",
+                open && "rotate-180",
+              )}
+            />
+          </CollapsibleTrigger>
+        </CardHeader>
+        <CollapsiblePanel>
+          <CardContent className="flex flex-col gap-3 pt-(--card-spacing) pb-(--card-spacing)">
+            {children}
+          </CardContent>
+        </CollapsiblePanel>
+      </Card>
+    </Collapsible>
   );
 }
 

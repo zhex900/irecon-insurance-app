@@ -9,6 +9,7 @@ import {
   clampEmailFooterDisplayWidth,
   EMAIL_FOOTER_DISPLAY_WIDTH_DEFAULT,
 } from "~/lib/email/footer-display";
+import { POLICY_NUMBER_PREFIX } from "~/lib/policies/policy-number";
 
 export {
   EMAIL_FOOTER_DISPLAY_WIDTH_DEFAULT,
@@ -370,7 +371,7 @@ export function emailTemplatePreviewVars(options?: {
   // Values must be unique so Visual edits can reverse-map back to {{tokens}}.
   return {
     clientName: "Acme Constructions Pty Ltd",
-    policyNumber: "ATCCW1234",
+    policyNumber: `${POLICY_NUMBER_PREFIX}1234`,
     brokerName: "Jane Broker",
     coverType: "Annual Cover",
     insuredName: "Acme Insured Pty Ltd",

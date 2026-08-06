@@ -12,7 +12,7 @@ export type CarPolicyWizardDialogsProps = {
   discarding: boolean;
   onStay: () => void;
   onLeaveWithoutSaving: () => void;
-  onSaveAndLeave: () => void;
+  onSaveAndLeave: () => void | Promise<void>;
 };
 
 export function CarPolicyWizardDialogs({

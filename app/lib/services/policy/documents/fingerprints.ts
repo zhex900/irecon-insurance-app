@@ -38,11 +38,17 @@ export function reviewDocumentsFingerprint(policy: Policy): string {
     premium?.contractWorksTerrorismPremium ?? "none",
     premium?.contractWorksPlantPremium ?? "none",
     premium?.contractWorksPlantTerrorismPremium ?? "none",
+    premium?.contractWorksPlantESL ?? "none",
     premium?.contractWorksESL ?? "none",
+    premium?.contractWorksGST ?? "none",
     premium?.contractWorksStampDuty ?? "none",
     premium?.liabilityBasePremium ?? "none",
     premium?.liabilityESL ?? "none",
+    premium?.liabilityGST ?? "none",
     premium?.liabilityStampDuty ?? "none",
+    premium?.combinedBrokerFee ?? "none",
+    // Manual edits regenerate Excel even when totals coincidentally match.
+    JSON.stringify([...(car.premiumManualKeys ?? [])].sort()),
   ].join("|");
 }
 

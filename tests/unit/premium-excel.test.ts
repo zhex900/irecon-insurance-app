@@ -95,4 +95,53 @@ describe("premium excel helpers", () => {
     expect(after).not.toBe(before);
     expect(after).toContain("adjusted");
   });
+
+  it("changes fingerprint when manual premium keys change", () => {
+    const base = {
+      policyNumber: "P1",
+      policyStatusId: 1,
+      dateStart: "2024-01-01",
+      dateEnd: "2025-01-01",
+      stateId: 2,
+      postcode: "2000",
+      insurerCode: "X",
+      car: {
+        insuredName: "Acme",
+        siteAddress: "1 St",
+        estimatedTurnover: 1_000_000,
+        contractWorksSumInsured: 1_000_000,
+        displayHomes: 0,
+        existingStructure: 0,
+        plantEquipment: 0,
+        liabilityLimitBand: 1,
+        businessActivities: "",
+        insuredContracts: "",
+        geographicalScopes: "",
+        maximumConstructionPeriod: 12,
+        maximumMaintenancePeriod: 12,
+        adjusted: false,
+        premiumManualKeys: [],
+        premium: {
+          originalTotalPremium: 100,
+          contractWorksBasePremium: 80,
+        },
+      },
+    } as unknown as Policy;
+
+    const before = premiumExcelFingerprint(base);
+    const after = premiumExcelFingerprint({
+      ...base,
+      car: {
+        ...base.car,
+        premiumManualKeys: ["contractWorksBasePremium"],
+        premium: {
+          ...base.car.premium,
+          contractWorksBasePremium: 90,
+          originalTotalPremium: 110,
+        },
+      },
+    } as unknown as Policy);
+
+    expect(after).not.toBe(before);
+  });
 });

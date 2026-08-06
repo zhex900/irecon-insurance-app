@@ -4,7 +4,7 @@ import {
   invalidInputResponse,
   searchParamsObject,
 } from "~/lib/http/route-input";
-import { parseIdListParam } from "~/lib/search/id-list-param";
+import { parseUuidListParam } from "~/lib/search/id-list-param";
 import { parsePolicyListFiltersFromUrl } from "~/lib/search/policy-list-filters";
 import { countPoliciesForClientIds } from "~/lib/services/policies/list.service";
 import {
@@ -55,7 +55,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   }
 
   if (type === "client-policy-counts") {
-    const ids = parseIdListParam(parsed.data.ids ?? null);
+    const ids = parseUuidListParam(parsed.data.ids ?? null);
     const filters = parsePolicyListFiltersFromUrl(url);
     const counts = await countPoliciesForClientIds(
       {

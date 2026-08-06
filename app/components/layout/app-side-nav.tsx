@@ -375,6 +375,9 @@ function MainNavSection({
 
           const section = link.section!;
           const children = section === "reports" ? data.reports : data.settings;
+          // No leaves → hide the section root (e.g. Settings for brokers).
+          if (children.length === 0) return null;
+
           const sectionOpen = expandedSections.includes(section) && !iconRail;
           const isSectionActive = sectionFromPathname(pathname) === section;
 

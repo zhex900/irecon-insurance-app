@@ -2,11 +2,16 @@ import { carPolicyDraftSchema } from "~/lib/zod/policy-car";
 import { POLICY_STATUS } from "~/lib/zod/policy-car";
 import { requireAuth } from "~/lib/auth/session.server";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
-import { parsePositiveInteger } from "~/lib/http/route-input";
+import { parseUuid } from "~/lib/http/route-input";
+import {
+  POLICY_NUMBER_TAKEN_MESSAGE,
+  validatePolicyNumberInput,
+} from "~/lib/policies/policy-number";
 import { mergeDraftIntoPolicy } from "~/lib/services/policy/draft-merge";
 import {
   deletePolicyDraft,
   getPolicy,
+  isPolicyNumberTaken,
   savePolicy,
 } from "~/lib/services/policy/data.service";
 import type { Route } from "./+types/policies.$policyId.draft";
@@ -14,7 +19,7 @@ import type { Route } from "./+types/policies.$policyId.draft";
 /** Browser draft-save / discard endpoint (Postgres via Drizzle). */
 export async function action({ request, params }: Route.ActionArgs) {
   await requireAuth(request);
-  const policyId = parsePositiveInteger(params.policyId);
+  const policyId = parseUuid(params.policyId);
   if (!policyId) {
     return Response.json(
       { ok: false, formError: "Invalid policy id." },
@@ -75,6 +80,24 @@ export async function action({ request, params }: Route.ActionArgs) {
   }
 
   const merged = mergeDraftIntoPolicy(existing, parsed.data);
+  if (merged.policyNumber !== existing.policyNumber) {
+    const validated = validatePolicyNumberInput(merged.policyNumber);
+    if (!validated.ok) {
+      return Response.json({
+        ok: false,
+        errors: { policyNumber: [validated.message] },
+        formError: validated.message,
+      });
+    }
+    if (await isPolicyNumberTaken(validated.policyNumber, policyId)) {
+      return Response.json({
+        ok: false,
+        errors: { policyNumber: [POLICY_NUMBER_TAKEN_MESSAGE] },
+        formError: POLICY_NUMBER_TAKEN_MESSAGE,
+      });
+    }
+    merged.policyNumber = validated.policyNumber;
+  }
   await savePolicy(merged);
   return Response.json({ ok: true, savedAt: new Date().toISOString() });
 }

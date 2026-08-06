@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { requireAuth } from "~/lib/auth/session.server";
+import { parseUuid } from "~/lib/http/route-input";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import { getPolicy, savePolicy } from "~/lib/services/policy/data.service";
 import type { Route } from "./+types/policies.$policyId.documents";
@@ -10,11 +11,10 @@ const MAX_PDF_BASE64_LENGTH = 20 * 1024 * 1024;
 // 500 characters (existing production rows are already >1,300 characters).
 const MAX_GENERATION_KEY_LENGTH = 20_000;
 
-const policyIdSchema = z.coerce.number().int().positive();
 const policyDocumentSchema = z
   .object({
     policyDocumentId: z.number().int().positive(),
-    policyId: z.number().int().positive(),
+    policyId: z.string().uuid(),
     name: z.string().trim().min(1).max(200),
     filename: z.string().trim().min(1).max(255),
     generationKey: z.string().max(MAX_GENERATION_KEY_LENGTH),
@@ -43,14 +43,13 @@ export async function action({ request, params }: Route.ActionArgs) {
   }
 
   const actor = await requireAuth(request);
-  const parsedPolicyId = policyIdSchema.safeParse(params.policyId);
-  if (!parsedPolicyId.success) {
+  const policyId = parseUuid(params.policyId);
+  if (!policyId) {
     return Response.json(
       { ok: false, formError: "Invalid policy id." },
       { status: 400 },
     );
   }
-  const policyId = parsedPolicyId.data;
 
   let rawBody: unknown;
   try {

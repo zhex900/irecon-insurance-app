@@ -46,6 +46,7 @@ import {
 } from "~/components/ui/table";
 import { WordingHtmlView } from "~/components/policies/wording-html-view";
 import { WordingRichEditor } from "~/components/policies/wording-rich-editor";
+import { FieldInput } from "~/components/ui/form-controls";
 import { isAdminRole, isSuperAdmin } from "~/lib/auth/roles";
 import { requireAuth } from "~/lib/auth/session.server";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
@@ -74,6 +75,7 @@ import {
 import { plainTextFromWordingHtml } from "~/lib/policies/wording/html";
 import {
   carWordingFormSchema,
+  type CarWordingFormInput,
   type CarWordingFormValues,
 } from "~/lib/zod/car-wording";
 import type { Route } from "./+types/car-wording";
@@ -233,10 +235,10 @@ function WordingFormDialog({
     (navigation.formData?.get("intent") === "create" ||
       navigation.formData?.get("intent") === "update");
 
-  const form = useForm<CarWordingFormValues>({
+  const form = useForm<CarWordingFormInput, unknown, CarWordingFormValues>({
     resolver: zodResolver(carWordingFormSchema),
     values: {
-      subject: editing?.subject ?? "",
+      subject: plainTextFromWordingHtml(editing?.subject ?? ""),
       content: editing?.content ?? "",
     },
   });
@@ -281,13 +283,16 @@ function WordingFormDialog({
             control={form.control}
             name="subject"
             render={({ field }) => (
-              <WordingRichEditor
+              <FieldInput
                 id="subject"
+                name={field.name}
                 label="Subject"
                 required
-                variant="subject"
                 value={field.value}
+                onBlur={field.onBlur}
                 onChange={field.onChange}
+                className="[&_input]:font-semibold"
+                placeholder="Endorsement title (always bold on schedules)"
                 error={form.formState.errors.subject?.message}
               />
             )}
@@ -449,7 +454,7 @@ export default function SettingsCarWordingRoute({
                   <TableCell className="text-muted-foreground tabular-nums">
                     {item.carWordingId}
                   </TableCell>
-                  <TableCell className="font-medium">
+                  <TableCell className="font-semibold">
                     <SearchHighlight
                       text={plainTextFromWordingHtml(item.subject)}
                       query={searchQuery}

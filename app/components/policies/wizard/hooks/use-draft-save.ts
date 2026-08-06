@@ -242,6 +242,13 @@ export function usePolicyDraftSave({
         hasUnsavedChangesRef.current = true;
         setHasUnsavedChanges(true);
         rollbackSavedPaths(pendingDirtyPathsRef.current);
+        const policyNumberError = data.errors?.policyNumber?.[0];
+        if (policyNumberError) {
+          form.setError("policyNumber", {
+            type: "server",
+            message: policyNumberError,
+          });
+        }
         setDraftSaveError(
           data.formError ??
             "Draft could not be saved. Check the form and try again.",
@@ -254,6 +261,7 @@ export function usePolicyDraftSave({
         return false;
       }
 
+      form.clearErrors("policyNumber");
       lastHandledSavedAtRef.current = data.savedAt;
       setDraftSavedAt(data.savedAt);
       setDraftSaveError(null);
@@ -329,10 +337,10 @@ export function usePolicyDraftSave({
   }
 
   function saveDraftNow() {
-    void (async () => {
+    return (async () => {
       setManualSaving(true);
       try {
-        await persistDraft({ force: true });
+        return await persistDraft({ force: true });
       } finally {
         setManualSaving(false);
       }

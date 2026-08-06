@@ -2,7 +2,7 @@ import { z } from "zod";
 import { requireAuth } from "~/lib/auth/session.server";
 import { ExternalServiceError } from "~/lib/errors";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
-import { parsePositiveInteger } from "~/lib/http/route-input";
+import { parseUuid } from "~/lib/http/route-input";
 import {
   getDocumentService,
   getLibraryDocumentsBucket,
@@ -45,12 +45,9 @@ export async function action({ request, params, context }: Route.ActionArgs) {
   }
 
   const actor = await requireAuth(request);
-  const policyId = parsePositiveInteger(params.policyId);
+  const policyId = parseUuid(params.policyId);
   if (!policyId) {
     return Response.json({ error: "Invalid policy id." }, { status: 400 });
-  }
-  if (!Number.isFinite(policyId) || policyId <= 0) {
-    return Response.json({ error: "Invalid policy id" }, { status: 400 });
   }
 
   const policy = await getPolicy(policyId);

@@ -49,7 +49,7 @@ export function usePolicyWizardNavigation({
   isDraft,
   navIds,
 }: {
-  policyId: number;
+  policyId: string;
   form: UseFormReturn<CarPolicyFormValues>;
   readOnly: boolean;
   freshSteps: boolean;
@@ -88,7 +88,7 @@ export function usePolicyWizardNavigation({
   // When policyId changes, re-derive from that policy — never carry over step/maxStep
   // from the previous policy. Skip when freshSteps: useState already started at 0.
   const lastNavRef = useRef<{
-    policyId: number;
+    policyId: string;
     readOnly: boolean;
     freshSteps: boolean;
     policyPremium: PremiumBreakdown | null | undefined;

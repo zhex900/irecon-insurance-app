@@ -25,6 +25,7 @@ import {
   PolicyStatusMenu,
   type TerminalStatusValidation,
 } from "~/components/policies/policy-status-menu";
+import { PolicyNumberField } from "~/components/policies/policy-number-field";
 import { cn } from "~/lib/utils";
 import { listPolicyFieldSearchOptions } from "~/lib/policies/field-labels";
 import { wizardSteps } from "~/lib/zod/policy-car";
@@ -127,6 +128,10 @@ function InfoRow({ label, children }: { label: string; children: ReactNode }) {
 export function PolicyInformationCard({
   insurerName,
   policyNumber,
+  policyNumberEditable = false,
+  onPolicyNumberChange,
+  onPolicyNumberBlur,
+  policyNumberError,
   statusId,
   statusName,
   statusOptions = [],
@@ -141,6 +146,11 @@ export function PolicyInformationCard({
 }: {
   insurerName: string;
   policyNumber: string;
+  /** When true, suffix after the fixed prefix is editable. */
+  policyNumberEditable?: boolean;
+  onPolicyNumberChange?: (fullPolicyNumber: string) => void;
+  onPolicyNumberBlur?: () => void;
+  policyNumberError?: string;
   statusId: number;
   statusName: string;
   statusOptions?: { policyStatusId: number; name: string }[];
@@ -166,7 +176,16 @@ export function PolicyInformationCard({
         <dl className="flex flex-col gap-3">
           <InfoRow label="Insurer">{insurerName || "—"}</InfoRow>
           <InfoRow label="Class">Construction All Risk</InfoRow>
-          <InfoRow label="Policy Number">{policyNumber}</InfoRow>
+          <InfoRow label="Policy Number">
+            <PolicyNumberField
+              compact
+              value={policyNumber}
+              disabled={!policyNumberEditable}
+              onChange={policyNumberEditable ? onPolicyNumberChange : undefined}
+              onBlur={policyNumberEditable ? onPolicyNumberBlur : undefined}
+              error={policyNumberError}
+            />
+          </InfoRow>
           <Separator />
           <InfoRow label="Status">
             {statusOptions.length > 0 && onStatusChange ? (
@@ -213,7 +232,11 @@ export function PolicyCollapsibleSection({
       <Card id={id} className={cn(POLICY_SECTION_SCROLL_MT_CLASS, className)}>
         <CardHeader className="border-b p-0">
           <CollapsibleTrigger
-            className="flex w-full items-start justify-between gap-3 px-(--card-spacing) pb-(--card-spacing) text-left transition-colors outline-none hover:bg-muted/40 focus-visible:bg-muted/40 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
+            // Not a native <button>: Taken/view-only wraps the form in a
+            // disabled fieldset, which would lock expand/collapse.
+            nativeButton={false}
+            render={<div />}
+            className="flex w-full cursor-pointer items-start justify-between gap-3 px-(--card-spacing) pb-(--card-spacing) text-left transition-colors outline-none hover:bg-muted/40 focus-visible:bg-muted/40 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
             aria-label={open ? `Collapse ${title}` : `Expand ${title}`}
           >
             <div className="min-w-0">
@@ -337,7 +360,7 @@ export function PolicySectionNav({
                     invalidOpen ? "rotate-0" : "-rotate-90",
                   )}
                 />
-                <span className="truncate">Invalid fields</span>
+                <span className="truncate">Incomplete</span>
               </span>
               <Badge
                 variant="outline"
@@ -480,7 +503,7 @@ export function PolicyStickyHeader({
   breadcrumbs,
 }: {
   policyNumber: string;
-  clientId: number;
+  clientId: string;
   clientName: string;
   /** New / Editing / View only cue — shown before status. */
   modeBadge?: ReactNode;

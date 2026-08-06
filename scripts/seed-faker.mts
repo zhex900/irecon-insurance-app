@@ -76,7 +76,7 @@ async function seedClients(count: number) {
   const clientSourceIds = reference.clientSources.map((s) => s.clientSourceId);
   const arIds = ars.map((ar) => ar.authorisedRepresentativeId);
 
-  const createdIds: number[] = [];
+  const createdIds: string[] = [];
   console.log(`Creating ${count} clients…`);
 
   for (let i = 0; i < count; i += 1) {
@@ -100,7 +100,7 @@ async function seedClients(count: number) {
   return createdIds;
 }
 
-async function seedPolicies(count: number, clientIds: number[]) {
+async function seedPolicies(count: number, clientIds: string[]) {
   if (clientIds.length === 0) {
     throw new Error("No client IDs available for policy seed.");
   }
@@ -253,7 +253,7 @@ async function main() {
   await seedPolicies(policies, clientIds);
 
   console.log("Done.");
-  console.log(`  Created client IDs: ${clientIds[0]}…${clientIds.at(-1)}`);
+  console.log(`  Created ${clientIds.length} clients`);
   process.exit(0);
 }
 

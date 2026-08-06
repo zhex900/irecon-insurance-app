@@ -29,7 +29,7 @@ import {
 import { cn } from "~/lib/utils";
 
 export type ColumnClientFilterOption = {
-  clientId: number;
+  clientId: string;
   name: string;
   tradingName?: string;
 };
@@ -42,10 +42,10 @@ export function ColumnClientFilterHeader({
   countQuery,
   align = "start",
 }: {
-  selected: number[];
+  selected: string[];
   /** Resolved labels for currently selected clients (from loader). */
   selectedOptions: ColumnClientFilterOption[];
-  onChange: (next: number[]) => void;
+  onChange: (next: string[]) => void;
   countQuery?: string;
   align?: "start" | "center" | "end";
 }) {
@@ -54,7 +54,7 @@ export function ColumnClientFilterHeader({
   const [localOptions, setLocalOptions] = useState<ColumnClientFilterOption[]>(
     [],
   );
-  const [policyCounts, setPolicyCounts] = useState<Record<number, number>>({});
+  const [policyCounts, setPolicyCounts] = useState<Record<string, number>>({});
   /** Local draft so multi-select (OR) stays responsive while the URL revalidates. */
   const [draft, setDraft] = useState(selected);
   const active = selected.length > 0;
@@ -92,11 +92,11 @@ export function ColumnClientFilterHeader({
   }, [data?.clients, isSettled, q]);
 
   const countIdsKey = useMemo(() => {
-    const ids = new Set<number>([
+    const ids = new Set<string>([
       ...draft,
       ...displayHits.map((hit) => hit.clientId),
     ]);
-    return [...ids].sort((a, b) => a - b).join(",");
+    return [...ids].sort().join(",");
   }, [draft, displayHits]);
 
   useEffect(() => {
@@ -117,9 +117,9 @@ export function ColumnClientFilterHeader({
         const data = (await response.json()) as {
           counts: Record<string, number>;
         };
-        const next: Record<number, number> = {};
+        const next: Record<string, number> = {};
         for (const [id, count] of Object.entries(data.counts ?? {})) {
-          next[Number(id)] = Number(count);
+          next[id] = Number(count);
         }
         setPolicyCounts(next);
       } catch (error) {
@@ -136,10 +136,10 @@ export function ColumnClientFilterHeader({
   const shownCounts =
     open && countIdsKey.length > 0
       ? policyCounts
-      : ({} as Record<number, number>);
+      : ({} as Record<string, number>);
 
   const selectedById = useMemo(() => {
-    const map = new Map<number, ColumnClientFilterOption>();
+    const map = new Map<string, ColumnClientFilterOption>();
     for (const option of localOptions) map.set(option.clientId, option);
     for (const option of selectedOptions) map.set(option.clientId, option);
     return map;
@@ -164,7 +164,7 @@ export function ColumnClientFilterHeader({
     onChange(next);
   }
 
-  function remove(clientId: number) {
+  function remove(clientId: string) {
     const next = draft.filter((id) => id !== clientId);
     setDraft(next);
     onChange(next);
@@ -229,7 +229,7 @@ export function ColumnClientFilterHeader({
           <div className="flex max-h-28 flex-col gap-0.5 overflow-auto border-b pb-1.5">
             {draft.map((clientId) => {
               const option = selectedById.get(clientId);
-              const label = option?.name ?? `Client #${clientId}`;
+              const label = option?.name ?? "Client";
               const trading = option?.tradingName?.trim();
               return (
                 <div

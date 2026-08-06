@@ -13,9 +13,9 @@ export const CAR_SEARCH_STATUSES = [
 export type CarSearchStatus = (typeof CAR_SEARCH_STATUSES)[number];
 
 export type ReportPolicyRow = {
-  policyId: number;
+  policyId: string;
   policyNumber: string;
-  clientId: number;
+  clientId: string;
   clientName: string;
   arName: string;
   arEmail: string;
@@ -96,8 +96,8 @@ export function defaultClientReportPeriod(now = new Date()): {
 }
 
 export type ClientReportRow = {
-  policyId: number;
-  clientId: number;
+  policyId: string;
+  clientId: string;
   clientName: string;
   turnoverLimit: number;
   dateEnd: string;

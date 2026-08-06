@@ -10,7 +10,7 @@ import { useActionSuccessToast } from "~/hooks/use-success-toast";
 import { useDebouncedSearchQuery } from "~/hooks/use-debounced-search-query";
 import { requireAuth } from "~/lib/auth/session.server";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
-import { parseFormIntent, parsePositiveInteger } from "~/lib/http/route-input";
+import { parseFormIntent, parseUuid } from "~/lib/http/route-input";
 import {
   pageSearchHref,
   pageSizeSearchHref,
@@ -97,7 +97,7 @@ export async function action({ request }: Route.ActionArgs) {
     return { ok: false as const, error: "Unknown action" };
   }
 
-  const id = parsePositiveInteger(formData.get("id"));
+  const id = parseUuid(formData.get("id"));
   if (!id) return { ok: false as const, error: "Missing id" };
 
   try {

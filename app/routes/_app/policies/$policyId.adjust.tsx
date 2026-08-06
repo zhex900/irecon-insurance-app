@@ -4,7 +4,7 @@ import { PageHeader } from "~/components/layout/app-layout";
 import { Badge } from "~/components/reui/badge";
 import { withSuccessToast } from "~/hooks/use-success-toast";
 import { requireAuth } from "~/lib/auth/session.server";
-import { parseFormIntent, parsePositiveInteger } from "~/lib/http/route-input";
+import { parseFormIntent, parseUuid } from "~/lib/http/route-input";
 import {
   AdjustmentError,
   calculateAdjustmentForPolicy,
@@ -25,7 +25,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
 
 export async function loader({ params, request }: Route.LoaderArgs) {
   await requireAuth(request);
-  const policyId = parsePositiveInteger(params.policyId);
+  const policyId = parseUuid(params.policyId);
   if (!policyId) throw new Response("Policy not found", { status: 404 });
   const policy = await getPolicy(policyId);
   if (!policy) throw new Response("Policy not found", { status: 404 });
@@ -68,7 +68,7 @@ function parsePayload(raw: string) {
 
 export async function action({ request, params }: Route.ActionArgs) {
   const actor = await requireAuth(request);
-  const policyId = parsePositiveInteger(params.policyId);
+  const policyId = parseUuid(params.policyId);
   if (!policyId) return { formError: "Invalid policy id." };
   const formData = await request.formData();
   const intent = parseFormIntent(

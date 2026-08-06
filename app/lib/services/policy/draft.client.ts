@@ -15,7 +15,7 @@ export type PolicyDraftSaveResult = DraftSaveResult;
  * Does not trigger React Router revalidation.
  */
 export async function savePolicyDraftClient(
-  policyId: number,
+  policyId: string,
   values: CarPolicyFormValues & {
     premium?: Record<string, number>;
     premiumManualKeys?: string[];
@@ -48,7 +48,7 @@ export async function savePolicyDraftClient(
 
 /** Discard an unsaved new-policy draft (Pending + isDraft only). */
 export async function discardPolicyDraftClient(
-  policyId: number,
+  policyId: string,
 ): Promise<DraftDiscardResult> {
   const response = await fetch(`/api/policies/${policyId}/draft`, {
     method: "DELETE",

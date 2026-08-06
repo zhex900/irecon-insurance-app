@@ -144,11 +144,14 @@ export function applyManualPremiumEdit({
   const next: PremiumBreakdown = { ...premium, [key]: value };
   const prevPlantTerror = asRate(premium.contractWorksPlantTerrorismPremium);
 
+  // True Base may only increase (or stay). Floor at current value and rating min.
   if (key === "contractWorksBasePremium") {
-    next.contractWorksBasePremium = roundMoney(Math.max(value, cwMin));
+    const floor = Math.max(asRate(premium.contractWorksBasePremium), cwMin);
+    next.contractWorksBasePremium = roundMoney(Math.max(value, floor));
   }
   if (key === "liabilityBasePremium") {
-    next.liabilityBasePremium = roundMoney(Math.max(value, liabMin));
+    const floor = Math.max(asRate(premium.liabilityBasePremium), liabMin);
+    next.liabilityBasePremium = roundMoney(Math.max(value, floor));
   }
 
   const base = asRate(next.contractWorksBasePremium);

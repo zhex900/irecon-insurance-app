@@ -30,6 +30,9 @@ export function addPremiumExcelPremiumSheet(
   const { policy, premium, coverLabel, turnoverLabel, generatedAt, version } =
     ctx;
   const car = policy.car;
+  // Click-edited Premium Breakdown lines must ship as values. Rate formulas
+  // would overwrite the broker's numbers when Excel recalculates on open.
+  const pasteManualValues = (car.premiumManualKeys?.length ?? 0) > 0;
 
   sheet.mergeCells("A1:D1");
   sheet.getCell("A1").value = APP_NAME;
@@ -64,8 +67,9 @@ export function addPremiumExcelPremiumSheet(
   sheet.mergeCells("B7:D7");
   sheet.getCell("B7").value = car.siteAddress || "—";
 
-  sheet.getCell("A8").value =
-    "Amounts below are Excel formulas from Policy + Rates (not pasted totals).";
+  sheet.getCell("A8").value = pasteManualValues
+    ? "Amounts below match the Premium Breakdown (including manual edits)."
+    : "Amounts below are Excel formulas from Policy + Rates (not pasted totals).";
   sheet.mergeCells("A8:D8");
   sheet.getCell("A8").font = {
     italic: true,
@@ -104,12 +108,15 @@ export function addPremiumExcelPremiumSheet(
     total: headerRow + 13,
   } as const;
 
+  const formulaUnlessManual = (formula: string) =>
+    pasteManualValues ? undefined : formula;
+
   const premRows: PremRow[] = [
     {
       label: "Base Premium",
-      b: `${INPUT.turnover}*${RATE.cwRate}`,
-      c: `${INPUT.turnover}*${RATE.llRate}`,
-      d: `SUM(B${R.base}:C${R.base})`,
+      b: formulaUnlessManual(`${INPUT.turnover}*${RATE.cwRate}`),
+      c: formulaUnlessManual(`${INPUT.turnover}*${RATE.llRate}`),
+      d: formulaUnlessManual(`SUM(B${R.base}:C${R.base})`),
       bResult: premium.contractWorksCalculatedBasePremium,
       cResult: premium.liabilityCalculatedBasePremium,
       dResult:
@@ -118,47 +125,63 @@ export function addPremiumExcelPremiumSheet(
     },
     {
       label: "True Base Premium",
-      b: `MAX(B${R.base},${RATE.cwMin})`,
-      c: `MAX(C${R.base},${RATE.llMin})`,
-      d: `SUM(B${R.trueBase},C${R.trueBase},B${R.terror},B${R.dh},B${R.es},B${R.plant},B${R.plantTerror})`,
+      b: formulaUnlessManual(`MAX(B${R.base},${RATE.cwMin})`),
+      c: formulaUnlessManual(`MAX(C${R.base},${RATE.llMin})`),
+      d: formulaUnlessManual(
+        `SUM(B${R.trueBase},C${R.trueBase},B${R.terror},B${R.dh},B${R.es},B${R.plant},B${R.plantTerror})`,
+      ),
       bResult: premium.contractWorksBasePremium,
       cResult: premium.liabilityBasePremium,
+      dResult:
+        premium.contractWorksBasePremium +
+        premium.liabilityBasePremium +
+        premium.contractWorksTerrorismPremium +
+        (premium.contractWorksDisplayHomesPremium ?? 0) +
+        (premium.contractWorksExistingStructurePremium ?? 0) +
+        premium.contractWorksPlantPremium +
+        premium.contractWorksPlantTerrorismPremium,
     },
     {
       label: "Terrorism Levy",
-      b: `SUM(B${R.trueBase},B${R.dh},B${R.es})*${RATE.terror}`,
+      b: formulaUnlessManual(
+        `SUM(B${R.trueBase},B${R.dh},B${R.es})*${RATE.terror}`,
+      ),
       bResult: premium.contractWorksTerrorismPremium,
     },
     {
       label: "Display Homes",
-      b: INPUT.dhPremium,
+      b: formulaUnlessManual(INPUT.dhPremium),
       bResult: premium.contractWorksDisplayHomesPremium ?? 0,
     },
     {
       label: "Existing Structure",
-      b: INPUT.esPremium,
+      b: formulaUnlessManual(INPUT.esPremium),
       bResult: premium.contractWorksExistingStructurePremium ?? 0,
     },
     {
       label: "Plant and Equipment",
-      b: `${INPUT.plant}*${RATE.plantRate}`,
+      b: formulaUnlessManual(`${INPUT.plant}*${RATE.plantRate}`),
       bResult: premium.contractWorksPlantPremium,
     },
     {
       label: "Terrorism Levy Plant and Equipment",
-      b: `IF(B${R.plant}>0,B${R.plant}*${RATE.terror},0)`,
+      b: formulaUnlessManual(`IF(B${R.plant}>0,B${R.plant}*${RATE.terror},0)`),
       bResult: premium.contractWorksPlantTerrorismPremium,
     },
     {
       label: "ESL Plant and Equipment",
-      b: `IF(B${R.plant}>0,SUM(B${R.plant},B${R.plantTerror})*${RATE.plantEsl},0)`,
+      b: formulaUnlessManual(
+        `IF(B${R.plant}>0,SUM(B${R.plant},B${R.plantTerror})*${RATE.plantEsl},0)`,
+      ),
       bResult: premium.contractWorksPlantESL,
     },
     {
       label: "ESL",
-      b: `SUM(B${R.trueBase},B${R.terror},B${R.dh},B${R.es})*${RATE.esl}`,
-      c: `0`,
-      d: `SUM(B${R.esl},C${R.esl},B${R.plantEsl})`,
+      b: formulaUnlessManual(
+        `SUM(B${R.trueBase},B${R.terror},B${R.dh},B${R.es})*${RATE.esl}`,
+      ),
+      c: formulaUnlessManual(`0`),
+      d: formulaUnlessManual(`SUM(B${R.esl},C${R.esl},B${R.plantEsl})`),
       bResult: premium.contractWorksESL,
       cResult: premium.liabilityESL,
       dResult:
@@ -168,32 +191,34 @@ export function addPremiumExcelPremiumSheet(
     },
     {
       label: "GST",
-      b: `SUM(B${R.trueBase}:B${R.esl})*${RATE.gst}`,
-      c: `SUM(C${R.trueBase},C${R.esl})*${RATE.gst}`,
-      d: `SUM(B${R.gst}:C${R.gst})`,
+      b: formulaUnlessManual(`SUM(B${R.trueBase}:B${R.esl})*${RATE.gst}`),
+      c: formulaUnlessManual(`SUM(C${R.trueBase},C${R.esl})*${RATE.gst}`),
+      d: formulaUnlessManual(`SUM(B${R.gst}:C${R.gst})`),
       bResult: premium.contractWorksGST,
       cResult: premium.liabilityGST,
       dResult: premium.contractWorksGST + premium.liabilityGST,
     },
     {
       label: "Stamp Duty",
-      b: `SUM(B${R.trueBase}:B${R.gst})*${RATE.sd1}`,
-      c: `SUM(C${R.trueBase},C${R.esl},C${R.gst})*${RATE.sd2}`,
-      d: `SUM(B${R.sd}:C${R.sd})`,
+      b: formulaUnlessManual(`SUM(B${R.trueBase}:B${R.gst})*${RATE.sd1}`),
+      c: formulaUnlessManual(
+        `SUM(C${R.trueBase},C${R.esl},C${R.gst})*${RATE.sd2}`,
+      ),
+      d: formulaUnlessManual(`SUM(B${R.sd}:C${R.sd})`),
       bResult: premium.contractWorksStampDuty,
       cResult: premium.liabilityStampDuty,
       dResult: premium.contractWorksStampDuty + premium.liabilityStampDuty,
     },
     {
       label: "Broker Fee",
-      d: INPUT.brokerFee,
+      d: formulaUnlessManual(INPUT.brokerFee),
       dResult: premium.combinedBrokerFee,
     },
     {
       label: "Total Premium",
-      b: `SUM(B${R.trueBase}:B${R.sd})`,
-      c: `SUM(C${R.trueBase},C${R.esl}:C${R.sd})`,
-      d: `SUM(B${R.total},C${R.total},D${R.broker})`,
+      b: formulaUnlessManual(`SUM(B${R.trueBase}:B${R.sd})`),
+      c: formulaUnlessManual(`SUM(C${R.trueBase},C${R.esl}:C${R.sd})`),
+      d: formulaUnlessManual(`SUM(B${R.total},C${R.total},D${R.broker})`),
       bResult: premium.contractWorksTotalPremium,
       cResult: premium.liabilityTotalPremium,
       dResult: premium.originalTotalPremium,
@@ -207,10 +232,16 @@ export function addPremiumExcelPremiumSheet(
     labelCell.value = row.label;
     if (row.strong) labelCell.font = { bold: true };
     if (row.b) moneyCell(sheet.getCell(`B${r}`), row.b, row.bResult ?? 0);
+    else if (row.bResult != null)
+      moneyCell(sheet.getCell(`B${r}`), undefined, row.bResult);
     else sheet.getCell(`B${r}`).value = "";
     if (row.c) moneyCell(sheet.getCell(`C${r}`), row.c, row.cResult ?? 0);
+    else if (row.cResult != null)
+      moneyCell(sheet.getCell(`C${r}`), undefined, row.cResult);
     else sheet.getCell(`C${r}`).value = "";
     if (row.d) moneyCell(sheet.getCell(`D${r}`), row.d, row.dResult ?? 0);
+    else if (row.dResult != null)
+      moneyCell(sheet.getCell(`D${r}`), undefined, row.dResult);
     else if (row.b && row.c) {
       moneyCell(
         sheet.getCell(`D${r}`),
@@ -219,12 +250,19 @@ export function addPremiumExcelPremiumSheet(
       );
     } else if (row.b) {
       moneyCell(sheet.getCell(`D${r}`), `B${r}`, row.bResult ?? 0);
+    } else if (row.bResult != null || row.cResult != null) {
+      moneyCell(
+        sheet.getCell(`D${r}`),
+        undefined,
+        (row.bResult ?? 0) + (row.cResult ?? 0),
+      );
     } else sheet.getCell(`D${r}`).value = "";
   });
 
   const footnoteRow = R.total + 2;
-  sheet.getCell(`A${footnoteRow}`).value =
-    "Plant premium uses rate × plant value (v2.1+). Open Policy / Rates to change drivers; Premium recalculates via formulas.";
+  sheet.getCell(`A${footnoteRow}`).value = pasteManualValues
+    ? "Manual Premium Breakdown edits are pasted as values so Excel matches the policy UI."
+    : "Plant premium uses rate × plant value (v2.1+). Open Policy / Rates to change drivers; Premium recalculates via formulas.";
   sheet.mergeCells(`A${footnoteRow}:D${footnoteRow}`);
   sheet.getCell(`A${footnoteRow}`).font = {
     size: 9,

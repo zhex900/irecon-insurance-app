@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type MutableRefObject,
+} from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { useRouteLoaderData } from "react-router";
 import { toast } from "sonner";
@@ -29,6 +35,8 @@ export function usePolicyDocuments({
   policy,
   form,
   premium,
+  premiumRef,
+  premiumManualKeysRef,
   referralReasons,
   rating,
   carWording,
@@ -37,6 +45,10 @@ export function usePolicyDocuments({
   policy: Policy;
   form: UseFormReturn<CarPolicyFormValues>;
   premium: PremiumBreakdown | undefined;
+  /** Latest premium including in-flight manual edits (preferred over state). */
+  premiumRef: MutableRefObject<PremiumBreakdown | undefined>;
+  /** Session Premium Breakdown keys the broker click-edited. */
+  premiumManualKeysRef: MutableRefObject<string[]>;
   referralReasons: string[];
   rating: Policy["car"]["rating"] | undefined;
   /** Fixed Additional Wording catalogue (checkbox list). */
@@ -90,18 +102,32 @@ export function usePolicyDocuments({
 
   const buildDocumentSnapshot = useCallback(
     (premiumOverride?: PremiumBreakdown): Policy | null => {
+      // Prefer premiumRef so Excel/PDF pick up click-to-edit premium before
+      // React state has flushed (same pattern as draft save / submit).
+      const livePremium =
+        premiumOverride ?? premiumRef.current ?? premium ?? policy.car.premium;
       // Always snapshot form values (Limits SI, sub-limits, etc.) even before
       // premium has been calculated — otherwise PDF preview falls back to the
       // stale loader policy and misses overrides.
       return policySnapshotFromForm(policy, form.getValues(), {
-        premium: premiumOverride ?? premium ?? policy.car.premium,
+        premium: livePremium,
+        premiumManualKeys: premiumManualKeysRef.current,
         rating: rating ?? policy.car.rating,
         referralReasons,
         documents: documentsRef.current,
         carWording,
       });
     },
-    [policy, form, premium, rating, referralReasons, carWording],
+    [
+      policy,
+      form,
+      premium,
+      premiumRef,
+      premiumManualKeysRef,
+      rating,
+      referralReasons,
+      carWording,
+    ],
   );
 
   /** True when live form/premium would produce a different doc generation key. */

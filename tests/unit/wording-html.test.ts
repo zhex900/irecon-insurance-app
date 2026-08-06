@@ -3,6 +3,7 @@ import {
   ensureWordingHtml,
   formatWordingListMarker,
   isWordingHtmlEmpty,
+  normalizeWordingSubjectForSave,
   plainTextFromWordingHtml,
   sanitizeWordingHtml,
   wordingHtmlToEstimateText,
@@ -11,6 +12,16 @@ import {
 describe("wording html", () => {
   it("converts plain text to paragraphs", () => {
     expect(ensureWordingHtml("Hello\nWorld")).toBe("<p>Hello</p><p>World</p>");
+  });
+
+  it("normalizes subject to a single bold line", () => {
+    expect(normalizeWordingSubjectForSave("  Open Trench  ")).toBe(
+      "<p><strong>Open Trench</strong></p>",
+    );
+    expect(normalizeWordingSubjectForSave("<p><em>Legacy</em> title</p>")).toBe(
+      "<p><strong>Legacy title</strong></p>",
+    );
+    expect(normalizeWordingSubjectForSave("")).toBe("");
   });
 
   it("strips scripts and keeps formatting", () => {

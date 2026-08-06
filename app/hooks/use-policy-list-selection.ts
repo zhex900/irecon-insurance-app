@@ -23,7 +23,7 @@ export function usePolicyListSelection({
 }) {
   const navigation = useNavigation();
   const actionData = useActionData() as DeletePoliciesActionData | undefined;
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [pendingDelete, setPendingDelete] = useState<
     DeletablePolicyRef[] | null
   >(null);
@@ -68,7 +68,7 @@ export function usePolicyListSelection({
     navigation.state !== "idle" &&
     navigation.formData?.get("intent") === deleteIntent;
 
-  function toggleSelected(policyId: number, checked: boolean) {
+  function toggleSelected(policyId: string, checked: boolean) {
     setSelectedIds((prev) =>
       checked
         ? prev.includes(policyId)

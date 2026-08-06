@@ -10,7 +10,7 @@ type PolicyListPageFilters = Pick<
   PolicyListUrlFilters,
   "statusIds" | "coverTypeIds" | "policyCategoryIds" | "inception" | "expiry"
 > & {
-  clientIds?: number[];
+  clientIds?: string[];
 };
 
 export function usePolicyListPage({

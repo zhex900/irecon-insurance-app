@@ -6,7 +6,7 @@ import type {
 } from "~/lib/db/types";
 
 /** Bump when Premium / Policy / Rates / Adjustment sheet layout or formulas change. */
-export const PREMIUM_EXCEL_SPREADSHEET_VERSION = "1.3";
+export const PREMIUM_EXCEL_SPREADSHEET_VERSION = "1.4";
 
 export type BuildPremiumExcelInput = {
   policy: Policy;

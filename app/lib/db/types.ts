@@ -56,7 +56,7 @@ export type CarWording = {
 };
 
 export type Client = {
-  clientId: number;
+  clientId: string;
   /** Registered / legal name (legacy `Name`). */
   name: string;
   tradingName: string;
@@ -120,7 +120,7 @@ export const POLICY_MESSAGE_NOTE_TYPE_ID = 3;
 
 export type PolicyNote = {
   policyNoteId: number;
-  policyId: number;
+  policyId: string;
   policyNoteTypeId: number;
   description: string;
   createdWhen: string;
@@ -157,7 +157,7 @@ export type CarExcesses = {
 };
 
 export type PolicySummary = {
-  policyId: number;
+  policyId: string;
   policyNumber: string;
   insuredName: string;
   clientName: string;
@@ -227,7 +227,7 @@ export type CarAdjustmentRecord = {
 
 export type PolicyDocument = {
   policyDocumentId: number;
-  policyId: number;
+  policyId: string;
   name: string;
   filename: string;
   /** Fingerprint of the policy snapshot used to generate this pack. */
@@ -247,8 +247,8 @@ export type PolicyDocument = {
 };
 
 export type Policy = {
-  policyId: number;
-  clientId: number;
+  policyId: string;
+  clientId: string;
   policyNumber: string;
   policyCategoryId: number;
   policyStatusId: number;

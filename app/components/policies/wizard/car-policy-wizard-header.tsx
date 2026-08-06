@@ -15,7 +15,7 @@ import type { ReactNode } from "react";
 export type CarPolicyWizardHeaderProps = {
   wizardMode: WizardMode;
   policyNumber: string;
-  clientId: number;
+  clientId: string;
   clientName: string;
   selectedStatus?: { policyStatusId: number; name: string };
   saveStatus: PolicySaveStatus;

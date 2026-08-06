@@ -2,7 +2,9 @@ import type { CarWording, Policy, PremiumBreakdown } from "~/lib/db/types";
 import { normalizeExcesses } from "~/lib/policies/excesses";
 import { collectEndorsementWordings } from "~/lib/pdf/merge-fields";
 import { normalizeSubLimits } from "~/lib/policies/sub-limits";
+import { resolvePolicyNumberForSave } from "~/lib/policies/policy-number";
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
+import { isTerminalStatus } from "~/lib/zod/policy-car";
 
 /** Prefer a finite form money value; fall back when blank/NaN (not when 0). */
 function pickMoney(formValue: unknown, fallback: number): number {
@@ -20,6 +22,8 @@ export function policySnapshotFromForm(
   values: CarPolicyFormValues,
   options?: {
     premium?: PremiumBreakdown;
+    /** Session keys for Premium Breakdown click-edits (Excel / draft). */
+    premiumManualKeys?: string[];
     rating?: Policy["car"]["rating"];
     referralReasons?: string[];
     documents?: Policy["documents"];
@@ -28,6 +32,8 @@ export function policySnapshotFromForm(
   },
 ): Policy {
   const premium = options?.premium ?? policy.car.premium;
+  const premiumManualKeys =
+    options?.premiumManualKeys ?? policy.car.premiumManualKeys;
   const selectedWordingIds = Array.isArray(values.selectedWordingIds)
     ? values.selectedWordingIds
         .map((id) => Number(id))
@@ -41,10 +47,11 @@ export function policySnapshotFromForm(
     ...policy,
     policyCategoryId: values.policyCategoryId ?? policy.policyCategoryId,
     policyStatusId: values.policyStatusId ?? policy.policyStatusId,
-    policyNumber:
-      values.policyCategoryId === 2 && values.policyNumber
-        ? values.policyNumber
-        : policy.policyNumber,
+    policyNumber: resolvePolicyNumberForSave(
+      policy.policyNumber,
+      values.policyNumber,
+      isTerminalStatus(policy.policyStatusId),
+    ),
     postcode: values.postcode ?? policy.postcode,
     stateId: values.stateId ?? policy.stateId,
     dateStart: values.dateStart ?? policy.dateStart,
@@ -149,6 +156,7 @@ export function policySnapshotFromForm(
       ),
       referralReasons: options?.referralReasons ?? policy.car.referralReasons,
       premium,
+      premiumManualKeys,
       rating: options?.rating ?? policy.car.rating,
     },
   };
