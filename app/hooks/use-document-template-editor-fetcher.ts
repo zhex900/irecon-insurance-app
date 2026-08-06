@@ -116,6 +116,11 @@ export function useDocumentTemplateEditorFetcher({
       revalidate();
       return;
     }
+    if (data.intent === "delete-draft") {
+      toast.success(`Deleted draft v${data.versionNumber}`);
+      revalidate();
+      return;
+    }
 
     const saved = submittedTemplateRef.current;
     if (saved) baselineTemplateRef.current = saved;

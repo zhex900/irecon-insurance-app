@@ -44,6 +44,15 @@ function confirmCopy(action: DocumentTemplateConfirmAction): {
         confirmVariant: "destructive",
         loadingLabel: "Loading…",
       };
+    case "delete-draft":
+      return {
+        title: `Delete draft v${action.versionNumber}?`,
+        description:
+          "This permanently removes the draft from history. Published versions are not affected.",
+        confirmLabel: "Delete draft",
+        confirmVariant: "destructive",
+        loadingLabel: "Deleting…",
+      };
   }
 }
 
@@ -66,7 +75,8 @@ export function DocumentTemplateConfirmDialog({
   const loading =
     busy &&
     ((action.kind === "publish" && intent === "publish-version") ||
-      (action.kind === "undo" && intent === "undo"));
+      (action.kind === "undo" && intent === "undo") ||
+      (action.kind === "delete-draft" && intent === "delete-draft"));
 
   return (
     <ConfirmDialog

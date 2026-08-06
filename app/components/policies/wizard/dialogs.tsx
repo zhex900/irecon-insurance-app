@@ -42,9 +42,13 @@ export function SubmitConfirmDialog({
           </DialogDescription>
         </DialogHeader>
         <ul className="flex list-disc flex-col gap-1 pl-5 text-sm text-foreground">
-          {documentNames.map((name) => (
-            <li key={name}>{name}</li>
-          ))}
+          {documentNames.length > 0 ? (
+            documentNames.map((name) => <li key={name}>{name}</li>)
+          ) : (
+            <li className="list-none text-muted-foreground">
+              No documents configured for this cover type.
+            </li>
+          )}
         </ul>
         <DialogFooter>
           <Button

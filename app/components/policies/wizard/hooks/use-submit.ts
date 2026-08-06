@@ -1,11 +1,12 @@
 import { useState, type MutableRefObject } from "react";
 import type { useFetcher } from "react-router";
 import type { UseFormReturn } from "react-hook-form";
+import { toast } from "sonner";
 import { focusFormIssue } from "~/lib/form-validation-ui";
 import type { Policy, PremiumBreakdown } from "~/lib/db/types";
 import { rollupPremiumTotals } from "~/lib/pricing/premium-totals";
 import { getTakenStatusErrors } from "~/lib/policies/taken-status";
-import { listReviewDocumentsForConfirm } from "~/lib/services/policy/documents";
+import { listReviewDocumentsForConfirmClient } from "~/lib/services/policy/documents/documents.client";
 import {
   carPolicyPricingSchema,
   POLICY_STATUS,
@@ -54,6 +55,7 @@ export function usePolicySubmit({
     cancelled?: () => boolean;
     premiumOverride?: PremiumBreakdown;
     force?: boolean;
+    replaceCoverPack?: boolean;
   }) => Promise<void>;
   formDataChangedForDocuments: (premiumOverride?: PremiumBreakdown) => boolean;
   goToStep: (index: number, options?: { unlock?: boolean }) => void;
@@ -68,11 +70,24 @@ export function usePolicySubmit({
 }) {
   const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [submitDocumentNames, setSubmitDocumentNames] = useState<string[]>([]);
 
-  const submitDocumentNames = listReviewDocumentsForConfirm({
-    ...policy,
-    stateId: Number(form.watch("stateId")) || policy.stateId,
-  });
+  function policyForDocumentConfirm(): Policy {
+    const values = form.getValues();
+    const coverTypeId = Number(values.coverTypeId) || policy.car.coverTypeId;
+    return {
+      ...policy,
+      stateId: Number(values.stateId) || policy.stateId,
+      car: {
+        ...policy.car,
+        coverTypeId,
+        annualCoverTypeId:
+          coverTypeId === 1
+            ? Number(values.annualCoverTypeId) || policy.car.annualCoverTypeId
+            : null,
+      },
+    };
+  }
 
   async function requestSubmit() {
     const valid = await form.trigger();
@@ -88,6 +103,19 @@ export function usePolicySubmit({
           focusFormIssue(form.setFocus, path);
         }
       }
+      return;
+    }
+
+    try {
+      const names = await listReviewDocumentsForConfirmClient(
+        policyForDocumentConfirm(),
+      );
+      setSubmitDocumentNames(names);
+    } catch {
+      setSubmitDocumentNames([]);
+      toast.error("Could not load document list", {
+        description: "Check your connection and try again.",
+      });
       return;
     }
     setSubmitConfirmOpen(true);
@@ -124,7 +152,8 @@ export function usePolicySubmit({
       await regenerateDocumentsIfNeeded({
         premiumOverride: premiumForDocs,
         // Confirming generation is an explicit document event: retain the
-        // previous PDFs and append the newly generated pack as the next version.
+        // previous PDFs and append the newly generated pack as the next version
+        // (unless cover type changed — ensureReviewDocumentsClient replaces).
         force: true,
       });
       const saved = await savePolicy();

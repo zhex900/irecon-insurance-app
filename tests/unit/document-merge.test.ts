@@ -4,7 +4,10 @@ import {
   nextAmendmentNumber,
   nextDocumentId,
 } from "~/lib/services/policy/documents/content";
-import { mergeReviewDocuments } from "~/lib/services/policy/documents/merge";
+import {
+  mergeReviewDocuments,
+  reviewPackTemplateSetChanged,
+} from "~/lib/services/policy/documents/merge";
 
 function doc(
   partial: Partial<PolicyDocument> &
@@ -154,5 +157,86 @@ describe("mergeReviewDocuments", () => {
     expect(merged).toHaveLength(2);
     expect(merged[1]?.libraryDocumentId).toBe(3);
     expect(merged[1]?.filename).toBe("wording.pdf");
+  });
+
+  it("replace drops prior cover pack and keeps premium excel", () => {
+    const existing = [
+      doc({
+        policyDocumentId: 1,
+        filename: "sched-annual.pdf",
+        templateKey: "schedule-annual",
+        generationKey: "old",
+      }),
+      doc({
+        policyDocumentId: 2,
+        filename: "wording-annual.pdf",
+        libraryDocumentId: 9,
+        generationKey: "old",
+      }),
+      doc({
+        policyDocumentId: 3,
+        filename: "premium.xlsx",
+        templateKey: "premium-breakdown-xlsx",
+        generationKey: "excel",
+      }),
+    ];
+    const pack = [
+      doc({
+        policyDocumentId: 0,
+        filename: "sched-ob.pdf",
+        templateKey: "schedule-owner-builder",
+        generationKey: "new",
+      }),
+      doc({
+        policyDocumentId: 0,
+        filename: "wording-ob.pdf",
+        libraryDocumentId: 11,
+        generationKey: "new",
+      }),
+    ];
+    const merged = mergeReviewDocuments(existing, pack, { replace: true });
+    expect(merged.map((d) => d.templateKey ?? d.libraryDocumentId)).toEqual([
+      "premium-breakdown-xlsx",
+      "schedule-owner-builder",
+      11,
+    ]);
+    expect(merged[1]?.policyDocumentId).toBe(4);
+  });
+});
+
+describe("reviewPackTemplateSetChanged", () => {
+  it("detects Annual → Owner Builder template key change", () => {
+    expect(
+      reviewPackTemplateSetChanged(
+        [
+          doc({
+            policyDocumentId: 1,
+            filename: "a.pdf",
+            templateKey: "schedule-annual",
+          }),
+        ],
+        ["schedule-owner-builder", "rating-owner-builder"],
+      ),
+    ).toBe(true);
+  });
+
+  it("is false when keys match", () => {
+    expect(
+      reviewPackTemplateSetChanged(
+        [
+          doc({
+            policyDocumentId: 1,
+            filename: "a.pdf",
+            templateKey: "schedule-annual",
+          }),
+          doc({
+            policyDocumentId: 2,
+            filename: "b.pdf",
+            templateKey: "rating-annual",
+          }),
+        ],
+        ["schedule-annual", "rating-annual"],
+      ),
+    ).toBe(false);
   });
 });

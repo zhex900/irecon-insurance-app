@@ -160,6 +160,7 @@ export function DocumentTemplateEditor({
         basedOnVersion={loaderData.editingVersionNumber}
         onPreviewVersion={(entry) => void editor.handlePreviewVersion(entry)}
         onPublishVersion={editor.publishVersion}
+        onDeleteDraft={editor.deleteDraft}
         onOpenInEditor={editor.handleOpenVersionInEditor}
         onPreviewWorkingCopy={() => void editor.handlePreview()}
         onSaveDraft={() => editor.submitTemplate("draft")}

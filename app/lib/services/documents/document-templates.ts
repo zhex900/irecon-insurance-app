@@ -742,6 +742,76 @@ export async function deleteDocumentTemplate(
   return deleted.length > 0;
 }
 
+/**
+ * Delete a single unpublished draft version from history.
+ * Refuses published versions and the last remaining row for a key.
+ */
+export async function deleteDocumentTemplateDraft(
+  documentTemplateKey: string,
+  versionNumber: number,
+): Promise<{ versionNumber: number }> {
+  const db = getDb();
+  const [target] = await db
+    .select()
+    .from(appDocumentTemplateVersion)
+    .where(
+      and(
+        eq(appDocumentTemplateVersion.documentTemplateKey, documentTemplateKey),
+        eq(appDocumentTemplateVersion.versionNumber, versionNumber),
+      ),
+    )
+    .limit(1);
+
+  if (!target) {
+    throw new Error(
+      `Version ${versionNumber} not found for ${documentTemplateKey}`,
+    );
+  }
+  if (target.isPublished) {
+    throw new Error("Published versions cannot be deleted from history.");
+  }
+
+  const published = await getPublishedDocumentTemplate(documentTemplateKey);
+  if (published && target.versionNumber <= published.versionNumber) {
+    throw new Error(
+      "Only unpublished drafts newer than the live version can be deleted.",
+    );
+  }
+
+  const [{ count }] = await db
+    .select({
+      count: sql<number>`count(*)::int`,
+    })
+    .from(appDocumentTemplateVersion)
+    .where(
+      eq(appDocumentTemplateVersion.documentTemplateKey, documentTemplateKey),
+    );
+
+  if (Number(count) <= 1) {
+    throw new Error(
+      "Cannot delete the only version. Delete the whole template instead.",
+    );
+  }
+
+  const deleted = await db
+    .delete(appDocumentTemplateVersion)
+    .where(
+      eq(
+        appDocumentTemplateVersion.documentTemplateVersionId,
+        target.documentTemplateVersionId,
+      ),
+    )
+    .returning({
+      id: appDocumentTemplateVersion.documentTemplateVersionId,
+    });
+
+  if (deleted.length === 0) {
+    throw new Error("Failed to delete document template draft.");
+  }
+
+  return { versionNumber: target.versionNumber };
+}
+
 /** @deprecated Use deleteDocumentTemplate. */
 export async function resetDocumentTemplate(
   documentTemplateKey: string,

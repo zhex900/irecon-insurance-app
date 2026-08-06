@@ -78,7 +78,7 @@ Total = ΔS1_Gross + ΔS2_Gross`}</pre>
   );
 }
 
-const steps = ["Policy Information", "Pricing DeclarationConfirmed"] as const;
+const steps = ["Policy Information", "Pricing Information"] as const;
 
 type ActionData = {
   breakdown?: AdjustmentBreakdown;
@@ -292,7 +292,7 @@ export function AdjustmentPricingTables({
     <div className="flex flex-col gap-6">
       <Card>
         <CardHeader>
-          <CardTitle>Pricing DeclarationConfirmed</CardTitle>
+          <CardTitle>Pricing information</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-6">
           <p className="text-sm text-muted-foreground">

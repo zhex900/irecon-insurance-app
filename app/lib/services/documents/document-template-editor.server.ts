@@ -10,6 +10,7 @@ import { getDocumentTemplateHistory } from "~/lib/services/documents/document-te
 import {
   autosaveDocumentTemplateDraft,
   deleteDocumentTemplate,
+  deleteDocumentTemplateDraft,
   getEditableDocumentTemplate,
   publishDocumentTemplate,
   publishDocumentTemplateVersion,
@@ -97,6 +98,7 @@ export async function documentTemplateAction({
       "autosave",
       "meta",
       "reset",
+      "delete-draft",
       "publish-version",
       "undo",
       "publish",
@@ -169,6 +171,42 @@ export async function documentTemplateAction({
         error: publicErrorMessage(error, {
           fallback: "Failed to delete document template.",
           operation: "document_template_delete",
+        }),
+      };
+    }
+  }
+
+  if (intent === "delete-draft") {
+    try {
+      const versionNumber = parsePositiveInteger(formData.get("versionNumber"));
+      if (!versionNumber) {
+        return { ok: false as const, error: "Invalid version number." };
+      }
+      const deleted = await deleteDocumentTemplateDraft(
+        templateKey,
+        versionNumber,
+      );
+      await writeAuditLog({
+        actor: viewer,
+        action: "settings.document_template_draft_delete",
+        entityType: "document_template",
+        entityId: templateKey,
+        summary: `Deleted draft v${deleted.versionNumber} for document template ${templateKey}`,
+        metadata: { templateKey, versionNumber: deleted.versionNumber },
+        request,
+      });
+      return {
+        ok: true as const,
+        intent: "delete-draft" as const,
+        templateKey,
+        versionNumber: deleted.versionNumber,
+      };
+    } catch (error) {
+      return {
+        ok: false as const,
+        error: publicErrorMessage(error, {
+          fallback: "Failed to delete document template draft.",
+          operation: "document_template_draft_delete",
         }),
       };
     }

@@ -116,6 +116,8 @@ export type RatingSnapshot = {
 };
 
 /** Broker/user message notes (editable). Referral notes use type 2. */
+export const POLICY_INFORMATIONAL_NOTE_TYPE_ID = 1;
+export const POLICY_REFERRAL_NOTE_TYPE_ID = 2;
 export const POLICY_MESSAGE_NOTE_TYPE_ID = 3;
 
 export type PolicyNote = {

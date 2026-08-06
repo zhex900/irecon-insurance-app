@@ -36,7 +36,8 @@ export type DocumentTemplateConfirmAction =
   | { kind: "revert" }
   | { kind: "publish"; versionNumber: number }
   | { kind: "undo" }
-  | { kind: "load-version"; entry: DocumentTemplateHistoryEntry };
+  | { kind: "load-version"; entry: DocumentTemplateHistoryEntry }
+  | { kind: "delete-draft"; versionNumber: number };
 
 export function useDocumentTemplateEditorController({
   loaderData,
@@ -274,9 +275,22 @@ export function useDocumentTemplateEditorController({
     setConfirmAction({ kind: "publish", versionNumber });
   }
 
+  function deleteDraft(versionNumber: number) {
+    if (!canEdit) return;
+    setConfirmAction({ kind: "delete-draft", versionNumber });
+  }
+
   function confirmPublishVersion(versionNumber: number) {
     const formData = new FormData();
     formData.set("intent", "publish-version");
+    formData.set("versionNumber", String(versionNumber));
+    fetcher.submit(formData, { method: "post" });
+    setConfirmAction(null);
+  }
+
+  function confirmDeleteDraft(versionNumber: number) {
+    const formData = new FormData();
+    formData.set("intent", "delete-draft");
     formData.set("versionNumber", String(versionNumber));
     fetcher.submit(formData, { method: "post" });
     setConfirmAction(null);
@@ -409,6 +423,9 @@ export function useDocumentTemplateEditorController({
       case "load-version":
         confirmLoadVersionInEditor(confirmAction.entry);
         break;
+      case "delete-draft":
+        confirmDeleteDraft(confirmAction.versionNumber);
+        break;
     }
   }
 
@@ -469,6 +486,7 @@ export function useDocumentTemplateEditorController({
     submitMeta,
     submitTemplate,
     publishVersion,
+    deleteDraft,
     navigateToList,
     requestLeaveToList,
     discardLeave,

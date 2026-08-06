@@ -1,7 +1,12 @@
 import type { Policy, PolicyDocument } from "~/lib/db/types";
 import type { LibraryDocumentRecord } from "~/lib/documents/library-documents";
 import type { BrokerFeeLineInput } from "~/lib/pdf/merge-fields";
-import { mergeReviewDocuments } from "~/lib/services/policy/documents/merge";
+import { listReviewDocumentsForConfirm } from "~/lib/services/policy/documents/confirm";
+import {
+  isPreservedAcrossCoverReplace,
+  mergeReviewDocuments,
+  reviewPackTemplateSetChanged,
+} from "~/lib/services/policy/documents/merge";
 import {
   buildReviewDocumentPack,
   policyHasLibraryDocuments,
@@ -86,22 +91,36 @@ export async function syncPolicyDocumentLabelsClient(
 export async function ensureReviewDocumentsClient(
   policy: Policy,
   generatedBy: string,
-  options?: { force?: boolean; brokerFeeLines?: BrokerFeeLineInput[] },
+  options?: {
+    force?: boolean;
+    /** Drop prior cover pack (templates + library) and write the new cover set. */
+    replaceCoverPack?: boolean;
+    brokerFeeLines?: BrokerFeeLineInput[];
+  },
 ): Promise<PolicyDocument[]> {
   if (!policy.car.premium) return policy.documents ?? [];
   const existing = policy.documents ?? [];
-  // Library / static docs attach once. Regenerations only produce templates.
-  const includeLibrary = !policyHasLibraryDocuments(existing);
   // Always fetch library docs so label edits refresh onto existing attachments.
   const [libraryDocs, templates] = await Promise.all([
     fetchLibraryDocumentsClient(),
     fetchPublishedTemplatesForCover(policy.car.coverTypeId),
   ]);
+  const replaceCoverPack =
+    options?.replaceCoverPack === true ||
+    reviewPackTemplateSetChanged(
+      existing,
+      templates.map((template) => template.key),
+    );
+  // Library / static docs attach once per cover. Cover change replaces them.
+  const includeLibrary =
+    replaceCoverPack || !policyHasLibraryDocuments(existing);
   const pack = buildReviewDocumentPack(
     policy,
     generatedBy,
     templates,
-    existing,
+    replaceCoverPack
+      ? existing.filter(isPreservedAcrossCoverReplace)
+      : existing,
     libraryDocs,
     { includeLibrary, brokerFeeLines: options?.brokerFeeLines },
   );
@@ -111,11 +130,24 @@ export async function ensureReviewDocumentsClient(
         generationKey: `${doc.generationKey}|force|${Date.now()}`,
       }))
     : pack;
-  const merged = mergeReviewDocuments(existing, nextPack);
+  const merged = mergeReviewDocuments(existing, nextPack, {
+    replace: replaceCoverPack,
+  });
   const synced = syncPolicyDocumentLabels(merged, {
     libraryDocs,
     templates,
   });
   if (synced === existing) return existing;
   return savePolicyDocumentsClient(policy.policyId, synced);
+}
+
+/** Labels for the Submit confirmation dialog (current cover templates + library). */
+export async function listReviewDocumentsForConfirmClient(
+  policy: Policy,
+): Promise<string[]> {
+  const [libraryDocs, templates] = await Promise.all([
+    fetchLibraryDocumentsClient(),
+    fetchPublishedTemplatesForCover(policy.car.coverTypeId),
+  ]);
+  return listReviewDocumentsForConfirm(policy, { libraryDocs, templates });
 }

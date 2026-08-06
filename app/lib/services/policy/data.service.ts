@@ -12,6 +12,7 @@ import { formatPolicyNumberFromSeq } from "~/lib/policies/policy-number";
 import { normalizeSubLimits } from "~/lib/policies/sub-limits";
 import type { Policy, PolicySummary } from "~/lib/db/types";
 import { listClients } from "~/lib/services/clients/service";
+import { createInformationalNote } from "~/lib/policies/policy-notes";
 
 /**
  * True when another policy already holds this number (case-insensitive).
@@ -333,6 +334,10 @@ export async function createPolicyDraft(
     policyId,
     clientId,
     policyNumber: partial.policyNumber ?? policyNumber,
+    // Always seed a creation note unless the caller supplied notes (e.g. import).
+    notes: partial.notes ?? [
+      createInformationalNote(policyId, "Policy Created", createdBy),
+    ],
   };
 
   return savePolicy(draft);

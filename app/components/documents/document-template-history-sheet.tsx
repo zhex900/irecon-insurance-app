@@ -1,5 +1,11 @@
 import { useState } from "react";
-import { ChevronDownIcon, EyeIcon, PencilIcon, UploadIcon } from "lucide-react";
+import {
+  ChevronDownIcon,
+  EyeIcon,
+  PencilIcon,
+  Trash2Icon,
+  UploadIcon,
+} from "lucide-react";
 import { Badge } from "~/components/reui/badge";
 import { Button } from "~/components/ui/button";
 import { LoadingButton } from "~/components/ui/loading-button";
@@ -29,6 +35,7 @@ export function DocumentTemplateHistorySheet({
   basedOnVersion,
   onPreviewVersion,
   onPublishVersion,
+  onDeleteDraft,
   onOpenInEditor,
   onPreviewWorkingCopy,
   onSaveDraft,
@@ -45,6 +52,7 @@ export function DocumentTemplateHistorySheet({
   basedOnVersion: number | null;
   onPreviewVersion: (entry: DocumentTemplateHistoryEntry) => void;
   onPublishVersion: (versionNumber: number) => void;
+  onDeleteDraft: (versionNumber: number) => void;
   onOpenInEditor: (entry: DocumentTemplateHistoryEntry) => void;
   onPreviewWorkingCopy: () => void;
   onSaveDraft: () => void;
@@ -140,6 +148,8 @@ export function DocumentTemplateHistorySheet({
                       entry.isPublished ||
                       entry.versionNumber === publishedVersionNumber
                     }
+                    isDraftTab={tab === "drafts"}
+                    canDeleteDraft={canEdit && versions.length > 1}
                     canEdit={canEdit}
                     busy={busy}
                     expanded={expandedVersion === entry.versionNumber}
@@ -153,6 +163,7 @@ export function DocumentTemplateHistorySheet({
                     onPreview={() => onPreviewVersion(entry)}
                     onOpenInEditor={() => onOpenInEditor(entry)}
                     onPublish={() => onPublishVersion(entry.versionNumber)}
+                    onDeleteDraft={() => onDeleteDraft(entry.versionNumber)}
                   />
                 ))
               )}
@@ -264,6 +275,8 @@ function CurrentEditPanel({
 function VersionCard({
   entry,
   isLive,
+  isDraftTab,
+  canDeleteDraft,
   canEdit,
   busy,
   expanded,
@@ -271,9 +284,12 @@ function VersionCard({
   onPreview,
   onOpenInEditor,
   onPublish,
+  onDeleteDraft,
 }: {
   entry: DocumentTemplateHistoryEntry;
   isLive: boolean;
+  isDraftTab: boolean;
+  canDeleteDraft: boolean;
   canEdit: boolean;
   busy: boolean;
   expanded: boolean;
@@ -281,6 +297,7 @@ function VersionCard({
   onPreview: () => void;
   onOpenInEditor: () => void;
   onPublish: () => void;
+  onDeleteDraft: () => void;
 }) {
   const changeCount = entry.changes.length;
 
@@ -370,6 +387,18 @@ function VersionCard({
                   Set as published
                 </Button>
               )
+            ) : null}
+            {canDeleteDraft && isDraftTab && !isLive ? (
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                disabled={busy}
+                onClick={onDeleteDraft}
+              >
+                <Trash2Icon data-icon="inline-start" />
+                Delete draft
+              </Button>
             ) : null}
           </div>
           {changeCount > 0 ? (

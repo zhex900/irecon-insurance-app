@@ -21,7 +21,7 @@ This document covers validation that runs when a broker **saves**, **finishes**,
 
 ### Wizard Finish (Step 2 → persist policy)
 
-**Trigger:** Finish button on Pricing DeclarationConfirmed step.
+**Trigger:** Finish button on Pricing information step.
 
 **Validation before save:**
 

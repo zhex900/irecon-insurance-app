@@ -12,6 +12,8 @@ export function reviewDocumentsFingerprint(policy: Policy): string {
     policy.stateId,
     policy.postcode,
     policy.insurerCode,
+    car.coverTypeId,
+    car.annualCoverTypeId ?? "none",
     car.insuredName,
     car.siteAddress,
     car.estimatedTurnover,

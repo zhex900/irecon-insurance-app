@@ -1,21 +1,48 @@
 import type { Policy } from "~/lib/db/types";
+import { formatDocumentLabel } from "~/lib/documents/document-label";
 import type { LibraryDocumentRecord } from "~/lib/documents/library-documents";
 import {
-  policyHasLibraryDocuments,
+  type PackTemplateMeta,
   resolveLibraryAttachments,
 } from "~/lib/services/policy/documents/packs";
 
-/** Display names for documents that Submit will generate (confirmation UI). */
+function packTemplateLabel(template: PackTemplateMeta): string {
+  return (
+    formatDocumentLabel(template.label) ||
+    formatDocumentLabel(template.title) ||
+    template.key
+  );
+}
+
+/**
+ * Display names for documents Submit will generate (confirmation UI).
+ * Prefer published template `label` (then title) for the current cover, plus
+ * library attachments that match the policy cover / state.
+ */
 export function listReviewDocumentsForConfirm(
   policy: Policy,
-  libraryDocs?: LibraryDocumentRecord[],
+  options?: {
+    libraryDocs?: LibraryDocumentRecord[];
+    templates?: PackTemplateMeta[];
+  },
 ): string[] {
-  const names = ["CAR Schedule", "CAR Rating / ROA"];
-  // Library / static docs only attach on the first review pack.
-  if (!policyHasLibraryDocuments(policy.documents)) {
-    for (const item of resolveLibraryAttachments(policy, libraryDocs)) {
-      names.push(item.name);
-    }
+  const names: string[] = [];
+  const seen = new Set<string>();
+
+  function push(name: string) {
+    const trimmed = name.trim();
+    if (!trimmed || seen.has(trimmed)) return;
+    seen.add(trimmed);
+    names.push(trimmed);
   }
+
+  for (const template of options?.templates ?? []) {
+    push(packTemplateLabel(template));
+  }
+
+  for (const item of resolveLibraryAttachments(policy, options?.libraryDocs)) {
+    push(item.name);
+  }
+
   return names;
 }

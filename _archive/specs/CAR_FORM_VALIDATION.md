@@ -147,7 +147,7 @@ These validators only apply when specific other fields are set:
 
 ## Referral reasons (informational — does not block)
 
-Shown on **Step 2 — Pricing DeclarationConfirmed** when `CARPolicy.IsReferred()` or `CARCalculator.IsReferred()` is true. These are **not** included in the “Cannot continue” validation summary; the broker can still finish the wizard.
+Shown on **Step 2 — Pricing information** when `CARPolicy.IsReferred()` or `CARCalculator.IsReferred()` is true. These are **not** included in the “Cannot continue” validation summary; the broker can still finish the wizard.
 
 From `CARPolicy.GetReferralReasons()` and `CARCalculator2.GetReferralReasons()`:
 

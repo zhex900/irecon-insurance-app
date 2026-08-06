@@ -55,7 +55,7 @@ export function RiskDetailsStep({ reference }: { reference: ReferenceData }) {
         label="Type of Cover"
         required
         error={errors.coverTypeId?.message}
-        tooltip="Please note that the sub limits will be refreshed when you change type of cover"
+        tooltip="Please note that the sub limits and documents will be refreshed when you change type of cover"
         {...register("coverTypeId", {
           onChange: (e) =>
             applyCoverTypeDefaults(

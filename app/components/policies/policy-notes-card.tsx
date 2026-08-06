@@ -21,6 +21,7 @@ import { Textarea } from "~/components/ui/textarea";
 import { UserHoverCard } from "~/components/ui/user-hover-card";
 import { POLICY_MESSAGE_NOTE_TYPE_ID, type PolicyNote } from "~/lib/db/types";
 import type { NoteAuthor } from "~/lib/services/users/service";
+import { sortPolicyNotesDescending } from "~/lib/policies/policy-notes";
 import { cn, formatRelativeTimeAgo } from "~/lib/utils";
 
 function authorLabel(
@@ -72,10 +73,13 @@ export function PolicyNotesCard({
   const wasBusyRef = useRef(false);
   const pendingSaveRef = useRef<"add" | "edit" | null>(null);
 
+  const orderedNotes = sortPolicyNotesDescending(notes);
+
   const selectedNote =
     selectedNoteId == null
       ? null
-      : (notes.find((note) => note.policyNoteId === selectedNoteId) ?? null);
+      : (orderedNotes.find((note) => note.policyNoteId === selectedNoteId) ??
+        null);
 
   useEffect(() => {
     if (wasBusyRef.current && !noteBusy && !noteError) {
@@ -138,9 +142,9 @@ export function PolicyNotesCard({
             <div className="min-w-0">
               <CardTitle>Policy Notes</CardTitle>
               <CardDescription>
-                {notes.length === 0
+                {orderedNotes.length === 0
                   ? "No notes yet"
-                  : `${notes.length} note${notes.length === 1 ? "" : "s"}`}
+                  : `${orderedNotes.length} note${orderedNotes.length === 1 ? "" : "s"}`}
               </CardDescription>
             </div>
             {canAddNotes ? (
@@ -161,13 +165,13 @@ export function PolicyNotesCard({
           </div>
         </CardHeader>
         <CardContent className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain p-0">
-          {notes.length === 0 ? (
+          {orderedNotes.length === 0 ? (
             <p className="px-(--card-spacing) py-3 text-xs text-muted-foreground">
               No notes yet.
             </p>
           ) : (
             <ul className="divide-y divide-border">
-              {notes.map((note) => {
+              {orderedNotes.map((note) => {
                 const { text: authorText } = authorLabel(
                   note.createdBy,
                   noteAuthors,

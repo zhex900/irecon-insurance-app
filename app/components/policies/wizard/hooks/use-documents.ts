@@ -27,6 +27,7 @@ import {
   savePolicyDocumentsClient,
   syncPolicyDocumentLabelsClient,
 } from "~/lib/services/policy/documents/documents.client";
+import { isPreservedAcrossCoverReplace } from "~/lib/services/policy/documents/merge";
 import { reviewDocumentsFingerprint } from "~/lib/services/policy/documents/fingerprints";
 import { policySnapshotFromForm } from "~/lib/services/policy/documents/snapshot-from-form";
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
@@ -73,11 +74,17 @@ export function usePolicyDocuments({
   });
 
   const lastPolicyIdRef = useRef(policy.policyId);
+  const coverTypeId = Number(form.watch("coverTypeId")) || 0;
+  const lastCoverTypeIdRef = useRef(
+    Number(policy.car.coverTypeId) || coverTypeId,
+  );
+
   useEffect(() => {
     if (lastPolicyIdRef.current === policy.policyId) return;
     lastPolicyIdRef.current = policy.policyId;
+    lastCoverTypeIdRef.current = Number(policy.car.coverTypeId) || 0;
     setDocuments(policy.documents ?? []);
-  }, [policy.policyId, policy.documents]);
+  }, [policy.policyId, policy.documents, policy.car.coverTypeId]);
 
   // Settings label edits are snapshotted onto packs — refresh names when opening a policy.
   useEffect(() => {
@@ -150,6 +157,8 @@ export function usePolicyDocuments({
     premiumOverride?: PremiumBreakdown;
     /** Bypass fingerprint match and always append a new Schedule/ROA version. */
     force?: boolean;
+    /** Drop prior cover pack and generate for the current cover type. */
+    replaceCoverPack?: boolean;
   }) {
     const snapshot = buildDocumentSnapshot(options?.premiumOverride);
     if (!snapshot) return;
@@ -160,6 +169,7 @@ export function usePolicyDocuments({
       const previous = documentsRef.current;
       const next = await ensureReviewDocumentsClient(snapshot, generatedBy, {
         force: options?.force,
+        replaceCoverPack: options?.replaceCoverPack,
         brokerFeeLines,
       });
       if (options?.cancelled?.()) return;
@@ -181,6 +191,45 @@ export function usePolicyDocuments({
       if (!options?.cancelled?.()) setIsGeneratingDocuments(false);
     }
   }
+
+  // Cover type change: clear Annual/Single/OB pack and regenerate for the new cover.
+  useEffect(() => {
+    if (coverTypeId <= 0) return;
+    if (coverTypeId === lastCoverTypeIdRef.current) return;
+    lastCoverTypeIdRef.current = coverTypeId;
+
+    let cancelled = false;
+    const previous = documentsRef.current;
+    const kept = previous.filter(isPreservedAcrossCoverReplace);
+    documentsRef.current = kept;
+    setDocuments(kept);
+
+    void (async () => {
+      try {
+        if (kept.length !== previous.length) {
+          await savePolicyDocumentsClient(policy.policyId, kept);
+        }
+        if (cancelled) return;
+        await regenerateDocumentsIfNeeded({
+          cancelled: () => cancelled,
+          replaceCoverPack: true,
+          force: true,
+        });
+      } catch (error: unknown) {
+        if (cancelled) return;
+        toast.error("Could not refresh documents for the new cover type", {
+          description:
+            error instanceof Error ? error.message : "Please try again.",
+        });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // regenerateDocumentsIfNeeded closes over latest snapshot builders via refs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only react to cover type
+  }, [coverTypeId, policy.policyId]);
 
   async function exportPremiumExcel() {
     const snapshot = buildDocumentSnapshot();

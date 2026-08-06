@@ -8,7 +8,8 @@ import {
 import {
   buildReferralNotes,
   mergeReferralNotes,
-} from "~/lib/services/price/premium.service";
+  sortPolicyNotesDescending,
+} from "~/lib/policies/policy-notes";
 import { num, requireDate } from "~/lib/services/price/helpers";
 
 describe("roles", () => {
@@ -30,24 +31,46 @@ describe("roles", () => {
 
 describe("premium note helpers", () => {
   it("buildReferralNotes returns empty when no reasons", () => {
-    expect(buildReferralNotes(1, [], "broker@demo.local")).toEqual([]);
+    expect(buildReferralNotes("p1", [], "broker@demo.local")).toEqual([]);
   });
 
   it("mergeReferralNotes skips duplicate referral text", () => {
     const first = mergeReferralNotes(
       undefined,
-      9,
+      "p9",
       ["High plant"],
       "broker@demo.local",
     );
     expect(first).toHaveLength(1);
     const second = mergeReferralNotes(
       first,
-      9,
+      "p9",
       ["High plant"],
       "broker@demo.local",
     );
     expect(second).toBeUndefined();
+  });
+
+  it("sortPolicyNotesDescending puts newest first", () => {
+    const sorted = sortPolicyNotesDescending([
+      {
+        policyNoteId: 1,
+        policyId: "p1",
+        policyNoteTypeId: 1,
+        description: "older",
+        createdWhen: "2026-01-01T10:00:00.000Z",
+        createdBy: "a@demo.local",
+      },
+      {
+        policyNoteId: 2,
+        policyId: "p1",
+        policyNoteTypeId: 3,
+        description: "newer",
+        createdWhen: "2026-06-01T10:00:00.000Z",
+        createdBy: "a@demo.local",
+      },
+    ]);
+    expect(sorted.map((n) => n.description)).toEqual(["newer", "older"]);
   });
 });
 
