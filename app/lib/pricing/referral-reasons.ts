@@ -30,19 +30,25 @@ export function liabilityLimitLabel(band: number): string {
   }
 }
 
+/** Form selects often yield `"true"` / `"false"` strings — avoid `Boolean("false")`. */
+export function coerceFormBoolean(value: unknown): boolean | null {
+  if (value === true || value === "true") return true;
+  if (value === false || value === "false") return false;
+  return null;
+}
+
 /** Build referral reasons from risk / limits inputs + rating presence. */
 export function buildReferralReasons(
-  input: Pick<
-    CarPolicyFormValues,
-    | "displayHomes"
-    | "existingStructure"
-    | "claimsCountLast3Years"
-    | "anyClaimsExceed20k"
-    | "hasExistingContractWorksCover"
-    | "plantEquipment"
-    | "liabilityLimitBand"
-    | "dateStart"
-  >,
+  input: {
+    displayHomes?: CarPolicyFormValues["displayHomes"];
+    existingStructure?: CarPolicyFormValues["existingStructure"];
+    claimsCountLast3Years?: CarPolicyFormValues["claimsCountLast3Years"];
+    anyClaimsExceed20k?: unknown;
+    hasExistingContractWorksCover?: unknown;
+    plantEquipment?: CarPolicyFormValues["plantEquipment"];
+    liabilityLimitBand?: CarPolicyFormValues["liabilityLimitBand"];
+    dateStart?: CarPolicyFormValues["dateStart"];
+  },
   rating: ReferralRatingInput,
   liabilityLabel: string,
 ): string[] {
@@ -66,10 +72,13 @@ export function buildReferralReasons(
       `Number of claim last 3 years is entered with value ${input.claimsCountLast3Years}`,
     );
   }
-  if (input.anyClaimsExceed20k) {
+  const claimsExceed20k = coerceFormBoolean(input.anyClaimsExceed20k);
+  if (claimsExceed20k === true) {
     reasons.push("Any claims exceeded $20,000 in value is stated as yes");
+  } else if (claimsExceed20k === false) {
+    reasons.push("Any claims exceeded $20,000 in value is stated as no");
   }
-  if (!input.hasExistingContractWorksCover) {
+  if (coerceFormBoolean(input.hasExistingContractWorksCover) === false) {
     reasons.push("Do not hold a current Contract Works/Liability policy");
   }
   if (Number(input.plantEquipment) > 50000) {

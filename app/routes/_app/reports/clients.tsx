@@ -9,7 +9,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "~/components/ui/empty";
-import { Input } from "~/components/ui/input";
+import { DateInput } from "~/components/ui/date-input";
 import { Field, FieldGroup, FieldLabel } from "~/components/ui/field";
 import {
   Table,
@@ -140,20 +140,18 @@ export default function ClientReportRoute({
           <FieldGroup className="flex-1 gap-3 sm:flex-row sm:items-end">
             <Field className="sm:w-44">
               <FieldLabel htmlFor="dateFrom">From</FieldLabel>
-              <Input
+              <DateInput
                 id="dateFrom"
                 name="from"
-                type="date"
                 defaultValue={loaderData.dateFrom}
                 className="w-full"
               />
             </Field>
             <Field className="sm:w-44">
               <FieldLabel htmlFor="dateTo">To</FieldLabel>
-              <Input
+              <DateInput
                 id="dateTo"
                 name="to"
-                type="date"
                 defaultValue={loaderData.dateTo}
                 className="w-full"
               />

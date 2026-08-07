@@ -15,7 +15,7 @@ export function usePolicyDraftKeyboardSave(
     if (fieldsLocked) return;
 
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key.toLowerCase() !== "s") return;
+      if (event.key && event.key.toLowerCase() !== "s") return;
       if (!(event.metaKey || event.ctrlKey) || event.altKey) return;
       event.preventDefault();
       saveDraftNowRef.current();

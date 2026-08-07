@@ -1,6 +1,15 @@
 import type { ReactNode } from "react";
+import {
+  useController,
+  useFormContext,
+  type Control,
+  type FieldPath,
+  type FieldValues,
+} from "react-hook-form";
 import { cn } from "~/lib/utils";
 import { AmountInput } from "~/components/ui/amount-input";
+import { AppSelect, type AppSelectOption } from "~/components/ui/app-select";
+import { DateInput } from "~/components/ui/date-input";
 import {
   Field,
   FieldDescription,
@@ -141,29 +150,51 @@ export function FieldTextarea({
   );
 }
 
-/** Native select styled for dense insurance forms (works with RHF register). */
-export function Select({
-  className,
+/** App-styled select for RHF forms (FormProvider or explicit `control`). */
+export function Select<
+  TFieldValues extends FieldValues = FieldValues,
+  TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
+>({
+  name,
+  control: controlProp,
+  options,
+  placeholder = "Please select...",
   label,
   error,
   hint,
   tooltip,
   id,
   required,
-  children,
-  ...props
-}: React.ComponentProps<"select"> & {
+  disabled,
+  className,
+  onValueChange,
+}: {
+  name: TName;
+  control?: Control<TFieldValues>;
+  options: readonly AppSelectOption[];
+  placeholder?: string;
   label?: string;
   error?: string;
   hint?: string;
   tooltip?: ReactNode;
   required?: boolean;
+  disabled?: boolean;
+  className?: string;
+  id?: string;
+  onValueChange?: (value: string) => void;
 }) {
-  const selectId = id ?? props.name;
-  const name = typeof props.name === "string" ? props.name : undefined;
+  const formContext = useFormContext<TFieldValues>();
+  const control = controlProp ?? formContext.control;
+  const { field, fieldState } = useController({
+    name,
+    control,
+  });
+  const selectId = id ?? name;
   const { saved, className: highlight } = useFieldSaveState(name);
+  const message = error ?? fieldState.error?.message;
+
   return (
-    <Field data-invalid={error ? true : undefined}>
+    <Field data-invalid={message ? true : undefined} className={className}>
       {label ? (
         <div className="flex items-center gap-1.5">
           <FieldLabel htmlFor={selectId} required={required}>
@@ -175,23 +206,103 @@ export function Select({
         </div>
       ) : null}
       <div className="relative">
-        <select
+        <AppSelect
           id={selectId}
-          aria-invalid={!!error}
-          className={cn(
-            "h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20",
-            highlight,
-            saved && "pr-8",
-            className,
-          )}
-          {...props}
-        >
-          {children}
-        </select>
+          name={field.name}
+          value={field.value == null ? "" : String(field.value)}
+          onValueChange={(next) => {
+            field.onChange(next);
+            onValueChange?.(next);
+          }}
+          options={options}
+          placeholder={placeholder}
+          disabled={disabled}
+          required={required}
+          aria-invalid={!!message}
+          className={cn(highlight, saved && "pr-8")}
+        />
         <FieldSavedTick name={name} />
       </div>
       {hint ? <FieldDescription>{hint}</FieldDescription> : null}
-      {error ? <FieldError>{error}</FieldError> : null}
+      {message ? <FieldError>{message}</FieldError> : null}
+    </Field>
+  );
+}
+
+/** App-styled date field for RHF forms (`yyyy-MM-dd`). */
+export function FieldDateInput<
+  TFieldValues extends FieldValues = FieldValues,
+  TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
+>({
+  name,
+  control,
+  label,
+  error,
+  hint,
+  tooltip,
+  id,
+  required,
+  disabled,
+  className,
+  placeholder,
+}: {
+  name: TName;
+  control?: Control<TFieldValues>;
+  label: string;
+  error?: string;
+  hint?: string;
+  tooltip?: ReactNode;
+  required?: boolean;
+  disabled?: boolean;
+  className?: string;
+  id?: string;
+  placeholder?: string;
+}) {
+  const formContext = useFormContext<TFieldValues>();
+  const resolvedControl = control ?? formContext.control;
+  const { field, fieldState } = useController({
+    name,
+    control: resolvedControl,
+  });
+  const fieldId = id ?? name;
+  const { saved, className: highlight } = useFieldSaveState(name);
+  const message = error ?? fieldState.error?.message;
+
+  return (
+    <Field data-invalid={message ? true : undefined} className={className}>
+      <div className="flex w-full items-start gap-1.5">
+        <FieldLabel
+          htmlFor={fieldId}
+          required={required}
+          className="w-auto min-w-0 flex-1"
+        >
+          {label}
+        </FieldLabel>
+        {tooltip ? (
+          <FormulaTooltip label={`${label} help`}>{tooltip}</FormulaTooltip>
+        ) : null}
+      </div>
+      {hint != null ? (
+        <FieldDescription className={hint ? undefined : "invisible"}>
+          {hint || "\u00a0"}
+        </FieldDescription>
+      ) : null}
+      <div className="relative">
+        <DateInput
+          id={fieldId}
+          name={field.name}
+          value={field.value == null ? "" : String(field.value)}
+          onChange={field.onChange}
+          onBlur={field.onBlur}
+          disabled={disabled}
+          required={required}
+          placeholder={placeholder}
+          aria-invalid={!!message}
+          className={cn(highlight, saved && "pr-8")}
+        />
+        <FieldSavedTick name={name} />
+      </div>
+      {message ? <FieldError>{message}</FieldError> : null}
     </Field>
   );
 }

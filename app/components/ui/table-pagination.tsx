@@ -1,8 +1,5 @@
 import { useNavigate } from "react-router";
-import {
-  NativeSelect,
-  NativeSelectOption,
-} from "~/components/ui/native-select";
+import { AppSelect } from "~/components/ui/app-select";
 import {
   Pagination,
   PaginationContent,
@@ -125,20 +122,18 @@ export function TablePagination({
 
         <PaginationItem>
           {pageSizeHref ? (
-            <NativeSelect
+            <AppSelect
               className="w-28"
               aria-label="Rows per page"
               value={String(pageSize)}
-              onChange={(event) => {
-                navigate(pageSizeHref(Number(event.target.value)));
+              onValueChange={(next) => {
+                navigate(pageSizeHref(Number(next)));
               }}
-            >
-              {sizeOptions.map((size) => (
-                <NativeSelectOption key={size} value={String(size)}>
-                  {size} / page
-                </NativeSelectOption>
-              ))}
-            </NativeSelect>
+              options={sizeOptions.map((size) => ({
+                value: String(size),
+                label: `${size} / page`,
+              }))}
+            />
           ) : (
             <span className="text-sm text-muted-foreground tabular-nums">
               {pageSize} / page

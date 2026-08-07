@@ -14,10 +14,7 @@ import {
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { LoadingButton } from "~/components/ui/loading-button";
-import {
-  NativeSelect,
-  NativeSelectOption,
-} from "~/components/ui/native-select";
+import { AppSelect } from "~/components/ui/app-select";
 import { DOCUMENT_LABEL_MAX_LENGTH } from "~/lib/documents/document-label";
 import type { DocumentPageOrientation } from "~/lib/pdf/templates";
 
@@ -77,23 +74,26 @@ export function DocumentTemplateEditorToolbar(props: EditorToolbarProps) {
               }}
             />
           </label>
-          <NativeSelect
+          <AppSelect
             size="sm"
             aria-label="Cover type"
             value={props.coverType}
             disabled={disabled}
-            onChange={(event) => props.onCoverTypeChange(event.target.value)}
-            className="min-w-36"
-          >
-            <NativeSelectOption value="1">Annual</NativeSelectOption>
-            <NativeSelectOption value="2">Single</NativeSelectOption>
-            <NativeSelectOption value="3">Owner Builder</NativeSelectOption>
-            <NativeSelectOption value="all">
-              {props.templateKey === "adjustment"
-                ? "Adjustment only"
-                : "All cover types"}
-            </NativeSelectOption>
-          </NativeSelect>
+            onValueChange={props.onCoverTypeChange}
+            className="w-40 shrink-0"
+            options={[
+              { value: "1", label: "Annual" },
+              { value: "2", label: "Single" },
+              { value: "3", label: "Owner Builder" },
+              {
+                value: "all",
+                label:
+                  props.templateKey === "adjustment"
+                    ? "Adjustment only"
+                    : "All cover types",
+              },
+            ]}
+          />
         </>
       ) : (
         <span

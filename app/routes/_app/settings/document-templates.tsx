@@ -24,10 +24,7 @@ import {
 } from "~/components/ui/dialog";
 import { Field, FieldGroup, FieldLabel } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
-import {
-  NativeSelect,
-  NativeSelectOption,
-} from "~/components/ui/native-select";
+import { AppSelect } from "~/components/ui/app-select";
 import { InteractiveTableRow } from "~/components/ui/interactive-table-row";
 import {
   Table,
@@ -301,20 +298,19 @@ function NewTemplateDialog({
             </Field>
             <Field>
               <FieldLabel htmlFor="new-template-cover">Cover type</FieldLabel>
-              <NativeSelect
+              <AppSelect
                 id="new-template-cover"
                 name="coverTypeId"
                 defaultValue="1"
                 disabled={submitting}
                 className="w-full"
-              >
-                <NativeSelectOption value="1">Annual</NativeSelectOption>
-                <NativeSelectOption value="2">Single</NativeSelectOption>
-                <NativeSelectOption value="3">Owner Builder</NativeSelectOption>
-                <NativeSelectOption value="all">
-                  All cover types
-                </NativeSelectOption>
-              </NativeSelect>
+                options={[
+                  { value: "1", label: "Annual" },
+                  { value: "2", label: "Single" },
+                  { value: "3", label: "Owner Builder" },
+                  { value: "all", label: "All cover types" },
+                ]}
+              />
             </Field>
           </FieldGroup>
           <DialogFooter>

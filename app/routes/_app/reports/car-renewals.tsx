@@ -11,6 +11,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "~/components/ui/empty";
+import { DateInput } from "~/components/ui/date-input";
 import { Input } from "~/components/ui/input";
 import { Field, FieldGroup, FieldLabel } from "~/components/ui/field";
 import {
@@ -176,11 +177,10 @@ export default function CarRenewalReportRoute({
           <FieldGroup className="flex-1 gap-3 sm:flex-row">
             <Field className="sm:w-44">
               <FieldLabel htmlFor="referenceDate">Reference date</FieldLabel>
-              <Input
+              <DateInput
                 id="referenceDate"
-                type="date"
                 value={referenceDate}
-                onChange={(e) => setReferenceDate(e.target.value)}
+                onChange={setReferenceDate}
                 className="w-full"
               />
             </Field>

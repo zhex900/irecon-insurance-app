@@ -5,20 +5,15 @@ import {
   IndentDecreaseIcon,
   IndentIncreaseIcon,
   ItalicIcon,
+  ListIcon,
+  ListOrderedIcon,
   UnderlineIcon,
 } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Field, FieldError, FieldLabel } from "~/components/ui/field";
 import {
-  NativeSelect,
-  NativeSelectOption,
-} from "~/components/ui/native-select";
-import {
   ensureWordingHtml,
   normalizeWordingHtmlForSave,
-  WORDING_FONT_FAMILIES,
-  WORDING_FONT_SIZES,
-  type WordingFontFamily,
   type WordingListStyle,
 } from "~/lib/policies/wording/html";
 import { cn } from "~/lib/utils";
@@ -38,13 +33,10 @@ type LoadedModules = {
 const LIST_TOOLBAR: Array<{
   style: WordingListStyle;
   label: string;
-  caption: string;
+  icon: ReactNode;
 }> = [
-  { style: "disc", label: "Bullet list", caption: "•" },
-  { style: "dash", label: "Dash list", caption: "-" },
-  { style: "decimal", label: "Numbered list", caption: "1." },
-  { style: "lower-alpha", label: "Letter list a)", caption: "a)" },
-  { style: "lower-roman", label: "Roman list (i)", caption: "(i)" },
+  { style: "disc", label: "Bullet list", icon: <ListIcon /> },
+  { style: "decimal", label: "Numbered list", icon: <ListOrderedIcon /> },
 ];
 
 type WordingRichEditorProps = {
@@ -189,15 +181,6 @@ function WordingEditorInner({
     }
   }, [editor, value]);
 
-  const fontSize =
-    String(editor?.getAttributes("textStyle").fontSize ?? "").replace(
-      /px$/i,
-      "",
-    ) || "";
-  const fontFamily = String(
-    editor?.getAttributes("textStyle").fontFamily ?? "",
-  );
-
   function indent(ed: Editor) {
     if (ed.can().sinkListItem("listItem")) {
       ed.chain().focus().sinkListItem("listItem").run();
@@ -260,73 +243,6 @@ function WordingEditorInner({
             <UnderlineIcon />
           </ToolbarButton>
           <span className="mx-1 h-4 w-px bg-border" aria-hidden />
-          <Field className="w-auto gap-0">
-            <FieldLabel htmlFor={`${id ?? "wording"}-font`} className="sr-only">
-              Font
-            </FieldLabel>
-            <NativeSelect
-              id={`${id ?? "wording"}-font`}
-              className="max-w-[9rem] border-transparent bg-transparent shadow-none"
-              size="sm"
-              disabled={disabled || !editor}
-              value={
-                WORDING_FONT_FAMILIES.includes(fontFamily as WordingFontFamily)
-                  ? fontFamily
-                  : ""
-              }
-              onChange={(e) => {
-                const v = e.target.value;
-                if (!editor) return;
-                if (!v) {
-                  editor.chain().focus().unsetFontFamily().run();
-                  return;
-                }
-                editor.chain().focus().setFontFamily(v).run();
-              }}
-            >
-              <NativeSelectOption value="">Font</NativeSelectOption>
-              {WORDING_FONT_FAMILIES.map((family) => (
-                <NativeSelectOption key={family} value={family}>
-                  {family}
-                </NativeSelectOption>
-              ))}
-            </NativeSelect>
-          </Field>
-          <Field className="w-auto gap-0">
-            <FieldLabel htmlFor={`${id ?? "wording"}-size`} className="sr-only">
-              Font size
-            </FieldLabel>
-            <NativeSelect
-              id={`${id ?? "wording"}-size`}
-              className="w-16 border-transparent bg-transparent shadow-none"
-              size="sm"
-              disabled={disabled || !editor}
-              value={
-                WORDING_FONT_SIZES.includes(
-                  fontSize as (typeof WORDING_FONT_SIZES)[number],
-                )
-                  ? fontSize
-                  : ""
-              }
-              onChange={(e) => {
-                const v = e.target.value;
-                if (!editor) return;
-                if (!v) {
-                  editor.chain().focus().unsetFontSize().run();
-                  return;
-                }
-                editor.chain().focus().setFontSize(`${v}px`).run();
-              }}
-            >
-              <NativeSelectOption value="">Size</NativeSelectOption>
-              {WORDING_FONT_SIZES.map((size) => (
-                <NativeSelectOption key={size} value={size}>
-                  {size}
-                </NativeSelectOption>
-              ))}
-            </NativeSelect>
-          </Field>
-          <span className="mx-1 h-4 w-px bg-border" aria-hidden />
           {LIST_TOOLBAR.map((item) => (
             <ToolbarButton
               key={item.style}
@@ -337,9 +253,7 @@ function WordingEditorInner({
                 editor?.chain().focus().toggleWordingList(item.style).run()
               }
             >
-              <span className="min-w-5 text-xs font-medium tabular-nums">
-                {item.caption}
-              </span>
+              {item.icon}
             </ToolbarButton>
           ))}
           <ToolbarButton

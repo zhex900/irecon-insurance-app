@@ -80,6 +80,11 @@ export function CarPolicyWizardInner({
   );
   const livePolicyNumber =
     form.watch("policyNumber")?.trim() || policy.policyNumber;
+  const coverTypeId =
+    Number(form.watch("coverTypeId")) || policy.car.coverTypeId;
+  const coverTypeName =
+    reference.coverTypes.find((item) => item.coverTypeId === coverTypeId)
+      ?.name ?? "";
   const insurerCode = form.watch("insurerCode");
   const insurerName =
     reference.insurers.find((item) => item.code === insurerCode)?.name ??
@@ -347,6 +352,7 @@ export function CarPolicyWizardInner({
         policyNumber={livePolicyNumber}
         clientId={policy.clientId}
         clientName={clientName}
+        coverTypeName={coverTypeName || undefined}
         selectedStatus={selectedStatus}
         saveStatus={saveStatus}
         adjusted={Boolean(policy.car.adjusted)}

@@ -53,15 +53,16 @@ export function ClaimsWordingStep({
             {...register("claimsCountLast3Years")}
           />
           <Select
+            name="anyClaimsExceed20k"
             label="Have any claims exceeded $20,000 in value?"
             required
             error={errors.anyClaimsExceed20k?.message}
-            {...register("anyClaimsExceed20k")}
-          >
-            <option value="">Please select...</option>
-            <option value="true">Yes</option>
-            <option value="false">No</option>
-          </Select>
+            options={[
+              { value: "", label: "Please select..." },
+              { value: "true", label: "Yes" },
+              { value: "false", label: "No" },
+            ]}
+          />{" "}
         </div>
       </Section>
 

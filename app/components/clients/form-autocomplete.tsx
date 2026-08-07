@@ -136,14 +136,16 @@ export function FormAutocomplete({
             ) : (
               filtered.map((item, index) => {
                 const active = valuesEqual(item.value, field.value);
-                const highlighted = index === 0;
+                // First match is Enter-target only while filtering; avoid a permanent gray bar.
+                const enterTarget = Boolean(query.trim()) && index === 0;
                 return (
                   <li key={String(item.value)} role="option">
                     <button
                       type="button"
                       className={cn(
                         "flex w-full flex-col items-start rounded-md px-2.5 py-2 text-left hover:bg-muted",
-                        (active || highlighted) && "bg-muted",
+                        active && "bg-accent text-accent-foreground",
+                        enterTarget && !active && "bg-muted",
                       )}
                       onMouseDown={(event) => event.preventDefault()}
                       onClick={() => selectOption(item)}

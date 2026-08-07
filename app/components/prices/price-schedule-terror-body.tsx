@@ -1,10 +1,7 @@
 import { useMemo, useState } from "react";
 import { Field, FieldDescription, FieldLabel } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
-import {
-  NativeSelect,
-  NativeSelectOption,
-} from "~/components/ui/native-select";
+import { AppSelect } from "~/components/ui/app-select";
 import { Textarea } from "~/components/ui/textarea";
 import {
   Table,
@@ -165,37 +162,37 @@ export function TerrorBody({
             <div className="flex flex-wrap items-end gap-2">
               <Field className="w-36">
                 <FieldLabel htmlFor="terror-tier-filter">Tier</FieldLabel>
-                <NativeSelect
+                <AppSelect
                   id="terror-tier-filter"
                   className="w-full"
                   size="sm"
                   value={tierFilter}
-                  onChange={(e) => setTierFilter(e.target.value)}
-                >
-                  <NativeSelectOption value="all">All</NativeSelectOption>
-                  {schedule.tiers.map((tier) => (
-                    <NativeSelectOption key={tier.tier} value={tier.tier}>
-                      {tier.tier}
-                    </NativeSelectOption>
-                  ))}
-                </NativeSelect>
+                  onValueChange={setTierFilter}
+                  options={[
+                    { value: "all", label: "All" },
+                    ...schedule.tiers.map((tier) => ({
+                      value: tier.tier,
+                      label: tier.tier,
+                    })),
+                  ]}
+                />
               </Field>
               <Field className="w-36">
                 <FieldLabel htmlFor="terror-state-filter">State</FieldLabel>
-                <NativeSelect
+                <AppSelect
                   id="terror-state-filter"
                   className="w-full"
                   size="sm"
                   value={stateFilter}
-                  onChange={(e) => setStateFilter(e.target.value)}
-                >
-                  <NativeSelectOption value="all">All</NativeSelectOption>
-                  {stateOptions.map((code) => (
-                    <NativeSelectOption key={code} value={code}>
-                      {code}
-                    </NativeSelectOption>
-                  ))}
-                </NativeSelect>
+                  onValueChange={setStateFilter}
+                  options={[
+                    { value: "all", label: "All" },
+                    ...stateOptions.map((code) => ({
+                      value: code,
+                      label: code,
+                    })),
+                  ]}
+                />
               </Field>
               <Field className="min-w-[10rem] flex-1">
                 <FieldLabel htmlFor="terror-postcode-filter">

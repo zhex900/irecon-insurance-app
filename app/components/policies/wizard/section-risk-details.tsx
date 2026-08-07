@@ -1,5 +1,6 @@
 import { useFormContext } from "react-hook-form";
 import {
+  FieldDateInput,
   FieldInput,
   FieldTextarea,
   Select,
@@ -33,18 +34,18 @@ export function RiskDetailsStep({ reference }: { reference: ReferenceData }) {
   return (
     <div className="grid gap-4 md:grid-cols-2">
       <Select
+        name="insurerCode"
         label="Insurer"
         required
         error={errors.insurerCode?.message}
-        {...register("insurerCode")}
-      >
-        <option value="">Please select...</option>
-        {reference.insurers.map((item) => (
-          <option key={item.code} value={item.code}>
-            {item.name}
-          </option>
-        ))}
-      </Select>
+        options={[
+          { value: "", label: "Please select..." },
+          ...reference.insurers.map((item) => ({
+            value: item.code,
+            label: item.name,
+          })),
+        ]}
+      />
       <FieldInput
         label="Insured Name"
         required
@@ -52,62 +53,53 @@ export function RiskDetailsStep({ reference }: { reference: ReferenceData }) {
         {...register("insuredName")}
       />
       <Select
+        name="coverTypeId"
         label="Type of Cover"
         required
         error={errors.coverTypeId?.message}
         tooltip="Please note that the sub limits and documents will be refreshed when you change type of cover"
-        {...register("coverTypeId", {
-          onChange: (e) =>
-            applyCoverTypeDefaults(
-              Number(e.target.value),
-              reference,
-              setValue,
-              getValues,
-            ),
-        })}
-      >
-        <option value="">Please select...</option>
-        {reference.coverTypes.map((item) => (
-          <option key={item.coverTypeId} value={item.coverTypeId}>
-            {item.name}
-          </option>
-        ))}
-      </Select>
+        options={[
+          { value: "", label: "Please select..." },
+          ...reference.coverTypes.map((item) => ({
+            value: String(item.coverTypeId),
+            label: item.name,
+          })),
+        ]}
+        onValueChange={(next) =>
+          applyCoverTypeDefaults(Number(next), reference, setValue, getValues)
+        }
+      />
       {coverTypeId === 1 ? (
         <Select
+          name="annualCoverTypeId"
           label="Annual Type of Cover"
           required
           error={errors.annualCoverTypeId?.message}
-          {...register("annualCoverTypeId", {
-            onChange: (e) =>
-              applyAnnualCoverTypeDefaults(
-                Number(e.target.value),
-                reference,
-                setValue,
-              ),
-          })}
-        >
-          <option value="">Please select...</option>
-          {reference.annualCoverTypes.map((item) => (
-            <option key={item.annualCoverTypeId} value={item.annualCoverTypeId}>
-              {item.name}
-            </option>
-          ))}
-        </Select>
+          options={[
+            { value: "", label: "Please select..." },
+            ...reference.annualCoverTypes.map((item) => ({
+              value: String(item.annualCoverTypeId),
+              label: item.name,
+            })),
+          ]}
+          onValueChange={(next) =>
+            applyAnnualCoverTypeDefaults(Number(next), reference, setValue)
+          }
+        />
       ) : null}
       <Select
+        name="policyCategoryId"
         label="Policy Category"
         required
         error={errors.policyCategoryId?.message}
-        {...register("policyCategoryId")}
-      >
-        <option value="">Please select...</option>
-        {reference.policyCategories.map((item) => (
-          <option key={item.policyCategoryId} value={item.policyCategoryId}>
-            {item.name}
-          </option>
-        ))}
-      </Select>
+        options={[
+          { value: "", label: "Please select..." },
+          ...reference.policyCategories.map((item) => ({
+            value: String(item.policyCategoryId),
+            label: item.name,
+          })),
+        ]}
+      />{" "}
       {isRenewal ? (
         <PolicyNumberField
           value={policyNumber}
@@ -191,17 +183,17 @@ export function RiskDetailsStep({ reference }: { reference: ReferenceData }) {
         />
       </div>
       <div className="grid gap-x-4 gap-y-2 md:col-span-2 md:grid-cols-2 md:grid-rows-[auto_auto_auto]">
-        <FieldInput
+        <FieldDateInput
           className="md:row-span-3 md:!grid md:grid-rows-subgrid md:gap-2"
+          name="dateStart"
           label="Policy From Date"
           required
           hint="Auto 12 months for annual"
-          type="date"
           error={errors.dateStart?.message}
-          {...register("dateStart")}
         />
-        <FieldInput
+        <FieldDateInput
           className="md:row-span-3 md:!grid md:grid-rows-subgrid md:gap-2"
+          name="dateEnd"
           label="Policy End Date"
           required
           hint={
@@ -209,32 +201,30 @@ export function RiskDetailsStep({ reference }: { reference: ReferenceData }) {
               ? "End Date for owner builder cannot exceed 12 months"
               : "End date for annual policy and single project cannot exceed 18 months from start date"
           }
-          type="date"
           error={errors.dateEnd?.message}
-          {...register("dateEnd")}
         />
       </div>
       <div className="md:col-span-2">
         <Select
+          name="hasExistingContractWorksCover"
           label="Do you hold a current contract works/liability policy?"
           required
           error={errors.hasExistingContractWorksCover?.message}
-          {...register("hasExistingContractWorksCover", {
-            onChange: (event) => {
-              if (event.target.value !== "true") {
-                setValue("currentInsurer", "", {
-                  shouldDirty: true,
-                  shouldValidate: false,
-                });
-              }
-            },
-          })}
-        >
-          <option value="">Please select...</option>
-          <option value="true">Yes</option>
-          <option value="false">No</option>
-        </Select>
-      </div>
+          options={[
+            { value: "", label: "Please select..." },
+            { value: "true", label: "Yes" },
+            { value: "false", label: "No" },
+          ]}
+          onValueChange={(next) => {
+            if (next !== "true") {
+              setValue("currentInsurer", "", {
+                shouldDirty: true,
+                shouldValidate: false,
+              });
+            }
+          }}
+        />
+      </div>{" "}
       {showCurrentInsurer ? (
         <FieldInput
           className="md:col-span-2"

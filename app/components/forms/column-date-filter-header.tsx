@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { CheckIcon, ChevronDownIcon, ListFilterIcon } from "lucide-react";
 import { Button } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
+import { DateInput } from "~/components/ui/date-input";
 import { Label } from "~/components/ui/label";
 import {
   Popover,
@@ -172,28 +172,22 @@ export function ColumnDateFilterHeader({
               <Label htmlFor={`${inputIdPrefix}-from`} className="text-xs">
                 From
               </Label>
-              <Input
+              <DateInput
                 id={`${inputIdPrefix}-from`}
-                type="date"
                 value={draft.from ?? ""}
                 className="h-8"
-                onChange={(event) =>
-                  applyCustom(event.target.value, draft.to ?? "")
-                }
+                onChange={(next) => applyCustom(next, draft.to ?? "")}
               />
             </div>
             <div className="flex min-w-0 flex-col gap-1">
               <Label htmlFor={`${inputIdPrefix}-to`} className="text-xs">
                 To
               </Label>
-              <Input
+              <DateInput
                 id={`${inputIdPrefix}-to`}
-                type="date"
                 value={draft.to ?? ""}
                 className="h-8"
-                onChange={(event) =>
-                  applyCustom(draft.from ?? "", event.target.value)
-                }
+                onChange={(next) => applyCustom(draft.from ?? "", next)}
               />
             </div>
           </div>

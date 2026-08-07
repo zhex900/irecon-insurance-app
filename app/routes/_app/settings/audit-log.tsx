@@ -18,12 +18,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
-import { Input } from "~/components/ui/input";
+import { AppSelect } from "~/components/ui/app-select";
+import { DateInput } from "~/components/ui/date-input";
 import { Field, FieldGroup, FieldLabel } from "~/components/ui/field";
-import {
-  NativeSelect,
-  NativeSelectOption,
-} from "~/components/ui/native-select";
 import { InteractiveTableRow } from "~/components/ui/interactive-table-row";
 import {
   Table,
@@ -188,52 +185,64 @@ export default function SettingsAuditLogRoute({
           <FieldLabel htmlFor="action" className="sr-only">
             Action
           </FieldLabel>
-          <NativeSelect
+          <AppSelect
             id="action"
             name="action"
             defaultValue={action}
             className="w-full"
-          >
-            <NativeSelectOption value="">All actions</NativeSelectOption>
-            {AUDIT_ACTIONS.map((code) => (
-              <NativeSelectOption key={code} value={code}>
-                {code}
-              </NativeSelectOption>
-            ))}
-          </NativeSelect>
+            placeholder="All actions"
+            options={[
+              { value: "", label: "All actions" },
+              ...AUDIT_ACTIONS.map((code) => ({
+                value: code,
+                label: code,
+              })),
+            ]}
+          />
         </Field>
         {isAdmin ? (
           <Field>
             <FieldLabel htmlFor="actor" className="sr-only">
               Actor
             </FieldLabel>
-            <NativeSelect
+            <AppSelect
               id="actor"
               name="actor"
               defaultValue={actorUserId}
               className="w-full"
-            >
-              <NativeSelectOption value="">All users</NativeSelectOption>
-              {users.map((user) => (
-                <NativeSelectOption key={user.userId} value={user.userId}>
-                  {user.fullName || user.email}
-                </NativeSelectOption>
-              ))}
-            </NativeSelect>
+              placeholder="All users"
+              options={[
+                { value: "", label: "All users" },
+                ...users.map((user) => ({
+                  value: user.userId,
+                  label: user.fullName || user.email,
+                })),
+              ]}
+            />
           </Field>
         ) : null}
         <Field>
           <FieldLabel htmlFor="from" className="sr-only">
             From
           </FieldLabel>
-          <Input id="from" name="from" type="date" defaultValue={from} />
+          <DateInput
+            id="from"
+            name="from"
+            defaultValue={from}
+            placeholder="From date"
+          />
         </Field>
         <Field className="flex-row items-end gap-2">
           <Field className="min-w-0 flex-1">
             <FieldLabel htmlFor="to" className="sr-only">
               To
             </FieldLabel>
-            <Input id="to" name="to" type="date" defaultValue={to} />
+            <DateInput
+              id="to"
+              name="to"
+              defaultValue={to}
+              placeholder="To date"
+            />
           </Field>
           <Button type="submit" variant="secondary">
             Filter

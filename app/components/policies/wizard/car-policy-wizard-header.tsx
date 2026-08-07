@@ -17,6 +17,7 @@ export type CarPolicyWizardHeaderProps = {
   policyNumber: string;
   clientId: string;
   clientName: string;
+  coverTypeName?: string;
   selectedStatus?: { policyStatusId: number; name: string };
   saveStatus: PolicySaveStatus;
   adjusted: boolean;
@@ -38,6 +39,7 @@ export function CarPolicyWizardHeader({
   policyNumber,
   clientId,
   clientName,
+  coverTypeName,
   selectedStatus,
   saveStatus,
   adjusted,
@@ -65,6 +67,7 @@ export function CarPolicyWizardHeader({
         policyNumber={policyNumber}
         clientId={clientId}
         clientName={clientName || "Client"}
+        coverTypeName={coverTypeName}
         className="static border-0 bg-transparent backdrop-blur-none"
         modeBadge={wizardModeBadge(wizardMode)}
         breadcrumbs={[

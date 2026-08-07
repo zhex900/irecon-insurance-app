@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useNavigate } from "react-router";
 import { XIcon } from "lucide-react";
 import { Badge } from "~/components/reui/badge";
+import { DateInput } from "~/components/ui/date-input";
 import { Field, FieldLabel } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import { cn, formatDate, rateToPercent } from "~/lib/utils";
@@ -217,10 +218,9 @@ export function MetaRow({
       <div className="grid gap-3 sm:grid-cols-2">
         <Field>
           <FieldLabel htmlFor="dateStart">Effective date</FieldLabel>
-          <Input
+          <DateInput
             id="dateStart"
             name="dateStart"
-            type="date"
             defaultValue={dateStart}
             required
           />

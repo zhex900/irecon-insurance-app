@@ -13,6 +13,7 @@ const SAMPLE_REFERRAL_REASONS = [
   "Existing Structure has a value of $111.00",
   "Number of claim last 3 years is entered with value 12",
   "Any claims exceeded $20,000 in value is stated as yes",
+  "Any claims exceeded $20,000 in value is stated as no",
   "Unable to find terrorism rate for this combination of postcode/State",
 ].join("\n");
 

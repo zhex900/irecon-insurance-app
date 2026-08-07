@@ -493,6 +493,7 @@ export function PolicyStickyHeader({
   policyNumber,
   clientId,
   clientName,
+  coverTypeName,
   modeBadge,
   statusBadge,
   saveStatus,
@@ -505,6 +506,8 @@ export function PolicyStickyHeader({
   policyNumber: string;
   clientId: string;
   clientName: string;
+  /** Cover type label shown as a tag after the policy number. */
+  coverTypeName?: string;
   /** New / Editing / View only cue — shown before status. */
   modeBadge?: ReactNode;
   statusBadge?: ReactNode;
@@ -530,6 +533,11 @@ export function PolicyStickyHeader({
               <h2 className="truncate text-lg font-semibold tracking-tight md:text-xl">
                 {policyNumber}
               </h2>
+              {coverTypeName ? (
+                <Badge variant="warning" size="default" radius="full">
+                  {coverTypeName}
+                </Badge>
+              ) : null}
               {modeBadge}
               {statusBadge}
               {saveStatus}

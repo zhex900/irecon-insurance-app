@@ -36,9 +36,11 @@ export function money(value: number | string | null | undefined) {
   return formatCurrency(value);
 }
 
-export function yesNo(value: boolean | null | undefined) {
-  if (value == null) return "";
-  return value ? "Yes" : "No";
+export function yesNo(value: boolean | string | null | undefined) {
+  if (value == null || value === "") return "";
+  if (value === true || value === "true") return "Yes";
+  if (value === false || value === "false") return "No";
+  return "";
 }
 
 export function coverLabel(coverTypeId: number | string | null | undefined) {

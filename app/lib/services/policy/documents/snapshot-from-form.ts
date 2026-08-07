@@ -1,6 +1,7 @@
 import type { CarWording, Policy, PremiumBreakdown } from "~/lib/db/types";
 import { normalizeExcesses } from "~/lib/policies/excesses";
 import { collectEndorsementWordings } from "~/lib/pdf/merge-fields";
+import { coerceFormBoolean } from "~/lib/pricing/referral-reasons";
 import { normalizeSubLimits } from "~/lib/policies/sub-limits";
 import { resolvePolicyNumberForSave } from "~/lib/policies/policy-number";
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
@@ -95,9 +96,11 @@ export function policySnapshotFromForm(
       claimsCountLast3Years:
         values.claimsCountLast3Years ?? policy.car.claimsCountLast3Years,
       anyClaimsExceed20k:
-        values.anyClaimsExceed20k ?? policy.car.anyClaimsExceed20k,
+        coerceFormBoolean(values.anyClaimsExceed20k) ??
+        policy.car.anyClaimsExceed20k,
       declarationConfirmed:
-        values.declarationConfirmed ?? policy.car.declarationConfirmed,
+        coerceFormBoolean(values.declarationConfirmed) ??
+        policy.car.declarationConfirmed,
       contractWorksSumInsured: pickMoney(
         values.contractWorksSumInsured,
         policy.car.contractWorksSumInsured,
@@ -108,14 +111,16 @@ export function policySnapshotFromForm(
         return Number.isFinite(n) && n > 0 ? n : policy.car.liabilityLimitBand;
       })(),
       hasExistingContractWorksCover:
-        values.hasExistingContractWorksCover ??
+        coerceFormBoolean(values.hasExistingContractWorksCover) ??
         policy.car.hasExistingContractWorksCover,
-      currentInsurer:
-        values.hasExistingContractWorksCover === true
-          ? (values.currentInsurer ?? policy.car.currentInsurer)
-          : values.hasExistingContractWorksCover === false
-            ? ""
-            : (values.currentInsurer ?? policy.car.currentInsurer),
+      currentInsurer: (() => {
+        const hold = coerceFormBoolean(values.hasExistingContractWorksCover);
+        if (hold === true) {
+          return values.currentInsurer ?? policy.car.currentInsurer;
+        }
+        if (hold === false) return "";
+        return values.currentInsurer ?? policy.car.currentInsurer;
+      })(),
       maximumConstructionPeriod:
         values.maximumConstructionPeriod ??
         policy.car.maximumConstructionPeriod,

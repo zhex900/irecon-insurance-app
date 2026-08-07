@@ -11,7 +11,6 @@ export function LimitsOfLiabilityStep({
   reference: ReferenceData;
 }) {
   const {
-    register,
     formState: { errors },
   } = useFormContext<CarPolicyFormValues>();
 
@@ -71,6 +70,7 @@ export function LimitsOfLiabilityStep({
 
       <Section title="Section 2 – Legal Liability">
         <Select
+          name="liabilityLimitBand"
           label="Limit of Liability"
           required
           error={errors.liabilityLimitBand?.message}
@@ -84,15 +84,14 @@ export function LimitsOfLiabilityStep({
               </p>
             </div>
           }
-          {...register("liabilityLimitBand")}
-        >
-          <option value="">Please select...</option>
-          {reference.liabilityLimitBands.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.name}
-            </option>
-          ))}
-        </Select>
+          options={[
+            { value: "", label: "Please select..." },
+            ...reference.liabilityLimitBands.map((item) => ({
+              value: String(item.id),
+              label: item.name,
+            })),
+          ]}
+        />{" "}
       </Section>
     </div>
   );

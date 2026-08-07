@@ -12,7 +12,7 @@ import {
   DialogTitle,
 } from "~/components/ui/dialog";
 import { Field, FieldGroup, FieldLabel } from "~/components/ui/field";
-import { Input } from "~/components/ui/input";
+import { DateInput } from "~/components/ui/date-input";
 import { Skeleton } from "~/components/ui/skeleton";
 import {
   Table,
@@ -167,20 +167,18 @@ export default function CarPolicyReportRoute({
           <FieldGroup className="gap-3 sm:flex-row">
             <Field className="sm:w-44">
               <FieldLabel htmlFor="dateFrom">Date from</FieldLabel>
-              <Input
+              <DateInput
                 id="dateFrom"
                 name="from"
-                type="date"
                 defaultValue={loaderData.dateFrom}
                 className="w-full"
               />
             </Field>
             <Field className="sm:w-44">
               <FieldLabel htmlFor="dateTo">Date to</FieldLabel>
-              <Input
+              <DateInput
                 id="dateTo"
                 name="to"
-                type="date"
                 defaultValue={loaderData.dateTo}
                 className="w-full"
               />
