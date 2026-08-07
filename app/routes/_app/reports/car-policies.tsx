@@ -1,19 +1,10 @@
-import { useMemo, useState } from "react";
-import { Form, useFetcher } from "react-router";
+import { useMemo } from "react";
+import { Form, Link, useSearchParams } from "react-router";
 import { DownloadIcon } from "lucide-react";
 import { PageHeader } from "~/components/layout/app-layout";
 import { Button, buttonVariants } from "~/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "~/components/ui/dialog";
 import { Field, FieldGroup, FieldLabel } from "~/components/ui/field";
 import { DateInput } from "~/components/ui/date-input";
-import { Skeleton } from "~/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -22,20 +13,40 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table";
+import { TablePagination } from "~/components/ui/table-pagination";
 import {
+  CAR_SEARCH_STATUSES,
   defaultCarPolicyPeriod,
   type CarSearchStatus,
-  type ReportPolicyRow,
 } from "~/lib/services/reports/service";
-import { getCarPolicyReportSummary } from "~/lib/services/reports/list.service";
+import {
+  filtersForCarSearchStatus,
+  getCarPolicyReportSummary,
+  listReportPoliciesPage,
+} from "~/lib/services/reports/list.service";
+import {
+  pageSearchHref,
+  pageSizeSearchHref,
+  parsePagination,
+} from "~/lib/pagination";
 import { formatCurrency, formatDate } from "~/lib/utils";
 import type { Route } from "./+types/car-policies";
 import { pageTitle } from "~/lib/brand";
 import { requireAuth } from "~/lib/auth/session.server";
 import { optionalIsoDateSchema } from "~/lib/http/route-input";
+import { z } from "zod";
+
+const DETAIL_PAGE_SIZE = 25;
 
 export function meta() {
   return [{ title: pageTitle("CAR Policy Report") }];
+}
+
+const statusParamSchema = z.enum(CAR_SEARCH_STATUSES);
+
+function parseStatusParam(raw: string | null): CarSearchStatus | null {
+  const parsed = statusParamSchema.safeParse(raw);
+  return parsed.success ? parsed.data : null;
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -48,22 +59,66 @@ export async function loader({ request }: Route.LoaderArgs) {
   const dateTo =
     optionalIsoDateSchema.parse(url.searchParams.get("to") ?? undefined) ??
     defaults.dateTo;
+  const status = parseStatusParam(url.searchParams.get("status"));
+
   const summary = await getCarPolicyReportSummary(dateFrom, dateTo);
-  return { summary, dateFrom, dateTo };
+
+  if (!status) {
+    return {
+      summary,
+      dateFrom,
+      dateTo,
+      detail: null,
+    };
+  }
+
+  const pagination = parsePagination(url, { defaultSize: DETAIL_PAGE_SIZE });
+  const filters = filtersForCarSearchStatus(status);
+  const page = await listReportPoliciesPage({
+    dateFrom,
+    dateTo,
+    statusIds: filters.statusIds,
+    policyCategoryIds: filters.policyCategoryIds,
+    limit: pagination.limit,
+    offset: pagination.offset,
+  });
+
+  const detailMeta = summary.find((row) => row.status === status) ?? null;
+
+  return {
+    summary,
+    dateFrom,
+    dateTo,
+    detail: {
+      status,
+      rows: page.rows,
+      total: page.total,
+      page: page.page,
+      pageSize: page.pageSize,
+      policyCount: detailMeta?.policyCount ?? page.total,
+      totalBasePremium: detailMeta?.totalBasePremium ?? 0,
+    },
+  };
+}
+
+function statusDetailSearch(
+  dateFrom: string,
+  dateTo: string,
+  status: CarSearchStatus,
+) {
+  const params = new URLSearchParams({ from: dateFrom, to: dateTo, status });
+  return `?${params.toString()}`;
 }
 
 export default function CarPolicyReportRoute({
   loaderData,
 }: Route.ComponentProps) {
-  const detailFetcher = useFetcher<{
-    rows: ReportPolicyRow[];
-    total: number;
-  }>();
-  const [detailStatus, setDetailStatus] = useState<CarSearchStatus | null>(
-    null,
-  );
-  const detailRows = detailFetcher.data?.rows ?? [];
-  const detailLoading = detailFetcher.state !== "idle";
+  const [searchParams] = useSearchParams();
+  const detail = loaderData.detail;
+
+  const pageHref = (nextPage: number) => pageSearchHref(searchParams, nextPage);
+  const pageSizeHref = (nextPageSize: number) =>
+    pageSizeSearchHref(searchParams, nextPageSize, DETAIL_PAGE_SIZE);
 
   const summary = loaderData.summary;
   const totalPolicies = useMemo(
@@ -71,24 +126,11 @@ export default function CarPolicyReportRoute({
     [summary],
   );
 
-  const detailMeta = summary.find((row) => row.status === detailStatus) ?? null;
-
   const summaryExportHref = `/api/reports/car-policies.xlsx?from=${encodeURIComponent(loaderData.dateFrom)}&to=${encodeURIComponent(loaderData.dateTo)}&view=summary`;
   const detailExportHref =
-    detailStatus != null
-      ? `/api/reports/car-policies.xlsx?from=${encodeURIComponent(loaderData.dateFrom)}&to=${encodeURIComponent(loaderData.dateTo)}&view=detail&status=${encodeURIComponent(detailStatus)}`
+    detail != null
+      ? `/api/reports/car-policies.xlsx?from=${encodeURIComponent(loaderData.dateFrom)}&to=${encodeURIComponent(loaderData.dateTo)}&view=detail&status=${encodeURIComponent(detail.status)}`
       : null;
-
-  function openDetail(status: CarSearchStatus) {
-    setDetailStatus(status);
-    const params = new URLSearchParams({
-      type: "report-detail",
-      from: loaderData.dateFrom,
-      to: loaderData.dateTo,
-      status,
-    });
-    detailFetcher.load(`/api/search?${params}`);
-  }
 
   return (
     <div>
@@ -105,7 +147,6 @@ export default function CarPolicyReportRoute({
         key={`${loaderData.dateFrom}|${loaderData.dateTo}`}
         method="get"
         className="mb-4 flex flex-col gap-4 rounded-xl border bg-card p-4 lg:flex-row lg:items-end lg:justify-between"
-        onSubmit={() => setDetailStatus(null)}
       >
         <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-end">
           <FieldGroup className="gap-3 sm:flex-row">
@@ -172,17 +213,28 @@ export default function CarPolicyReportRoute({
               </TableRow>
             ) : (
               summary.map((row) => (
-                <TableRow key={row.status}>
+                <TableRow
+                  key={row.status}
+                  data-state={
+                    detail?.status === row.status ? "selected" : undefined
+                  }
+                  className="data-[state=selected]:bg-muted/50"
+                >
                   <TableCell className="font-medium">
-                    <Button
-                      type="button"
-                      variant="link"
-                      className="h-auto px-0"
-                      disabled={row.policyCount === 0}
-                      onClick={() => openDetail(row.status)}
-                    >
-                      {row.status}
-                    </Button>
+                    {row.policyCount === 0 ? (
+                      row.status
+                    ) : (
+                      <Link
+                        to={statusDetailSearch(
+                          loaderData.dateFrom,
+                          loaderData.dateTo,
+                          row.status,
+                        )}
+                        className="text-foreground underline-offset-4 hover:underline"
+                      >
+                        {row.status}
+                      </Link>
+                    )}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
                     {row.policyCount}
@@ -197,24 +249,41 @@ export default function CarPolicyReportRoute({
         </Table>
       </div>
 
-      <Dialog
-        open={detailStatus != null}
-        onOpenChange={(open) => {
-          if (!open) setDetailStatus(null);
-        }}
-      >
-        <DialogContent className="sm:max-w-3xl" showCloseButton>
-          <DialogHeader>
-            <DialogTitle>{detailStatus}</DialogTitle>
-            <DialogDescription>
-              {detailMeta?.policyCount ?? 0} polic
-              {(detailMeta?.policyCount ?? 0) === 1 ? "y" : "ies"} ·{" "}
-              {formatCurrency(detailMeta?.totalBasePremium ?? 0)} total base
-              premium
-            </DialogDescription>
-          </DialogHeader>
+      {detail != null ? (
+        <div className="mt-6 space-y-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">{detail.status}</h2>
+              <p className="text-sm text-muted-foreground">
+                {detail.policyCount} polic
+                {detail.policyCount === 1 ? "y" : "ies"} ·{" "}
+                {formatCurrency(detail.totalBasePremium)} total base premium
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                to={`?from=${encodeURIComponent(loaderData.dateFrom)}&to=${encodeURIComponent(loaderData.dateTo)}`}
+                className={buttonVariants({ variant: "outline", size: "sm" })}
+              >
+                Close
+              </Link>
+              {detailExportHref ? (
+                <a
+                  href={detailExportHref}
+                  className={buttonVariants({ variant: "outline", size: "sm" })}
+                  aria-disabled={detail.total === 0}
+                  {...(detail.total === 0
+                    ? { tabIndex: -1, onClick: (e) => e.preventDefault() }
+                    : {})}
+                >
+                  <DownloadIcon data-icon="inline-start" />
+                  Export Excel
+                </a>
+              ) : null}
+            </div>
+          </div>
 
-          <div className="max-h-[50vh] overflow-auto rounded-lg border">
+          <div className="overflow-hidden rounded-xl border bg-card">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -225,28 +294,27 @@ export default function CarPolicyReportRoute({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {detailLoading ? (
-                  <TableRow>
-                    {[0, 1, 2, 3].map((column) => (
-                      <TableCell key={column} className="py-4">
-                        <Skeleton className="h-4 w-full" />
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ) : detailRows.length === 0 ? (
+                {detail.rows.length === 0 ? (
                   <TableRow>
                     <TableCell
                       colSpan={4}
-                      className="py-8 text-center text-muted-foreground"
+                      className="py-10 text-center text-muted-foreground"
                     >
                       No policies found for this status.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  detailRows.map((policy) => (
+                  detail.rows.map((policy) => (
                     <TableRow key={policy.policyId}>
-                      <TableCell>{policy.clientName}</TableCell>
-                      <TableCell>{policy.arName}</TableCell>
+                      <TableCell className="font-medium">
+                        <Link
+                          to={`/policies/${policy.policyId}`}
+                          className="text-foreground underline-offset-4 hover:underline"
+                        >
+                          {policy.clientName}
+                        </Link>
+                      </TableCell>
+                      <TableCell>{policy.arName || "—"}</TableCell>
                       <TableCell>{formatDate(policy.createdWhen)}</TableCell>
                       <TableCell className="text-right tabular-nums">
                         {formatCurrency(policy.basePremium)}
@@ -256,25 +324,16 @@ export default function CarPolicyReportRoute({
                 )}
               </TableBody>
             </Table>
+            <TablePagination
+              total={detail.total}
+              page={detail.page}
+              pageSize={detail.pageSize}
+              pageHref={pageHref}
+              pageSizeHref={pageSizeHref}
+            />
           </div>
-
-          <DialogFooter>
-            {detailExportHref ? (
-              <a
-                href={detailExportHref}
-                className={buttonVariants({ variant: "outline" })}
-                aria-disabled={detailRows.length === 0}
-                {...(detailRows.length === 0
-                  ? { tabIndex: -1, onClick: (e) => e.preventDefault() }
-                  : {})}
-              >
-                <DownloadIcon data-icon="inline-start" />
-                Export Excel
-              </a>
-            ) : null}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </div>
+      ) : null}
     </div>
   );
 }
