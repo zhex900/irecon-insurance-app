@@ -32,6 +32,20 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    include: ["react", "react-dom"],
+    // Pre-bundle TipTap (client dynamic import after mount). Avoids
+    // "504 Outdated Optimize Dep" on first /settings/car-wording visit.
+    // Do not include `@tiptap/pm` — it has no "." export (subpaths only).
+    include: [
+      "react",
+      "react-dom",
+      "@tiptap/react",
+      "@tiptap/core",
+      "@tiptap/starter-kit",
+      "@tiptap/suggestion",
+      "@tiptap/extension-placeholder",
+      "@tiptap/extension-underline",
+      "@tiptap/extension-text-style",
+      "@tiptap/extension-font-family",
+    ],
   },
 });
