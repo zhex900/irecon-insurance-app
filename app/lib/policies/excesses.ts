@@ -45,7 +45,7 @@ export type ContractValueBand = "upTo2m" | "from2mTo5m";
 
 export const CONTRACT_VALUE_BAND_LABEL: Record<ContractValueBand, string> = {
   upTo2m: "Contract Value up to $2,000,000",
-  from2mTo5m: "Contract Value $2,000,001 to $5,000,000",
+  from2mTo5m: "Contract Value over $2,000,001",
 };
 
 export type ExcessFieldConfig = {
@@ -146,6 +146,66 @@ export function resolveContractValueBand(
   if (!Number.isFinite(value) || value < 0) return null;
   if (value <= 2_000_000) return "upTo2m";
   return "from2mTo5m";
+}
+
+/** Active band heading for PDFs / merge fields (empty when turnover unknown). */
+export function contractValueBandLabel(estimatedTurnover: unknown): string {
+  const band = resolveContractValueBand(estimatedTurnover);
+  return band ? CONTRACT_VALUE_BAND_LABEL[band] : "";
+}
+
+export type ActiveBandExcessAmounts = {
+  minorPerils: string;
+  majorPerils: string;
+  limit10M: string;
+  limit20M: string;
+};
+
+/**
+ * Excess amounts for the turnover-active contract-value band only.
+ * Empty strings when estimated turnover does not resolve to a band.
+ */
+export function activeBandExcessAmounts(
+  excesses:
+    | Pick<
+        CarExcesses,
+        | "excessUpTo2MMinorPerils"
+        | "excessUpTo2MMajorPerils"
+        | "excessOver2MMinorPerils"
+        | "excessOver2MMajorPerils"
+        | "excessUpTo2MLimit10M"
+        | "excessUpTo2MLimit20M"
+        | "excessOver2MLimit10M"
+        | "excessOver2MLimit20M"
+      >
+    | null
+    | undefined,
+  estimatedTurnover: unknown,
+): ActiveBandExcessAmounts {
+  const empty: ActiveBandExcessAmounts = {
+    minorPerils: "",
+    majorPerils: "",
+    limit10M: "",
+    limit20M: "",
+  };
+  const band = resolveContractValueBand(estimatedTurnover);
+  if (!band || !excesses) return empty;
+
+  if (band === "upTo2m") {
+    return {
+      minorPerils: excesses.excessUpTo2MMinorPerils ?? "",
+      majorPerils: excesses.excessUpTo2MMajorPerils ?? "",
+      limit10M: excesses.excessUpTo2MLimit10M ?? "",
+      limit20M: excesses.excessUpTo2MLimit20M ?? "",
+    };
+  }
+
+  return {
+    minorPerils: excesses.excessOver2MMinorPerils ?? "",
+    majorPerils: excesses.excessOver2MMajorPerils ?? "",
+    limit10M: excesses.excessOver2MLimit10M ?? "",
+    limit20M: excesses.excessOver2MLimit20M ?? "",
+  };
 }
 
 export function isExcessFieldVisible(

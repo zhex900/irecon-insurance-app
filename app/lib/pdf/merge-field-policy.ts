@@ -1,4 +1,8 @@
 import type { CarWording, Policy } from "~/lib/db/types";
+import {
+  activeBandExcessAmounts,
+  contractValueBandLabel,
+} from "~/lib/policies/excesses";
 import { combinedTrueBasePremium } from "~/lib/pricing/premium-totals";
 import { formatDate } from "~/lib/utils";
 import {
@@ -168,6 +172,7 @@ export function policyToMergeInputs(
   const adjustment = car.adjustment;
   const sub = car.subLimits ?? ({} as NonNullable<typeof car.subLimits>);
   const excess = car.excesses ?? ({} as NonNullable<typeof car.excesses>);
+  const activeExcess = activeBandExcessAmounts(excess, car.estimatedTurnover);
   const original = adjustment?.breakdown.original;
   const adjusted = adjustment?.breakdown.adjustment;
   const delta = adjustment?.breakdown.delta;
@@ -219,6 +224,11 @@ export function policyToMergeInputs(
     MaterialsInOffSiteStorage: String(sub.materialsInOffSiteStorage ?? ""),
     Transit: String(sub.transit ?? ""),
     LegalLiabilityLimit: liabilityLabel(car.liabilityLimitBand),
+    ContractValueLabel: contractValueBandLabel(car.estimatedTurnover),
+    ExcessMinorPerils: money(activeExcess.minorPerils),
+    ExcessMajorPerils: money(activeExcess.majorPerils),
+    ExcessLimit10M: money(activeExcess.limit10M),
+    ExcessLimit20M: money(activeExcess.limit20M),
     ExcessPlantEquipment: money(excess.excessPlantEquipment),
     ExcessUpTo2MMinorPerils: money(excess.excessUpTo2MMinorPerils),
     ExcessUpTo2MMajorPerils: money(excess.excessUpTo2MMajorPerils),

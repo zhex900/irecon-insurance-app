@@ -37,26 +37,26 @@ export function PdfPreviewDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[90vh] w-full max-w-[calc(100%-2rem)] flex-col gap-3 sm:max-w-5xl">
-        <DialogHeader>
+      <DialogContent className="flex h-[calc(100dvh-2rem)] max-h-[calc(100dvh-2rem)] w-full max-w-[calc(100%-2rem)] flex-col gap-3 overflow-hidden sm:max-w-5xl">
+        <DialogHeader className="shrink-0">
           <DialogTitle>{title}</DialogTitle>
           {description ? (
             <DialogDescription>{description}</DialogDescription>
           ) : null}
         </DialogHeader>
         {error ? (
-          <div className="flex h-[min(70vh,720px)] items-center justify-center rounded-md border bg-muted px-4 text-center text-sm text-destructive">
+          <div className="flex min-h-0 flex-1 items-center justify-center rounded-md border bg-muted px-4 text-center text-sm text-destructive">
             {error}
           </div>
         ) : loading || !src ? (
-          <div className="flex h-[min(70vh,720px)] items-center justify-center rounded-md border bg-muted">
+          <div className="flex min-h-0 flex-1 items-center justify-center rounded-md border bg-muted">
             <Spinner className="size-6" />
           </div>
         ) : (
           <iframe
             title={title}
             src={pdfSrcWithoutNavPanes(src)}
-            className="h-[min(70vh,720px)] w-full rounded-md border bg-muted"
+            className="min-h-0 w-full flex-1 rounded-md border bg-muted"
           />
         )}
       </DialogContent>
