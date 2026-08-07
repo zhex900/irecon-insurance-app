@@ -216,7 +216,7 @@ export function RiskDetailsStep({ reference }: { reference: ReferenceData }) {
       </div>
       <div className="md:col-span-2">
         <Select
-          label="Do you hold a current Contract Works/Liability policy?"
+          label="Do you hold a current contract works/liability policy?"
           required
           error={errors.hasExistingContractWorksCover?.message}
           {...register("hasExistingContractWorksCover", {

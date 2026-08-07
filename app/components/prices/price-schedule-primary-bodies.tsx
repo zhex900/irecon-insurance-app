@@ -35,10 +35,10 @@ export function CarBody({
             <TableHead>Turnover max</TableHead>
             <TableHead className="text-right">CW rate %</TableHead>
             <TableHead className="text-right">CW min</TableHead>
-            <TableHead className="text-right">$10m rate %</TableHead>
-            <TableHead className="text-right">$10m min</TableHead>
-            <TableHead className="text-right">$20m rate %</TableHead>
-            <TableHead className="text-right">$20m min</TableHead>
+            <TableHead className="text-right">$10M rate %</TableHead>
+            <TableHead className="text-right">$10M min</TableHead>
+            <TableHead className="text-right">$20M rate %</TableHead>
+            <TableHead className="text-right">$20M min</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
