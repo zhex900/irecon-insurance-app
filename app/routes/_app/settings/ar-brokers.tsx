@@ -348,7 +348,6 @@ function ArFormDialog({
             <LoadingButton
               type="submit"
               loading={saving}
-              loadingLabel={editing ? "Saving…" : "Adding…"}
             >
               {editing ? "Save changes" : "Add"}
             </LoadingButton>
@@ -554,7 +553,6 @@ export default function SettingsArBrokersRoute({
                   navigation.state === "submitting" &&
                   navigation.formData?.get("intent") === "delete"
                 }
-                loadingLabel="Deleting…"
               >
                 Delete
               </LoadingButton>

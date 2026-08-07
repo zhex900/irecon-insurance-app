@@ -55,7 +55,6 @@ export function ClientFormLeaveDialog({
             variant="ghost"
             onClick={onLeaveWithoutSaving}
             loading={discarding}
-            loadingLabel="Discarding…"
           >
             {isNew ? "Discard" : "Leave without saving"}
           </LoadingButton>
@@ -64,7 +63,6 @@ export function ClientFormLeaveDialog({
               type="button"
               onClick={onSaveAndLeave}
               loading={pendingLeaveAfterSave}
-              loadingLabel="Saving…"
             >
               {isNew ? "Save & continue" : "Save & leave"}
             </LoadingButton>

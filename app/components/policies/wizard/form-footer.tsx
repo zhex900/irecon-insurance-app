@@ -64,7 +64,6 @@ export function WizardFormFooter({
           className="ml-auto"
           onClick={onSubmit}
           loading={submitBusy}
-          loadingLabel="Submitting…"
           disabled={submitDisabled}
         >
           Submit

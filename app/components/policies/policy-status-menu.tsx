@@ -264,7 +264,6 @@ export function PolicyStatusMenu({
               type="button"
               onClick={confirmStatusChange}
               loading={confirmLoading}
-              loadingLabel="Confirming…"
             >
               Confirm
             </LoadingButton>

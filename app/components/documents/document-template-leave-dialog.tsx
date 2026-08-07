@@ -79,7 +79,6 @@ export function DocumentTemplateLeaveDialog({
             type="button"
             onClick={onSaveAndLeave}
             loading={saving}
-            loadingLabel="Saving…"
           >
             Save draft & leave
           </LoadingButton>

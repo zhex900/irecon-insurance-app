@@ -247,7 +247,6 @@ export function CarAdjustmentWizard({
               type="button"
               onClick={goNext}
               loading={isCalculating}
-              loadingLabel="Calculating…"
             >
               Next
             </LoadingButton>
@@ -264,7 +263,6 @@ export function CarAdjustmentWizard({
               <LoadingButton
                 type="submit"
                 loading={isFinishing}
-                loadingLabel="Finishing…"
               >
                 Finish
               </LoadingButton>

@@ -470,7 +470,6 @@ export default function PolicyDetailRoute({
                   variant="outline"
                   size="sm"
                   loading={isCloning}
-                  loadingLabel="Cloning…"
                   onClick={() => {
                     submit({ intent: "clone" }, { method: "post" });
                   }}

@@ -155,7 +155,6 @@ export default function ResetPasswordRoute({
             size="lg"
             className="mt-2 w-full"
             loading={submitting}
-            loadingLabel="Updating…"
           >
             Update password
           </LoadingButton>

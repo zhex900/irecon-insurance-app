@@ -277,7 +277,6 @@ function EmailFooterCard({
                 variant="outline"
                 size="sm"
                 loading={busy}
-                loadingLabel="Uploading…"
                 onClick={() => inputRef.current?.click()}
               >
                 Upload

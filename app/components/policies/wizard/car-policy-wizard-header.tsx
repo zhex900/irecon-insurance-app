@@ -101,7 +101,6 @@ export function CarPolicyWizardHeader({
               disabled={submitDisabled}
               onClick={onRequestSubmit}
               loading={submitBusy}
-              loadingLabel="Submitting…"
             >
               Submit
             </LoadingButton>

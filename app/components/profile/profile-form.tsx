@@ -304,11 +304,7 @@ export function ProfileForm({
             ) : null}
 
             <div className="flex flex-wrap gap-2">
-              <LoadingButton
-                type="submit"
-                loading={saving}
-                loadingLabel="Saving…"
-              >
+              <LoadingButton type="submit" loading={saving}>
                 Save profile
               </LoadingButton>
               <Button

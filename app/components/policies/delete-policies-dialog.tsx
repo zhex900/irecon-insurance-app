@@ -99,7 +99,6 @@ export function DeletePoliciesDialog({
               type="submit"
               variant="destructive"
               loading={loading}
-              loadingLabel="Deleting…"
             >
               Delete
             </LoadingButton>

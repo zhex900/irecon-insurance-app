@@ -52,42 +52,58 @@ export function orderFormIssues(
     });
 }
 
+const VISIBLE_CONTROL_SELECTOR =
+  'button[data-slot=select-trigger], input:not([type="hidden"]), select, textarea, button:not([type="hidden"])';
+
+function isHiddenInput(el: HTMLElement): boolean {
+  return el instanceof HTMLInputElement && el.type === "hidden";
+}
+
+function visibleControlInField(fieldRoot: ParentNode): HTMLElement | null {
+  return fieldRoot.querySelector<HTMLElement>(VISIBLE_CONTROL_SELECTOR);
+}
+
 function findFocusableElement(path: string): HTMLElement | null {
   if (typeof document === "undefined") return null;
 
-  const selectors = [
-    `[name="${CSS.escape(path)}"]`,
-    `#${CSS.escape(path)}`,
-    `[id="${CSS.escape(path)}"]`,
-    `[aria-labelledby="${CSS.escape(path)}"]`,
-    `label[for="${CSS.escape(path)}"]`,
-  ];
-
-  for (const selector of selectors) {
-    try {
-      const el = document.querySelector<HTMLElement>(selector);
-      if (!el) continue;
-      if (el.tagName === "LABEL") {
-        const control = document.getElementById(
-          (el as HTMLLabelElement).htmlFor,
-        );
-        if (control instanceof HTMLElement) return control;
-        continue;
-      }
-      return el;
-    } catch {
-      // Invalid selector for this path — try the next.
-    }
+  const byDataPath = document.querySelector<HTMLElement>(
+    `[data-field-path="${CSS.escape(path)}"]`,
+  );
+  if (byDataPath) {
+    if (byDataPath.matches(VISIBLE_CONTROL_SELECTOR)) return byDataPath;
+    const nested = visibleControlInField(byDataPath);
+    if (nested) return nested;
   }
 
-  // AmountInput / InputGroup: match the inner control near a label.
-  const label = document.querySelector(`label[for="${CSS.escape(path)}"]`);
+  const label = document.querySelector<HTMLLabelElement>(
+    `label[for="${CSS.escape(path)}"]`,
+  );
   if (label) {
-    const field = label.closest("[data-slot=field], .grid, div");
-    const input = field?.querySelector<HTMLElement>(
-      "input, select, textarea, button, [tabindex]",
-    );
-    if (input) return input;
+    const field = label.closest("[data-slot=field]");
+    if (field) {
+      const control = visibleControlInField(field);
+      if (control) return control;
+    }
+    const byId = document.getElementById(label.htmlFor);
+    if (byId instanceof HTMLElement && !isHiddenInput(byId)) return byId;
+  }
+
+  const byId = document.getElementById(path);
+  if (byId instanceof HTMLElement && !isHiddenInput(byId)) return byId;
+
+  const named = document.querySelector<HTMLElement>(
+    `[name="${CSS.escape(path)}"]`,
+  );
+  if (named) {
+    if (isHiddenInput(named)) {
+      const field = named.closest("[data-slot=field]");
+      if (field) {
+        const control = visibleControlInField(field);
+        if (control) return control;
+      }
+    } else {
+      return named;
+    }
   }
 
   return null;
@@ -104,7 +120,10 @@ export function focusFormIssue<TFieldValues extends FieldValues>(
     // Checkbox / custom controls may not register a focusable ref.
   }
 
-  const run = () => {
+  let attempts = 0;
+  const maxAttempts = 8;
+
+  const tryFocus = () => {
     const el = findFocusableElement(path);
     if (!el) return false;
     el.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -114,11 +133,14 @@ export function focusFormIssue<TFieldValues extends FieldValues>(
     return true;
   };
 
+  const schedule = () => {
+    if (tryFocus()) return;
+    attempts += 1;
+    if (attempts >= maxAttempts) return;
+    window.setTimeout(schedule, attempts <= 2 ? 16 : attempts * 80);
+  };
+
   requestAnimationFrame(() => {
-    if (run()) return;
-    // Collapsible / conditional fields may appear one frame later.
-    requestAnimationFrame(() => {
-      run();
-    });
+    requestAnimationFrame(schedule);
   });
 }

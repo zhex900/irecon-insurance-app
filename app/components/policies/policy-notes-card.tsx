@@ -271,7 +271,6 @@ export function PolicyNotesCard({
                     <LoadingButton
                       type="button"
                       loading={noteBusy}
-                      loadingLabel="Saving…"
                       disabled={!editDraft.trim()}
                       onClick={submitEdit}
                     >
@@ -343,7 +342,6 @@ export function PolicyNotesCard({
             <LoadingButton
               type="button"
               loading={noteBusy}
-              loadingLabel="Saving…"
               disabled={!draft.trim()}
               onClick={submitAdd}
             >

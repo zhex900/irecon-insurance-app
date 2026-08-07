@@ -47,7 +47,6 @@ export function DocumentTemplateDeleteDialog({
             type="button"
             variant="destructive"
             loading={deleting}
-            loadingLabel="Deleting…"
             onClick={onConfirm}
           >
             Delete

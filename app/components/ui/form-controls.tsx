@@ -194,7 +194,11 @@ export function Select<
   const message = error ?? fieldState.error?.message;
 
   return (
-    <Field data-invalid={message ? true : undefined} className={className}>
+    <Field
+      data-field-path={name}
+      data-invalid={message ? true : undefined}
+      className={className}
+    >
       {label ? (
         <div className="flex items-center gap-1.5">
           <FieldLabel htmlFor={selectId} required={required}>
@@ -205,7 +209,7 @@ export function Select<
           ) : null}
         </div>
       ) : null}
-      <div className="relative">
+      <div className="relative" data-field-path={name}>
         <AppSelect
           id={selectId}
           name={field.name}

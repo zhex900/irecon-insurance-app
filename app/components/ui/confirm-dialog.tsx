@@ -18,7 +18,6 @@ export function ConfirmDialog({
   cancelLabel = "Cancel",
   confirmVariant = "default",
   loading = false,
-  loadingLabel,
   onConfirm,
 }: {
   open: boolean;
@@ -29,7 +28,6 @@ export function ConfirmDialog({
   cancelLabel?: string;
   confirmVariant?: React.ComponentProps<typeof Button>["variant"];
   loading?: boolean;
-  loadingLabel?: string;
   onConfirm: () => void;
 }) {
   return (
@@ -58,7 +56,6 @@ export function ConfirmDialog({
             type="button"
             variant={confirmVariant}
             loading={loading}
-            loadingLabel={loadingLabel ?? `${confirmLabel}…`}
             onClick={onConfirm}
           >
             {confirmLabel}

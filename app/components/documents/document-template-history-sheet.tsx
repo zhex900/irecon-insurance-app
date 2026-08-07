@@ -260,7 +260,6 @@ function CurrentEditPanel({
             type="button"
             size="sm"
             loading={busy}
-            loadingLabel="Saving…"
             disabled={!dirty}
             onClick={onSaveDraft}
           >

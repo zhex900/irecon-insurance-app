@@ -16,6 +16,7 @@ import {
 } from "~/components/layout/app-breadcrumb";
 import { AppSideNav } from "~/components/layout/app-side-nav";
 import { GlobalSearch } from "~/components/layout/global-search";
+import { NavigationProgress } from "~/components/layout/navigation-progress";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -200,6 +201,7 @@ export function AppLayout({
   return (
     <TooltipProvider>
       <SentryUserSync userId={broker.id} email={broker.email} />
+      <NavigationProgress />
       <SidebarProvider
         open={shellNav.sidebarOpen}
         onOpenChange={handleSidebarOpenChange}

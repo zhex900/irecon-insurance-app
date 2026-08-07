@@ -444,7 +444,6 @@ export function EmailDocumentsDialog({
               type="button"
               onClick={() => void handleSend()}
               loading={sending}
-              loadingLabel="Sending…"
             >
               <MailIcon data-icon="inline-start" />
               Send

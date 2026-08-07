@@ -110,7 +110,6 @@ export default function ForgotPasswordRoute({
               size="lg"
               className="mt-2 w-full"
               loading={submitting}
-              loadingLabel="Sending…"
             >
               Send reset link
             </LoadingButton>

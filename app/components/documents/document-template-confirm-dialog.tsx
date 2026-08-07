@@ -6,7 +6,6 @@ function confirmCopy(action: DocumentTemplateConfirmAction): {
   description: React.ReactNode;
   confirmLabel: string;
   confirmVariant?: React.ComponentProps<typeof ConfirmDialog>["confirmVariant"];
-  loadingLabel?: string;
 } {
   switch (action.kind) {
     case "revert":
@@ -16,7 +15,6 @@ function confirmCopy(action: DocumentTemplateConfirmAction): {
           "This reverts all layout edits since you opened this template, or since the last Save draft / Publish.",
         confirmLabel: "Revert",
         confirmVariant: "destructive",
-        loadingLabel: "Reverting…",
       };
     case "publish":
       return {
@@ -24,7 +22,6 @@ function confirmCopy(action: DocumentTemplateConfirmAction): {
         description:
           "This sets the selected version as the published (live) template. PDF generation will use this version.",
         confirmLabel: "Publish",
-        loadingLabel: "Publishing…",
       };
     case "undo":
       return {
@@ -33,7 +30,6 @@ function confirmCopy(action: DocumentTemplateConfirmAction): {
           "The previous published version will become live, or nothing will remain published if no earlier version exists.",
         confirmLabel: "Undo publish",
         confirmVariant: "destructive",
-        loadingLabel: "Undoing…",
       };
     case "load-version":
       return {
@@ -42,7 +38,6 @@ function confirmCopy(action: DocumentTemplateConfirmAction): {
           "Unsaved edits in the designer will be replaced. Save a draft first if you need to keep them.",
         confirmLabel: "Replace edits",
         confirmVariant: "destructive",
-        loadingLabel: "Loading…",
       };
     case "delete-draft":
       return {
@@ -51,7 +46,6 @@ function confirmCopy(action: DocumentTemplateConfirmAction): {
           "This permanently removes the draft from history. Published versions are not affected.",
         confirmLabel: "Delete draft",
         confirmVariant: "destructive",
-        loadingLabel: "Deleting…",
       };
   }
 }
@@ -87,7 +81,6 @@ export function DocumentTemplateConfirmDialog({
       confirmLabel={copy.confirmLabel}
       confirmVariant={copy.confirmVariant}
       loading={loading}
-      loadingLabel={copy.loadingLabel}
       onConfirm={onConfirm}
     />
   );

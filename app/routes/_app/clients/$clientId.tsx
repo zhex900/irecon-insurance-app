@@ -370,7 +370,6 @@ export default function ClientDetailRoute({
                 type="submit"
                 variant="destructive"
                 loading={deleting}
-                loadingLabel="Deleting…"
               >
                 Delete
               </LoadingButton>

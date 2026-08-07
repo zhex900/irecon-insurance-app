@@ -70,7 +70,6 @@ export function UserToggleConfirmDialog({
                 (navigation.formData?.get("intent") === "enable" ||
                   navigation.formData?.get("intent") === "disable")
               }
-              loadingLabel={user?.disabled ? "Enabling…" : "Disabling…"}
             >
               {user?.disabled ? "Enable" : "Disable"}
             </LoadingButton>
@@ -123,7 +122,6 @@ export function UserDeleteConfirmDialog({
                 navigation.state === "submitting" &&
                 navigation.formData?.get("intent") === "delete"
               }
-              loadingLabel="Deleting…"
             >
               Delete
             </LoadingButton>

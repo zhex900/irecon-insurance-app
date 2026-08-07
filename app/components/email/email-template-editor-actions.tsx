@@ -84,7 +84,6 @@ export function EmailTemplateEditorActions({
         variant="outline"
         size="sm"
         loading={resetting}
-        loadingLabel="Resetting…"
         onClick={onReset}
         disabled={busy}
         title={resetTitle}
@@ -105,7 +104,6 @@ export function EmailTemplateEditorActions({
         type="submit"
         size="sm"
         loading={saving}
-        loadingLabel="Saving…"
       >
         Save
       </LoadingButton>

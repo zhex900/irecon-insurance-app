@@ -62,12 +62,7 @@ export function PriceScheduleDialog({
       >
         Cancel
       </FooterButton>
-      <LoadingButton
-        type="submit"
-        form="price-schedule-form"
-        loading={saving}
-        loadingLabel="Saving…"
-      >
+      <LoadingButton type="submit" form="price-schedule-form" loading={saving}>
         Save
       </LoadingButton>
     </>
@@ -197,7 +192,6 @@ export function PriceDeleteDialog({
               type="submit"
               variant="destructive"
               loading={deleting}
-              loadingLabel="Deleting…"
             >
               Delete
             </LoadingButton>

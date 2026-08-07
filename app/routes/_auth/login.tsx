@@ -127,7 +127,6 @@ export default function LoginRoute({ actionData }: Route.ComponentProps) {
             size="lg"
             className="mt-2 w-full"
             loading={submitting}
-            loadingLabel="Signing in…"
           >
             Sign in
           </LoadingButton>

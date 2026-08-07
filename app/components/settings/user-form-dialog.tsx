@@ -344,7 +344,6 @@ export function UserFormDialog({
               <LoadingButton
                 type="submit"
                 loading={saving}
-                loadingLabel={editing ? "Saving…" : "Adding…"}
               >
                 {editing ? "Save changes" : "Add"}
               </LoadingButton>

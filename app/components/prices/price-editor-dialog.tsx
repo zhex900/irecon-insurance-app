@@ -93,11 +93,7 @@ export function PriceEditorDialog({
             >
               Cancel
             </a>
-            <LoadingButton
-              type="submit"
-              loading={saving}
-              loadingLabel={intent === "create" ? "Creating…" : "Saving…"}
-            >
+            <LoadingButton type="submit" loading={saving}>
               {intent === "create" ? "Create" : "Save"}
             </LoadingButton>
           </div>
@@ -157,12 +153,7 @@ export function PriceDeleteDialog({
           >
             Cancel
           </a>
-          <LoadingButton
-            type="submit"
-            variant="destructive"
-            loading={deleting}
-            loadingLabel="Deleting…"
-          >
+          <LoadingButton type="submit" variant="destructive" loading={deleting}>
             Delete
           </LoadingButton>
         </Form>

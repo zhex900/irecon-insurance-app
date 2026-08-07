@@ -117,7 +117,6 @@ export function DocumentTemplateEditorToolbar(props: EditorToolbarProps) {
         variant="outline"
         size="sm"
         loading={props.previewLoading}
-        loadingLabel="Preview…"
         disabled={props.busy}
         onClick={props.onPreview}
       >
@@ -208,7 +207,6 @@ export function DocumentTemplateEditorToolbar(props: EditorToolbarProps) {
               props.busy &&
               (props.intent === "draft" || props.intent === "autosave")
             }
-            loadingLabel="Saving…"
             disabled={disabled}
             onClick={props.onSaveDraft}
           >
@@ -218,7 +216,6 @@ export function DocumentTemplateEditorToolbar(props: EditorToolbarProps) {
             type="button"
             size="sm"
             loading={props.busy && props.intent === "publish"}
-            loadingLabel="Publishing…"
             disabled={disabled}
             onClick={props.onPublish}
           >

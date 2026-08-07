@@ -62,7 +62,6 @@ export function SubmitConfirmDialog({
           <LoadingButton
             type="button"
             loading={busy}
-            loadingLabel="Generating…"
             onClick={onConfirm}
           >
             Confirm & generate
@@ -124,7 +123,6 @@ export function LeaveDiscardDialog({
             variant="ghost"
             onClick={onLeaveWithoutSaving}
             loading={discarding}
-            loadingLabel="Discarding…"
             disabled={pendingLeaveAfterSave}
           >
             {isNew ? "Discard" : "Leave without saving"}
@@ -133,7 +131,6 @@ export function LeaveDiscardDialog({
             type="button"
             onClick={onSaveAndLeave}
             loading={pendingLeaveAfterSave}
-            loadingLabel="Saving…"
             disabled={discarding}
           >
             {isNew ? "Save & continue" : "Save & leave"}
