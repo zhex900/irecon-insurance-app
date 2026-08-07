@@ -31,6 +31,20 @@ function formatErrorDetails(error: unknown): {
       };
     }
 
+    if (error.status === 403) {
+      const details =
+        typeof error.data === "string" && error.data.trim()
+          ? error.data.trim()
+          : "You are not authorised for this page.";
+      return {
+        heading: "Access denied",
+        subheading: "Not authorised",
+        details,
+        status: 403,
+        stack: showDebugDetails ? error.statusText || undefined : undefined,
+      };
+    }
+
     return {
       heading: "Oops!",
       subheading: "Unexpected Server Error",

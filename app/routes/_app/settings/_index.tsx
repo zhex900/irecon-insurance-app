@@ -26,7 +26,9 @@ import {
 } from "~/components/ui/card";
 import { requireAuth } from "~/lib/auth/session.server";
 import { isAdminRole, isSuperAdmin } from "~/lib/auth/roles";
+import { throwUnauthorizedPage } from "~/lib/auth/authorize.server";
 import { isFeatureEnabled } from "~/lib/services/feature-flags";
+import { viewerCanAccessSettings } from "~/lib/services/navigation/side-nav.service";
 import type { Route } from "./+types/_index";
 import { pageTitle } from "~/lib/brand";
 
@@ -36,6 +38,9 @@ export function meta() {
 
 export async function loader({ request }: Route.LoaderArgs) {
   const viewer = await requireAuth(request);
+  if (!(await viewerCanAccessSettings(viewer))) {
+    throwUnauthorizedPage();
+  }
   const [
     auditLogEnabled,
     pricesEnabled,

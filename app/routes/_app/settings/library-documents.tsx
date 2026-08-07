@@ -1,8 +1,8 @@
-import { redirect } from "react-router";
 import { FileStackIcon } from "lucide-react";
 import { PageHeader } from "~/components/layout/app-layout";
 import { LibraryDocumentsManager } from "~/components/documents/library-documents-manager";
 import { isAdminRole, isSuperAdmin } from "~/lib/auth/roles";
+import { requireFeatureOrSuperAdminPage } from "~/lib/auth/authorize.server";
 import { requireAuth } from "~/lib/auth/session.server";
 import { getLibraryDocumentsBucket } from "~/lib/cloudflare.server";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
@@ -27,9 +27,7 @@ export function meta() {
 export async function loader({ request }: Route.LoaderArgs) {
   const viewer = await requireAuth(request);
   const enabled = await isFeatureEnabled("library_documents");
-  if (!enabled && !isSuperAdmin(viewer)) {
-    throw redirect("/settings");
-  }
+  requireFeatureOrSuperAdminPage(enabled, viewer);
   return {
     documents: await listLibraryDocuments(),
     coverTypes: referenceData.coverTypes,

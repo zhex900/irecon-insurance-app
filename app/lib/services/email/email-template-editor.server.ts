@@ -1,5 +1,6 @@
 import { redirect } from "react-router";
 import { z } from "zod";
+import { requireFeatureOrSuperAdminPage } from "~/lib/auth/authorize.server";
 import { requireAuth } from "~/lib/auth/session.server";
 import { isSuperAdmin } from "~/lib/auth/roles";
 import {
@@ -33,9 +34,7 @@ export async function loadEmailTemplateEditor({
 }: EmailTemplateRequestArgs) {
   const viewer = await requireAuth(request);
   const emailTemplatesEnabled = await isFeatureEnabled("email_templates");
-  if (!emailTemplatesEnabled && !isSuperAdmin(viewer)) {
-    throw redirect("/settings");
-  }
+  requireFeatureOrSuperAdminPage(emailTemplatesEnabled, viewer);
 
   const parsedKey = emailTemplateKeySchema.safeParse(params.key);
   if (!parsedKey.success) {

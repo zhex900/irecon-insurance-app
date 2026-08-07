@@ -91,3 +91,72 @@ export function parseAppUserFormData(
 }
 
 export type AppUserFormValues = z.infer<typeof appUserSchema>;
+
+/** Self-service profile: name, email, optional password; optional role for admins. */
+export const profileUpdateSchema = z
+  .object({
+    fullName: z.string().trim().min(1, "Full name is required"),
+    email: z
+      .string()
+      .trim()
+      .min(1, "Email is required")
+      .email("Email is not in the correct format"),
+    /** Only applied when the actor is admin/super-admin (enforced in the action). */
+    role: z.enum(["broker", "admin"]).optional(),
+    password: z.string().optional(),
+    confirmPassword: z.string().optional(),
+  })
+  .superRefine((values, ctx) => {
+    const password = values.password ?? "";
+    const confirm = values.confirmPassword ?? "";
+
+    if (password !== "") {
+      if (password.length < 8) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["password"],
+          message: "Password must be at least 8 characters",
+        });
+      }
+      if (confirm === "") {
+        ctx.addIssue({
+          code: "custom",
+          path: ["confirmPassword"],
+          message: "Confirm your password",
+        });
+      } else if (password !== confirm) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["confirmPassword"],
+          message: "Passwords do not match",
+        });
+      }
+    } else if (confirm !== "") {
+      ctx.addIssue({
+        code: "custom",
+        path: ["password"],
+        message: "Enter a new password",
+      });
+    }
+  });
+
+export type ProfileUpdateFormValues = z.infer<typeof profileUpdateSchema>;
+
+export function parseProfileFormData(input: {
+  fullName: FormDataEntryValue | null;
+  email: FormDataEntryValue | null;
+  role?: FormDataEntryValue | null;
+  password?: FormDataEntryValue | null;
+  confirmPassword?: FormDataEntryValue | null;
+}) {
+  const password = String(input.password ?? "");
+  const confirmPassword = String(input.confirmPassword ?? "");
+  const roleRaw = String(input.role ?? "").trim();
+  return profileUpdateSchema.safeParse({
+    fullName: String(input.fullName ?? ""),
+    email: String(input.email ?? ""),
+    role: roleRaw === "admin" || roleRaw === "broker" ? roleRaw : undefined,
+    password: password || undefined,
+    confirmPassword: confirmPassword || undefined,
+  });
+}

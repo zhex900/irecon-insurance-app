@@ -13,7 +13,7 @@ import { UserFormDialog } from "~/components/settings/user-form-dialog";
 import { UsersTable } from "~/components/settings/users-table";
 import { Button } from "~/components/ui/button";
 import { requireAuth } from "~/lib/auth/session.server";
-import { isAdminRole } from "~/lib/auth/roles";
+import { requireAdminPage } from "~/lib/auth/authorize.server";
 import { getAvatarsBucket } from "~/lib/cloudflare.server";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
 import {
@@ -50,9 +50,7 @@ const PAGE_SIZE = 25;
 
 export async function loader({ request }: Route.LoaderArgs) {
   const viewer = await requireAuth(request);
-  if (!isAdminRole(viewer)) {
-    throw new Response("Not Found", { status: 404 });
-  }
+  requireAdminPage(viewer);
   const url = new URL(request.url);
   const q = queryTextSchema.parse(url.searchParams.get("q") ?? "");
   const parsedEditId = positiveIntegerSchema.safeParse(
@@ -106,9 +104,7 @@ async function applyAvatarUpload(
 
 export async function action({ request, context }: Route.ActionArgs) {
   const actor = await requireAuth(request);
-  if (!isAdminRole(actor)) {
-    throw new Response("Not Found", { status: 404 });
-  }
+  requireAdminPage(actor);
   const formData = await request.formData();
   const intent = parseFormIntent(formData, [
     "create",

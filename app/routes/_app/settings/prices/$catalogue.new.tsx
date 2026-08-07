@@ -1,8 +1,9 @@
 import { redirect, useActionData } from "react-router";
 import { PriceEditorDialog } from "~/components/prices/price-editor-dialog";
+import { requireSuperAdminPage } from "~/lib/auth/authorize.server";
+import { isSuperAdmin } from "~/lib/auth/roles";
 import { requireAuth } from "~/lib/auth/session.server";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
-import { isSuperAdmin } from "~/lib/auth/roles";
 import {
   createTemplate,
   emptyCatalogue,
@@ -39,9 +40,7 @@ export function meta({ params }: Route.MetaArgs) {
 
 export async function loader({ request, params }: Route.LoaderArgs) {
   const viewer = await requireAuth(request);
-  if (!isSuperAdmin(viewer)) {
-    throw redirect("/settings/prices/car-rates");
-  }
+  requireSuperAdminPage(viewer);
   const slug = params.catalogue ?? "";
   if (!isPriceCatalogueSlug(slug)) {
     throw redirect("/settings/prices/car-rates");

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { redirect, useFetcher } from "react-router";
+import { useFetcher } from "react-router";
 import { SlidersHorizontalIcon } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -13,7 +13,7 @@ import {
   CardTitle,
 } from "~/components/ui/card";
 import { requireAuth } from "~/lib/auth/session.server";
-import { isSuperAdmin } from "~/lib/auth/roles";
+import { requireSuperAdminPage } from "~/lib/auth/authorize.server";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import {
   FEATURE_KEYS,
@@ -30,17 +30,13 @@ export function meta() {
 
 export async function loader({ request }: Route.LoaderArgs) {
   const viewer = await requireAuth(request);
-  if (!isSuperAdmin(viewer)) {
-    throw redirect("/settings");
-  }
+  requireSuperAdminPage(viewer);
   return { features: await listFeatureFlags() };
 }
 
 export async function action({ request }: Route.ActionArgs) {
   const viewer = await requireAuth(request);
-  if (!isSuperAdmin(viewer)) {
-    throw redirect("/settings");
-  }
+  requireSuperAdminPage(viewer);
 
   const formData = await request.formData();
   const parsed = z

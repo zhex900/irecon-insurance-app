@@ -1,11 +1,5 @@
 import { useMemo, useState } from "react";
-import {
-  Form,
-  redirect,
-  useActionData,
-  useNavigation,
-  useSubmit,
-} from "react-router";
+import { Form, useActionData, useNavigation, useSubmit } from "react-router";
 import { Controller, useForm } from "react-hook-form";
 import { flattenFieldErrors, focusFormIssue } from "~/lib/form-validation-ui";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -48,6 +42,7 @@ import { WordingHtmlView } from "~/components/policies/wording-html-view";
 import { WordingRichEditor } from "~/components/policies/wording-rich-editor";
 import { FieldInput } from "~/components/ui/form-controls";
 import { isAdminRole, isSuperAdmin } from "~/lib/auth/roles";
+import { requireFeatureOrSuperAdminPage } from "~/lib/auth/authorize.server";
 import { requireAuth } from "~/lib/auth/session.server";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
 import {
@@ -90,9 +85,7 @@ const PAGE_SIZE = 25;
 export async function loader({ request }: Route.LoaderArgs) {
   const viewer = await requireAuth(request);
   const enabled = await isFeatureEnabled("additional_wording");
-  if (!enabled && !isSuperAdmin(viewer)) {
-    throw redirect("/settings");
-  }
+  requireFeatureOrSuperAdminPage(enabled, viewer);
   const url = new URL(request.url);
   const q = queryTextSchema.parse(url.searchParams.get("q") ?? "");
   const pagination = parsePagination(url, { defaultSize: PAGE_SIZE });

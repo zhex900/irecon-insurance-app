@@ -40,6 +40,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 export function shouldRevalidate({
   formData,
   actionResult,
+  formAction,
 }: ShouldRevalidateFunctionArgs) {
   // Child policy draft saves should not refetch the shell.
   if (formData?.get("intent") === "draft") return false;
@@ -50,6 +51,16 @@ export function shouldRevalidate({
     (actionResult as { draft?: boolean }).draft
   ) {
     return false;
+  }
+  // Profile saves update the header avatar / name.
+  if (
+    formAction?.includes("/profile") ||
+    (actionResult &&
+      typeof actionResult === "object" &&
+      "intent" in actionResult &&
+      (actionResult as { intent?: string }).intent === "profile")
+  ) {
+    return true;
   }
   // Keep broker + side nav stable across child route navigations.
   return false;

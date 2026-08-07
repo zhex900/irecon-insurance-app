@@ -41,13 +41,13 @@ import {
   TableRow,
 } from "~/components/ui/table";
 import { requireAuth } from "~/lib/auth/session.server";
+import { requireAdminPage } from "~/lib/auth/authorize.server";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
 import {
   parseFormIntent,
   parsePositiveInteger,
   queryTextSchema,
 } from "~/lib/http/route-input";
-import { isAdminRole } from "~/lib/auth/roles";
 import type { WholesaleBroker } from "~/lib/db/types";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import { SearchHighlight } from "~/components/search/highlight-cell";
@@ -79,9 +79,7 @@ const PAGE_SIZE = 25;
 
 export async function loader({ request }: Route.LoaderArgs) {
   const viewer = await requireAuth(request);
-  if (!isAdminRole(viewer)) {
-    throw new Response("Not Found", { status: 404 });
-  }
+  requireAdminPage(viewer);
   const url = new URL(request.url);
   const q = queryTextSchema.parse(url.searchParams.get("q") ?? "");
   const pagination = parsePagination(url, { defaultSize: PAGE_SIZE });
@@ -101,9 +99,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 export async function action({ request }: Route.ActionArgs) {
   const actor = await requireAuth(request);
-  if (!isAdminRole(actor)) {
-    throw new Response("Not Found", { status: 404 });
-  }
+  requireAdminPage(actor);
   const formData = await request.formData();
   const intent = parseFormIntent(formData, ["create", "update", "delete"]);
 

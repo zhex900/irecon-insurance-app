@@ -1,5 +1,5 @@
 import { useRef, useState, type ComponentType } from "react";
-import { Link, redirect } from "react-router";
+import { Link } from "react-router";
 import {
   ArrowRightIcon,
   Building2Icon,
@@ -23,6 +23,7 @@ import {
 } from "~/components/ui/card";
 import { Badge } from "~/components/reui/badge";
 import { requireAuth } from "~/lib/auth/session.server";
+import { requireFeatureOrSuperAdminPage } from "~/lib/auth/authorize.server";
 import { isSuperAdmin } from "~/lib/auth/roles";
 import {
   EMAIL_FOOTER_DISPLAY_WIDTH_DEFAULT,
@@ -50,9 +51,7 @@ export function meta() {
 export async function loader({ request }: Route.LoaderArgs) {
   const viewer = await requireAuth(request);
   const emailTemplatesEnabled = await isFeatureEnabled("email_templates");
-  if (!emailTemplatesEnabled && !isSuperAdmin(viewer)) {
-    throw redirect("/settings");
-  }
+  requireFeatureOrSuperAdminPage(emailTemplatesEnabled, viewer);
 
   // Keep this loader light — do not embed the ~200KB footer data URI here.
   // The footer card loads the image from `/api/email-footer` instead.

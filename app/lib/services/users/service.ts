@@ -209,6 +209,41 @@ export async function updateUser(userId: string, input: AppUserWritable) {
   return normalizeAppUser(updated);
 }
 
+/**
+ * Self-service profile update.
+ * Role is only applied when `allowRoleChange` is true (admin/super-admin actor).
+ * Super-admin accounts stay super-admin regardless of the requested role.
+ */
+export async function updateOwnProfile(
+  userId: string,
+  input: {
+    fullName: string;
+    email: string;
+    password?: string;
+    role?: "broker" | "admin";
+  },
+  options?: { allowRoleChange?: boolean },
+) {
+  const existing = await getUser(userId);
+  if (!existing) throw new Error("User not found");
+
+  const nextRole =
+    options?.allowRoleChange &&
+    existing.role !== "super-admin" &&
+    (input.role === "admin" || input.role === "broker")
+      ? input.role
+      : existing.role;
+
+  return updateUser(userId, {
+    fullName: input.fullName,
+    email: input.email,
+    password: input.password,
+    role: nextRole,
+    authorisedRepresentativeId: existing.authorisedRepresentativeId,
+    disabled: existing.disabled,
+  });
+}
+
 export async function setUserDisabled(userId: string, disabled: boolean) {
   const existing = await getUser(userId);
   if (!existing) throw new Error("User not found");

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { PageHeader } from "~/components/layout/app-layout";
 import { Button, buttonVariants } from "~/components/ui/button";
 import { getAppEnvironment, getAppVersion } from "~/lib/app-version";
-import { isSuperAdmin } from "~/lib/auth/roles";
+import { requireSuperAdminPage } from "~/lib/auth/authorize.server";
 import { requireAuth } from "~/lib/auth/session.server";
 import { pageTitle } from "~/lib/brand";
 import { cn } from "~/lib/utils";
@@ -14,9 +14,7 @@ export function meta() {
 
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await requireAuth(request);
-  if (!isSuperAdmin(user)) {
-    throw new Response("Not Found", { status: 404 });
-  }
+  requireSuperAdminPage(user);
 
   const url = new URL(request.url);
   if (url.searchParams.get("throw") === "1") {

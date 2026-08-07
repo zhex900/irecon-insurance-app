@@ -53,7 +53,6 @@ import {
   getAppVersion,
 } from "~/lib/app-version";
 import { APP_NAME } from "~/lib/brand";
-import { isAdminRole } from "~/lib/auth/roles";
 import type { BrokerSession } from "~/lib/db/types";
 import { SentryUserSync } from "~/lib/observability/sentry-user-sync";
 import type { SideNavData } from "~/lib/services/navigation/side-nav.service";
@@ -299,19 +298,13 @@ function AccountMenu({ broker }: { broker: BrokerSession }) {
           </DropdownMenuLabel>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        {isAdminRole(broker) ? (
-          <>
-            <DropdownMenuGroup>
-              <DropdownMenuItem
-                render={<Link to={`/settings/users?edit=${broker.id}`} />}
-              >
-                <UserIcon />
-                Profile
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-          </>
-        ) : null}
+        <DropdownMenuGroup>
+          <DropdownMenuItem render={<Link to="/profile" />}>
+            <UserIcon />
+            Profile
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
         <DropdownMenuItem
           variant="destructive"
           disabled={loggingOut}

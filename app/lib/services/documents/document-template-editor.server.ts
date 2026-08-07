@@ -1,5 +1,6 @@
 import { redirect } from "react-router";
 import { z } from "zod";
+import { requireFeatureOrSuperAdminPage } from "~/lib/auth/authorize.server";
 import { requireAuth } from "~/lib/auth/session.server";
 import { isAdminRole, isSuperAdmin } from "~/lib/auth/roles";
 import { parseTemplateForm } from "~/lib/documents/template-editor-form";
@@ -31,9 +32,7 @@ export async function loadDocumentTemplateEditor({
 }: DocumentTemplateRequestArgs) {
   const viewer = await requireAuth(request);
   const enabled = await isFeatureEnabled("document_templates");
-  if (!enabled && !isSuperAdmin(viewer)) {
-    throw redirect("/settings");
-  }
+  requireFeatureOrSuperAdminPage(enabled, viewer);
 
   const templateKey = String(params.templateKey ?? "");
   const [state, history] = await Promise.all([

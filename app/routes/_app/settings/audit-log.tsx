@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Form, redirect } from "react-router";
+import { Form } from "react-router";
 import { format } from "date-fns";
 import { enAU } from "date-fns/locale";
 import { ScrollTextIcon } from "lucide-react";
@@ -7,8 +7,9 @@ import { ListSearchField } from "~/components/forms/list-search-field";
 import { PageHeader } from "~/components/layout/app-layout";
 import { useDebouncedSearchQuery } from "~/hooks/use-debounced-search-query";
 import { requireAuth } from "~/lib/auth/session.server";
+import { requireFeatureOrSuperAdminPage } from "~/lib/auth/authorize.server";
 import { optionalIsoDateSchema, queryTextSchema } from "~/lib/http/route-input";
-import { isAdminRole, isSuperAdmin } from "~/lib/auth/roles";
+import { isAdminRole } from "~/lib/auth/roles";
 import { Button } from "~/components/ui/button";
 import {
   Dialog,
@@ -70,9 +71,7 @@ function formatWhen(iso: string) {
 export async function loader({ request }: Route.LoaderArgs) {
   const viewer = await requireAuth(request);
   const auditLogEnabled = await isFeatureEnabled("audit_log");
-  if (!auditLogEnabled && !isSuperAdmin(viewer)) {
-    throw redirect("/settings");
-  }
+  requireFeatureOrSuperAdminPage(auditLogEnabled, viewer);
 
   const url = new URL(request.url);
   const q = queryTextSchema.parse(url.searchParams.get("q") ?? "");

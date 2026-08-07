@@ -1,10 +1,4 @@
-import {
-  Link,
-  redirect,
-  useFetcher,
-  useNavigate,
-  useNavigation,
-} from "react-router";
+import { Link, useFetcher, useNavigate, useNavigation } from "react-router";
 import { useEffect, useRef, useState } from "react";
 import { FilePenLineIcon, PlusIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -44,6 +38,7 @@ import {
   TableRow,
 } from "~/components/ui/table";
 import { requireAuth } from "~/lib/auth/session.server";
+import { requireFeatureOrSuperAdminPage } from "~/lib/auth/authorize.server";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
 import { parseFormIntent } from "~/lib/http/route-input";
 import { isAdminRole, isSuperAdmin } from "~/lib/auth/roles";
@@ -72,9 +67,7 @@ export function HydrateFallback() {
 export async function loader({ request }: Route.LoaderArgs) {
   const viewer = await requireAuth(request);
   const enabled = await isFeatureEnabled("document_templates");
-  if (!enabled && !isSuperAdmin(viewer)) {
-    throw redirect("/settings");
-  }
+  requireFeatureOrSuperAdminPage(enabled, viewer);
 
   return {
     templates: await listDocumentTemplates(),

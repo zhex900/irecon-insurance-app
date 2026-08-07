@@ -129,6 +129,14 @@ async function listSettingsLinks(viewer: AppUser): Promise<SideNavLink[]> {
   return links;
 }
 
+/** True when the viewer has at least one Settings destination (nav + /settings hub). */
+export async function viewerCanAccessSettings(
+  viewer: AppUser,
+): Promise<boolean> {
+  const links = await listSettingsLinks(viewer);
+  return links.length > 0;
+}
+
 export async function getSideNavData(viewer: AppUser): Promise<SideNavData> {
   const [recentRoutes, settings] = await Promise.all([
     listRecentRoutes(viewer.userId),

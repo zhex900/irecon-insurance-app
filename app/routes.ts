@@ -50,6 +50,7 @@ export default [
   route("api/recent-routes", "routes/api/recent-routes.tsx"),
   layout("routes/_app/layout.tsx", [
     route("dashboard", "routes/_app/dashboard.tsx"),
+    route("profile", "routes/_app/profile.tsx"),
     route("clients", "routes/_app/clients/_index.tsx"),
     route("clients/new", "routes/_app/clients/new.tsx"),
     route("clients/:clientId/edit", "routes/_app/clients/$clientId.edit.tsx"),
