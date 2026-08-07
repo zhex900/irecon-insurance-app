@@ -57,8 +57,20 @@ export function setSentryUser(
   Sentry.setUser({ id: user.userId, email: user.email });
 }
 
-export function captureServerException(error: unknown): void {
+export function captureServerException(
+  error: unknown,
+  tags?: Record<string, string>,
+): void {
   setSentryRequestTags();
+  if (tags) {
+    Sentry.withScope((scope) => {
+      for (const [key, value] of Object.entries(tags)) {
+        scope.setTag(key, value);
+      }
+      Sentry.captureException(error);
+    });
+    return;
+  }
   Sentry.captureException(error);
 }
 

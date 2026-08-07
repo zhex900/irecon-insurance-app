@@ -98,6 +98,20 @@ export async function action({ request, params }: Route.ActionArgs) {
     }
     merged.policyNumber = validated.policyNumber;
   }
-  await savePolicy(merged);
-  return Response.json({ ok: true, savedAt: new Date().toISOString() });
+
+  try {
+    await savePolicy(merged);
+    return Response.json({ ok: true, savedAt: new Date().toISOString() });
+  } catch (error) {
+    return Response.json(
+      {
+        ok: false,
+        formError: publicErrorMessage(error, {
+          fallback: "Draft could not be saved. Try again.",
+          operation: "policy_draft_save",
+        }),
+      },
+      { status: 500 },
+    );
+  }
 }

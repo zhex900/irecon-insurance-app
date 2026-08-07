@@ -1,5 +1,6 @@
 import { carPolicyDraftSchema } from "~/lib/zod/policy-car";
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
+import { reportClientRouteError } from "~/lib/observability/report-error";
 import { mergeDraftIntoPolicy } from "~/lib/services/policy/draft-merge";
 import type {
   DraftDiscardResult,
@@ -36,22 +37,68 @@ export async function savePolicyDraftClient(
     };
   }
 
-  const response = await fetch(`/api/policies/${policyId}/draft`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(parsed.data),
-  });
+  try {
+    const response = await fetch(`/api/policies/${policyId}/draft`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(parsed.data),
+    });
 
-  const data = (await response.json()) as PolicyDraftSaveResult;
-  return data;
+    let data: PolicyDraftSaveResult;
+    try {
+      data = (await response.json()) as PolicyDraftSaveResult;
+    } catch {
+      const error = new Error(
+        `policy_draft_save_invalid_response:${response.status}`,
+      );
+      reportClientRouteError(error);
+      return {
+        ok: false,
+        formError: "Draft could not be saved. Check your connection.",
+      };
+    }
+
+    if (!response.ok || !data.ok) {
+      const formError =
+        data.ok === false
+          ? data.formError
+          : "Draft could not be saved. Try again.";
+      if (response.status >= 500) {
+        reportClientRouteError(
+          new Error(formError ?? `policy_draft_save_failed:${response.status}`),
+        );
+      }
+      if (data.ok === false) return data;
+      return {
+        ok: false,
+        formError: formError ?? "Draft could not be saved. Try again.",
+      };
+    }
+
+    return data;
+  } catch (error) {
+    reportClientRouteError(error);
+    return {
+      ok: false,
+      formError: "Draft could not be saved. Check your connection.",
+    };
+  }
 }
 
 /** Discard an unsaved new-policy draft (Pending + isDraft only). */
 export async function discardPolicyDraftClient(
   policyId: string,
 ): Promise<DraftDiscardResult> {
-  const response = await fetch(`/api/policies/${policyId}/draft`, {
-    method: "DELETE",
-  });
-  return (await response.json()) as DraftDiscardResult;
+  try {
+    const response = await fetch(`/api/policies/${policyId}/draft`, {
+      method: "DELETE",
+    });
+    return (await response.json()) as DraftDiscardResult;
+  } catch (error) {
+    reportClientRouteError(error);
+    return {
+      ok: false,
+      formError: "Could not discard policy",
+    };
+  }
 }

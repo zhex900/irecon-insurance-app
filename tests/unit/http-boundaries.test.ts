@@ -13,6 +13,10 @@ vi.mock("~/lib/observability/logger.server", () => ({
   logger: { error: vi.fn() },
 }));
 
+vi.mock("~/lib/observability/sentry.server", () => ({
+  captureServerException: vi.fn(),
+}));
+
 describe("route input schemas", () => {
   it("bounds query text and rejects malformed positive ids", () => {
     expect(queryTextSchema.parse("  broker ")).toBe("broker");
@@ -45,13 +49,17 @@ describe("domain errors", () => {
     });
   });
 
-  it("exposes domain copy but hides and logs unexpected errors", () => {
+  it("exposes domain copy but hides and logs unexpected errors", async () => {
+    const { captureServerException } =
+      await import("~/lib/observability/sentry.server");
+
     expect(
       publicErrorMessage(new ValidationError("Check the value."), {
         fallback: "Save failed.",
         operation: "test_save",
       }),
     ).toBe("Check the value.");
+    expect(captureServerException).not.toHaveBeenCalled();
 
     expect(
       publicErrorMessage(new Error("postgres password=secret"), {
@@ -63,5 +71,6 @@ describe("domain errors", () => {
       "Unexpected route operation failure",
       expect.objectContaining({ operation: "test_save", errorType: "Error" }),
     );
+    expect(captureServerException).toHaveBeenCalled();
   });
 });
