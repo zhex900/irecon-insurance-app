@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Logo } from "~/components/logo";
+import { OfflineDialog } from "~/components/layout/offline-dialog";
 import { ThemeToggle } from "~/components/theme-toggle";
 
 function AuthBlueprintBackground() {
@@ -46,6 +47,7 @@ function AuthBlueprintBackground() {
 export function AuthShell({ children }: { children: ReactNode }) {
   return (
     <main className="relative flex min-h-screen">
+      <OfflineDialog />
       <div className="absolute top-4 right-4 z-20">
         <ThemeToggle />
       </div>

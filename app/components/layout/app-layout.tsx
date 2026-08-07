@@ -17,6 +17,7 @@ import {
 import { AppSideNav } from "~/components/layout/app-side-nav";
 import { GlobalSearch } from "~/components/layout/global-search";
 import { NavigationProgress } from "~/components/layout/navigation-progress";
+import { OfflineDialog } from "~/components/layout/offline-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -202,6 +203,7 @@ export function AppLayout({
     <TooltipProvider>
       <SentryUserSync userId={broker.id} email={broker.email} />
       <NavigationProgress />
+      <OfflineDialog />
       <SidebarProvider
         open={shellNav.sidebarOpen}
         onOpenChange={handleSidebarOpenChange}
