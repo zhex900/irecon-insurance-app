@@ -52,85 +52,48 @@ export function orderFormIssues(
     });
 }
 
-const VISIBLE_CONTROL_SELECTOR =
-  'button[data-slot=select-trigger], input:not([type="hidden"]), select, textarea, button:not([type="hidden"])';
+function scrollFocusedControl(path: string): boolean {
+  if (typeof document === "undefined") return false;
 
-function isHiddenInput(el: HTMLElement): boolean {
-  return el instanceof HTMLInputElement && el.type === "hidden";
-}
-
-function visibleControlInField(fieldRoot: ParentNode): HTMLElement | null {
-  return fieldRoot.querySelector<HTMLElement>(VISIBLE_CONTROL_SELECTOR);
-}
-
-function findFocusableElement(path: string): HTMLElement | null {
-  if (typeof document === "undefined") return null;
-
-  const byDataPath = document.querySelector<HTMLElement>(
-    `[data-field-path="${CSS.escape(path)}"]`,
-  );
-  if (byDataPath) {
-    if (byDataPath.matches(VISIBLE_CONTROL_SELECTOR)) return byDataPath;
-    const nested = visibleControlInField(byDataPath);
-    if (nested) return nested;
+  const active = document.activeElement;
+  if (
+    active instanceof HTMLElement &&
+    active !== document.body &&
+    (active.id === path || active.getAttribute("name") === path)
+  ) {
+    active.scrollIntoView({ behavior: "smooth", block: "center" });
+    return true;
   }
 
-  const label = document.querySelector<HTMLLabelElement>(
-    `label[for="${CSS.escape(path)}"]`,
-  );
-  if (label) {
-    const field = label.closest("[data-slot=field]");
-    if (field) {
-      const control = visibleControlInField(field);
-      if (control) return control;
-    }
-    const byId = document.getElementById(label.htmlFor);
-    if (byId instanceof HTMLElement && !isHiddenInput(byId)) return byId;
-  }
-
+  // id on the visible control (Select trigger / input) once mounted.
   const byId = document.getElementById(path);
-  if (byId instanceof HTMLElement && !isHiddenInput(byId)) return byId;
-
-  const named = document.querySelector<HTMLElement>(
-    `[name="${CSS.escape(path)}"]`,
-  );
-  if (named) {
-    if (isHiddenInput(named)) {
-      const field = named.closest("[data-slot=field]");
-      if (field) {
-        const control = visibleControlInField(field);
-        if (control) return control;
-      }
-    } else {
-      return named;
-    }
-  }
-
-  return null;
+  if (!(byId instanceof HTMLElement)) return false;
+  if (byId instanceof HTMLInputElement && byId.type === "hidden") return false;
+  byId.focus({ preventScroll: true });
+  byId.scrollIntoView({ behavior: "smooth", block: "center" });
+  return true;
 }
 
-/** Focus and scroll to the first invalid field (RHF setFocus + DOM fallback). */
+/**
+ * Focus + scroll to a field via React Hook Form refs.
+ * Controls should register a focusable element with `ref={field.ref}` /
+ * `register()` so `setFocus` works — no DOM field scraping.
+ * Retries briefly for collapsible / conditionally mounted fields.
+ */
 export function focusFormIssue<TFieldValues extends FieldValues>(
   setFocus: UseFormSetFocus<TFieldValues>,
   path: string,
 ) {
-  try {
-    setFocus(path as never, { shouldSelect: true });
-  } catch {
-    // Checkbox / custom controls may not register a focusable ref.
-  }
-
   let attempts = 0;
-  const maxAttempts = 8;
+  const maxAttempts = 12;
 
   const tryFocus = () => {
-    const el = findFocusableElement(path);
-    if (!el) return false;
-    el.scrollIntoView({ behavior: "smooth", block: "center" });
-    if (document.activeElement !== el && typeof el.focus === "function") {
-      el.focus({ preventScroll: true });
+    try {
+      setFocus(path as never, { shouldSelect: true });
+    } catch {
+      // Control not registered yet (conditional mount) or non-focusable.
     }
-    return true;
+    return scrollFocusedControl(path);
   };
 
   const schedule = () => {

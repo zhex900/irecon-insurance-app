@@ -194,11 +194,7 @@ export function Select<
   const message = error ?? fieldState.error?.message;
 
   return (
-    <Field
-      data-field-path={name}
-      data-invalid={message ? true : undefined}
-      className={className}
-    >
+    <Field data-invalid={message ? true : undefined} className={className}>
       {label ? (
         <div className="flex items-center gap-1.5">
           <FieldLabel htmlFor={selectId} required={required}>
@@ -209,8 +205,9 @@ export function Select<
           ) : null}
         </div>
       ) : null}
-      <div className="relative" data-field-path={name}>
+      <div className="relative">
         <AppSelect
+          ref={field.ref}
           id={selectId}
           name={field.name}
           value={field.value == null ? "" : String(field.value)}
@@ -218,12 +215,15 @@ export function Select<
             field.onChange(next);
             onValueChange?.(next);
           }}
+          onBlur={field.onBlur}
           options={options}
           placeholder={placeholder}
           disabled={disabled}
           required={required}
           aria-invalid={!!message}
-          className={cn(highlight, saved && "pr-8")}
+          // Highlight on the trigger (has the border) — not the wrapper.
+          className={cn(saved && "pr-8")}
+          triggerClassName={highlight}
         />
         <FieldSavedTick name={name} />
       </div>

@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { forwardRef, useState, type ReactNode } from "react";
 
 import { cn } from "~/lib/utils";
 import {
@@ -24,6 +24,7 @@ export type AppSelectProps = {
   value?: string | null;
   defaultValue?: string | null;
   onValueChange?: (value: string) => void;
+  onBlur?: () => void;
   placeholder?: string;
   name?: string;
   id?: string;
@@ -51,76 +52,84 @@ function toSelectValue(value: string | null | undefined): string | null {
 }
 
 /** App-styled select (Base UI). Empty string option values are supported. */
-export function AppSelect({
-  options,
-  value,
-  defaultValue,
-  onValueChange,
-  placeholder = "Select…",
-  name,
-  id,
-  disabled,
-  required,
-  size = "default",
-  className,
-  triggerClassName,
-  "aria-label": ariaLabel,
-  "aria-invalid": ariaInvalid,
-}: AppSelectProps) {
-  const controlled = value !== undefined;
-  const [uncontrolled, setUncontrolled] = useState(defaultValue ?? "");
-  const current = controlled ? (value ?? "") : uncontrolled;
-  const items = options.map((option) => ({
-    value: toItemValue(option.value),
-    label: option.label,
-  }));
+export const AppSelect = forwardRef<HTMLButtonElement, AppSelectProps>(
+  function AppSelect(
+    {
+      options,
+      value,
+      defaultValue,
+      onValueChange,
+      onBlur,
+      placeholder = "Select…",
+      name,
+      id,
+      disabled,
+      required,
+      size = "default",
+      className,
+      triggerClassName,
+      "aria-label": ariaLabel,
+      "aria-invalid": ariaInvalid,
+    },
+    ref,
+  ) {
+    const controlled = value !== undefined;
+    const [uncontrolled, setUncontrolled] = useState(defaultValue ?? "");
+    const current = controlled ? (value ?? "") : uncontrolled;
+    const items = options.map((option) => ({
+      value: toItemValue(option.value),
+      label: option.label,
+    }));
 
-  return (
-    <div className={cn("relative w-full", className)}>
-      {name ? (
-        <input
-          type="hidden"
-          name={name}
-          value={current}
-          required={required}
+    return (
+      <div className={cn("relative w-full", className)}>
+        {name ? (
+          <input
+            type="hidden"
+            name={name}
+            value={current}
+            required={required}
+            disabled={disabled}
+            readOnly
+          />
+        ) : null}
+        <Select
+          id={id}
           disabled={disabled}
-          readOnly
-        />
-      ) : null}
-      <Select
-        id={id}
-        disabled={disabled}
-        required={required}
-        items={items}
-        value={controlled ? toSelectValue(value) : toSelectValue(current)}
-        onValueChange={(next) => {
-          const resolved = fromItemValue(next);
-          if (!controlled) setUncontrolled(resolved);
-          onValueChange?.(resolved);
-        }}
-      >
-        <SelectTrigger
-          size={size}
-          aria-label={ariaLabel}
-          aria-invalid={ariaInvalid}
-          className={cn("w-full", triggerClassName)}
+          required={required}
+          items={items}
+          value={controlled ? toSelectValue(value) : toSelectValue(current)}
+          onValueChange={(next) => {
+            const resolved = fromItemValue(next);
+            if (!controlled) setUncontrolled(resolved);
+            onValueChange?.(resolved);
+          }}
         >
-          <SelectValue placeholder={placeholder} />
-        </SelectTrigger>
-        <SelectContent alignItemWithTrigger={false} align="start">
-          <SelectGroup>
-            {options.map((option) => (
-              <SelectItem
-                key={toItemValue(option.value)}
-                value={toItemValue(option.value)}
-                disabled={option.disabled}
-              >
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        </SelectContent>
-      </Select>
-    </div>
-  );
-}
+          <SelectTrigger
+            ref={ref}
+            size={size}
+            aria-label={ariaLabel}
+            aria-invalid={ariaInvalid}
+            className={cn("w-full", triggerClassName)}
+            onBlur={onBlur}
+          >
+            <SelectValue placeholder={placeholder} />
+          </SelectTrigger>
+          <SelectContent alignItemWithTrigger={false} align="start">
+            <SelectGroup>
+              {options.map((option) => (
+                <SelectItem
+                  key={toItemValue(option.value)}
+                  value={toItemValue(option.value)}
+                  disabled={option.disabled}
+                >
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+      </div>
+    );
+  },
+);
