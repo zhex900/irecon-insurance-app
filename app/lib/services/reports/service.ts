@@ -83,24 +83,36 @@ export function defaultCarPolicyPeriod(now = new Date()): {
   };
 }
 
-/** Default client report period: calendar year (Jan 1 → Dec 31). */
+/** Default client report period: current calendar month (legacy target spec). */
 export function defaultClientReportPeriod(now = new Date()): {
   dateFrom: string;
   dateTo: string;
 } {
   const year = now.getFullYear();
+  const month = now.getMonth();
+  const from = new Date(year, month, 1);
+  const to = new Date(year, month + 1, 0);
   return {
-    dateFrom: `${year}-01-01`,
-    dateTo: `${year}-12-31`,
+    dateFrom: localIsoDate(from),
+    dateTo: localIsoDate(to),
   };
 }
 
+function localIsoDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+/** Legacy Admin Client_Report row — one client, latest Taken policy turnover/expiry. */
 export type ClientReportRow = {
-  policyId: string;
   clientId: string;
-  clientName: string;
+  name: string;
+  subAgent: string;
   turnoverLimit: number;
-  dateEnd: string;
+  expiryDate: string;
+  createdDate: string;
 };
 
 export function todayIsoDate(now = new Date()): string {

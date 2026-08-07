@@ -52,6 +52,8 @@ export function usePolicyLeaveGuard({
   const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false);
   const [discarding, setDiscarding] = useState(false);
   const allowLeaveRef = useRef(false);
+  /** Where the user was headed when the leave dialog opened (survives blocker.reset). */
+  const pendingLeaveDestinationRef = useRef<string | null>(null);
 
   // New policies: always confirm before leaving (avoids orphan drafts).
   // Existing policies: only block when there are unsaved edits.
@@ -83,15 +85,20 @@ export function usePolicyLeaveGuard({
   }, [fetcher.state, fetcher.data, hasUnsavedChangesRef, setHasUnsavedChanges]);
 
   // If unsaved clears while blocked: stay on new policies so discard can run;
-  // existing policies with a clean form can dismiss the block. Never proceed
-  // solely because a leave-save is in flight — wait for allowLeaveRef after success.
+  // existing policies with a clean form can dismiss the block. Never reset while
+  // a leave-save is in flight — optimistic draft save clears dirty before navigation.
   useEffect(() => {
+    if (blocker.state === "blocked" && blocker.location) {
+      pendingLeaveDestinationRef.current =
+        `${blocker.location.pathname}${blocker.location.search}${blocker.location.hash}`;
+    }
     if (blocker.state !== "blocked") return;
     if (allowLeaveRef.current) {
       setPendingLeaveAfterSave(false);
       blocker.proceed();
       return;
     }
+    if (pendingLeaveAfterSaveRef.current) return;
     if (!isNew && !hasUnsavedChanges) {
       blocker.reset();
     }
@@ -151,7 +158,20 @@ export function usePolicyLeaveGuard({
         if (!ok) {
           pendingLeaveAfterSaveRef.current = false;
           setPendingLeaveAfterSave(false);
+          return;
         }
+        pendingLeaveAfterSaveRef.current = false;
+        setPendingLeaveAfterSave(false);
+        setDiscardConfirmOpen(false);
+        if (blocker.state === "blocked") {
+          blocker.proceed();
+        } else {
+          navigate(
+            pendingLeaveDestinationRef.current ??
+              `/clients/${policy.clientId}`,
+          );
+        }
+        pendingLeaveDestinationRef.current = null;
         return;
       }
       // Await the draft save. Leave navigation runs inside persistDraft on
@@ -197,6 +217,7 @@ export function usePolicyLeaveGuard({
     blocker,
     allowLeaveRef,
     pendingLeaveAfterSaveRef,
+    pendingLeaveDestinationRef,
     pendingLeaveAfterSave,
     setPendingLeaveAfterSave,
     discardConfirmOpen,

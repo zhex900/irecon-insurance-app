@@ -94,9 +94,11 @@ export function ClientPoliciesTable({
           aria-label="Search policies"
           className="max-w-sm shrink-0"
         />
-        <p className="text-sm text-muted-foreground lg:ms-auto">
-          {total} of {allCount} policies
-        </p>
+        <div className="flex flex-col gap-1 text-sm text-muted-foreground lg:items-end">
+          <p>
+            {total} of {allCount} policies
+          </p>
+        </div>
       </div>
 
       <PolicyListTable

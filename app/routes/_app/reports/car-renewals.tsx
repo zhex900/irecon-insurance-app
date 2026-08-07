@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Form, useSearchParams } from "react-router";
 import { DownloadIcon, FileTextIcon } from "lucide-react";
 import { PageHeader } from "~/components/layout/app-layout";
-import { Button } from "~/components/ui/button";
+import { Button, buttonVariants } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import {
   Empty,
@@ -23,7 +23,6 @@ import {
   TableRow,
 } from "~/components/ui/table";
 import { TablePagination } from "~/components/ui/table-pagination";
-import { downloadCsv, toCsv } from "~/lib/csv";
 import {
   pageSearchHref,
   pageSizeSearchHref,
@@ -124,37 +123,10 @@ export default function CarRenewalReportRoute({
   const pageSizeHref = (nextPageSize: number) =>
     pageSizeSearchHref(searchParams, nextPageSize, PAGE_SIZE);
 
-  function exportCsv() {
-    const csv = toCsv(
-      ["Status", "Type", "Client", "Expiry", "AR", "AR Email", "Due Next Days"],
-      results.map((row) => ({
-        Status: row.statusName,
-        Category: row.policyCategoryName,
-        Client: row.clientName,
-        Expiry: formatDate(row.dateEnd),
-        AR: row.arName.trim() || "",
-        "AR Email": row.arEmail.trim() || "",
-        "Due Next Days": row.dueNextDays,
-      })),
-    );
-    const filename = `car-renewal-report-${loaderData.referenceDate}-page-${loaderData.page}.csv`;
-    downloadCsv(filename, csv);
-    void import("~/lib/services/audit/client").then(
-      ({ recordAuditEventClient }) => {
-        recordAuditEventClient({
-          action: "report.export",
-          entityType: "report",
-          entityId: "car-renewals",
-          summary: `Exported CAR renewal CSV (${results.length} rows)`,
-          metadata: {
-            filename,
-            referenceDate: loaderData.referenceDate,
-            rowCount: results.length,
-          },
-        });
-      },
-    );
-  }
+  const exportParams = new URLSearchParams(searchParams);
+  exportParams.delete("page");
+  exportParams.delete("pageSize");
+  const exportHref = `/api/reports/car-renewals.xlsx?${exportParams.toString()}`;
 
   return (
     <div>
@@ -197,15 +169,17 @@ export default function CarRenewalReportRoute({
           </FieldGroup>
           <div className="flex flex-wrap gap-2">
             <Button type="submit">Apply</Button>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={results.length === 0}
-              onClick={exportCsv}
+            <a
+              href={exportHref}
+              className={buttonVariants({ variant: "outline" })}
+              aria-disabled={loaderData.total === 0}
+              {...(loaderData.total === 0
+                ? { tabIndex: -1, onClick: (e) => e.preventDefault() }
+                : {})}
             >
               <DownloadIcon data-icon="inline-start" />
-              Export CSV
-            </Button>
+              Export Excel
+            </a>
           </div>
         </div>
 

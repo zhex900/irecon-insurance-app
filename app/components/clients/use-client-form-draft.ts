@@ -52,6 +52,7 @@ export function useClientFormDraft({
   const pendingDraftPayloadRef = useRef<string | null>(null);
   const pendingDirtyPathsRef = useRef<string[]>([]);
   const allowLeaveRef = useRef(false);
+  const pendingLeaveDestinationRef = useRef<string | null>(null);
   const savedSnapshotRef = useRef("");
   const previousSnapshotRef = useRef("");
   const previousSavedAtRef = useRef<string | null>(null);
@@ -209,10 +210,14 @@ export function useClientFormDraft({
           allowLeaveRef.current = true;
           const name = form.getValues("name")?.trim() || "Client";
           toast.success(`${name} saved`);
+          const destination =
+            pendingLeaveDestinationRef.current ??
+            `/clients/${client.clientId}`;
+          pendingLeaveDestinationRef.current = null;
           if (blocker.state === "blocked") {
             blocker.proceed();
           } else {
-            navigate(`/clients/${client.clientId}`);
+            navigate(destination);
           }
         }
       }
@@ -241,7 +246,12 @@ export function useClientFormDraft({
   }
 
   useEffect(() => {
+    if (blocker.state === "blocked" && blocker.location) {
+      pendingLeaveDestinationRef.current =
+        `${blocker.location.pathname}${blocker.location.search}${blocker.location.hash}`;
+    }
     if (blocker.state === "blocked" && !isNew && !hasUnsavedChanges) {
+      if (pendingLeaveAfterSaveRef.current) return;
       blocker.reset();
     }
   }, [blocker, hasUnsavedChanges, isNew]);
@@ -306,6 +316,7 @@ export function useClientFormDraft({
   }
 
   function saveAndLeave() {
+    pendingLeaveAfterSaveRef.current = true;
     setPendingLeaveAfterSave(true);
     void persistDraft({ force: true, requireComplete: isNew });
   }

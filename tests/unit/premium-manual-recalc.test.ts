@@ -239,6 +239,34 @@ describe("applyManualPremiumEdit — corrected vs legacy quirks", () => {
     );
   });
 
+  it("typed Terrorism Levy Plant and Equipment sticks and recalculates Plant ESL", () => {
+    const τ = 0.053;
+    const plantEslRate = 0.27;
+    const plant = 100;
+    const editedPlantTerror = 8.5;
+    const expectedPlantEsl = Math.round(
+      (plant + editedPlantTerror) * plantEslRate * 100,
+    ) / 100;
+
+    const result = applyManualPremiumEdit({
+      premium: premium({
+        contractWorksBasePremium: 1250,
+        contractWorksTerrorismPremium: Math.round(1250 * τ * 100) / 100,
+        contractWorksPlantPremium: plant,
+        contractWorksPlantTerrorismPremium: Math.round(plant * τ * 100) / 100,
+        contractWorksPlantESL: Math.round(plant * plantEslRate * 100) / 100,
+      }),
+      rating: rating({ terrorismRate: τ, plantEslRate, eslRate: 0.2 }),
+      key: "contractWorksPlantTerrorismPremium",
+      value: editedPlantTerror,
+    });
+
+    expect(result.premium.contractWorksPlantTerrorismPremium).toBe(
+      editedPlantTerror,
+    );
+    expect(result.premium.contractWorksPlantESL).toBe(expectedPlantEsl);
+  });
+
   it("derives τ from folded levy when rating is missing", () => {
     const base = 1250;
     const es = 10;

@@ -23,14 +23,14 @@ const reports = [
     to: "/reports/clients",
     title: "Client Report",
     description:
-      "List clients with turnover limit and expiry for a date range. Clear dates to show all.",
+      "Clients with latest Taken policy turnover and expiry. Filter by client created date, then export Excel.",
     icon: UsersIcon,
   },
   {
     to: "/reports/car-policies",
     title: "CAR Policy Report",
     description:
-      "Summarise CAR policies by status for a date period, then drill into detail and export CSV.",
+      "Summarise CAR policies by status for a date period, then drill into detail and export Excel.",
     icon: FileBarChart2Icon,
   },
   {
@@ -47,7 +47,7 @@ export default function ReportsIndexRoute() {
     <div>
       <PageHeader
         title="Reports"
-        description="Run operational reports on screen, then export to CSV."
+        description="Run operational reports on screen, then export to Excel."
         breadcrumbs={[{ label: "Reports" }]}
       />
 

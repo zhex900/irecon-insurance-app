@@ -4,6 +4,23 @@ function roundMoney(value: number) {
   return Math.round(value * 100) / 100;
 }
 
+/** Contract works + liability base premium (ex-GST), for list/report totals. */
+export function combinedBasePremiumExGst(
+  contractWorksBasePremium: number,
+  liabilityBasePremium: number,
+): number {
+  return roundMoney(contractWorksBasePremium + liabilityBasePremium);
+}
+
+/**
+ * Broker fee ex-GST from stored combined (incl. GST).
+ * Fee schedule lines use 10% GST (fee + feeGst).
+ */
+export function brokerFeeExGstFromCombined(combinedInclGst: number): number {
+  if (!combinedInclGst) return 0;
+  return roundMoney((combinedInclGst * 10) / 11);
+}
+
 /**
  * Legacy combined True Base Premium (CARNewPolicy / CARViewPolicy):
  * Section1Base + Section1Terror (+ ES/DH + their terror) + Section2Base

@@ -21,6 +21,7 @@ export type PolicyLeaveApi = {
   blocker: Blocker;
   allowLeaveRef: MutableRefObject<boolean>;
   pendingLeaveAfterSaveRef: MutableRefObject<boolean>;
+  pendingLeaveDestinationRef: MutableRefObject<string | null>;
   setPendingLeaveAfterSave: (value: boolean) => void;
   setDiscardConfirmOpen: (value: boolean) => void;
 };
@@ -296,10 +297,14 @@ export function usePolicyDraftSave({
         leave.setPendingLeaveAfterSave(false);
         leave.setDiscardConfirmOpen(false);
         leave.allowLeaveRef.current = true;
+        const destination =
+          leave.pendingLeaveDestinationRef.current ??
+          `/clients/${policy.clientId}`;
+        leave.pendingLeaveDestinationRef.current = null;
         if (leave.blocker.state === "blocked") {
           leave.blocker.proceed();
         } else {
-          navigate(`/clients/${policy.clientId}`);
+          navigate(destination);
         }
       }
       return true;

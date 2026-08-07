@@ -1,6 +1,18 @@
 const CURRENCY = '"$"#,##0.00';
 const PERCENT = "0.0000%";
 
+type ExcelJsModule = typeof import("exceljs");
+
+/** Dynamic exceljs loader — works in Node, browser, and Workers (nodejs_compat). */
+export async function loadExcelJS(): Promise<ExcelJsModule> {
+  const mod = await import("exceljs");
+  const ExcelJS = (mod.default ?? mod) as ExcelJsModule;
+  if (typeof ExcelJS.Workbook !== "function") {
+    throw new Error("Excel export failed: exceljs Workbook is unavailable.");
+  }
+  return ExcelJS;
+}
+
 export function formatCurrencyCell(cell: import("exceljs").Cell) {
   cell.numFmt = CURRENCY;
   cell.alignment = { horizontal: "right" };

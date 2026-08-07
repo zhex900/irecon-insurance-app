@@ -100,13 +100,19 @@ function resolveStatusIds(input: ListPoliciesPageInput): number[] {
   return [];
 }
 
-export type ListPoliciesPageResult = PageResult<PolicyListItem> & {
-  statusCounts: Record<number, number>;
-  coverCounts: Record<number, number>;
-  categoryCounts: Record<number, number>;
-  inceptionPresetCounts: Record<string, number>;
-  expiryPresetCounts: Record<string, number>;
+export type PolicyListPremiumTotals = {
+  totalBasePremiumExGst: number;
+  totalBrokerFeeExGst: number;
 };
+
+export type ListPoliciesPageResult = PageResult<PolicyListItem> &
+  PolicyListPremiumTotals & {
+    statusCounts: Record<number, number>;
+    coverCounts: Record<number, number>;
+    categoryCounts: Record<number, number>;
+    inceptionPresetCounts: Record<string, number>;
+    expiryPresetCounts: Record<string, number>;
+  };
 
 type FilterOmit = {
   omitStatus?: boolean;
@@ -218,6 +224,37 @@ async function countByGroup(
   return counts;
 }
 
+async function sumPolicyListPremiums(
+  input: ListPoliciesPageInput,
+): Promise<PolicyListPremiumTotals> {
+  const db = getDb();
+  const filters = buildPolicyListFilters(input);
+  const where = filters.length > 0 ? and(...filters) : undefined;
+  const [row] = await db
+    .select({
+      totalBasePremiumExGst: sql<number>`coalesce(sum(
+        coalesce(${policyCar.contractWorksBasePremium}, 0) +
+        coalesce(${policyCar.liabilityBasePremium}, 0)
+      ), 0)::float`,
+      totalBrokerFeeExGst: sql<number>`coalesce(sum(
+        coalesce((${policyCar.appExtras}->>'combinedBrokerFee')::numeric, 0) * 10 / 11
+      ), 0)::float`,
+    })
+    .from(policy)
+    .innerJoin(policyCar, eq(policy.policyId, policyCar.policyId))
+    .leftJoin(client, eq(policy.clientId, client.clientId))
+    .leftJoin(
+      policyCarAdjustment,
+      eq(policy.policyId, policyCarAdjustment.policyId),
+    )
+    .where(where);
+
+  return {
+    totalBasePremiumExGst: Number(row?.totalBasePremiumExGst ?? 0),
+    totalBrokerFeeExGst: Number(row?.totalBrokerFeeExGst ?? 0),
+  };
+}
+
 async function countWithFilters(
   input: ListPoliciesPageInput,
   omit?: FilterOmit,
@@ -280,6 +317,7 @@ export async function listPoliciesPage(
 
   const [
     total,
+    premiumTotals,
     statusCounts,
     coverCounts,
     categoryCounts,
@@ -288,6 +326,7 @@ export async function listPoliciesPage(
     rows,
   ] = await Promise.all([
     countWithFilters(input),
+    sumPolicyListPremiums(input),
     countByGroup(
       input,
       { omitStatus: true },
@@ -407,6 +446,7 @@ export async function listPoliciesPage(
 
   return {
     ...toPageResult(items, total, pagination),
+    ...premiumTotals,
     statusCounts,
     coverCounts,
     categoryCounts,

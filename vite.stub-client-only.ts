@@ -5,11 +5,14 @@ import type { Plugin } from "vite";
  * They are browser-only UI (pdfme Designer, React Email TipTap editor) and
  * are loaded via dynamic `import()` after mount on the client.
  *
+ * Do not stub exceljs — `/api/reports/*.xlsx` builds workbooks on the Worker
+ * (dynamic import in `*.server.ts` only). Premium Excel still loads exceljs
+ * in the browser bundle, not SSR.
+ *
  * Without stubbing, Vite still emits huge SSR chunks for those dynamic
  * imports and Wrangler uploads them — blowing the free plan 3 MiB gzip limit.
  */
 const CLIENT_ONLY_PREFIXES = [
-  "exceljs",
   "@pdfme/generator",
   "@pdfme/schemas",
   "@pdfme/ui",

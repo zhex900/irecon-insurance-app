@@ -16,6 +16,7 @@ import {
   PREMIUM_EXCEL_SPREADSHEET_VERSION,
   type BuildPremiumExcelInput,
 } from "~/lib/pricing/premium-excel-types";
+import { loadExcelJS } from "~/lib/pricing/premium-excel-workbook";
 import { calculateCarAdjustment } from "~/server/pricing/car-adjustment-calculator";
 
 export { PREMIUM_EXCEL_SPREADSHEET_VERSION };
@@ -25,7 +26,7 @@ export type { BuildPremiumExcelInput };
 export async function buildPremiumExcelWorkbook(
   input: BuildPremiumExcelInput,
 ): Promise<Uint8Array> {
-  const ExcelJS = (await import("exceljs")).default;
+  const ExcelJS = await loadExcelJS();
   const workbook = new ExcelJS.Workbook();
   workbook.creator = APP_NAME;
   workbook.created = new Date();

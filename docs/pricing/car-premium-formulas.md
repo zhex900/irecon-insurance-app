@@ -260,7 +260,7 @@ DH          = ContractWorksDisplayHomesPremium
 | Existing Structure / Display Homes | `(base + ES + DH) × τ` | unchanged    | unchanged                                     |                                                                                         |
 | Terrorism Levy                     | **typed value**        | `plant × τ′` | unchanged                                     | `τ′ = entered / base` (updates session τ)                                               |
 | Plant & Equipment                  | unchanged              | `plant × τ`  | `(plant + priorPlantTerror) × plantEslRate`   |                                                                                         |
-| Terrorism Levy Plant               | unchanged              | `plant × τ`  | `(plant + enteredPlantTerror) × plantEslRate` | then plant terror set to `plant × τ`                                                    |
+| Terrorism Levy Plant               | unchanged              | **typed value** | `(plant + enteredPlantTerror) × plantEslRate` |                                                                                         |
 | Plant ESL                          | unchanged              | unchanged    | kept                                          | back-derives `plantEslRate`                                                             |
 | ESL / SD / GST                     | unchanged              | unchanged    | unchanged                                     | Typed line sticks for this edit; **next** driver edit refreshes ESL/SD/GST from formula |
 

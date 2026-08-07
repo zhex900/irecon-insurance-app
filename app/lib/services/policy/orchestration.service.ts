@@ -156,7 +156,7 @@ export async function upsertPolicyFromForm(
   });
 
   await assertPolicyNumberAvailable(policy, existing);
-  return savePolicy({ ...policy, isDraft: false });
+  return savePolicy({ ...policy, isDraft: false }, { actor: createdBy });
 }
 
 export async function applyPremiumCalculation(

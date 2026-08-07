@@ -11,6 +11,7 @@ import { normalizeExcesses } from "~/lib/policies/excesses";
 import { formatPolicyNumberFromSeq } from "~/lib/policies/policy-number";
 import { normalizeSubLimits } from "~/lib/policies/sub-limits";
 import type { Policy, PolicySummary } from "~/lib/db/types";
+import { POLICY_STATUS } from "~/lib/zod/policy-car";
 import { listClients } from "~/lib/services/clients/service";
 import { createInformationalNote } from "~/lib/policies/policy-notes";
 
@@ -208,14 +209,43 @@ function normalizePolicy(item: Policy): Policy {
   };
 }
 
-export async function savePolicy(policyDoc: Policy) {
+export async function savePolicy(
+  policyDoc: Policy,
+  options?: { actor?: string },
+) {
   const db = getDb();
   const { policyValues, carValues, adjustmentValues } = policyToRows(policyDoc);
 
   await db.transaction(async (tx) => {
+    const [existing] = await tx
+      .select({
+        policyStatusId: policy.policyStatusId,
+        takenAt: policy.takenAt,
+        takenBy: policy.takenBy,
+      })
+      .from(policy)
+      .where(eq(policy.policyId, policyDoc.policyId))
+      .limit(1);
+
+    let takenAt = existing?.takenAt ?? null;
+    let takenBy = existing?.takenBy ?? null;
+    if (
+      policyValues.policyStatusId === POLICY_STATUS.Taken &&
+      existing?.policyStatusId !== POLICY_STATUS.Taken &&
+      takenAt == null
+    ) {
+      takenAt = new Date();
+      takenBy = options?.actor?.trim() || policyDoc.createdBy || "";
+    }
+
+    const takenFields =
+      takenAt != null
+        ? { takenAt, takenBy: takenBy ?? "" }
+        : {};
+
     await tx
       .insert(policy)
-      .values(policyValues)
+      .values({ ...policyValues, ...takenFields })
       .onConflictDoUpdate({
         target: policy.policyId,
         set: {
@@ -230,6 +260,7 @@ export async function savePolicy(policyDoc: Policy) {
           insurerCode: policyValues.insurerCode,
           isDraft: policyValues.isDraft,
           updatedWhen: new Date(),
+          ...takenFields,
         },
       });
 

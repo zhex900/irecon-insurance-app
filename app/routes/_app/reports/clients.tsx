@@ -1,7 +1,7 @@
 import { Form, Link, useSearchParams } from "react-router";
 import { DownloadIcon, UsersIcon } from "lucide-react";
 import { PageHeader } from "~/components/layout/app-layout";
-import { Button } from "~/components/ui/button";
+import { Button, buttonVariants } from "~/components/ui/button";
 import {
   Empty,
   EmptyDescription,
@@ -20,7 +20,9 @@ import {
   TableRow,
 } from "~/components/ui/table";
 import { TablePagination } from "~/components/ui/table-pagination";
-import { downloadCsv, toCsv } from "~/lib/csv";
+import { requireAuth } from "~/lib/auth/session.server";
+import { pageTitle } from "~/lib/brand";
+import { optionalIsoDateSchema } from "~/lib/http/route-input";
 import {
   pageSearchHref,
   pageSizeSearchHref,
@@ -30,33 +32,33 @@ import { listClientReportPage } from "~/lib/services/reports/list.service";
 import { defaultClientReportPeriod } from "~/lib/services/reports/service";
 import { formatCurrency, formatDate } from "~/lib/utils";
 import type { Route } from "./+types/clients";
-import { pageTitle } from "~/lib/brand";
-import { requireAuth } from "~/lib/auth/session.server";
-import { optionalIsoDateSchema } from "~/lib/http/route-input";
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 25;
 
 export function meta() {
   return [{ title: pageTitle("Client Report") }];
 }
 
+function resolveClientReportDates(url: URL) {
+  const rawFrom = url.searchParams.get("from");
+  const rawTo = url.searchParams.get("to");
+  // Missing or empty params → all clients (no created-date filter).
+  const dateFrom =
+    rawFrom == null || rawFrom === ""
+      ? ""
+      : (optionalIsoDateSchema.parse(rawFrom) ?? "");
+  const dateTo =
+    rawTo == null || rawTo === ""
+      ? ""
+      : (optionalIsoDateSchema.parse(rawTo) ?? "");
+  return { dateFrom, dateTo };
+}
+
 export async function loader({ request }: Route.LoaderArgs) {
   await requireAuth(request);
   const url = new URL(request.url);
-  const defaults = defaultClientReportPeriod();
-  // Missing params → this calendar year. Explicit empty string → all clients.
-  const rawFrom = url.searchParams.get("from");
-  const rawTo = url.searchParams.get("to");
-  const dateFrom =
-    rawFrom === null
-      ? defaults.dateFrom
-      : (optionalIsoDateSchema.parse(rawFrom || undefined) ?? "");
-  const dateTo =
-    rawTo === null
-      ? defaults.dateTo
-      : (optionalIsoDateSchema.parse(rawTo || undefined) ?? "");
+  const { dateFrom, dateTo } = resolveClientReportDates(url);
   const pagination = parsePagination(url, { defaultSize: PAGE_SIZE });
-
   const page = await listClientReportPage({
     dateFrom: dateFrom || undefined,
     dateTo: dateTo || undefined,
@@ -82,49 +84,25 @@ export default function ClientReportRoute({
   const pageSizeHref = (nextPageSize: number) =>
     pageSizeSearchHref(searchParams, nextPageSize, PAGE_SIZE);
 
-  function exportCsv() {
-    const csv = toCsv(
-      ["Client Name", "Turnover Limit", "Expiry Date"],
-      loaderData.rows.map((row) => ({
-        "Client Name": row.clientName,
-        "Turnover Limit": row.turnoverLimit,
-        "Expiry Date": formatDate(row.dateEnd),
-      })),
-    );
-    const range =
-      loaderData.dateFrom || loaderData.dateTo
-        ? `${loaderData.dateFrom || "all"}-${loaderData.dateTo || "all"}`
-        : "all";
-    const filename = `client-report-${range}-page-${loaderData.page}.csv`;
-    downloadCsv(filename, csv);
-    void import("~/lib/services/audit/client").then(
-      ({ recordAuditEventClient }) => {
-        recordAuditEventClient({
-          action: "report.export",
-          entityType: "report",
-          entityId: "clients",
-          summary: `Exported client report CSV (${loaderData.rows.length} rows)`,
-          metadata: {
-            filename,
-            dateFrom: loaderData.dateFrom,
-            dateTo: loaderData.dateTo,
-            rowCount: loaderData.rows.length,
-          },
-        });
-      },
-    );
-  }
-
   const rangeLabel =
     !loaderData.dateFrom && !loaderData.dateTo
       ? "all dates"
       : `${loaderData.dateFrom || "…"} – ${loaderData.dateTo || "…"}`;
+  const showingAllDates = !loaderData.dateFrom && !loaderData.dateTo;
+  const thisMonth = defaultClientReportPeriod();
+
+  const exportParams = new URLSearchParams();
+  if (loaderData.dateFrom) exportParams.set("from", loaderData.dateFrom);
+  if (loaderData.dateTo) exportParams.set("to", loaderData.dateTo);
+  const exportHref = `/api/reports/clients.xlsx${
+    exportParams.size > 0 ? `?${exportParams.toString()}` : ""
+  }`;
 
   return (
     <div>
       <PageHeader
         title="Client Report"
-        description="Client policies with turnover limit and expiry. Clear dates to show all."
+        description="One row per client with Sub Agent, turnover limit and expiry from the latest Taken policy. Filter by client created date."
         breadcrumbs={[
           { label: "Reports", to: "/reports" },
           { label: "Client Report" },
@@ -157,21 +135,42 @@ export default function ClientReportRoute({
               />
             </Field>
             <Button type="submit">Apply</Button>
+            {showingAllDates ? (
+              <Button type="button" variant="outline" disabled>
+                Show all clients
+              </Button>
+            ) : (
+              <Link
+                to="/reports/clients?from=&to="
+                className={buttonVariants({ variant: "outline" })}
+              >
+                Show all clients
+              </Link>
+            )}
+            {!showingAllDates ? null : (
+              <Link
+                to={`/reports/clients?from=${thisMonth.dateFrom}&to=${thisMonth.dateTo}`}
+                className={buttonVariants({ variant: "outline" })}
+              >
+                This month
+              </Link>
+            )}
           </FieldGroup>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={loaderData.total === 0}
-            onClick={exportCsv}
+          <a
+            href={exportHref}
+            className={buttonVariants({ variant: "outline" })}
+            aria-disabled={loaderData.total === 0}
+            {...(loaderData.total === 0
+              ? { tabIndex: -1, onClick: (e) => e.preventDefault() }
+              : {})}
           >
             <DownloadIcon data-icon="inline-start" />
-            Export CSV
-          </Button>
+            Export Excel
+          </a>
         </div>
         <p className="text-sm text-muted-foreground">
-          {loaderData.total} polic
-          {loaderData.total === 1 ? "y" : "ies"} · expiry {rangeLabel}. Leave
-          dates empty for all clients.
+          {loaderData.total} client{loaderData.total === 1 ? "" : "s"} · created{" "}
+          {rangeLabel}.
         </p>
       </Form>
 
@@ -179,23 +178,26 @@ export default function ClientReportRoute({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Client Name</TableHead>
+              <TableHead>Name</TableHead>
+              <TableHead>Sub Agent</TableHead>
               <TableHead className="text-right">Turnover Limit</TableHead>
               <TableHead>Expiry Date</TableHead>
+              <TableHead>Created Date</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loaderData.rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={3} className="py-10">
+                <TableCell colSpan={5} className="py-10">
                   <Empty>
                     <EmptyHeader>
                       <EmptyMedia variant="icon">
                         <UsersIcon />
                       </EmptyMedia>
-                      <EmptyTitle>No clients found</EmptyTitle>
+                      <EmptyTitle>No results</EmptyTitle>
                       <EmptyDescription>
-                        No clients match this date range.
+                        No clients with a Taken policy match this created-date
+                        range.
                       </EmptyDescription>
                     </EmptyHeader>
                   </Empty>
@@ -203,21 +205,23 @@ export default function ClientReportRoute({
               </TableRow>
             ) : (
               loaderData.rows.map((row) => (
-                <TableRow key={row.policyId}>
+                <TableRow key={row.clientId}>
                   <TableCell className="font-medium">
                     <Link
                       to={`/clients/${row.clientId}`}
                       className="text-foreground underline-offset-4 hover:underline"
                     >
-                      {row.clientName}
+                      {row.name}
                     </Link>
                   </TableCell>
+                  <TableCell>{row.subAgent}</TableCell>
                   <TableCell className="text-right tabular-nums">
                     {formatCurrency(row.turnoverLimit)}
                   </TableCell>
-                  <TableCell className="tabular-nums">
-                    {formatDate(row.dateEnd)}
+                  <TableCell>
+                    {row.expiryDate ? formatDate(row.expiryDate) : "—"}
                   </TableCell>
+                  <TableCell>{formatDate(row.createdDate)}</TableCell>
                 </TableRow>
               ))
             )}

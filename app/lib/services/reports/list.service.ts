@@ -204,67 +204,145 @@ export async function listReportPoliciesPage(
   return toPageResult(items, Number(countRow?.count ?? 0), pagination);
 }
 
-/**
- * Client report: one row per policy with client name, turnover limit, expiry.
- * Date filters apply to policy expiry (`dateEnd`). Empty from/to = no date filter.
- */
-export async function listClientReportPage(
-  input: {
-    dateFrom?: string;
-    dateTo?: string;
-    limit?: number;
-    offset?: number;
-  } = {},
-): Promise<PageResult<ClientReportRow>> {
-  const db = getDb();
-  const pagination = resolvePage({
-    ...input,
-    pageSize: input.limit ?? 50,
-  });
+type ClientReportInput = {
+  /** Filter on client `createdWhen`. Empty = all clients. */
+  dateFrom?: string;
+  dateTo?: string;
+};
 
+function buildClientReportFilters(input: ClientReportInput): SQL[] {
   const filters: SQL[] = [];
   const from = input.dateFrom?.trim();
   const to = input.dateTo?.trim();
   if (from) {
-    filters.push(gte(policy.dateEnd, new Date(`${from}T00:00:00`)));
+    filters.push(gte(client.createdWhen, new Date(`${from}T00:00:00`)));
   }
   if (to) {
-    filters.push(lte(policy.dateEnd, new Date(`${to}T23:59:59.999`)));
+    filters.push(lte(client.createdWhen, new Date(`${to}T23:59:59.999`)));
   }
-  const where = filters.length > 0 ? and(...filters) : undefined;
+  return filters;
+}
 
-  const [countRow] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(policy)
-    .innerJoin(policyCar, eq(policy.policyId, policyCar.policyId))
-    .leftJoin(client, eq(policy.clientId, client.clientId))
-    .where(where);
-
-  const rows = await db
+function latestTakenPolicyRankSubquery() {
+  const db = getDb();
+  return db
     .select({
-      policyId: policy.policyId,
       clientId: policy.clientId,
-      clientName: client.name,
       turnoverLimit: policyCar.estimatedTurnover,
-      dateEnd: policy.dateEnd,
+      expiryDate: policy.dateEnd,
+      rn: sql<number>`row_number() over (
+        partition by ${policy.clientId}
+        order by ${policy.dateStart} desc, ${policy.dateEnd} desc
+      )`.as("rn"),
     })
     .from(policy)
     .innerJoin(policyCar, eq(policy.policyId, policyCar.policyId))
-    .leftJoin(client, eq(policy.clientId, client.clientId))
-    .where(where)
-    .orderBy(asc(client.name), asc(policy.dateEnd), desc(policy.policyId))
-    .limit(pagination.limit)
-    .offset(pagination.offset);
+    .where(eq(policy.policyStatusId, POLICY_STATUS.Taken))
+    .as("latest_taken_policy");
+}
 
-  const items: ClientReportRow[] = rows.map((row) => ({
-    policyId: row.policyId,
+function mapClientReportRows(
+  rows: Array<{
+    clientId: string;
+    name: string | null;
+    subAgent: string | null;
+    turnoverLimit: string | number | null;
+    expiryDate: Date | null;
+    createdDate: Date;
+  }>,
+): ClientReportRow[] {
+  return rows.map((row) => ({
     clientId: row.clientId,
-    clientName: row.clientName?.trim() || "—",
+    name: row.name?.trim() || "—",
+    subAgent: row.subAgent?.trim() || "—",
     turnoverLimit: Number(row.turnoverLimit ?? 0),
-    dateEnd: row.dateEnd.toISOString(),
+    expiryDate: row.expiryDate?.toISOString() ?? "",
+    createdDate: row.createdDate.toISOString(),
   }));
+}
 
-  return toPageResult(items, Number(countRow?.count ?? 0), pagination);
+async function queryClientReportRows(
+  input: ClientReportInput,
+  pagination?: { limit: number; offset: number },
+): Promise<ClientReportRow[]> {
+  const db = getDb();
+  const latestPolicy = latestTakenPolicyRankSubquery();
+  const filters = buildClientReportFilters(input);
+  filters.push(sql`${latestPolicy.rn} = 1`);
+  const where = and(...filters);
+
+  let query = db
+    .select({
+      clientId: client.clientId,
+      name: client.name,
+      subAgent: authorisedRepresentative.fullName,
+      turnoverLimit: latestPolicy.turnoverLimit,
+      expiryDate: latestPolicy.expiryDate,
+      createdDate: client.createdWhen,
+    })
+    .from(client)
+    .innerJoin(latestPolicy, eq(client.clientId, latestPolicy.clientId))
+    .leftJoin(
+      authorisedRepresentative,
+      eq(
+        client.authorisedRepresentativeId,
+        authorisedRepresentative.authorisedRepresentativeId,
+      ),
+    )
+    .where(where)
+    .orderBy(asc(client.name))
+    .$dynamic();
+
+  if (pagination) {
+    query = query.limit(pagination.limit).offset(pagination.offset);
+  }
+
+  const rows = await query;
+  return mapClientReportRows(rows);
+}
+
+async function countClientReportRows(input: ClientReportInput): Promise<number> {
+  const db = getDb();
+  const latestPolicy = latestTakenPolicyRankSubquery();
+  const filters = buildClientReportFilters(input);
+  filters.push(sql`${latestPolicy.rn} = 1`);
+  const where = and(...filters);
+
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(client)
+    .innerJoin(latestPolicy, eq(client.clientId, latestPolicy.clientId))
+    .where(where);
+
+  return Number(row?.count ?? 0);
+}
+
+/** Legacy Client_Report — clients with latest Taken policy; filter by client created date. */
+export async function listClientReportAll(
+  input: ClientReportInput = {},
+): Promise<ClientReportRow[]> {
+  return queryClientReportRows(input);
+}
+
+/** Paginated client report for `/reports/clients`. */
+export async function listClientReportPage(
+  input: ClientReportInput & {
+    limit?: number;
+    offset?: number;
+  } = {},
+): Promise<PageResult<ClientReportRow>> {
+  const pagination = resolvePage({
+    ...input,
+    pageSize: input.limit ?? 50,
+  });
+  const [total, rows] = await Promise.all([
+    countClientReportRows(input),
+    queryClientReportRows(input, {
+      limit: pagination.limit,
+      offset: pagination.offset,
+    }),
+  ]);
+  return toPageResult(rows, total, pagination);
 }
 
 /** Aggregated CAR policy report — SQL group-by, no full-table hydrate. */

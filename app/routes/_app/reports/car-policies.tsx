@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Form, useFetcher } from "react-router";
 import { DownloadIcon } from "lucide-react";
 import { PageHeader } from "~/components/layout/app-layout";
-import { Button } from "~/components/ui/button";
+import { Button, buttonVariants } from "~/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -22,7 +22,6 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table";
-import { downloadCsv, toCsv } from "~/lib/csv";
 import {
   defaultCarPolicyPeriod,
   type CarSearchStatus,
@@ -74,6 +73,12 @@ export default function CarPolicyReportRoute({
 
   const detailMeta = summary.find((row) => row.status === detailStatus) ?? null;
 
+  const summaryExportHref = `/api/reports/car-policies.xlsx?from=${encodeURIComponent(loaderData.dateFrom)}&to=${encodeURIComponent(loaderData.dateTo)}&view=summary`;
+  const detailExportHref =
+    detailStatus != null
+      ? `/api/reports/car-policies.xlsx?from=${encodeURIComponent(loaderData.dateFrom)}&to=${encodeURIComponent(loaderData.dateTo)}&view=detail&status=${encodeURIComponent(detailStatus)}`
+      : null;
+
   function openDetail(status: CarSearchStatus) {
     setDetailStatus(status);
     const params = new URLSearchParams({
@@ -83,67 +88,6 @@ export default function CarPolicyReportRoute({
       status,
     });
     detailFetcher.load(`/api/search?${params}`);
-  }
-
-  function exportSummary() {
-    const csv = toCsv(
-      ["Status", "Number of Policies", "Total Base Premium Combined"],
-      summary.map((row) => ({
-        Status: row.status,
-        "Number of Policies": row.policyCount,
-        "Total Base Premium Combined": row.totalBasePremium.toFixed(2),
-      })),
-    );
-    const filename = `car-policy-report-${loaderData.dateFrom}-${loaderData.dateTo}.csv`;
-    downloadCsv(filename, csv);
-    void import("~/lib/services/audit/client").then(
-      ({ recordAuditEventClient }) => {
-        recordAuditEventClient({
-          action: "report.export",
-          entityType: "report",
-          entityId: "car-policies-summary",
-          summary: `Exported CAR policy summary CSV (${summary.length} rows)`,
-          metadata: {
-            filename,
-            dateFrom: loaderData.dateFrom,
-            dateTo: loaderData.dateTo,
-            rowCount: summary.length,
-          },
-        });
-      },
-    );
-  }
-
-  function exportDetail(rows: ReportPolicyRow[], statusLabel: string) {
-    const csv = toCsv(
-      ["Client Name", "AR Name", "Date Quoted", "Base Premium"],
-      rows.map((row) => ({
-        "Client Name": row.clientName,
-        "AR Name": row.arName,
-        "Date Quoted": formatDate(row.createdWhen),
-        "Base Premium": row.basePremium.toFixed(2),
-      })),
-    );
-    const slug = statusLabel.replace(/\s+/g, "-").toLowerCase();
-    const filename = `car-policy-report-${slug}-${loaderData.dateFrom}-${loaderData.dateTo}.csv`;
-    downloadCsv(filename, csv);
-    void import("~/lib/services/audit/client").then(
-      ({ recordAuditEventClient }) => {
-        recordAuditEventClient({
-          action: "report.export",
-          entityType: "report",
-          entityId: "car-policies-detail",
-          summary: `Exported CAR policy detail CSV for ${statusLabel} (${rows.length} rows)`,
-          metadata: {
-            filename,
-            dateFrom: loaderData.dateFrom,
-            dateTo: loaderData.dateTo,
-            statusLabel,
-            rowCount: rows.length,
-          },
-        });
-      },
-    );
   }
 
   return (
@@ -186,15 +130,17 @@ export default function CarPolicyReportRoute({
           </FieldGroup>
           <Button type="submit">Apply</Button>
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          disabled={totalPolicies === 0}
-          onClick={exportSummary}
+        <a
+          href={summaryExportHref}
+          className={buttonVariants({ variant: "outline" })}
+          aria-disabled={totalPolicies === 0}
+          {...(totalPolicies === 0
+            ? { tabIndex: -1, onClick: (e) => e.preventDefault() }
+            : {})}
         >
           <DownloadIcon data-icon="inline-start" />
-          Export CSV
-        </Button>
+          Export Excel
+        </a>
       </Form>
 
       <p className="mb-3 text-sm text-muted-foreground">
@@ -313,17 +259,19 @@ export default function CarPolicyReportRoute({
           </div>
 
           <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={detailRows.length === 0}
-              onClick={() => {
-                if (detailStatus) exportDetail(detailRows, detailStatus);
-              }}
-            >
-              <DownloadIcon data-icon="inline-start" />
-              Export CSV
-            </Button>
+            {detailExportHref ? (
+              <a
+                href={detailExportHref}
+                className={buttonVariants({ variant: "outline" })}
+                aria-disabled={detailRows.length === 0}
+                {...(detailRows.length === 0
+                  ? { tabIndex: -1, onClick: (e) => e.preventDefault() }
+                  : {})}
+              >
+                <DownloadIcon data-icon="inline-start" />
+                Export Excel
+              </a>
+            ) : null}
           </DialogFooter>
         </DialogContent>
       </Dialog>

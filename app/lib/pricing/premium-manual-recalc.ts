@@ -177,16 +177,18 @@ export function applyManualPremiumEdit({
       plant > 0 ? roundMoney(plant * τ) : 0;
   }
 
-  if (
-    key === "contractWorksPlantPremium" ||
-    key === "contractWorksPlantTerrorismPremium"
-  ) {
-    const plantTerrorForEsl =
-      key === "contractWorksPlantTerrorismPremium" ? value : prevPlantTerror;
+  if (key === "contractWorksPlantPremium") {
     next.contractWorksPlantESL =
-      plant > 0 ? roundMoney((plant + plantTerrorForEsl) * plantEslRate) : 0;
+      plant > 0 ? roundMoney((plant + prevPlantTerror) * plantEslRate) : 0;
     next.contractWorksPlantTerrorismPremium =
       plant > 0 ? roundMoney(plant * τ) : 0;
+  }
+
+  // Typed plant terrorism levy sticks; ESL uses (plant + entered) × plantEslRate.
+  if (key === "contractWorksPlantTerrorismPremium") {
+    next.contractWorksPlantTerrorismPremium = roundMoney(value);
+    next.contractWorksPlantESL =
+      plant > 0 ? roundMoney((plant + value) * plantEslRate) : 0;
   }
 
   if (key === "contractWorksPlantESL" && plant > 0) {

@@ -48,6 +48,15 @@ export default [
   route("api/audit", "routes/api/audit.tsx"),
   route("api/search", "routes/api/search.tsx"),
   route("api/recent-routes", "routes/api/recent-routes.tsx"),
+  route("api/reports/clients.xlsx", "routes/api/reports.clients.xlsx.tsx"),
+  route(
+    "api/reports/car-policies.xlsx",
+    "routes/api/reports.car-policies.xlsx.tsx",
+  ),
+  route(
+    "api/reports/car-renewals.xlsx",
+    "routes/api/reports.car-renewals.xlsx.tsx",
+  ),
   layout("routes/_app/layout.tsx", [
     route("dashboard", "routes/_app/dashboard.tsx"),
     route("profile", "routes/_app/profile.tsx"),

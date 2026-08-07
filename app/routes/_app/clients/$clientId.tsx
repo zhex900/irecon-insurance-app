@@ -25,7 +25,7 @@ import { parseFormIntent, parseUuid } from "~/lib/http/route-input";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
 import { parsePagination } from "~/lib/pagination";
 import { parsePolicyListFiltersFromUrl } from "~/lib/search/policy-list-filters";
-import { formatDate } from "~/lib/utils";
+import { formatCurrency, formatDate } from "~/lib/utils";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import { listPoliciesPage } from "~/lib/services/policies/list.service";
 import {
@@ -87,6 +87,8 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     expiryPresetCounts: page.expiryPresetCounts,
     allCount,
     policyCount,
+    totalBasePremiumExGst: page.totalBasePremiumExGst,
+    totalBrokerFeeExGst: page.totalBrokerFeeExGst,
     q: filters.q,
     filters: {
       statusIds: filters.statusIds,
@@ -305,7 +307,23 @@ export default function ClientDetailRoute({
 
         <Card>
           <CardHeader>
-            <CardTitle>Policies</CardTitle>
+            <div className="flex justify-between text-sm lg:items-end">
+              <CardTitle>Policies</CardTitle>
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-muted-foreground">
+                <span>
+                  Base Premium (Ex. GST):{" "}
+                  <span className="font-medium text-foreground">
+                    {formatCurrency(loaderData.totalBasePremiumExGst)}
+                  </span>
+                </span>
+                <span>
+                  Broker Fee (Ex. GST):{" "}
+                  <span className="font-medium text-foreground">
+                    {formatCurrency(loaderData.totalBrokerFeeExGst)}
+                  </span>
+                </span>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <ClientPoliciesTable

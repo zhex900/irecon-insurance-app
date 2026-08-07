@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { PremiumBreakdown } from "~/lib/db/types";
-import { rollupPremiumTotals } from "~/lib/pricing/premium-totals";
+import {
+  brokerFeeExGstFromCombined,
+  combinedBasePremiumExGst,
+  rollupPremiumTotals,
+} from "~/lib/pricing/premium-totals";
 
 function premium(partial: Partial<PremiumBreakdown> = {}): PremiumBreakdown {
   return {
@@ -62,5 +66,18 @@ describe("rollupPremiumTotals", () => {
 
     expect(rolled.contractWorksTotalPremium).toBe(Math.round(sum * 100) / 100);
     expect(rolled.contractWorksTotalPremium).not.toBe(sum + 0.01);
+  });
+});
+
+describe("combinedBasePremiumExGst", () => {
+  it("sums contract works and liability base premium", () => {
+    expect(combinedBasePremiumExGst(1000, 500)).toBe(1500);
+  });
+});
+
+describe("brokerFeeExGstFromCombined", () => {
+  it("derives ex-GST from combined incl-GST fee at 10%", () => {
+    expect(brokerFeeExGstFromCombined(247.5)).toBe(225);
+    expect(brokerFeeExGstFromCombined(308)).toBe(280);
   });
 });
