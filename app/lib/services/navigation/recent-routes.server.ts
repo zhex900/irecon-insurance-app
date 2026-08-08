@@ -30,7 +30,6 @@ const STATIC_LABELS: Record<string, string> = {
   "/clients": "Clients",
   "/policies": "Policies",
   "/reports": "Reports",
-  "/reports/clients": "Client Report",
   "/reports/car-policies": "CAR Policy Report",
   "/reports/car-renewals": "CAR Renewal Report",
   "/settings": "Settings",

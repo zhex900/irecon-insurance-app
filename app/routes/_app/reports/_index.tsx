@@ -3,7 +3,6 @@ import {
   FileBarChart2Icon,
   RefreshCwIcon,
   ArrowRightIcon,
-  UsersIcon,
 } from "lucide-react";
 import { PageHeader } from "~/components/layout/app-layout";
 import {
@@ -19,13 +18,6 @@ export function meta() {
 }
 
 const reports = [
-  {
-    to: "/reports/clients",
-    title: "Client Report",
-    description:
-      "Clients with latest Taken policy turnover and expiry. Filter by client created date, then export Excel.",
-    icon: UsersIcon,
-  },
   {
     to: "/reports/car-policies",
     title: "CAR Policy Report",

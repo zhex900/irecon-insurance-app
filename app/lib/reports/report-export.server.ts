@@ -4,7 +4,6 @@ import { writeAuditLog } from "~/lib/services/audit/service";
 import type {
   CarPolicySummaryRow,
   CarSearchStatus,
-  ClientReportRow,
   ReportPolicyRow,
   RenewalReportRow,
 } from "~/lib/services/reports/service";
@@ -40,52 +39,6 @@ export async function auditReportExport(input: {
     },
     request: input.request,
   });
-}
-
-export const CLIENT_REPORT_COLUMNS: ReportExcelColumn[] = [
-  { header: "Name", key: "name", width: 32 },
-  { header: "Sub Agent", key: "subAgent", width: 24 },
-  {
-    header: "Turnover Limit",
-    key: "turnoverLimit",
-    width: 18,
-    type: "currency",
-  },
-  { header: "Expiry Date", key: "expiryDate", width: 14 },
-  { header: "Created Date", key: "createdDate", width: 14 },
-];
-
-export function clientReportPeriodTitle(
-  dateFrom: string,
-  dateTo: string,
-): string {
-  const fromLabel = dateFrom ? formatDate(dateFrom) : "Start of time";
-  const toLabel = dateTo ? formatDate(dateTo) : "Now";
-  return `Client for period: ${fromLabel} - ${toLabel}`;
-}
-
-export function clientReportExcelRows(rows: ClientReportRow[]) {
-  return rows.map((row) => ({
-    name: row.name,
-    subAgent: row.subAgent,
-    turnoverLimit: row.turnoverLimit,
-    expiryDate: row.expiryDate ? formatDate(row.expiryDate) : "",
-    createdDate: formatDate(row.createdDate),
-  }));
-}
-
-export async function exportClientReportExcel(
-  rows: ClientReportRow[],
-  filename: string,
-  period: { dateFrom: string; dateTo: string },
-) {
-  const buffer = await buildReportExcelBuffer({
-    sheetName: "Client Report",
-    title: clientReportPeriodTitle(period.dateFrom, period.dateTo),
-    columns: CLIENT_REPORT_COLUMNS,
-    rows: clientReportExcelRows(rows),
-  });
-  return reportExcelResponse(buffer, filename);
 }
 
 export const CAR_POLICY_SUMMARY_COLUMNS: ReportExcelColumn[] = [

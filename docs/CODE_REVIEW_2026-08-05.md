@@ -46,7 +46,7 @@ Unchanged from prior review: portfolio-wide broker access, admin-only settings m
 | P1-3 | Document editor state machine → reducer + hooks; `PdfmeDesigner` split                                   |
 | P1-4 | Hotspot files split by responsibility (see prior table in git history)                                   |
 | P2-1 | `PolicyListTable`, `PolicyListTableRow`, `usePolicyListPage`                                             |
-| P2-2 | `useUrlFilterDraft` fixed; client report uses keyed GET form; clients index filters apply via URL params |
+| P2-2 | `useUrlFilterDraft` fixed; clients index filters apply via URL params |
 | P2-3 | Raw `<select>`/`<textarea>` replaced with primitives on touched settings/report surfaces                 |
 | P2-4 | Dead/compatibility modules removed                                                                       |
 | P2-5 | `useHandledActionData` used across CRUD list routes; policy selection uses same pattern                  |

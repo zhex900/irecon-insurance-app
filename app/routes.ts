@@ -48,7 +48,6 @@ export default [
   route("api/audit", "routes/api/audit.tsx"),
   route("api/search", "routes/api/search.tsx"),
   route("api/recent-routes", "routes/api/recent-routes.tsx"),
-  route("api/reports/clients.xlsx", "routes/api/reports.clients.xlsx.tsx"),
   route(
     "api/reports/car-policies.xlsx",
     "routes/api/reports.car-policies.xlsx.tsx",
@@ -72,7 +71,6 @@ export default [
     ),
     route("policies/:policyId", "routes/_app/policies/$policyId.tsx"),
     route("reports", "routes/_app/reports/_index.tsx"),
-    route("reports/clients", "routes/_app/reports/clients.tsx"),
     route("reports/car-policies", "routes/_app/reports/car-policies.tsx"),
     route("reports/car-renewals", "routes/_app/reports/car-renewals.tsx"),
     // More-specific /settings/* paths before the index so they always win.

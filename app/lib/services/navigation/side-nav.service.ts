@@ -22,11 +22,6 @@ export type SideNavData = {
 
 const REPORT_LINKS: SideNavLink[] = [
   {
-    id: "report-clients",
-    label: "Client Report",
-    href: "/reports/clients",
-  },
-  {
     id: "report-car-policies",
     label: "CAR Policy Report",
     href: "/reports/car-policies",

@@ -38,7 +38,6 @@ import { cn } from "~/lib/utils";
 type SectionId = NavSectionId;
 
 const CHILD_ICONS: Record<string, LucideIcon> = {
-  "report-clients": UsersIcon,
   "report-car-policies": FileBarChart2Icon,
   "report-car-renewals": RefreshCwIcon,
   "settings-users": UserCogIcon,
@@ -102,7 +101,6 @@ function pathMatches(pathname: string, href: string, end = false): boolean {
 /** Same icon as the matching top-level / settings / reports menu item. */
 function iconForRecentPath(path: string): LucideIcon {
   const byExactChild: Record<string, LucideIcon> = {
-    "/reports/clients": CHILD_ICONS["report-clients"] ?? UsersIcon,
     "/reports/car-policies": CHILD_ICONS["report-car-policies"] ?? FileTextIcon,
     "/reports/car-renewals":
       CHILD_ICONS["report-car-renewals"] ?? RefreshCwIcon,
