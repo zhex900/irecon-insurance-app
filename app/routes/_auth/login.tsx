@@ -1,4 +1,6 @@
+import * as React from "react";
 import { Form, Link, useNavigation, useSearchParams } from "react-router";
+import { TurnstileWidget } from "~/components/auth/turnstile-widget";
 import { AuthShell } from "~/components/auth/auth-shell";
 import { LoadingButton } from "~/components/ui/loading-button";
 import {
@@ -17,9 +19,25 @@ import { publicErrorMessage } from "~/lib/http/public-error.server";
 import { getUser } from "~/lib/services/users/service";
 import type { Route } from "./+types/login";
 import { pageTitle } from "~/lib/brand";
+import {
+  isTurnstileEnabled,
+  readTurnstileSecretKey,
+  readTurnstileSiteKey,
+} from "~/lib/turnstile/config";
+import {
+  clientIpFromRequest,
+  verifyTurnstileToken,
+} from "~/lib/turnstile/verify.server";
 
 export function meta() {
   return [{ title: pageTitle("Sign in") }];
+}
+
+export async function loader() {
+  const siteKey = readTurnstileSiteKey();
+  return {
+    turnstileSiteKey: isTurnstileEnabled() && siteKey ? siteKey : null,
+  };
 }
 
 export async function action({ request }: Route.ActionArgs) {
@@ -32,6 +50,29 @@ export async function action({ request }: Route.ActionArgs) {
     }
     if (!password) {
       return { error: "Password is required" };
+    }
+
+    if (isTurnstileEnabled()) {
+      const turnstileToken = String(
+        formData.get("cf-turnstile-response") ?? "",
+      ).trim();
+      if (!turnstileToken) {
+        return { error: "Complete the security check before signing in." };
+      }
+
+      const secretKey = readTurnstileSecretKey();
+      if (!secretKey) {
+        return { error: "Sign in is temporarily unavailable. Try again shortly." };
+      }
+
+      const turnstile = await verifyTurnstileToken(
+        turnstileToken,
+        secretKey,
+        clientIpFromRequest(request),
+      );
+      if (!turnstile.success) {
+        return { error: "Security check failed. Refresh and try again." };
+      }
     }
 
     const { data, error } = await signInWithPassword(email, password);
@@ -68,11 +109,27 @@ export async function action({ request }: Route.ActionArgs) {
   }
 }
 
-export default function LoginRoute({ actionData }: Route.ComponentProps) {
+export default function LoginRoute({
+  actionData,
+  loaderData,
+}: Route.ComponentProps) {
   const [searchParams] = useSearchParams();
   const navigation = useNavigation();
   const submitting = navigation.state !== "idle";
   const resetOk = searchParams.get("reset") === "1";
+  const turnstileSiteKey = loaderData?.turnstileSiteKey ?? null;
+  const [turnstileReady, setTurnstileReady] = React.useState(!turnstileSiteKey);
+  const [turnstileEpoch, setTurnstileEpoch] = React.useState(0);
+  const loginError =
+    actionData && "error" in actionData && actionData.error
+      ? actionData.error
+      : null;
+
+  React.useEffect(() => {
+    if (!loginError || !turnstileSiteKey) return;
+    setTurnstileReady(false);
+    setTurnstileEpoch((epoch) => epoch + 1);
+  }, [loginError, turnstileSiteKey]);
 
   return (
     <AuthShell>
@@ -119,14 +176,20 @@ export default function LoginRoute({ actionData }: Route.ComponentProps) {
               className="h-10"
             />
           </Field>
-          {actionData && "error" in actionData && actionData.error ? (
-            <FieldError>{actionData.error}</FieldError>
+          {loginError ? <FieldError>{loginError}</FieldError> : null}
+          {turnstileSiteKey ? (
+            <TurnstileWidget
+              key={turnstileEpoch}
+              siteKey={turnstileSiteKey}
+              onTokenChange={(token) => setTurnstileReady(Boolean(token))}
+            />
           ) : null}
           <LoadingButton
             type="submit"
             size="lg"
             className="mt-2 w-full"
             loading={submitting}
+            disabled={!turnstileReady}
           >
             Sign in
           </LoadingButton>

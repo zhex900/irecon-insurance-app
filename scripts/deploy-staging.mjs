@@ -104,6 +104,7 @@ async function syncWorkerSecrets() {
   await putSecret("EMAIL_FROM", process.env.EMAIL_FROM);
   await putSecret("EMAIL_REPLY_TO", process.env.EMAIL_REPLY_TO);
   await putSecret("SENTRY_DSN", process.env.SENTRY_DSN);
+  await putSecret("TURNSTILE_SECRET_KEY", process.env.TURNSTILE_SECRET_KEY);
 
   if (!process.env.SUPABASE_ANON_KEY?.trim()) {
     throw new Error(
@@ -118,6 +119,11 @@ async function syncWorkerSecrets() {
   if (!process.env.SENTRY_DSN?.trim()) {
     console.warn(
       "Warning: SENTRY_DSN empty — Worker error reporting disabled until set.",
+    );
+  }
+  if (!process.env.TURNSTILE_SECRET_KEY?.trim()) {
+    console.warn(
+      "Warning: TURNSTILE_SECRET_KEY empty — login Turnstile verification disabled until set.",
     );
   }
 }

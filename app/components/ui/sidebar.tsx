@@ -52,14 +52,17 @@ function useSidebar() {
   return context;
 }
 
-/** Avoid width animation on first paint (SSR hydration / hard refresh). */
-function useSidebarWidthTransitionEnabled() {
-  const [enabled, setEnabled] = React.useState(false);
+/**
+ * Width transitions stay in className for SSR/client parity.
+ * Gate them with `data-ready` so hard refresh does not animate layout settle.
+ */
+function useSidebarReady() {
+  const [ready, setReady] = React.useState(false);
   React.useEffect(() => {
-    const frame = requestAnimationFrame(() => setEnabled(true));
+    const frame = requestAnimationFrame(() => setReady(true));
     return () => cancelAnimationFrame(frame);
   }, []);
-  return enabled;
+  return ready;
 }
 
 function SidebarProvider({
@@ -76,6 +79,7 @@ function SidebarProvider({
   onOpenChange?: (open: boolean) => void;
 }) {
   const isMobile = useIsMobile();
+  const sidebarReady = useSidebarReady();
   const [openMobile, setOpenMobile] = React.useState(false);
 
   // This is the internal state of the sidebar.
@@ -141,15 +145,13 @@ function SidebarProvider({
     <SidebarContext.Provider value={contextValue}>
       <div
         data-slot="sidebar-wrapper"
-        style={
-          {
-            "--sidebar-width": SIDEBAR_WIDTH,
-            "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
-            ...style,
-          } as React.CSSProperties
-        }
+        data-ready={sidebarReady ? "" : undefined}
+        style={style}
         className={cn(
           "group/sidebar-wrapper flex h-svh min-h-svh w-full overflow-hidden has-data-[variant=inset]:bg-sidebar",
+          // Prefer classes over inline CSS vars — React SSR/client style
+          // serialization differs enough to trip hydration warnings.
+          `[--sidebar-width:${SIDEBAR_WIDTH}] [--sidebar-width-icon:${SIDEBAR_WIDTH_ICON}]`,
           className,
         )}
         {...props}
@@ -174,7 +176,6 @@ function Sidebar({
   collapsible?: "offcanvas" | "icon" | "none";
 }) {
   const { isMobile, state, open, openMobile, setOpenMobile } = useSidebar();
-  const widthTransitionEnabled = useSidebarWidthTransitionEnabled();
 
   if (collapsible === "none") {
     return (
@@ -236,7 +237,10 @@ function Sidebar({
       <div
         className={cn(
           "group peer relative hidden h-svh shrink-0 text-sidebar-foreground md:block",
-          widthTransitionEnabled && "transition-[width] duration-200 ease-out",
+          // Always present so SSR HTML matches the first client render.
+          // Disabled until wrapper `[data-ready]` (see SidebarProvider).
+          "transition-[width] duration-200 ease-out",
+          "[[data-slot=sidebar-wrapper]:not([data-ready])_&]:transition-none",
           open ? fullRail : iconRail,
         )}
         data-state={state}
@@ -288,6 +292,7 @@ function Sidebar({
         data-side={side}
         className={cn(
           "hidden h-svh w-max max-w-[min(100vw-2rem,20rem)] flex-col transition-[width] duration-200 ease-out md:flex",
+          "[[data-slot=sidebar-wrapper]:not([data-ready])_&]:transition-none",
           "group-data-[collapsible=offcanvas]:w-0 group-data-[collapsible=offcanvas]:overflow-hidden",
           isFloating
             ? "p-2"

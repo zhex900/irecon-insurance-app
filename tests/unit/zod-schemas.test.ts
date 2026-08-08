@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { clientDraftSchema, clientSchema } from "~/lib/zod/client";
 import { appUserCreateSchema, appUserSchema } from "~/lib/zod/app-user";
 import { carAdjustmentInputSchema } from "~/lib/zod/policy-adjustment";
+import { getPolicyRuleIssues } from "~/lib/zod/policy-car";
 
 describe("clientDraftSchema", () => {
   it("accepts incomplete drafts", () => {
@@ -83,6 +84,20 @@ describe("appUserSchema", () => {
       disabled: false,
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("getPolicyRuleIssues", () => {
+  it("flags annual cover type when annual policy and other risk fields are empty", () => {
+    const issues = getPolicyRuleIssues({
+      coverTypeId: 1,
+      annualCoverTypeId: null,
+      policyCategoryId: 1,
+      hasExistingContractWorksCover: false,
+    });
+    expect(issues.map((issue) => issue.path.join("."))).toContain(
+      "annualCoverTypeId",
+    );
   });
 });
 

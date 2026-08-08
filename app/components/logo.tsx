@@ -18,9 +18,10 @@ export function Logo({ className }: LogoProps) {
         src="/irecon-logo.svg"
         alt="IRECON"
         decoding="async"
+        width={214}
+        height={52}
         className={cn(
-          "aspect-214/52 w-auto max-w-full object-contain object-left",
-          "h-8",
+          "aspect-214/52 h-8 w-auto max-w-full object-contain object-left",
         )}
       />
 

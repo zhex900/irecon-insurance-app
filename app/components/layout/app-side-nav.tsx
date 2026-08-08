@@ -81,7 +81,6 @@ const TOP_LINKS: {
   },
 ];
 
-const indent = 16;
 /** Matches tree level-1: TreeItem `ps-(--tree-padding)` + label `px-2`. */
 const submenuStartClass = "ps-[calc(0.5rem+var(--side-nav-indent,16px))]";
 
@@ -172,9 +171,9 @@ function RecentRouteRow({
   return (
     <li
       className={cn(isEntering && "recents-expand-row")}
-      style={isEntering ? undefined : { height: rowHeightPx }}
+      style={isEntering ? undefined : { height: `${rowHeightPx}px` }}
     >
-      <div className="min-h-0" style={{ minHeight: rowHeightPx }}>
+      <div className="min-h-0" style={{ minHeight: `${rowHeightPx}px` }}>
         <button
           type="button"
           onClick={() => {
@@ -236,14 +235,7 @@ function RecentsSection({
   const listOpen = open && !iconRail;
 
   return (
-    <div
-      className="mb-0.5"
-      style={
-        {
-          ["--side-nav-indent" as string]: `${indent}px`,
-        } as React.CSSProperties
-      }
-    >
+    <div className="mb-0.5 [--side-nav-indent:16px]">
       <button
         type="button"
         onClick={onToggle}
@@ -277,7 +269,10 @@ function RecentsSection({
 
       {listOpen ? (
         <div className="min-h-0 overflow-hidden">
-          <div className="overflow-hidden" style={{ height: listHeightPx }}>
+          <div
+            className="overflow-hidden"
+            style={{ height: `${listHeightPx}px` }}
+          >
             {displayRoutes.length === 0 ? (
               <p
                 className={cn(
@@ -324,13 +319,7 @@ function MainNavSection({
   const { setOpen } = useSidebar();
 
   return (
-    <div
-      style={
-        {
-          ["--side-nav-indent" as string]: `${indent}px`,
-        } as React.CSSProperties
-      }
-    >
+    <div className="[--side-nav-indent:16px]">
       <ul className="flex w-max flex-col">
         {TOP_LINKS.map((link) => {
           const Icon = link.icon;

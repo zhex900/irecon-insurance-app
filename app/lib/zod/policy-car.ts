@@ -211,32 +211,44 @@ function parseIsoDate(isoDate: string): Date | null {
   return date;
 }
 
-function applyPolicyRules(data: PolicyRuleFields, ctx: z.RefinementCtx) {
+function pushCustomIssue(
+  issues: { path: (string | number)[]; message: string }[],
+  path: (string | number)[],
+  message: string,
+) {
+  issues.push({ path, message });
+}
+
+/** Cross-field rules used by Zod and the wizard incomplete list. */
+export function getPolicyRuleIssues(
+  data: PolicyRuleFields & {
+    estimatedTurnover?: unknown;
+    excesses?: Record<string, string | undefined>;
+  },
+): { path: (string | number)[]; message: string }[] {
+  const issues: { path: (string | number)[]; message: string }[] = [];
+
   if (data.policyCategoryId === 2 && !data.policyNumber?.trim()) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Policy number is required for renewal",
-      path: ["policyNumber"],
-    });
+    pushCustomIssue(
+      issues,
+      ["policyNumber"],
+      "Policy number is required for renewal",
+    );
   }
   if (
     data.hasExistingContractWorksCover === true &&
     !data.currentInsurer?.trim()
   ) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Current insurer is required",
-      path: ["currentInsurer"],
-    });
+    pushCustomIssue(issues, ["currentInsurer"], "Current insurer is required");
   }
   if (data.coverTypeId === 1) {
     const annualType = Number(data.annualCoverTypeId);
     if (annualType !== 1 && annualType !== 2) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Annual type of cover is required",
-        path: ["annualCoverTypeId"],
-      });
+      pushCustomIssue(
+        issues,
+        ["annualCoverTypeId"],
+        "Annual type of cover is required",
+      );
     }
   }
   if (data.dateStart && data.dateEnd) {
@@ -244,24 +256,52 @@ function applyPolicyRules(data: PolicyRuleFields, ctx: z.RefinementCtx) {
     if (data.coverTypeId === 1 || data.coverTypeId === 2) {
       const maxEnd = addCalendarMonths(data.dateStart, 18);
       if (end && maxEnd && end > maxEnd) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message:
-            "End date for annual policy and single project cannot exceed 18 months from Start Date",
-          path: ["dateEnd"],
-        });
+        pushCustomIssue(
+          issues,
+          ["dateEnd"],
+          "End date for annual policy and single project cannot exceed 18 months from Start Date",
+        );
       }
     }
     if (data.coverTypeId === 3) {
       const maxEnd = addCalendarMonths(data.dateStart, 12);
       if (end && maxEnd && end > maxEnd) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "End Date for Owner Builder cannot exceed 12 months",
-          path: ["dateEnd"],
-        });
+        pushCustomIssue(
+          issues,
+          ["dateEnd"],
+          "End Date for Owner Builder cannot exceed 12 months",
+        );
       }
     }
+  }
+
+  if (data.excesses) {
+    const visible = visibleExcessFields({
+      estimatedTurnover: data.estimatedTurnover,
+    });
+    for (const field of visible) {
+      const raw = String(data.excesses[field.key] ?? "")
+        .replace(/,/g, "")
+        .trim();
+      if (!raw) {
+        pushCustomIssue(issues, ["excesses", field.key], "Required");
+      } else if (!/^\d+(\.\d+)?$/.test(raw)) {
+        pushCustomIssue(issues, ["excesses", field.key], "Must be a number");
+      }
+    }
+  }
+
+  return issues;
+}
+
+function applyPolicyRules(data: PolicyRuleFields, ctx: z.RefinementCtx) {
+  for (const issue of getPolicyRuleIssues(data)) {
+    if (issue.path[0] === "excesses") continue;
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: issue.message,
+      path: issue.path,
+    });
   }
 }
 
@@ -272,27 +312,13 @@ function applyExcessRules(
   },
   ctx: z.RefinementCtx,
 ) {
-  if (!data.excesses) return;
-  const visible = visibleExcessFields({
-    estimatedTurnover: data.estimatedTurnover,
-  });
-  for (const field of visible) {
-    const raw = String(data.excesses[field.key] ?? "")
-      .replace(/,/g, "")
-      .trim();
-    if (!raw) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Required",
-        path: ["excesses", field.key],
-      });
-    } else if (!/^\d+(\.\d+)?$/.test(raw)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Must be a number",
-        path: ["excesses", field.key],
-      });
-    }
+  for (const issue of getPolicyRuleIssues(data)) {
+    if (issue.path[0] !== "excesses") continue;
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: issue.message,
+      path: issue.path,
+    });
   }
 }
 

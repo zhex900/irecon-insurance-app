@@ -39,6 +39,9 @@ function applyDatabaseEnv(env: Env) {
   if (env.EMAIL_FROM) process.env.EMAIL_FROM = env.EMAIL_FROM;
   if (env.EMAIL_REPLY_TO) process.env.EMAIL_REPLY_TO = env.EMAIL_REPLY_TO;
   if (env.SENTRY_DSN) process.env.SENTRY_DSN = env.SENTRY_DSN;
+  if (env.TURNSTILE_SECRET_KEY) {
+    process.env.TURNSTILE_SECRET_KEY = env.TURNSTILE_SECRET_KEY;
+  }
 }
 
 const handler = {

@@ -31,6 +31,8 @@ export type CloudflareEnv = {
   EMAIL_REPLY_TO?: string;
   /** Sentry DSN for Worker / SSR error reporting (secret). */
   SENTRY_DSN?: string;
+  /** Cloudflare Turnstile secret for login siteverify (secret). */
+  TURNSTILE_SECRET_KEY?: string;
   HYPERDRIVE?: { connectionString: string };
   AVATARS?: R2BucketLike;
   LIBRARY_DOCUMENTS?: R2BucketLike;

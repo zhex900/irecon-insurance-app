@@ -14,6 +14,7 @@ import {
 import { labelForPolicyFieldPath } from "~/lib/policies/field-labels";
 import {
   carPolicySchema,
+  getPolicyRuleIssues,
   wizardStepFields,
   wizardSteps,
   type CarPolicyFormValues,
@@ -293,6 +294,22 @@ export function usePolicyWizardNavigation({
       if (!messageByPath.has(path)) {
         messageByPath.set(path, issue.message);
       }
+      const stepIndex = findStepForFieldPath(path);
+      if (stepIndex == null) continue;
+      const sectionId = sectionIdForStep(stepIndex);
+      let set = pathsBySection.get(sectionId);
+      if (!set) {
+        set = new Set();
+        pathsBySection.set(sectionId, set);
+      }
+      set.add(path);
+    }
+    // Zod skips superRefine when preprocess fields return undefined (empty
+    // money/boolean selects). Always merge cross-field rules for the nav.
+    for (const issue of getPolicyRuleIssues(values)) {
+      const path = issue.path.map(String).join(".");
+      if (!path || messageByPath.has(path)) continue;
+      messageByPath.set(path, issue.message);
       const stepIndex = findStepForFieldPath(path);
       if (stepIndex == null) continue;
       const sectionId = sectionIdForStep(stepIndex);
