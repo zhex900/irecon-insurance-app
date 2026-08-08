@@ -9,6 +9,7 @@ import {
 } from "~/lib/cloudflare.server";
 import { EMAIL_SEND_RECIPIENTS } from "~/lib/email/templates";
 import { DocumentRenderServiceError } from "~/lib/pdf/document-worker.client.server";
+import { logger } from "~/lib/observability/logger.server";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import { sendPolicyDocumentsEmail } from "~/lib/services/email/send-policy-documents.server";
 import { getPolicy } from "~/lib/services/policy/data.service";
@@ -58,6 +59,15 @@ export async function action({ request, params, context }: Route.ActionArgs) {
   const raw = await request.json().catch(() => null);
   const parsed = emailDocumentsBodySchema.safeParse(raw);
   if (!parsed.success) {
+    logger.warn("Invalid email documents request", {
+      operation: "policy_documents_email_validate",
+      issues: JSON.stringify(
+        parsed.error.issues.map((issue) => ({
+          path: issue.path.join("."),
+          code: issue.code,
+        })),
+      ),
+    });
     return Response.json({ error: "Invalid email request." }, { status: 400 });
   }
 

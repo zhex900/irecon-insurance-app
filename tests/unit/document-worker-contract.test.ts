@@ -12,7 +12,7 @@ describe("document Worker contract", () => {
       requestId: "request-123",
       templateKey: "certificate",
       policy: {
-        policyId: 42,
+        policyId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
         policyNumber: "CAR-42",
         car: {},
       },
@@ -36,6 +36,23 @@ describe("document Worker contract", () => {
         templateKey: "certificate",
         policy: {},
         template: {},
+      }).success,
+    ).toBe(false);
+    expect(
+      pdfRenderRequestSchema.safeParse({
+        contractVersion: PDF_RENDER_CONTRACT_VERSION,
+        requestId: "request-123",
+        templateKey: "certificate",
+        policy: {
+          policyId: 42,
+          policyNumber: "CAR-42",
+          car: {},
+        },
+        template: {
+          key: "certificate",
+          mergeFields: [],
+          template: {},
+        },
       }).success,
     ).toBe(false);
   });

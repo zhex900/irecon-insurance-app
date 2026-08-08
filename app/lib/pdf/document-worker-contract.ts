@@ -26,7 +26,8 @@ function isStructuredObject(value: unknown): value is Record<string, unknown> {
 const policyRenderSchema = z.custom<Policy>(
   (value) =>
     isStructuredObject(value) &&
-    typeof value.policyId === "number" &&
+    typeof value.policyId === "string" &&
+    value.policyId.length > 0 &&
     typeof value.policyNumber === "string" &&
     isStructuredObject(value.car),
   "Invalid policy render snapshot",

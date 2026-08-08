@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 import { ConflictError, ValidationError } from "~/lib/errors";
 import {
   booleanFlagSchema,
@@ -10,7 +11,7 @@ import { publicErrorMessage } from "~/lib/http/public-error.server";
 import { logger } from "~/lib/observability/logger.server";
 
 vi.mock("~/lib/observability/logger.server", () => ({
-  logger: { error: vi.fn() },
+  logger: { error: vi.fn(), warn: vi.fn() },
 }));
 
 vi.mock("~/lib/observability/sentry.server", () => ({
@@ -72,5 +73,27 @@ describe("domain errors", () => {
       expect.objectContaining({ operation: "test_save", errorType: "Error" }),
     );
     expect(captureServerException).toHaveBeenCalled();
+  });
+
+  it("logs Zod validation failures without exposing issue values", () => {
+    const zodError = z.object({ to: z.string().email() }).safeParse({
+      to: "not-an-email",
+    });
+    expect(zodError.success).toBe(false);
+    if (zodError.success) return;
+
+    expect(
+      publicErrorMessage(zodError.error, {
+        fallback: "Save failed.",
+        operation: "test_zod",
+      }),
+    ).toBe("The submitted data is invalid.");
+    expect(logger.warn).toHaveBeenCalledWith(
+      "Submitted data failed validation",
+      expect.objectContaining({
+        operation: "test_zod",
+        issues: expect.stringContaining("to"),
+      }),
+    );
   });
 });
