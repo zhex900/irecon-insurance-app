@@ -38,31 +38,8 @@ export function formatAmountInput(
 }
 
 /**
- * Map caret through comma reformat: keep the same count of digits/decimal
- * markers before the caret so mid-number edits don't jump to the end.
+ * Strip commas before numeric coercion / validation.
  */
-export function mapAmountCaret(
-  valueBeforeFormat: string,
-  caret: number,
-  formatted: string,
-): number {
-  const clamped = Math.max(0, Math.min(caret, valueBeforeFormat.length));
-  const significant = valueBeforeFormat
-    .slice(0, clamped)
-    .replace(/[^\d.]/g, "");
-  if (significant.length === 0) return 0;
-
-  let seen = 0;
-  for (let i = 0; i < formatted.length; i++) {
-    if (/[\d.]/.test(formatted[i]!)) {
-      seen += 1;
-      if (seen === significant.length) return i + 1;
-    }
-  }
-  return formatted.length;
-}
-
-/** Strip commas before numeric coercion / validation. */
 export function stripAmountCommas(value: unknown): unknown {
   if (typeof value === "string") return value.replace(/,/g, "").trim();
   return value;
