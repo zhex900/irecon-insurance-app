@@ -83,11 +83,7 @@ export function EmailTemplatePreviewDialog({
           >
             Close
           </Button>
-          <LoadingButton
-            type="button"
-            loading={sending}
-            onClick={onSend}
-          >
+          <LoadingButton type="button" loading={sending} onClick={onSend}>
             <SendIcon data-icon="inline-start" />
             Send
           </LoadingButton>

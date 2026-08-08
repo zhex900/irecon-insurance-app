@@ -1,5 +1,10 @@
 import { expect, test } from "@playwright/test";
-import { demoUsers, loginAs, logout, waitForTurnstileIfPresent } from "./helpers/auth";
+import {
+  demoUsers,
+  loginAs,
+  logout,
+  waitForTurnstileIfPresent,
+} from "./helpers/auth";
 
 test.describe("auth", () => {
   test("login then logout", async ({ page }) => {

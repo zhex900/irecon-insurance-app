@@ -39,18 +39,18 @@ Unchanged from prior review: portfolio-wide broker access, admin-only settings m
 
 ## Resolved since 2026-08-05
 
-| ID   | Summary                                                                                                  |
-| ---- | -------------------------------------------------------------------------------------------------------- |
-| P1-1 | Interactive table keyboard access via `InteractiveTableRow`; global search combobox keyboard + status    |
-| P1-2 | Shared `useApiSearch` search controller                                                                  |
-| P1-3 | Document editor state machine → reducer + hooks; `PdfmeDesigner` split                                   |
-| P1-4 | Hotspot files split by responsibility (see prior table in git history)                                   |
-| P2-1 | `PolicyListTable`, `PolicyListTableRow`, `usePolicyListPage`                                             |
-| P2-2 | `useUrlFilterDraft` fixed; clients index filters apply via URL params |
-| P2-3 | Raw `<select>`/`<textarea>` replaced with primitives on touched settings/report surfaces                 |
-| P2-4 | Dead/compatibility modules removed                                                                       |
-| P2-5 | `useHandledActionData` used across CRUD list routes; policy selection uses same pattern                  |
-| P2-6 | ESLint clean (0 errors); ref-during-render and setState-in-effect issues fixed                           |
+| ID   | Summary                                                                                               |
+| ---- | ----------------------------------------------------------------------------------------------------- |
+| P1-1 | Interactive table keyboard access via `InteractiveTableRow`; global search combobox keyboard + status |
+| P1-2 | Shared `useApiSearch` search controller                                                               |
+| P1-3 | Document editor state machine → reducer + hooks; `PdfmeDesigner` split                                |
+| P1-4 | Hotspot files split by responsibility (see prior table in git history)                                |
+| P2-1 | `PolicyListTable`, `PolicyListTableRow`, `usePolicyListPage`                                          |
+| P2-2 | `useUrlFilterDraft` fixed; clients index filters apply via URL params                                 |
+| P2-3 | Raw `<select>`/`<textarea>` replaced with primitives on touched settings/report surfaces              |
+| P2-4 | Dead/compatibility modules removed                                                                    |
+| P2-5 | `useHandledActionData` used across CRUD list routes; policy selection uses same pattern               |
+| P2-6 | ESLint clean (0 errors); ref-during-render and setState-in-effect issues fixed                        |
 
 ## Open findings
 

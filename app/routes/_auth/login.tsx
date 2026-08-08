@@ -29,6 +29,34 @@ import {
   verifyTurnstileToken,
 } from "~/lib/turnstile/verify.server";
 
+function LoginTurnstileGate({
+  siteKey,
+  submitting,
+}: {
+  siteKey: string;
+  submitting: boolean;
+}) {
+  const [ready, setReady] = React.useState(false);
+
+  return (
+    <>
+      <TurnstileWidget
+        siteKey={siteKey}
+        onTokenChange={(token) => setReady(Boolean(token))}
+      />
+      <LoadingButton
+        type="submit"
+        size="lg"
+        className="mt-2 w-full"
+        loading={submitting}
+        disabled={!ready}
+      >
+        Sign in
+      </LoadingButton>
+    </>
+  );
+}
+
 export function meta() {
   return [{ title: pageTitle("Sign in") }];
 }
@@ -62,7 +90,9 @@ export async function action({ request }: Route.ActionArgs) {
 
       const secretKey = readTurnstileSecretKey();
       if (!secretKey) {
-        return { error: "Sign in is temporarily unavailable. Try again shortly." };
+        return {
+          error: "Sign in is temporarily unavailable. Try again shortly.",
+        };
       }
 
       const turnstile = await verifyTurnstileToken(
@@ -118,18 +148,11 @@ export default function LoginRoute({
   const submitting = navigation.state !== "idle";
   const resetOk = searchParams.get("reset") === "1";
   const turnstileSiteKey = loaderData?.turnstileSiteKey ?? null;
-  const [turnstileReady, setTurnstileReady] = React.useState(!turnstileSiteKey);
-  const [turnstileEpoch, setTurnstileEpoch] = React.useState(0);
   const loginError =
     actionData && "error" in actionData && actionData.error
       ? actionData.error
       : null;
-
-  React.useEffect(() => {
-    if (!loginError || !turnstileSiteKey) return;
-    setTurnstileReady(false);
-    setTurnstileEpoch((epoch) => epoch + 1);
-  }, [loginError, turnstileSiteKey]);
+  const turnstileResetKey = loginError ?? "sign-in";
 
   return (
     <AuthShell>
@@ -178,21 +201,21 @@ export default function LoginRoute({
           </Field>
           {loginError ? <FieldError>{loginError}</FieldError> : null}
           {turnstileSiteKey ? (
-            <TurnstileWidget
-              key={turnstileEpoch}
+            <LoginTurnstileGate
+              key={turnstileResetKey}
               siteKey={turnstileSiteKey}
-              onTokenChange={(token) => setTurnstileReady(Boolean(token))}
+              submitting={submitting}
             />
-          ) : null}
-          <LoadingButton
-            type="submit"
-            size="lg"
-            className="mt-2 w-full"
-            loading={submitting}
-            disabled={!turnstileReady}
-          >
-            Sign in
-          </LoadingButton>
+          ) : (
+            <LoadingButton
+              type="submit"
+              size="lg"
+              className="mt-2 w-full"
+              loading={submitting}
+            >
+              Sign in
+            </LoadingButton>
+          )}
         </FieldGroup>
       </Form>
     </AuthShell>

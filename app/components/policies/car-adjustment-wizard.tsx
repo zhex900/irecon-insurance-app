@@ -260,10 +260,7 @@ export function CarAdjustmentWizard({
                 name="payload"
                 value={JSON.stringify(form.getValues())}
               />
-              <LoadingButton
-                type="submit"
-                loading={isFinishing}
-              >
+              <LoadingButton type="submit" loading={isFinishing}>
                 Finish
               </LoadingButton>
             </Form>

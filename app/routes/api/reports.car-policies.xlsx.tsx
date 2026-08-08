@@ -29,7 +29,8 @@ export async function loader({ request }: Route.LoaderArgs) {
   const actor = await requireAuth(request);
   const url = new URL(request.url);
   const parsed = querySchema.safeParse(Object.fromEntries(url.searchParams));
-  if (!parsed.success) return invalidInputResponse("Invalid export parameters.");
+  if (!parsed.success)
+    return invalidInputResponse("Invalid export parameters.");
 
   const defaults = defaultCarPolicyPeriod();
   const dateFrom =

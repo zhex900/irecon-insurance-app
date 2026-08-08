@@ -1,5 +1,4 @@
 import { WifiOffIcon } from "lucide-react";
-import { Badge } from "~/components/reui/badge";
 import {
   Dialog,
   DialogContent,

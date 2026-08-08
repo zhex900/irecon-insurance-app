@@ -89,8 +89,7 @@ export function usePolicyLeaveGuard({
   // a leave-save is in flight — optimistic draft save clears dirty before navigation.
   useEffect(() => {
     if (blocker.state === "blocked" && blocker.location) {
-      pendingLeaveDestinationRef.current =
-        `${blocker.location.pathname}${blocker.location.search}${blocker.location.hash}`;
+      pendingLeaveDestinationRef.current = `${blocker.location.pathname}${blocker.location.search}${blocker.location.hash}`;
     }
     if (blocker.state !== "blocked") return;
     if (allowLeaveRef.current) {
@@ -167,8 +166,7 @@ export function usePolicyLeaveGuard({
           blocker.proceed();
         } else {
           navigate(
-            pendingLeaveDestinationRef.current ??
-              `/clients/${policy.clientId}`,
+            pendingLeaveDestinationRef.current ?? `/clients/${policy.clientId}`,
           );
         }
         pendingLeaveDestinationRef.current = null;

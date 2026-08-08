@@ -254,15 +254,15 @@ DH          = ContractWorksDisplayHomesPremium
 
 ### Per-field behaviour (rebuild)
 
-| Edited field                       | Terrorism display      | Plant terror | Plant ESL                                     | Notes                                                                                   |
-| ---------------------------------- | ---------------------- | ------------ | --------------------------------------------- | --------------------------------------------------------------------------------------- |
-| True Base                          | `(base + ES + DH) × τ` | unchanged    | unchanged                                     | Keeps ES/DH fold                                                                        |
-| Existing Structure / Display Homes | `(base + ES + DH) × τ` | unchanged    | unchanged                                     |                                                                                         |
-| Terrorism Levy                     | **typed value**        | `plant × τ′` | unchanged                                     | `τ′ = entered / base` (updates session τ)                                               |
-| Plant & Equipment                  | unchanged              | `plant × τ`  | `(plant + priorPlantTerror) × plantEslRate`   |                                                                                         |
+| Edited field                       | Terrorism display      | Plant terror    | Plant ESL                                     | Notes                                                                                   |
+| ---------------------------------- | ---------------------- | --------------- | --------------------------------------------- | --------------------------------------------------------------------------------------- |
+| True Base                          | `(base + ES + DH) × τ` | unchanged       | unchanged                                     | Keeps ES/DH fold                                                                        |
+| Existing Structure / Display Homes | `(base + ES + DH) × τ` | unchanged       | unchanged                                     |                                                                                         |
+| Terrorism Levy                     | **typed value**        | `plant × τ′`    | unchanged                                     | `τ′ = entered / base` (updates session τ)                                               |
+| Plant & Equipment                  | unchanged              | `plant × τ`     | `(plant + priorPlantTerror) × plantEslRate`   |                                                                                         |
 | Terrorism Levy Plant               | unchanged              | **typed value** | `(plant + enteredPlantTerror) × plantEslRate` |                                                                                         |
-| Plant ESL                          | unchanged              | unchanged    | kept                                          | back-derives `plantEslRate`                                                             |
-| ESL / SD / GST                     | unchanged              | unchanged    | unchanged                                     | Typed line sticks for this edit; **next** driver edit refreshes ESL/SD/GST from formula |
+| Plant ESL                          | unchanged              | unchanged       | kept                                          | back-derives `plantEslRate`                                                             |
+| ESL / SD / GST                     | unchanged              | unchanged       | unchanged                                     | Typed line sticks for this edit; **next** driver edit refreshes ESL/SD/GST from formula |
 
 ### Taxes (after a driver-field edit)
 

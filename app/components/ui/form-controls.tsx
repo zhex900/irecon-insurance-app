@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import {
+  Controller,
   useController,
   useFormContext,
   type Control,
@@ -23,6 +24,16 @@ import {
   FieldSavedTick,
   useFieldSaveState,
 } from "~/components/forms/field-save-highlight";
+
+function assignRef<T>(ref: React.Ref<T> | undefined, value: T | null) {
+  if (typeof ref === "function") {
+    ref(value);
+    return;
+  }
+  if (ref && typeof ref === "object") {
+    (ref as React.MutableRefObject<T | null>).current = value;
+  }
+}
 
 /** RHF-friendly labeled input on top of shadcn Field. */
 export function FieldInput({
@@ -185,51 +196,61 @@ export function Select<
 }) {
   const formContext = useFormContext<TFieldValues>();
   const control = controlProp ?? formContext.control;
-  const { field, fieldState } = useController({
-    name,
-    control,
-  });
   const selectId = id ?? name;
   const { saved, className: highlight } = useFieldSaveState(name);
-  const message = error ?? fieldState.error?.message;
 
   return (
-    <Field data-invalid={message ? true : undefined} className={className}>
-      {label ? (
-        <div className="flex items-center gap-1.5">
-          <FieldLabel htmlFor={selectId} required={required}>
-            {label}
-          </FieldLabel>
-          {tooltip ? (
-            <FormulaTooltip label={`${label} help`}>{tooltip}</FormulaTooltip>
-          ) : null}
-        </div>
-      ) : null}
-      <div className="relative">
-        <AppSelect
-          ref={field.ref}
-          id={selectId}
-          name={field.name}
-          value={field.value == null ? "" : String(field.value)}
-          onValueChange={(next) => {
-            field.onChange(next);
-            onValueChange?.(next);
-          }}
-          onBlur={field.onBlur}
-          options={options}
-          placeholder={placeholder}
-          disabled={disabled}
-          required={required}
-          aria-invalid={!!message}
-          // Highlight on the trigger (has the border) — not the wrapper.
-          className={cn(saved && "pr-8")}
-          triggerClassName={highlight}
-        />
-        <FieldSavedTick name={name} />
-      </div>
-      {hint ? <FieldDescription>{hint}</FieldDescription> : null}
-      {message ? <FieldError>{message}</FieldError> : null}
-    </Field>
+    <Controller
+      name={name}
+      control={control}
+      render={({ field, fieldState }) => {
+        const message = error ?? fieldState.error?.message;
+
+        return (
+          <Field
+            data-invalid={message ? true : undefined}
+            className={className}
+          >
+            {label ? (
+              <div className="flex items-center gap-1.5">
+                <FieldLabel htmlFor={selectId} required={required}>
+                  {label}
+                </FieldLabel>
+                {tooltip ? (
+                  <FormulaTooltip label={`${label} help`}>
+                    {tooltip}
+                  </FormulaTooltip>
+                ) : null}
+              </div>
+            ) : null}
+            <div className="relative">
+              <AppSelect
+                ref={(node) => assignRef(field.ref, node)}
+                id={selectId}
+                name={field.name}
+                value={field.value == null ? "" : String(field.value)}
+                onValueChange={(next) => {
+                  field.onChange(next);
+                  onValueChange?.(next);
+                }}
+                onBlur={field.onBlur}
+                options={options}
+                placeholder={placeholder}
+                disabled={disabled}
+                required={required}
+                aria-invalid={!!message}
+                // Highlight on the trigger (has the border) — not the wrapper.
+                className={cn(saved && "pr-8")}
+                triggerClassName={highlight}
+              />
+              <FieldSavedTick name={name} />
+            </div>
+            {hint ? <FieldDescription>{hint}</FieldDescription> : null}
+            {message ? <FieldError>{message}</FieldError> : null}
+          </Field>
+        );
+      }}
+    />
   );
 }
 

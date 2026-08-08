@@ -1,9 +1,5 @@
 import { Link } from "react-router";
-import {
-  FileBarChart2Icon,
-  RefreshCwIcon,
-  ArrowRightIcon,
-} from "lucide-react";
+import { FileBarChart2Icon, RefreshCwIcon, ArrowRightIcon } from "lucide-react";
 import { PageHeader } from "~/components/layout/app-layout";
 import {
   Card,

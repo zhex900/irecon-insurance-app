@@ -1,6 +1,7 @@
 import { z } from "zod";
 
-const SITEVERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
+const SITEVERIFY_URL =
+  "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 
 const siteverifyResponseSchema = z.object({
   success: z.boolean(),

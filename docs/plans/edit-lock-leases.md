@@ -59,13 +59,13 @@ sequenceDiagram
 
 The heartbeat is **not** checking whether the user is idle. It is a **lease renewal**: a small POST so the server extends `lease_expires_at`.
 
-| Mechanism                   | What it does                        | Polling?                          |
-| --------------------------- | ----------------------------------- | --------------------------------- |
-| Activity listeners          | Detect idle vs active               | No — event-driven                 |
+| Mechanism                     | What it does                        | Polling?                          |
+| ----------------------------- | ----------------------------------- | --------------------------------- |
+| Activity listeners            | Detect idle vs active               | No — event-driven                 |
 | Heartbeat (hybrid, see below) | Renew lease while tab open          | Yes — fallback timer when quiet   |
-| Lease TTL (90s)             | Server-side expiry if renewals stop | No — evaluated on next API call   |
-| `pagehide` + `sendBeacon`   | Release on tab close                | Event-driven                      |
-| Viewer status               | Page load / Take over click         | No background polling for viewers |
+| Lease TTL (90s)               | Server-side expiry if renewals stop | No — evaluated on next API call   |
+| `pagehide` + `sendBeacon`     | Release on tab close                | Event-driven                      |
+| Viewer status                 | Page load / Take over click         | No background polling for viewers |
 
 **Why not purely event-driven renewal?** If the user types once and leaves the tab open without further input, we still renew until idle+saved (then takeover eligible). Crash/force-close may not fire `pagehide` — **lease TTL** is the backstop.
 
@@ -93,11 +93,11 @@ When tab closes: `navigator.sendBeacon` **release** + clear timers (`pagehide`).
 
 **Yes, the table has a TTL:** `lease_expires_at` on each `edit_lock` row. Every accepted heartbeat sets it to `now() + LEASE_TTL` (90s). Any API that checks the lock treats the row as **free** when `lease_expires_at < now()` — no background cron required.
 
-| Scenario                                    | What happens                                      | Lock free when                                        |
-| ------------------------------------------- | ------------------------------------------------- | ----------------------------------------------------- |
+| Scenario                                    | What happens                                       | Lock free when                                          |
+| ------------------------------------------- | -------------------------------------------------- | ------------------------------------------------------- |
 | User navigates away / closes tab (normal)   | `pagehide` → `sendBeacon` **release** (delete row) | **Immediately** (if beacon succeeds)                    |
-| User closes tab / kills browser (no beacon) | Heartbeats stop                                   | **~90s** after last renewal (`lease_expires_at` passes) |
-| User stays on page                          | Hybrid heartbeats extend `lease_expires_at`       | Not until release, takeover, or expiry                |
+| User closes tab / kills browser (no beacon) | Heartbeats stop                                    | **~90s** after last renewal (`lease_expires_at` passes) |
+| User stays on page                          | Hybrid heartbeats extend `lease_expires_at`        | Not until release, takeover, or expiry                  |
 
 **Release is best-effort, TTL is the guarantee.** `sendBeacon` on `pagehide` is fast but not 100% reliable (crash, hard kill). The TTL backstop is why we renew while the tab is open.
 
@@ -151,12 +151,12 @@ Index on `lease_expires_at` for optional cleanup job later (not required for Pha
 
 **Service:** `app/lib/services/edit-lock/service.ts`
 
-| Intent      | Behavior                                                                                                                                              |
-| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Intent      | Behavior                                                                                                                                            |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `acquire`   | If no row or lease expired → claim. If held by same `sessionId` → renew. Else return lock status (holder display name from `app_user`).             |
 | `heartbeat` | Only if `holder_session_id` matches; update `active`, `has_unsaved`, `takeover_eligible`, extend `lease_expires_at` when `active \|\| has_unsaved`. |
-| `takeover`  | Only if `takeover_eligible` OR lease expired; reassign to caller.                                                                                     |
-| `release`   | Delete row if `sessionId` matches.                                                                                                                    |
+| `takeover`  | Only if `takeover_eligible` OR lease expired; reassign to caller.                                                                                   |
+| `release`   | Delete row if `sessionId` matches.                                                                                                                  |
 
 **Draft enforcement** (409 `LOCKED`):
 

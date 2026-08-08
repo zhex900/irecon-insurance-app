@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 
 function subscribeOnline(callback: () => void) {
   window.addEventListener("online", callback);
@@ -52,18 +52,18 @@ export function useNetworkStatus() {
   );
   const [reachable, setReachable] = useState<boolean | null>(null);
 
-  const checkReachability = useCallback(async () => {
-    setReachable(await verifyReachability());
-  }, []);
-
   useEffect(() => {
-    if (!browserOnline) {
-      setReachable(false);
-      return;
-    }
-    setReachable(null);
-    void checkReachability();
-  }, [browserOnline, checkReachability]);
+    if (!browserOnline) return;
+
+    let cancelled = false;
+    void verifyReachability().then((ok) => {
+      if (!cancelled) setReachable(ok);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [browserOnline]);
 
   const isOffline = !browserOnline || reachable === false;
 

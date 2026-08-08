@@ -46,7 +46,11 @@ export async function buildReportExcelBuffer(options: {
   }
 
   const headerRow = sheet.getRow(headerRowIndex);
-  for (let columnIndex = 0; columnIndex < options.columns.length; columnIndex += 1) {
+  for (
+    let columnIndex = 0;
+    columnIndex < options.columns.length;
+    columnIndex += 1
+  ) {
     headerRow.getCell(columnIndex + 1).value =
       options.columns[columnIndex].header;
   }
@@ -54,15 +58,24 @@ export async function buildReportExcelBuffer(options: {
 
   for (let rowIndex = 0; rowIndex < options.rows.length; rowIndex += 1) {
     const sheetRow = sheet.getRow(firstDataRowIndex + rowIndex);
-    for (let columnIndex = 0; columnIndex < options.columns.length; columnIndex += 1) {
+    for (
+      let columnIndex = 0;
+      columnIndex < options.columns.length;
+      columnIndex += 1
+    ) {
       const column = options.columns[columnIndex];
-      sheetRow.getCell(columnIndex + 1).value = options.rows[rowIndex][column.key] ?? "";
+      sheetRow.getCell(columnIndex + 1).value =
+        options.rows[rowIndex][column.key] ?? "";
     }
   }
 
   for (let rowIndex = 0; rowIndex < options.rows.length; rowIndex += 1) {
     const sheetRow = sheet.getRow(firstDataRowIndex + rowIndex);
-    for (let columnIndex = 0; columnIndex < options.columns.length; columnIndex += 1) {
+    for (
+      let columnIndex = 0;
+      columnIndex < options.columns.length;
+      columnIndex += 1
+    ) {
       const column = options.columns[columnIndex];
       const cell = sheetRow.getCell(columnIndex + 1);
       if (column.type === "currency") {

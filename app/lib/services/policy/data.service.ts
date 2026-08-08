@@ -239,9 +239,7 @@ export async function savePolicy(
     }
 
     const takenFields =
-      takenAt != null
-        ? { takenAt, takenBy: takenBy ?? "" }
-        : {};
+      takenAt != null ? { takenAt, takenBy: takenBy ?? "" } : {};
 
     await tx
       .insert(policy)

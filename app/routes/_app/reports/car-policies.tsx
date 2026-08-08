@@ -250,7 +250,7 @@ export default function CarPolicyReportRoute({
       </div>
 
       {detail != null ? (
-        <div className="mt-6 space-y-3">
+        <div className="mt-6 flex flex-col gap-3">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-lg font-semibold">{detail.status}</h2>

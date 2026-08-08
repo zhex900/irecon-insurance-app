@@ -100,11 +100,7 @@ export function EmailTemplateEditorActions({
       >
         Cancel
       </Button>
-      <LoadingButton
-        type="submit"
-        size="sm"
-        loading={saving}
-      >
+      <LoadingButton type="submit" size="sm" loading={saving}>
         Save
       </LoadingButton>
     </div>

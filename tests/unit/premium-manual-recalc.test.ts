@@ -244,9 +244,8 @@ describe("applyManualPremiumEdit — corrected vs legacy quirks", () => {
     const plantEslRate = 0.27;
     const plant = 100;
     const editedPlantTerror = 8.5;
-    const expectedPlantEsl = Math.round(
-      (plant + editedPlantTerror) * plantEslRate * 100,
-    ) / 100;
+    const expectedPlantEsl =
+      Math.round((plant + editedPlantTerror) * plantEslRate * 100) / 100;
 
     const result = applyManualPremiumEdit({
       premium: premium({

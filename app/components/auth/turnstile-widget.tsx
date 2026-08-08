@@ -13,7 +13,10 @@ type TurnstileRenderOptions = {
 declare global {
   interface Window {
     turnstile?: {
-      render: (container: HTMLElement, options: TurnstileRenderOptions) => string;
+      render: (
+        container: HTMLElement,
+        options: TurnstileRenderOptions,
+      ) => string;
       remove: (widgetId: string) => void;
     };
   }
@@ -54,7 +57,10 @@ export function TurnstileWidget({
   const containerRef = React.useRef<HTMLDivElement>(null);
   const widgetIdRef = React.useRef<string | null>(null);
   const onTokenChangeRef = React.useRef(onTokenChange);
-  onTokenChangeRef.current = onTokenChange;
+
+  React.useEffect(() => {
+    onTokenChangeRef.current = onTokenChange;
+  }, [onTokenChange]);
 
   React.useEffect(() => {
     let cancelled = false;

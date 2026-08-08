@@ -59,11 +59,7 @@ export function SubmitConfirmDialog({
           >
             Cancel
           </Button>
-          <LoadingButton
-            type="button"
-            loading={busy}
-            onClick={onConfirm}
-          >
+          <LoadingButton type="button" loading={busy} onClick={onConfirm}>
             Confirm & generate
           </LoadingButton>
         </DialogFooter>

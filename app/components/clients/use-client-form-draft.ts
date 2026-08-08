@@ -211,8 +211,7 @@ export function useClientFormDraft({
           const name = form.getValues("name")?.trim() || "Client";
           toast.success(`${name} saved`);
           const destination =
-            pendingLeaveDestinationRef.current ??
-            `/clients/${client.clientId}`;
+            pendingLeaveDestinationRef.current ?? `/clients/${client.clientId}`;
           pendingLeaveDestinationRef.current = null;
           if (blocker.state === "blocked") {
             blocker.proceed();
@@ -247,8 +246,7 @@ export function useClientFormDraft({
 
   useEffect(() => {
     if (blocker.state === "blocked" && blocker.location) {
-      pendingLeaveDestinationRef.current =
-        `${blocker.location.pathname}${blocker.location.search}${blocker.location.hash}`;
+      pendingLeaveDestinationRef.current = `${blocker.location.pathname}${blocker.location.search}${blocker.location.hash}`;
     }
     if (blocker.state === "blocked" && !isNew && !hasUnsavedChanges) {
       if (pendingLeaveAfterSaveRef.current) return;

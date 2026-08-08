@@ -536,14 +536,14 @@ Beyond those—industry defaults for this stack (keep in sync when promoting rul
 
 ## Open decisions (resolve early)
 
-| Topic                      | Options                                              | Recommendation                                        |
-| -------------------------- | ---------------------------------------------------- | ----------------------------------------------------- |
-| Monorepo vs single package | Keep single app package                              | Single package at root until a second app appears     |
-| Hosting                    | Cloudflare Workers (current)                         | Stay; aligns with existing wrangler                   |
-| Email                      | Resend vs Cloudflare Email                           | **Resend** for transactional + attachments ergonomics |
-| PR app hosting             | Workers preview vs Playwright-only against ephemeral | Preview URL in PR comment if cost allows              |
-| Reference data             | DB tables vs versioned JSON seed                     | **DB tables** seeded in migrations/seeds              |
-| E2E on every commit        | Full vs smoke on PR, full on main                    | Smoke+critical on PR; full on `main`/nightly          |
+| Topic                      | Options                                              | Recommendation                                                         |
+| -------------------------- | ---------------------------------------------------- | ---------------------------------------------------------------------- |
+| Monorepo vs single package | Keep single app package                              | Single package at root until a second app appears                      |
+| Hosting                    | Cloudflare Workers (current)                         | Stay; aligns with existing wrangler                                    |
+| Email                      | Resend vs Cloudflare Email                           | **Resend** for transactional + attachments ergonomics                  |
+| PR app hosting             | Workers preview vs Playwright-only against ephemeral | Preview URL in PR comment if cost allows                               |
+| Reference data             | DB tables vs versioned JSON seed                     | **DB tables** seeded in migrations/seeds                               |
+| E2E on every commit        | Full vs smoke on PR, full on main                    | Smoke+critical on PR; full on `main`/nightly                           |
 | Concurrent edit locking    | Row columns vs `edit_lock` lease table               | **Lease table** — see [edit-lock-leases.md](plans/edit-lock-leases.md) |
 
 ---

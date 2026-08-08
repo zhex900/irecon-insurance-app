@@ -345,10 +345,7 @@ function ArFormDialog({
             >
               Cancel
             </Button>
-            <LoadingButton
-              type="submit"
-              loading={saving}
-            >
+            <LoadingButton type="submit" loading={saving}>
               {editing ? "Save changes" : "Add"}
             </LoadingButton>
           </DialogFooter>
