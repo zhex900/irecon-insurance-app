@@ -120,22 +120,6 @@ export default function DashboardRoute({ loaderData }: Route.ComponentProps) {
             </Link>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Portfolio snapshot</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            <p>
-              {formatNumber(loaderData.taken)} taken ·{" "}
-              {formatNumber(loaderData.pending)} pending ·{" "}
-              {formatNumber(loaderData.notTaken)} not taken ·{" "}
-              {formatNumber(loaderData.clients)} clients on file.
-            </p>
-            <p className="mt-2 text-muted-foreground">
-              Charts and activity feeds come in a later pass.
-            </p>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );
