@@ -57,6 +57,8 @@
   --color-success-foreground: var(--success-foreground);
   --color-success: var(--success);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-focus-foreground: var(--focus-foreground);
+  --color-focus: var(--focus);
   --animate-border-rotate: border-rotate 8s linear infinite;
   --animate-nav-progress: nav-progress 1.8s ease-in-out infinite;
 }
@@ -122,6 +124,8 @@
   --warning-foreground: var(--color-yellow-900);
   --invert: #0a0a0a;
   --invert-foreground: #fafafa;
+  --focus: #7c3aed;
+  --focus-foreground: #5b21b6;
   color-scheme: light;
 }
 
@@ -166,6 +170,8 @@
   --warning-foreground: var(--color-yellow-400);
   --invert: #000000;
   --invert-foreground: #fafafa;
+  --focus: #a78bfa;
+  --focus-foreground: #ddd6fe;
   color-scheme: dark;
 }
 

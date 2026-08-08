@@ -112,16 +112,19 @@ export function ClaimsWordingStep({
                 const checked = selected.includes(item.carWordingId);
                 return (
                   <label className="flex items-start gap-3 rounded-md border border-border p-3 text-foreground">
-                    <input
-                      type="checkbox"
+                    <Checkbox
+                      id={`selectedWording-${item.carWordingId}`}
                       checked={checked}
-                      onChange={(e) => {
-                        const next = e.target.checked
-                          ? [...selected, item.carWordingId]
-                          : selected.filter((id) => id !== item.carWordingId);
+                      onCheckedChange={(value) => {
+                        const next =
+                          value === true
+                            ? [...selected, item.carWordingId]
+                            : selected.filter(
+                                (id) => id !== item.carWordingId,
+                              );
                         field.onChange(next);
                       }}
-                      className="mt-1"
+                      className="mt-0.5"
                     />
                     <span className="min-w-0">
                       <button

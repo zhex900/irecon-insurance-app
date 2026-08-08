@@ -542,7 +542,7 @@ export function PolicyStickyHeader({
               {statusBadge}
               {saveStatus}
               {adjusted ? (
-                <Badge variant="info-light" size="default" radius="full">
+                <Badge variant="focus-light" size="default" radius="full">
                   Adjusted
                 </Badge>
               ) : null}

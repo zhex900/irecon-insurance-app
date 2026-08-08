@@ -4,6 +4,7 @@ import { PlusIcon } from "lucide-react";
 import { WordingHtmlView } from "~/components/policies/wording-html-view";
 import { WordingRichEditor } from "~/components/policies/wording-rich-editor";
 import { Button } from "~/components/ui/button";
+import { Checkbox } from "~/components/ui/checkbox";
 import { FieldInput } from "~/components/ui/form-controls";
 import {
   Dialog,
@@ -124,11 +125,10 @@ export function CustomWordingsEditor() {
                     key={item.id}
                     className="flex items-start gap-3 rounded-md border border-border p-3 text-foreground"
                   >
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked
-                      readOnly
-                      className="mt-1"
+                      disabled
+                      className="mt-0.5"
                       aria-label="Custom wording"
                     />
                     <div className="flex w-full flex-col gap-3">
@@ -193,12 +193,13 @@ export function CustomWordingsEditor() {
                   key={item.id}
                   className="flex items-start gap-3 rounded-md border border-border p-3 text-foreground"
                 >
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked
-                    className="mt-1"
                     disabled={mode !== "idle"}
-                    onChange={() => setDeleteId(item.id)}
+                    onCheckedChange={(value) => {
+                      if (value !== true) setDeleteId(item.id);
+                    }}
+                    className="mt-0.5"
                     aria-label={`Remove ${plainTextFromWordingHtml(item.subject) || "custom wording"}`}
                   />
                   <div className="min-w-0 flex-1">
@@ -239,11 +240,10 @@ export function CustomWordingsEditor() {
 
             {mode === "adding" ? (
               <div className="flex items-start gap-3 rounded-md border border-border p-3 text-foreground">
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked
-                  readOnly
-                  className="mt-1"
+                  disabled
+                  className="mt-0.5"
                   aria-label="New custom wording"
                 />
                 <div className="flex w-full flex-col gap-3">

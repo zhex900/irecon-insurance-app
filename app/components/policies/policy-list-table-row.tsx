@@ -88,7 +88,7 @@ export function PolicyListTableRow({
             )}
           </span>
           {policy.adjusted ? (
-            <Badge variant="info-light" size="sm">
+            <Badge variant="focus-light" size="sm">
               Adjusted
             </Badge>
           ) : null}
