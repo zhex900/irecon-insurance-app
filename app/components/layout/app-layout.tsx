@@ -132,11 +132,11 @@ function SidebarCollapseToggle() {
             className="shrink-0 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             aria-label={label}
             onClick={toggleSidebar}
-          />
+          >
+            <Icon className="size-4" />
+          </Button>
         }
-      >
-        <Icon className="size-4" />
-      </TooltipTrigger>
+      />
       <TooltipContent side="right">{label}</TooltipContent>
     </Tooltip>
   );

@@ -103,8 +103,8 @@ function SidebarProvider({
       setOpenMobile((mobileOpen) => !mobileOpen);
       return;
     }
-    setOpen(!open);
-  }, [isMobile, open, setOpen]);
+    setOpen((current) => !current);
+  }, [isMobile, setOpen]);
 
   // Adds a keyboard shortcut to toggle the sidebar.
   React.useEffect(() => {
@@ -269,6 +269,7 @@ function Sidebar({
             {children}
           </div>
         </div>
+        <SidebarRail />
       </div>
     );
   }

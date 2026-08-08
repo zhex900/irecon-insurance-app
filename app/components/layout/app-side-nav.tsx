@@ -321,6 +321,7 @@ function MainNavSection({
   onToggleSection: (section: SectionId) => void;
 }) {
   const navigate = useNavigate();
+  const { setOpen } = useSidebar();
 
   return (
     <div
@@ -387,6 +388,10 @@ function MainNavSection({
                 aria-label={iconRail ? link.label : undefined}
                 onClick={() => {
                   if (iconRail) {
+                    setOpen(true);
+                    if (!expandedSections.includes(section)) {
+                      onToggleSection(section);
+                    }
                     void navigate(link.to);
                     return;
                   }
@@ -504,11 +509,14 @@ export const AppSideNav = React.memo(function AppSideNav({
     onNavSectionsChange(next);
   }
 
+  // Auto-expand the active section on navigation only — not when the user
+  // manually collapses Reports/Settings while staying on that section.
   React.useEffect(() => {
     const active = sectionFromPathname(location.pathname);
     if (!active || navSectionsExpanded.includes(active)) return;
     onNavSectionsChange([...navSectionsExpanded, active]);
-  }, [location.pathname, navSectionsExpanded, onNavSectionsChange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- pathname-driven only
+  }, [location.pathname]);
 
   React.useEffect(() => {
     recentRoutesRef.current = recentRoutes;
