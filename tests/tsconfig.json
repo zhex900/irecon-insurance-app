@@ -1,0 +1,12 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDirs": ["..", "../.react-router/types"],
+    "paths": {
+      "~/*": ["../app/*"]
+    }
+  },
+  "include": ["./**/*.ts"],
+  "exclude": []
+}

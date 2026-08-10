@@ -295,13 +295,10 @@ export function UserFormDialog({
                 <FieldLabel htmlFor="role-readonly">Role</FieldLabel>
                 <Input
                   id="role-readonly"
-                  value="Super admin"
+                  value="System admin"
                   disabled
                   readOnly
                 />
-                <p className="text-xs text-muted-foreground">
-                  Super-admin can only be set in the database.
-                </p>
               </Field>
             ) : (
               <Select

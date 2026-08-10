@@ -27,7 +27,7 @@ export function isAdminRole(
 }
 
 export function formatRoleLabel(role: AppRole | string): string {
-  if (role === "super-admin") return "Super admin";
+  if (role === "super-admin") return "System admin";
   if (role === "admin") return "Admin";
   return "Broker";
 }

@@ -5,6 +5,7 @@ import {
   isSuperAdmin,
   normalizeAppRole,
 } from "~/lib/auth/roles";
+import type { PolicyNote } from "~/lib/db/types";
 import {
   buildReferralNotes,
   mergeReferralNotes,
@@ -25,7 +26,9 @@ describe("roles", () => {
     expect(isAdminRole({ role: "super-admin" })).toBe(true);
     expect(isAdminRole({ role: "admin" })).toBe(true);
     expect(isAdminRole({ role: "broker" })).toBe(false);
-    expect(formatRoleLabel("super-admin")).toBe("Super admin");
+    expect(formatRoleLabel("super-admin")).toBe("System admin");
+    expect(formatRoleLabel("admin")).toBe("Admin");
+    expect(formatRoleLabel("broker")).toBe("Broker");
   });
 });
 
@@ -70,7 +73,7 @@ describe("premium note helpers", () => {
         createdBy: "a@demo.local",
       },
     ]);
-    expect(sorted.map((n) => n.description)).toEqual(["newer", "older"]);
+    expect(sorted.map((n: PolicyNote) => n.description)).toEqual(["newer", "older"]);
   });
 });
 
