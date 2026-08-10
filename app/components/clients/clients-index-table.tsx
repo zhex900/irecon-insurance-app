@@ -21,11 +21,6 @@ import {
   TableRow,
 } from "~/components/ui/table";
 import { TablePagination } from "~/components/ui/table-pagination";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "~/components/ui/tooltip";
 import { SearchHighlight } from "~/components/search/highlight-cell";
 import { fieldMatches } from "~/lib/search/match";
 import type { ReferenceData } from "~/lib/db/types";
@@ -178,25 +173,17 @@ export function ClientsIndexTable({
                         <Trash2Icon />
                       </Button>
                     ) : (
-                      <Tooltip>
-                        <TooltipTrigger
-                          render={<span className="inline-flex" />}
-                        >
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-sm"
-                            disabled
-                            className="text-muted-foreground"
-                            aria-label={`Cannot delete ${client.name}`}
-                          >
-                            <Trash2Icon />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          Clients with policies cannot be deleted
-                        </TooltipContent>
-                      </Tooltip>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        disabled
+                        className="text-muted-foreground"
+                        aria-label={`Cannot delete ${client.name}`}
+                        title="Clients with policies cannot be deleted"
+                      >
+                        <Trash2Icon />
+                      </Button>
                     )}
                   </InteractiveTableActionsCell>
                 </InteractiveTableRow>

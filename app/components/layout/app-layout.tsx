@@ -43,12 +43,8 @@ import { ThemeToggle } from "~/components/theme-toggle";
 import { Badge } from "~/components/reui/badge";
 import { Button } from "~/components/ui/button";
 import { Spinner } from "~/components/ui/spinner";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "~/components/ui/tooltip";
+import { TooltipProvider } from "~/components/ui/tooltip";
+import { useHydrated } from "~/hooks/use-hydrated";
 import {
   getAppEnvironment,
   getAppEnvironmentBadgeClass,
@@ -121,24 +117,18 @@ function SidebarCollapseToggle() {
   const Icon = open ? PanelLeftCloseIcon : PanelLeftOpenIcon;
 
   return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <Button
-            type="button"
-            data-sidebar="trigger"
-            variant="ghost"
-            size="icon-sm"
-            className="shrink-0 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-            aria-label={label}
-            onClick={toggleSidebar}
-          >
-            <Icon className="size-4" />
-          </Button>
-        }
-      />
-      <TooltipContent side="right">{label}</TooltipContent>
-    </Tooltip>
+    <Button
+      type="button"
+      data-sidebar="trigger"
+      variant="ghost"
+      size="icon-sm"
+      className="shrink-0 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+      aria-label={label}
+      title={label}
+      onClick={toggleSidebar}
+    >
+      <Icon className="size-4" />
+    </Button>
   );
 }
 
@@ -267,11 +257,27 @@ export function AppLayout({
 }
 
 function AccountMenu({ broker }: { broker: BrokerSession }) {
+  const hydrated = useHydrated();
   const navigation = useNavigation();
   const logoutFetcher = useFetcher();
   const loggingOut =
     logoutFetcher.state !== "idle" ||
     (navigation.state !== "idle" && navigation.formAction?.includes("/logout"));
+
+  if (!hydrated) {
+    return (
+      <span
+        className="rounded-full outline-none"
+        aria-label="Account menu"
+      >
+        <UserAvatar
+          email={broker.email}
+          fullName={broker.fullName}
+          userId={broker.id}
+        />
+      </span>
+    );
+  }
 
   return (
     <DropdownMenu>

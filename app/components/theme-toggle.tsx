@@ -1,7 +1,7 @@
-import * as React from "react";
 import { MonitorIcon, MoonIcon, SunIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "~/components/ui/button";
+import { useHydrated } from "~/hooks/use-hydrated";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,19 +18,6 @@ const themes = [
   { value: "system", label: "System", icon: MonitorIcon },
 ] as const;
 
-function subscribeNever() {
-  return () => {};
-}
-
-/** True once hydrated on the client — avoids an SSR/client theme mismatch flash. */
-function useMounted() {
-  return React.useSyncExternalStore(
-    subscribeNever,
-    () => true,
-    () => false,
-  );
-}
-
 export function ThemeToggle({
   className,
   align = "end",
@@ -39,7 +26,22 @@ export function ThemeToggle({
   align?: "start" | "center" | "end";
 }) {
   const { theme, setTheme } = useTheme();
-  const mounted = useMounted();
+  const hydrated = useHydrated();
+
+  if (!hydrated) {
+    return (
+      <Button
+        variant="ghost"
+        size="icon"
+        className={cn(className)}
+        aria-label="Toggle theme"
+        disabled
+      >
+        <SunIcon className="size-4 opacity-0" aria-hidden />
+        <span className="sr-only">Toggle theme</span>
+      </Button>
+    );
+  }
 
   return (
     <DropdownMenu>
@@ -59,7 +61,7 @@ export function ThemeToggle({
       />
       <DropdownMenuContent align={align} className="min-w-36">
         <DropdownMenuRadioGroup
-          value={mounted ? (theme ?? "system") : "system"}
+          value={theme ?? "system"}
           onValueChange={setTheme}
         >
           <DropdownMenuLabel>Theme</DropdownMenuLabel>
@@ -77,9 +79,9 @@ export function ThemeToggle({
 
 export function ThemeModePicker({ className }: { className?: string }) {
   const { theme, setTheme } = useTheme();
-  const mounted = useMounted();
+  const hydrated = useHydrated();
 
-  const current = mounted ? (theme ?? "system") : "system";
+  const current = hydrated ? (theme ?? "system") : "system";
 
   return (
     <div

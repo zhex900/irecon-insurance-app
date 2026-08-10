@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router";
 import { AppSelect } from "~/components/ui/app-select";
+import { useHydrated } from "~/hooks/use-hydrated";
 import {
   Pagination,
   PaginationContent,
@@ -79,6 +80,7 @@ export function TablePagination({
   pageSizeOptions?: readonly number[];
 }) {
   const navigate = useNavigate();
+  const hydrated = useHydrated();
   const pages = totalPages(total, pageSize);
   const current = Math.min(Math.max(page, 1), pages);
   const items = getPaginationItems(current, pages);
@@ -122,18 +124,24 @@ export function TablePagination({
 
         <PaginationItem>
           {pageSizeHref ? (
-            <AppSelect
-              className="w-28"
-              aria-label="Rows per page"
-              value={String(pageSize)}
-              onValueChange={(next) => {
-                navigate(pageSizeHref(Number(next)));
-              }}
-              options={sizeOptions.map((size) => ({
-                value: String(size),
-                label: `${size} / page`,
-              }))}
-            />
+            hydrated ? (
+              <AppSelect
+                className="w-28"
+                aria-label="Rows per page"
+                value={String(pageSize)}
+                onValueChange={(next) => {
+                  navigate(pageSizeHref(Number(next)));
+                }}
+                options={sizeOptions.map((size) => ({
+                  value: String(size),
+                  label: `${size} / page`,
+                }))}
+              />
+            ) : (
+              <span className="inline-flex h-8 w-28 items-center justify-end text-sm text-muted-foreground tabular-nums">
+                {pageSize} / page
+              </span>
+            )
           ) : (
             <span className="text-sm text-muted-foreground tabular-nums">
               {pageSize} / page

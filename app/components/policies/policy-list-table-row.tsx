@@ -8,11 +8,6 @@ import {
   InteractiveTableRow,
 } from "~/components/ui/interactive-table-row";
 import { TableCell } from "~/components/ui/table";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "~/components/ui/tooltip";
 import { SearchHighlight } from "~/components/search/highlight-cell";
 import { fieldMatches } from "~/lib/search/match";
 import type { ReferenceData } from "~/lib/db/types";
@@ -170,23 +165,17 @@ export function PolicyListTableRow({
             <Trash2Icon />
           </Button>
         ) : (
-          <Tooltip>
-            <TooltipTrigger render={<span className="inline-flex" />}>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                disabled
-                className="text-muted-foreground"
-                aria-label={`Cannot delete ${policy.policyNumber}`}
-              >
-                <Trash2Icon />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              Taken and not taken policies cannot be deleted
-            </TooltipContent>
-          </Tooltip>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            disabled
+            className="text-muted-foreground"
+            aria-label={`Cannot delete ${policy.policyNumber}`}
+            title="Taken and not taken policies cannot be deleted"
+          >
+            <Trash2Icon />
+          </Button>
         )}
       </InteractiveTableActionsCell>
     </InteractiveTableRow>
