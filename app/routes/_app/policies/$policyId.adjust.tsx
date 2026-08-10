@@ -6,6 +6,10 @@ import { withSuccessToast } from "~/hooks/use-success-toast";
 import { requireAuth } from "~/lib/auth/session.server";
 import { parseFormIntent, parseUuid } from "~/lib/http/route-input";
 import {
+  clientNotFoundResponse,
+  policyNotFoundResponse,
+} from "~/lib/http/resource-not-found";
+import {
   AdjustmentError,
   calculateAdjustmentForPolicy,
   submitPolicyAdjustment,
@@ -26,9 +30,9 @@ export function meta({ loaderData }: Route.MetaArgs) {
 export async function loader({ params, request }: Route.LoaderArgs) {
   await requireAuth(request);
   const policyId = parseUuid(params.policyId);
-  if (!policyId) throw new Response("Policy not found", { status: 404 });
+  if (!policyId) throw policyNotFoundResponse();
   const policy = await getPolicy(policyId);
-  if (!policy) throw new Response("Policy not found", { status: 404 });
+  if (!policy) throw policyNotFoundResponse();
 
   if (policy.policyStatusId !== POLICY_STATUS.Taken) {
     throw new Response(
@@ -49,7 +53,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
   }
 
   const client = await getClient(policy.clientId);
-  if (!client) throw new Response("Client not found", { status: 404 });
+  if (!client) throw clientNotFoundResponse();
 
   return {
     policy,

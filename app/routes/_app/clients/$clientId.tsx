@@ -22,6 +22,7 @@ import { PageHeader } from "~/components/layout/app-layout";
 import { withSuccessToast } from "~/hooks/use-success-toast";
 import { requireAuth } from "~/lib/auth/session.server";
 import { parseFormIntent, parseUuid } from "~/lib/http/route-input";
+import { clientNotFoundResponse } from "~/lib/http/resource-not-found";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
 import { parsePagination } from "~/lib/pagination";
 import { parsePolicyListFiltersFromUrl } from "~/lib/search/policy-list-filters";
@@ -47,7 +48,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
 export async function loader({ params, request }: Route.LoaderArgs) {
   await requireAuth(request);
   const clientId = parseUuid(params.clientId);
-  if (!clientId) throw new Response("Client not found", { status: 404 });
+  if (!clientId) throw clientNotFoundResponse();
   const url = new URL(request.url);
   const filters = parsePolicyListFiltersFromUrl(url);
   const pagination = parsePagination(url, { defaultSize: PAGE_SIZE });
@@ -70,7 +71,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     }),
     countClientPolicies(clientId),
   ]);
-  if (!client) throw new Response("Client not found", { status: 404 });
+  if (!client) throw clientNotFoundResponse();
 
   const allCount = Object.values(page.statusCounts).reduce((a, b) => a + b, 0);
 

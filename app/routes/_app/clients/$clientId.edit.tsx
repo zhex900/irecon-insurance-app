@@ -2,6 +2,7 @@ import { ClientForm } from "~/components/clients/client-form";
 import { PageHeader } from "~/components/layout/app-layout";
 import { requireAuth } from "~/lib/auth/session.server";
 import { booleanFlagSchema, parseUuid } from "~/lib/http/route-input";
+import { clientNotFoundResponse } from "~/lib/http/resource-not-found";
 import { pageTitle } from "~/lib/brand";
 import { getClient } from "~/lib/services/clients/service";
 import { getReferenceDataAsync } from "~/lib/services/reference.service";
@@ -20,7 +21,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
 export async function loader({ request, params }: Route.LoaderArgs) {
   await requireAuth(request);
   const clientId = parseUuid(params.clientId);
-  if (!clientId) throw new Response("Client not found", { status: 404 });
+  if (!clientId) throw clientNotFoundResponse();
   const isNew =
     booleanFlagSchema.parse(
       new URL(request.url).searchParams.get("new") ?? "0",
@@ -29,7 +30,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     getClient(clientId),
     getReferenceDataAsync(),
   ]);
-  if (!client) throw new Response("Client not found", { status: 404 });
+  if (!client) throw clientNotFoundResponse();
   return { client, reference, isNew };
 }
 

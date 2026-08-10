@@ -1,6 +1,7 @@
 import { redirect } from "react-router";
 import { requireAuth } from "~/lib/auth/session.server";
 import { searchParamsObject, uuidParamSchema } from "~/lib/http/route-input";
+import { clientNotFoundResponse } from "~/lib/http/resource-not-found";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import { getClient } from "~/lib/services/clients/service";
 import { createPolicyDraft } from "~/lib/services/policy/data.service";
@@ -14,7 +15,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   if (!parsedClientId.success) throw redirect("/clients");
   const clientId = parsedClientId.data;
   const client = await getClient(clientId);
-  if (!client) throw new Response("Client not found", { status: 404 });
+  if (!client) throw clientNotFoundResponse();
 
   const policy = await createPolicyDraft(clientId, {}, actor.email);
   await writeAuditLog({

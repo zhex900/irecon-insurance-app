@@ -39,6 +39,10 @@ import {
   parsePositiveInteger,
   parseUuid,
 } from "~/lib/http/route-input";
+import {
+  clientNotFoundResponse,
+  policyNotFoundResponse,
+} from "~/lib/http/resource-not-found";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import {
@@ -72,11 +76,11 @@ export function meta({ loaderData }: Route.MetaArgs) {
 export async function loader({ params, request }: Route.LoaderArgs) {
   await requireAuth(request);
   const policyId = parseUuid(params.policyId);
-  if (!policyId) throw new Response("Policy not found", { status: 404 });
+  if (!policyId) throw policyNotFoundResponse();
   const policy = await getPolicy(policyId);
-  if (!policy) throw new Response("Policy not found", { status: 404 });
+  if (!policy) throw policyNotFoundResponse();
   const client = await getClient(policy.clientId);
-  if (!client) throw new Response("Client not found", { status: 404 });
+  if (!client) throw clientNotFoundResponse();
   const [
     broker,
     emailTemplates,

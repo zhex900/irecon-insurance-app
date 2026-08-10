@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { isRouteErrorResponse, Link } from "react-router";
 import { ErrorPageIllustration } from "~/components/error-page-illustration";
 import { Button, buttonVariants } from "~/components/ui/button";
+import { getResourceNotFoundCopy } from "~/lib/http/resource-not-found";
 import { reportClientRouteError } from "~/lib/observability/report-error";
 import { cn } from "~/lib/utils";
 
@@ -16,17 +17,32 @@ function formatErrorDetails(error: unknown): {
 
   if (isRouteErrorResponse(error)) {
     if (error.status === 404) {
+      const message =
+        typeof error.data === "string" ? error.data.trim() : "";
+      const resourceCopy = message ? getResourceNotFoundCopy(message) : null;
+      if (resourceCopy) {
+        return {
+          heading: "Oops!",
+          subheading: resourceCopy.subheading,
+          details: resourceCopy.details,
+          status: 404,
+          stack: showDebugDetails ? message || undefined : undefined,
+        };
+      }
+
+      const isUnknownRoute = message.startsWith("No route matches");
       return {
         heading: "Oops!",
-        subheading: "Page not found",
-        details: "The requested page could not be found.",
+        subheading: isUnknownRoute || !message ? "Page not found" : message,
+        details: isUnknownRoute || !message
+          ? "The requested page could not be found."
+          : "The requested resource could not be found.",
         status: 404,
         stack: showDebugDetails
-          ? typeof error.data === "string"
-            ? error.data
-            : error.data != null
-              ? JSON.stringify(error.data, null, 2)
-              : error.statusText || undefined
+          ? message ||
+            (error.data != null ? JSON.stringify(error.data, null, 2) : undefined) ||
+            error.statusText ||
+            undefined
           : undefined,
       };
     }
