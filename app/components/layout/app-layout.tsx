@@ -18,6 +18,8 @@ import { AppSideNav } from "~/components/layout/app-side-nav";
 import { GlobalSearch } from "~/components/layout/global-search";
 import { NavigationProgress } from "~/components/layout/navigation-progress";
 import { OfflineDialog } from "~/components/layout/offline-dialog";
+import { SessionTimeoutDialog } from "~/components/layout/session-timeout-dialog";
+import type { SessionTimeoutClientState } from "~/lib/auth/session-timeout";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -138,6 +140,7 @@ export function AppLayout({
   sidebarOpen = true,
   recentsOpen = false,
   navSectionsExpanded = [],
+  sessionTimeout = null,
   content,
 }: {
   broker: BrokerSession;
@@ -148,6 +151,8 @@ export function AppLayout({
   recentsOpen?: boolean;
   /** Expanded Reports/Settings sections from cookie + path (SSR). */
   navSectionsExpanded?: NavSectionId[];
+  /** Idle / absolute session limits for the client timeout dialog. */
+  sessionTimeout?: SessionTimeoutClientState | null;
   /** When set (e.g. layout ErrorBoundary), replace the route Outlet. */
   content?: React.ReactNode;
 }) {
@@ -194,6 +199,7 @@ export function AppLayout({
       <SentryUserSync userId={broker.id} email={broker.email} />
       <NavigationProgress />
       <OfflineDialog />
+      <SessionTimeoutDialog config={sessionTimeout} />
       <SidebarProvider
         open={shellNav.sidebarOpen}
         onOpenChange={handleSidebarOpenChange}

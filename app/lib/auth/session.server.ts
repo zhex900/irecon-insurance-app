@@ -1,16 +1,46 @@
 import {
   appendAuthSessionCookies,
   appendClearAuthSessionCookies,
+  appendLastActivityCookie,
   getAuthUserWithSession,
+  readSessionTiming,
 } from "~/lib/supabase/auth.server";
+import {
+  evaluateSessionTimeout,
+  readSessionTimeoutConfig,
+} from "~/lib/auth/session-timeout.server";
+import { trackUsage } from "~/lib/observability/metrics.server";
+import { queueSetCookie } from "~/lib/observability/request-context.server";
 import { getUser } from "~/lib/services/users/service";
 import type { AppUser } from "~/lib/db/types";
 
+export type SessionEndReason = "inactivity" | "absolute";
+
 export async function getSessionAppUser(
   request: Request,
-): Promise<{ user: AppUser | null; setCookieHeaders?: Headers }> {
+): Promise<{
+  user: AppUser | null;
+  setCookieHeaders?: Headers;
+  sessionEndReason?: SessionEndReason;
+}> {
   const { user: authUser, session } = await getAuthUserWithSession(request);
   if (!authUser) return { user: null };
+
+  const timing = readSessionTiming(request);
+  const timeout = evaluateSessionTimeout(
+    timing,
+    readSessionTimeoutConfig(),
+  );
+  if (!timeout.ok) {
+    trackUsage("auth.session_end", { reason: timeout.reason });
+    const headers = new Headers();
+    appendClearAuthSessionCookies(headers, request);
+    return {
+      user: null,
+      setCookieHeaders: headers,
+      sessionEndReason: timeout.reason,
+    };
+  }
 
   const profile = await getUser(authUser.id);
   if (!profile || profile.disabled) return { user: null };
@@ -23,7 +53,8 @@ export async function getSessionAppUser(
     session.refresh_token &&
     !request.headers.get("Cookie")?.includes(session.access_token)
   ) {
-    // Refreshed session — refresh cookies for the caller when needed.
+    // Refreshed access token — keep absolute session start.
+    const startedAtMs = timing.startedAtMs ?? timeout.nowMs;
     appendAuthSessionCookies(
       headers,
       {
@@ -35,7 +66,18 @@ export async function getSessionAppUser(
             : undefined,
       },
       request,
+      { resetTiming: false, nowMs: timeout.nowMs },
     );
+    appendLastActivityCookie(headers, request, timeout.nowMs, startedAtMs);
+  } else if (timeout.shouldRefreshActivity) {
+    const startedAtMs = timing.startedAtMs ?? timeout.nowMs;
+    appendLastActivityCookie(headers, request, timeout.nowMs, startedAtMs);
+  }
+
+  if (headers.has("Set-Cookie")) {
+    for (const value of headers.getSetCookie()) {
+      queueSetCookie(value);
+    }
   }
 
   return {
@@ -45,11 +87,20 @@ export async function getSessionAppUser(
 }
 
 export async function requireAuth(request: Request): Promise<AppUser> {
-  const { user } = await getSessionAppUser(request);
+  const { user, setCookieHeaders, sessionEndReason } =
+    await getSessionAppUser(request);
   if (!user) {
+    const headers = setCookieHeaders ?? new Headers();
+    const location =
+      sessionEndReason === "inactivity"
+        ? "/login?reason=idle"
+        : sessionEndReason === "absolute"
+          ? "/login?reason=expired"
+          : "/login";
+    headers.set("Location", location);
     throw new Response(null, {
       status: 302,
-      headers: { Location: "/login" },
+      headers,
     });
   }
   return user;

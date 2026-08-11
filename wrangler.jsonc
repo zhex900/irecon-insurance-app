@@ -32,6 +32,8 @@
   // `limits.cpu_ms` requires a paid Workers plan — omit on Free (API code 100328).
   "vars": {
     "SUPABASE_URL": "https://tjnsygunohylofihoksl.supabase.co",
+    "SESSION_INACTIVITY_TIMEOUT_MINUTES": "30",
+    "SESSION_ABSOLUTE_TIMEOUT_HOURS": "12",
   },
   "hyperdrive": [
     {

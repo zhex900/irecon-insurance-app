@@ -5,6 +5,7 @@ import {
 import { AppErrorPage } from "~/components/app-error-page";
 import { AppLayout } from "~/components/layout/app-layout";
 import { requireAuth } from "~/lib/auth/session.server";
+import { getSessionTimeoutClientState } from "~/lib/auth/session-timeout.server";
 import { updateRequestContext } from "~/lib/observability/request-context.server";
 import { setSentryUser } from "~/lib/observability/sentry.server";
 import { toBrokerSession } from "~/lib/services/broker-session";
@@ -34,6 +35,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     sidebarOpen: shellNav.sidebarOpen,
     recentsOpen: shellNav.recentsOpen,
     navSectionsExpanded,
+    sessionTimeout: getSessionTimeoutClientState(request),
   };
 }
 
@@ -74,6 +76,7 @@ export default function AppLayoutRoute({ loaderData }: Route.ComponentProps) {
       sidebarOpen={loaderData.sidebarOpen}
       recentsOpen={loaderData.recentsOpen}
       navSectionsExpanded={loaderData.navSectionsExpanded}
+      sessionTimeout={loaderData.sessionTimeout}
     />
   );
 }
@@ -89,6 +92,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
         sidebarOpen={data.sidebarOpen}
         recentsOpen={data.recentsOpen}
         navSectionsExpanded={data.navSectionsExpanded}
+        sessionTimeout={data.sessionTimeout}
         content={<AppErrorPage error={error} />}
       />
     );

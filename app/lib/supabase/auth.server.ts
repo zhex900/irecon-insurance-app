@@ -3,9 +3,15 @@ import {
   getSupabaseAnonKey,
   getSupabaseUrl,
 } from "~/lib/supabase/env.server";
+import type { SessionTiming } from "~/lib/auth/session-timeout.server";
 
 const ACCESS_COOKIE = "sb-access-token";
 const REFRESH_COOKIE = "sb-refresh-token";
+const SESSION_STARTED_COOKIE = "sb-session-started";
+const LAST_ACTIVITY_COOKIE = "sb-last-activity";
+
+/** Refresh cookie lifetime (browser). Absolute/inactivity still enforced server-side. */
+const REFRESH_COOKIE_MAX_AGE_SEC = 60 * 60 * 24 * 30;
 
 function createAnonClient() {
   return createClient(getSupabaseUrl(), getSupabaseAnonKey(), {
@@ -50,21 +56,67 @@ function cookieSecureFromRequest(request?: Request) {
   return new URL(request.url).protocol === "https:";
 }
 
-export function createAuthSessionHeaders(session: {
-  access_token: string;
-  refresh_token: string;
-  expires_in?: number;
-}, request?: Request) {
-  const maxAge = session.expires_in ?? 60 * 60;
-  const secure = cookieSecureFromRequest(request);
+function parseUnixMs(raw: string | undefined): number | null {
+  if (!raw) return null;
+  const sec = Number(raw);
+  if (!Number.isFinite(sec) || sec <= 0) return null;
+  return Math.floor(sec * 1000);
+}
+
+export function readSessionTiming(request: Request): SessionTiming {
+  const cookies = parseCookies(request);
   return {
-    "Set-Cookie": [
-      cookie(ACCESS_COOKIE, session.access_token, { maxAge, secure }),
-      cookie(REFRESH_COOKIE, session.refresh_token, {
-        maxAge: 60 * 60 * 24 * 30,
-        secure,
-      }),
-    ].join(", "),
+    startedAtMs: parseUnixMs(cookies[SESSION_STARTED_COOKIE]),
+    lastActivityAtMs: parseUnixMs(cookies[LAST_ACTIVITY_COOKIE]),
+  };
+}
+
+function appendSessionTimingCookies(
+  headers: Headers,
+  request: Request | undefined,
+  nowMs: number,
+  options?: { startedAtMs?: number },
+) {
+  const secure = cookieSecureFromRequest(request);
+  const startedSec = Math.floor((options?.startedAtMs ?? nowMs) / 1000);
+  const activitySec = Math.floor(nowMs / 1000);
+  headers.append(
+    "Set-Cookie",
+    cookie(SESSION_STARTED_COOKIE, String(startedSec), {
+      maxAge: REFRESH_COOKIE_MAX_AGE_SEC,
+      secure,
+    }),
+  );
+  headers.append(
+    "Set-Cookie",
+    cookie(LAST_ACTIVITY_COOKIE, String(activitySec), {
+      maxAge: REFRESH_COOKIE_MAX_AGE_SEC,
+      secure,
+    }),
+  );
+}
+
+export function appendLastActivityCookie(
+  headers: Headers,
+  request: Request | undefined,
+  nowMs: number,
+  startedAtMs: number,
+) {
+  appendSessionTimingCookies(headers, request, nowMs, { startedAtMs });
+}
+
+export function createAuthSessionHeaders(
+  session: {
+    access_token: string;
+    refresh_token: string;
+    expires_in?: number;
+  },
+  request?: Request,
+) {
+  const headers = new Headers();
+  appendAuthSessionCookies(headers, session, request);
+  return {
+    "Set-Cookie": headers.getSetCookie().join(", "),
   };
 }
 
@@ -77,9 +129,16 @@ export function appendAuthSessionCookies(
     expires_in?: number;
   },
   request?: Request,
+  options?: {
+    nowMs?: number;
+    /** When true (default), reset absolute + inactivity clocks (login). */
+    resetTiming?: boolean;
+    startedAtMs?: number;
+  },
 ) {
   const maxAge = session.expires_in ?? 60 * 60;
   const secure = cookieSecureFromRequest(request);
+  const nowMs = options?.nowMs ?? Date.now();
   headers.append(
     "Set-Cookie",
     cookie(ACCESS_COOKIE, session.access_token, { maxAge, secure }),
@@ -87,10 +146,15 @@ export function appendAuthSessionCookies(
   headers.append(
     "Set-Cookie",
     cookie(REFRESH_COOKIE, session.refresh_token, {
-      maxAge: 60 * 60 * 24 * 30,
+      maxAge: REFRESH_COOKIE_MAX_AGE_SEC,
       secure,
     }),
   );
+  if (options?.resetTiming !== false) {
+    appendSessionTimingCookies(headers, request, nowMs, {
+      startedAtMs: options?.startedAtMs,
+    });
+  }
 }
 
 export function appendClearAuthSessionCookies(
@@ -105,6 +169,14 @@ export function appendClearAuthSessionCookies(
   headers.append(
     "Set-Cookie",
     cookie(REFRESH_COOKIE, "", { maxAge: 0, secure }),
+  );
+  headers.append(
+    "Set-Cookie",
+    cookie(SESSION_STARTED_COOKIE, "", { maxAge: 0, secure }),
+  );
+  headers.append(
+    "Set-Cookie",
+    cookie(LAST_ACTIVITY_COOKIE, "", { maxAge: 0, secure }),
   );
 }
 

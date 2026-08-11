@@ -8,6 +8,7 @@ import {
 import { logger } from "../app/lib/observability/logger.server";
 import {
   resolveRequestId,
+  takePendingSetCookies,
   withRequestContext,
 } from "../app/lib/observability/request-context.server";
 import { sentryOptionsFromEnv } from "../app/lib/observability/sentry.server";
@@ -42,6 +43,14 @@ function applyDatabaseEnv(env: Env) {
   if (env.TURNSTILE_SECRET_KEY) {
     process.env.TURNSTILE_SECRET_KEY = env.TURNSTILE_SECRET_KEY;
   }
+  if (env.SESSION_INACTIVITY_TIMEOUT_MINUTES != null) {
+    process.env.SESSION_INACTIVITY_TIMEOUT_MINUTES =
+      env.SESSION_INACTIVITY_TIMEOUT_MINUTES;
+  }
+  if (env.SESSION_ABSOLUTE_TIMEOUT_HOURS != null) {
+    process.env.SESSION_ABSOLUTE_TIMEOUT_HOURS =
+      env.SESSION_ABSOLUTE_TIMEOUT_HOURS;
+  }
 }
 
 const handler = {
@@ -65,6 +74,9 @@ const handler = {
 
         const headers = new Headers(response.headers);
         headers.set("x-request-id", requestId);
+        for (const setCookie of takePendingSetCookies()) {
+          headers.append("Set-Cookie", setCookie);
+        }
 
         logger.info("request.complete", {
           status: response.status,

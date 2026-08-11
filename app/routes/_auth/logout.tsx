@@ -16,7 +16,12 @@ async function logout(request: Request) {
     });
   }
   const headers = destroySessionCookieHeaders(new Headers(), request);
-  headers.set("Location", "/login");
+  const reason = new URL(request.url).searchParams.get("reason");
+  const location =
+    reason === "idle" || reason === "expired"
+      ? `/login?reason=${reason}`
+      : "/login";
+  headers.set("Location", location);
   return new Response(null, { status: 302, headers });
 }
 

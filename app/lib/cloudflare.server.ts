@@ -33,6 +33,10 @@ export type CloudflareEnv = {
   SENTRY_DSN?: string;
   /** Cloudflare Turnstile secret for login siteverify (secret). */
   TURNSTILE_SECRET_KEY?: string;
+  /** Idle minutes before forced re-login (0 disables). Default 30. */
+  SESSION_INACTIVITY_TIMEOUT_MINUTES?: string;
+  /** Max hours from login before forced re-login (0 disables). Default 12. */
+  SESSION_ABSOLUTE_TIMEOUT_HOURS?: string;
   HYPERDRIVE?: { connectionString: string };
   AVATARS?: R2BucketLike;
   LIBRARY_DOCUMENTS?: R2BucketLike;

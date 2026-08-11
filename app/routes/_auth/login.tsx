@@ -177,12 +177,19 @@ export default function LoginRoute({
   const navigation = useNavigation();
   const submitting = navigation.state !== "idle";
   const resetOk = searchParams.get("reset") === "1";
+  const sessionReason = searchParams.get("reason");
   const turnstileSiteKey = loaderData?.turnstileSiteKey ?? null;
   const loginError =
     actionData && "error" in actionData && actionData.error
       ? actionData.error
       : null;
   const turnstileResetKey = loginError ?? "sign-in";
+  const sessionMessage =
+    sessionReason === "idle"
+      ? "You were signed out after a period of inactivity."
+      : sessionReason === "expired"
+        ? "Your session expired. Sign in again to continue."
+        : null;
 
   return (
     <AuthShell>
@@ -195,6 +202,10 @@ export default function LoginRoute({
         <p className="mt-4 text-sm text-muted-foreground">
           Password updated. Sign in with your new password.
         </p>
+      ) : null}
+
+      {sessionMessage ? (
+        <p className="mt-4 text-sm text-muted-foreground">{sessionMessage}</p>
       ) : null}
 
       <Form method="post" className="mt-8">

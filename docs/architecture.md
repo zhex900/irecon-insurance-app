@@ -27,7 +27,7 @@ Immutable. Use these for trade-offs.
 | UI      | React 19, TypeScript strict, Tailwind 4, shadcn `base-nova` + ReUI |
 | Forms   | react-hook-form + Zod                                              |
 | DB      | Supabase Postgres + Drizzle + Hyperdrive                           |
-| Auth    | Supabase Auth (cookies)                                            |
+| Auth    | Supabase Auth (cookies) + app-level inactivity / absolute session max (`SESSION_*` env) |
 | Storage | R2 (avatars, library documents)                                    |
 | Locale  | `en-AU`, AUD                                                       |
 

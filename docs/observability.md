@@ -53,6 +53,7 @@ Builds use Vite `build.sourcemap: "hidden"` (maps on disk, no public `sourceMapp
 | Metric | Type | When |
 | ------ | ---- | ---- |
 | `auth.login` | count | Sign-in attempt (`result`, `reason` / `role`) |
+| `auth.session_end` | count | App session timeout (`reason`: inactivity / absolute) |
 | `client.create` / `client.delete` | count | Client create/delete |
 | `policy.draft_create` | count | New policy draft |
 | `policy.submit` | count | Full policy save (`status_changed`, `to_status`) |

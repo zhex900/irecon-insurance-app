@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import { Logo } from "~/components/logo";
 import { OfflineDialog } from "~/components/layout/offline-dialog";
-import { ThemeToggle } from "~/components/theme-toggle";
 
 function AuthBlueprintBackground() {
   return (
@@ -44,13 +43,11 @@ function AuthBlueprintBackground() {
   );
 }
 
+/** Login / password pages stay dark-only (no theme toggle). */
 export function AuthShell({ children }: { children: ReactNode }) {
   return (
-    <main className="relative flex min-h-screen">
+    <main className="dark relative flex min-h-screen bg-background text-foreground">
       <OfflineDialog />
-      <div className="absolute top-4 right-4 z-20">
-        <ThemeToggle />
-      </div>
       <section className="relative hidden w-[48%] flex-col justify-between overflow-hidden bg-black p-10 text-invert-foreground lg:flex">
         <div
           className="pointer-events-none absolute inset-0 opacity-30"
@@ -86,7 +83,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
         </div>
       </section>
 
-      <section className="flex flex-1 items-center justify-center border-l border-border bg-background p-6 dark:bg-card">
+      <section className="flex flex-1 items-center justify-center border-l border-border bg-card p-6">
         <div className="w-full max-w-md">
           <div className="mb-8 lg:hidden">
             <Logo />
