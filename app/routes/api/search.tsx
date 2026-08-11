@@ -4,6 +4,7 @@ import {
   invalidInputResponse,
   searchParamsObject,
 } from "~/lib/http/route-input";
+import { trackUsage } from "~/lib/observability/metrics.server";
 import { parseUuidListParam } from "~/lib/search/id-list-param";
 import { parsePolicyListFiltersFromUrl } from "~/lib/search/policy-list-filters";
 import { countPoliciesForClientIds } from "~/lib/services/policies/list.service";
@@ -48,6 +49,11 @@ export async function loader({ request }: Route.LoaderArgs) {
   const parsed = searchQuerySchema.safeParse(searchParamsObject(request));
   if (!parsed.success) return invalidInputResponse("Invalid search query.");
   const { q, type, limit } = parsed.data;
+
+  trackUsage("search.query", {
+    type,
+    has_query: Boolean(q),
+  });
 
   if (type === "clients") {
     const results = await searchClients(q, Math.min(limit, 50));

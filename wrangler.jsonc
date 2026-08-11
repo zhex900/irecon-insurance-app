@@ -4,20 +4,19 @@
   "compatibility_date": "2026-07-20",
   "compatibility_flags": ["nodejs_compat"],
   "main": "./workers/app.ts",
-  // Workers Logs + Traces (staging samples at 100%). For OTEL → Sentry, create
-  // destinations in the CF dashboard named sentry-logs / sentry-traces and add:
-  //   "logs": { "enabled": true, "head_sampling_rate": 1, "destinations": ["sentry-logs"] },
-  //   "traces": { "enabled": true, "head_sampling_rate": 1, "destinations": ["sentry-traces"] },
-  // See docs/observability.md.
+  // Workers Logs + Traces. Export to Sentry via CF dashboard destinations named
+  // exactly `sentry-logs` / `sentry-traces` (OTLP → Sentry). See docs/observability.md.
   "observability": {
     "enabled": true,
     "logs": {
       "enabled": true,
       "head_sampling_rate": 1,
+      "destinations": ["sentry-logs"],
     },
     "traces": {
       "enabled": true,
       "head_sampling_rate": 1,
+      "destinations": ["sentry-traces"],
     },
   },
   "upload_source_maps": true,

@@ -12,6 +12,8 @@ const isProd = environment === "prod";
 if (dsn) {
   Sentry.init({
     dsn,
+    enableMetrics: true,
+    enableLogs: true,
     environment,
     release,
     sendDefaultPii: false,

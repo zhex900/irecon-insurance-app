@@ -71,7 +71,7 @@
     "@react-router/cloudflare": "^8.3.0",
     "@react-router/node": "8.3.0",
     "@react-router/serve": "8.3.0",
-    "@sentry/cloudflare": "^10.69.0",
+    "@sentry/cloudflare": "^10.70.0",
     "@sentry/react-router": "^10.69.0",
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.112.2",

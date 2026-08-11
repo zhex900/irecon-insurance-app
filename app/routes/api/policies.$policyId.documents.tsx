@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { requireAuth } from "~/lib/auth/session.server";
 import { parseUuid } from "~/lib/http/route-input";
+import { trackUsage } from "~/lib/observability/metrics.server";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import { getPolicy, savePolicy } from "~/lib/services/policy/data.service";
 import type { Route } from "./+types/policies.$policyId.documents";
@@ -88,7 +89,13 @@ export async function action({ request, params }: Route.ActionArgs) {
   const documents = parsedBody.data.documents;
   const previousCount = existing.documents?.length ?? 0;
   const saved = await savePolicy({ ...existing, documents });
-  if (documents.length !== previousCount) {
+  const countChanged = documents.length !== previousCount;
+  trackUsage("document.generate", {
+    result: "success",
+    count_changed: countChanged,
+    surface: "policy_documents_api",
+  });
+  if (countChanged) {
     await writeAuditLog({
       actor,
       action: "policy.documents_generate",

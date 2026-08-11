@@ -16,6 +16,7 @@ import {
 } from "~/lib/supabase/auth.server";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
+import { trackUsage } from "~/lib/observability/metrics.server";
 import { getUser } from "~/lib/services/users/service";
 import type { Route } from "./+types/login";
 import { pageTitle } from "~/lib/brand";
@@ -74,9 +75,14 @@ export async function action({ request }: Route.ActionArgs) {
     const email = String(formData.get("email") ?? "").trim();
     const password = String(formData.get("password") ?? "");
     if (!email) {
+      trackUsage("auth.login", { result: "failure", reason: "missing_email" });
       return { error: "Email is required" };
     }
     if (!password) {
+      trackUsage("auth.login", {
+        result: "failure",
+        reason: "missing_password",
+      });
       return { error: "Password is required" };
     }
 
@@ -85,11 +91,19 @@ export async function action({ request }: Route.ActionArgs) {
         formData.get("cf-turnstile-response") ?? "",
       ).trim();
       if (!turnstileToken) {
+        trackUsage("auth.login", {
+          result: "failure",
+          reason: "turnstile_missing",
+        });
         return { error: "Complete the security check before signing in." };
       }
 
       const secretKey = readTurnstileSecretKey();
       if (!secretKey) {
+        trackUsage("auth.login", {
+          result: "failure",
+          reason: "turnstile_unavailable",
+        });
         return {
           error: "Sign in is temporarily unavailable. Try again shortly.",
         };
@@ -101,20 +115,30 @@ export async function action({ request }: Route.ActionArgs) {
         clientIpFromRequest(request),
       );
       if (!turnstile.success) {
+        trackUsage("auth.login", {
+          result: "failure",
+          reason: "turnstile_failed",
+        });
         return { error: "Security check failed. Refresh and try again." };
       }
     }
 
     const { data, error } = await signInWithPassword(email, password);
     if (error || !data.session || !data.user) {
+      trackUsage("auth.login", {
+        result: "failure",
+        reason: "invalid_credentials",
+      });
       return { error: "Invalid email or password" };
     }
 
     const profile = await getUser(data.user.id);
     if (!profile) {
+      trackUsage("auth.login", { result: "failure", reason: "no_profile" });
       return { error: "No app profile for this account. Contact an admin." };
     }
     if (profile.disabled) {
+      trackUsage("auth.login", { result: "failure", reason: "disabled" });
       return { error: "This account is disabled. Contact an admin." };
     }
 
@@ -125,11 +149,17 @@ export async function action({ request }: Route.ActionArgs) {
       request,
     });
 
+    trackUsage("auth.login", {
+      result: "success",
+      role: profile.role,
+    });
+
     const headers = new Headers();
     appendAuthSessionCookies(headers, data.session, request);
     headers.set("Location", "/dashboard");
     return new Response(null, { status: 302, headers });
   } catch (error) {
+    trackUsage("auth.login", { result: "failure", reason: "exception" });
     return {
       error: publicErrorMessage(error, {
         fallback: "Sign in failed. Try again shortly.",

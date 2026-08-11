@@ -1,5 +1,6 @@
 import { requireAuth } from "~/lib/auth/session.server";
 import { queryTextSchema } from "~/lib/http/route-input";
+import { trackUsage } from "~/lib/observability/metrics.server";
 import {
   auditReportExport,
   exportCarRenewalReportExcel,
@@ -56,6 +57,8 @@ export async function loader({ request }: Route.LoaderArgs) {
     },
     request,
   });
+
+  trackUsage("report.export", { report: "car_renewals", view: "list" });
 
   return exportCarRenewalReportExcel(rows, filename);
 }

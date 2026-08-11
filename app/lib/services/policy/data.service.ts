@@ -11,6 +11,7 @@ import { normalizeExcesses } from "~/lib/policies/excesses";
 import { formatPolicyNumberFromSeq } from "~/lib/policies/policy-number";
 import { normalizeSubLimits } from "~/lib/policies/sub-limits";
 import type { Policy, PolicySummary } from "~/lib/db/types";
+import { trackUsage } from "~/lib/observability/metrics.server";
 import { POLICY_STATUS } from "~/lib/zod/policy-car";
 import { listClients } from "~/lib/services/clients/service";
 import { createInformationalNote } from "~/lib/policies/policy-notes";
@@ -369,5 +370,7 @@ export async function createPolicyDraft(
     ],
   };
 
-  return savePolicy(draft);
+  const saved = await savePolicy(draft);
+  trackUsage("policy.draft_create");
+  return saved;
 }

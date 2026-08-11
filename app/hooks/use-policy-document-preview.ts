@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import type { CarWording, Policy, PolicyDocument } from "~/lib/db/types";
+import {
+  trackClientDistribution,
+  trackClientUsage,
+} from "~/lib/observability/metrics.client";
 import { buildPdfBlobFromDocument } from "~/lib/pdf/generate";
 import { reviewDocumentsFingerprint } from "~/lib/services/policy/documents/fingerprints";
 import { isPremiumExcelDocument } from "~/lib/pricing/premium-excel";
@@ -63,6 +67,7 @@ export function usePolicyDocumentPreview({
     setPreviewError(null);
     setPreviewSrc(null);
 
+    const started = performance.now();
     void import("~/lib/pdf/fonts")
       .then(({ getPdfmeFonts }) => getPdfmeFonts())
       .then((font) =>
@@ -74,12 +79,19 @@ export function usePolicyDocumentPreview({
       )
       .then((blob) => {
         if (cancelled) return;
+        trackClientUsage("pdf.preview", { result: "success" });
+        trackClientDistribution(
+          "pdf.preview.duration",
+          performance.now() - started,
+          { unit: "millisecond" },
+        );
         objectUrl = URL.createObjectURL(blob);
         setPreviewSrc(objectUrl);
         setPreviewLoading(false);
       })
       .catch((err: unknown) => {
         if (cancelled) return;
+        trackClientUsage("pdf.preview", { result: "failure" });
         setPreviewError(
           err instanceof Error ? err.message : "Failed to load PDF",
         );

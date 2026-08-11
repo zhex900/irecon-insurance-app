@@ -31,6 +31,10 @@ import { isPreservedAcrossCoverReplace } from "~/lib/services/policy/documents/m
 import { reviewDocumentsFingerprint } from "~/lib/services/policy/documents/fingerprints";
 import { policySnapshotFromForm } from "~/lib/services/policy/documents/snapshot-from-form";
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
+import {
+  trackClientDistribution,
+  trackClientUsage,
+} from "~/lib/observability/metrics.client";
 
 export function usePolicyDocuments({
   policy,
@@ -165,6 +169,7 @@ export function usePolicyDocuments({
     if (options?.cancelled?.()) return;
 
     setIsGeneratingDocuments(true);
+    const started = performance.now();
     try {
       const previous = documentsRef.current;
       const next = await ensureReviewDocumentsClient(snapshot, generatedBy, {
@@ -175,12 +180,32 @@ export function usePolicyDocuments({
       if (options?.cancelled?.()) return;
       setDocuments(next);
       if (next !== previous) {
+        trackClientUsage("document.generate", {
+          result: "success",
+          surface: "wizard",
+          changed: true,
+        });
+        trackClientDistribution(
+          "document.generate.duration",
+          performance.now() - started,
+          { unit: "millisecond", attributes: { surface: "wizard" } },
+        );
         toast.success("Documents generated", {
           description:
             "Policy PDFs are ready. Open or download them from Premium Summary.",
         });
+      } else {
+        trackClientUsage("document.generate", {
+          result: "success",
+          surface: "wizard",
+          changed: false,
+        });
       }
     } catch (error: unknown) {
+      trackClientUsage("document.generate", {
+        result: "failure",
+        surface: "wizard",
+      });
       toast.error("Document generation failed", {
         description:
           error instanceof Error

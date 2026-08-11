@@ -8,6 +8,7 @@ Production debugging stack for the Irecon CAR broker portal.
 | --------------- | ------------------------ | ---------------------------------------------------------------------------------- |
 | Worker runtime  | Cloudflare Observability | Invocation logs, auto traces (fetch / Hyperdrive / R2), metrics, Error 1101/1102   |
 | App errors + UX | Sentry                   | Issues, releases, user id/email, Session Replay, browser interactions, performance |
+| Product usage   | Sentry Metrics           | Counters/distributions for login, search, policies, PDF preview, email, exports    |
 | Business audit  | Postgres audit log       | Intentional mutations (unchanged)                                                  |
 
 ## Secrets / env
@@ -25,12 +26,13 @@ Builds use Vite `build.sourcemap: "hidden"` (maps on disk, no public `sourceMapp
 
 ## Cloudflare dashboard setup
 
-1. **Workers Observability** — already enabled in `[wrangler.jsonc](../wrangler.jsonc)` (`logs` + `traces`, staging sample rate `1`).
-2. **OTLP → Sentry** (optional but recommended):
+1. **Workers Observability** — enabled in `[wrangler.jsonc](../wrangler.jsonc)` and `[wrangler.documents.jsonc](../wrangler.documents.jsonc)` (`logs` + `traces`, staging sample rate `1`).
+2. **OTLP → Sentry** (required for CF export):
 
 - Follow [Export to Sentry](https://developers.cloudflare.com/workers/observability/exporting-opentelemetry-data/sentry/)
-- Create destinations named `sentry-logs` and `sentry-traces`
-- Add `"destinations": ["sentry-logs"]` / `["sentry-traces"]` under `observability.logs` / `observability.traces` in `wrangler.jsonc`
+- In the Cloudflare dashboard create destinations named exactly **`sentry-logs`** and **`sentry-traces`**
+- Wrangler already references those names under `observability.logs.destinations` / `observability.traces.destinations`
+- Redeploy after creating the destinations (export fails silently if names are missing)
 
 3. **Live debug** — `npx wrangler tail` after deploy; filter logs by `requestId`.
 
@@ -44,6 +46,31 @@ Builds use Vite `build.sourcemap: "hidden"` (maps on disk, no public `sourceMapp
 
 3. **Session Replay** — enabled in `[app/entry.client.tsx](../app/entry.client.tsx)` with **strict masking** (`maskAllText`, `blockAllMedia`, `maskAllInputs`).
 4. **User interactions** — `reactRouterTracingIntegration()` records navigations and click-driven spans; they appear on the Replay timeline when tracing is linked.
+5. **Metrics** — `enableMetrics: true` on client + Worker. Product counters live in `[metrics.server.ts](../app/lib/observability/metrics.server.ts)` / `[metrics.client.ts](../app/lib/observability/metrics.client.ts)`.
+
+### Product metrics (usage)
+
+| Metric | Type | When |
+| ------ | ---- | ---- |
+| `auth.login` | count | Sign-in attempt (`result`, `reason` / `role`) |
+| `client.create` / `client.delete` | count | Client create/delete |
+| `policy.draft_create` | count | New policy draft |
+| `policy.submit` | count | Full policy save (`status_changed`, `to_status`) |
+| `document.generate` | count | Wizard pack / documents API persist |
+| `document.generate.duration` | distribution | Wizard generation latency (client) |
+| `document.render` / `document.render.duration` | count / distribution | Document Worker PDF render (email path) |
+| `search.query` | count | `/api/search` (`type`, `has_query`) |
+| `email.policy_documents` | count | Policy document email sent |
+| `email.policy_documents.bytes` | distribution | Attachment payload size |
+| `report.export` | count | CAR policies / renewals Excel export |
+| `pdf.preview` / `pdf.preview.duration` | count / distribution | Client PDF preview |
+| `sentry.smoke_metric` | count | Super-admin smoke test |
+
+**Rules:** use bounded attributes (enums). Do **not** put user IDs, request IDs, or free-text queries on metrics — those belong in logs / traces / audit.
+
+`logger.warn` / `logger.error` also forward to **Sentry Logs** (`Sentry.logger`) while still writing JSON to Workers Logs.
+
+In Sentry: **Metrics** → chart by name → alert with a Metric Alert on drops/spikes (e.g. login failure rate, PDF preview failures).
 
 ## Privacy
 
@@ -78,6 +105,7 @@ Super-admin only: `/settings/sentry-test`
 
 - **Throw server error** — loader throws; expect Issue + Worker log line
 - **Throw client error** — render throw; expect Issue + Replay (when DSN configured)
+- **Emit server/client metric** — expect `sentry.smoke_metric` under Metrics
 
 ## Sampling (defaults)
 
@@ -96,4 +124,4 @@ Temporarily raise rates in Sentry project settings or env-specific init when inv
 - `[workers/app.ts](../workers/app.ts)` — `withSentry`, requestId, structured logs
 - `[app/entry.server.tsx](../app/entry.server.tsx)` — SSR errors + trace meta tags
 - `[app/entry.client.tsx](../app/entry.client.tsx)` — Replay + tracing
-- `[app/lib/observability/](../app/lib/observability/)` — logger, request context, Sentry helpers
+- `[app/lib/observability/](../app/lib/observability/)` — logger, request context, Sentry helpers, product metrics

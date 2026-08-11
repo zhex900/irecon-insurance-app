@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { requireAuth } from "~/lib/auth/session.server";
 import { invalidInputResponse } from "~/lib/http/route-input";
+import { trackUsage } from "~/lib/observability/metrics.server";
 import {
   auditReportExport,
   exportCarPolicyDetailExcel,
@@ -69,6 +70,11 @@ export async function loader({ request }: Route.LoaderArgs) {
       request,
     });
 
+    trackUsage("report.export", {
+      report: "car_policies",
+      view: "detail",
+    });
+
     return exportCarPolicyDetailExcel(page.rows, status, filename);
   }
 
@@ -86,6 +92,11 @@ export async function loader({ request }: Route.LoaderArgs) {
       rowCount: summary.length,
     },
     request,
+  });
+
+  trackUsage("report.export", {
+    report: "car_policies",
+    view: "summary",
   });
 
   return exportCarPolicySummaryExcel(summary, filename);

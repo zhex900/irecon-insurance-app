@@ -44,6 +44,7 @@ import {
   policyNotFoundResponse,
 } from "~/lib/http/resource-not-found";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
+import { trackUsage } from "~/lib/observability/metrics.server";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import {
   addPolicyNote,
@@ -345,6 +346,11 @@ export async function action({ request, params }: Route.ActionArgs) {
     before != null &&
     Number(before.policyStatusId) !== Number(parsed.data.policyStatusId)
   ) {
+    trackUsage("policy.submit", {
+      result: "success",
+      status_changed: true,
+      to_status: statusLabel(parsed.data.policyStatusId),
+    });
     await writeAuditLog({
       actor,
       action: "policy.status_change",
@@ -366,6 +372,11 @@ export async function action({ request, params }: Route.ActionArgs) {
     );
   }
 
+  trackUsage("policy.submit", {
+    result: "success",
+    status_changed: false,
+    to_status: statusLabel(parsed.data.policyStatusId),
+  });
   await writeAuditLog({
     actor,
     action: "policy.save",
@@ -382,6 +393,13 @@ export async function action({ request, params }: Route.ActionArgs) {
       `Policy ${before?.policyNumber ?? policyId} saved`,
     ),
   );
+}
+
+function statusLabel(statusId: number): string {
+  if (statusId === POLICY_STATUS.Taken) return "taken";
+  if (statusId === POLICY_STATUS.NotTaken) return "not_taken";
+  if (statusId === POLICY_STATUS.Pending) return "pending";
+  return "other";
 }
 
 export function shouldRevalidate({
