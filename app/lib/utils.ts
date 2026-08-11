@@ -1,7 +1,10 @@
 import { clsx, type ClassValue } from "clsx";
-import { format, formatDistance, isValid } from "date-fns";
+import { formatDistance, isValid } from "date-fns";
 import { enAU } from "date-fns/locale";
 import { twMerge } from "tailwind-merge";
+
+/** App-wide calendar timezone — keeps SSR (Workers UTC) and browser output aligned. */
+const BUSINESS_TIME_ZONE = "Australia/Sydney";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -41,11 +44,16 @@ function toValidDate(value: string | number | Date): Date | null {
   return isValid(date) ? date : null;
 }
 
-/** Absolute date for tables/labels — en-AU short date via date-fns. */
+/** Absolute date for tables/labels — en-AU short date in Australia/Sydney. */
 export function formatDate(value: string) {
   const date = toValidDate(value);
   if (!date) return "";
-  return format(date, "P", { locale: enAU });
+  return new Intl.DateTimeFormat("en-AU", {
+    timeZone: BUSINESS_TIME_ZONE,
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
 }
 
 /** Relative time (e.g. "about 3 hours ago") via date-fns. */
