@@ -319,7 +319,7 @@ export function usePdfmeDesignerActions({
       if (pageIndex !== target.pageIndex) return pageSchemas.map((s) => s);
       return pageSchemas.map((schema, schemaIndex) => {
         if (schemaIndex !== index) return schema;
-        const source = schema as unknown as SchemaLike;
+        const source = schema as SchemaLike;
         const next: SchemaLike = {
           ...source,
           head: Array.isArray(source.head) ? [...source.head] : [],

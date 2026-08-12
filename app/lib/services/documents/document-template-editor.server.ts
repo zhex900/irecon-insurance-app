@@ -1,9 +1,9 @@
-import { redirect } from "react-router";
 import { z } from "zod";
 import { requireFeatureOrSuperAdminPage } from "~/lib/auth/authorize.server";
 import { requireAuth } from "~/lib/auth/session.server";
 import { isAdminRole, isSuperAdmin } from "~/lib/auth/roles";
 import { parseTemplateForm } from "~/lib/documents/template-editor-form";
+import { redirectResponse } from "~/lib/http/redirect-response";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
 import { parseFormIntent, parsePositiveInteger } from "~/lib/http/route-input";
 import { writeAuditLog } from "~/lib/services/audit/service";
@@ -40,7 +40,7 @@ export async function loadDocumentTemplateEditor({
     getDocumentTemplateHistory(templateKey),
   ]);
   if (!state) {
-    throw redirect("/settings/document-templates");
+    throw redirectResponse("/settings/document-templates");
   }
 
   const { template: editable } = state;

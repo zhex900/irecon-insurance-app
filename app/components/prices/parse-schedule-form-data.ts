@@ -1,4 +1,4 @@
-import type { PriceCatalogueKind } from "~/lib/services/price";
+import type { PriceCatalogueKind } from "~/lib/services/price/types";
 import { percentToRate } from "~/lib/utils";
 
 /** Parse schedule update payload from the UI form fields. */

@@ -9,9 +9,9 @@ import {
 } from "~/server/pricing/car-adjustment-calculator";
 import {
   buildAdjustmentDocumentPack,
-  mergeReviewDocuments,
   syncPolicyDocumentLabels,
-} from "~/lib/services/policy/documents";
+} from "~/lib/services/policy/documents/packs";
+import { mergeReviewDocuments } from "~/lib/services/policy/documents/merge";
 import { listPublishedForAdjustment } from "~/lib/services/documents/document-templates";
 import { getPolicy, savePolicy } from "~/lib/services/policy/data.service";
 import { getCarWording } from "~/lib/services/reference.service";

@@ -66,19 +66,31 @@ export function usePolicyPremiumCalc({
   const isCalculating =
     isFetcherBusy && fetcher.formData?.get("intent") === "recalculate";
 
-  const lastPolicyIdRef = useRef(policy.policyId);
-  const lastPremiumFromPolicyRef = useRef(policy.car.premium);
+  // Reset the premium display as soon as the identity of the loaded policy
+  // (or its saved premium) changes — during render, per React's documented
+  // "adjust state when a prop changes" pattern, to avoid an extra render
+  // pass. Ref resets (which cannot be written during render) follow in the
+  // effect below, keyed on the same identity.
+  const [prevPolicySnapshot, setPrevPolicySnapshot] = useState({
+    policyId: policy.policyId,
+    premium: policy.car.premium,
+  });
+  if (
+    prevPolicySnapshot.policyId !== policy.policyId ||
+    prevPolicySnapshot.premium !== policy.car.premium
+  ) {
+    setPrevPolicySnapshot({
+      policyId: policy.policyId,
+      premium: policy.car.premium,
+    });
+    setPremium(withRolledTotals(policy.car.premium));
+  }
+
   useEffect(() => {
-    const changed =
-      lastPolicyIdRef.current !== policy.policyId ||
-      lastPremiumFromPolicyRef.current !== policy.car.premium;
-    if (!changed) return;
-    lastPolicyIdRef.current = policy.policyId;
-    lastPremiumFromPolicyRef.current = policy.car.premium;
     premiumManuallyEditedRef.current = false;
     premiumManualKeysRef.current = policy.car.premiumManualKeys ?? [];
-    setPremium(withRolledTotals(policy.car.premium));
-  }, [policy.policyId, policy.car.premium, policy.car.premiumManualKeys]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on the same identity as the render-time reset above
+  }, [policy.policyId, policy.car.premium]);
 
   const lastFetcherDataRef = useRef(fetcher.data);
   useEffect(() => {

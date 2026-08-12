@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useNavigate, useNavigation } from "react-router";
+import { useNavigation, useSubmit } from "react-router";
 import { SearchIcon } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Spinner } from "~/components/ui/spinner";
@@ -34,7 +34,7 @@ export function NewPolicyClientDialog({
   triggerLabel?: string;
   triggerVariant?: React.ComponentProps<typeof Button>["variant"];
 }) {
-  const navigate = useNavigate();
+  const submit = useSubmit();
   const navigation = useNavigation();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -42,7 +42,7 @@ export function NewPolicyClientDialog({
   const creating =
     creatingClientId != null &&
     navigation.state !== "idle" &&
-    navigation.location?.pathname === "/policies/new";
+    navigation.formAction?.startsWith("/policies/new");
 
   const {
     trimmedQuery: q,
@@ -70,7 +70,10 @@ export function NewPolicyClientDialog({
 
   function selectClient(clientId: string) {
     setCreatingClientId(clientId);
-    navigate(`/policies/new?clientId=${clientId}`);
+    submit(null, {
+      method: "post",
+      action: `/policies/new?clientId=${clientId}`,
+    });
   }
 
   return (

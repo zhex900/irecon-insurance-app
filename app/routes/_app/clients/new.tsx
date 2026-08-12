@@ -9,8 +9,14 @@ export function meta() {
   return [{ title: pageTitle("New Client") }];
 }
 
-/** Create a draft client then open the edit form (same pattern as new policy). */
+/** Direct GET (typed URL, refresh) has nothing to create yet — send to the list. */
 export async function loader({ request }: Route.LoaderArgs) {
+  await requireAuth(request);
+  return redirect("/clients");
+}
+
+/** Create a draft client then open the edit form (same pattern as new policy). */
+export async function action({ request }: Route.ActionArgs) {
   const actor = await requireAuth(request);
   const client = await createClientDraft(actor.email);
   await writeAuditLog({

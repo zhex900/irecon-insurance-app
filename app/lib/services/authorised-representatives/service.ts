@@ -1,6 +1,7 @@
 import { asc, eq, ilike, or } from "drizzle-orm";
 import { getDb } from "~/lib/db/client";
 import { authorisedRepresentative } from "~/lib/db/schema";
+import { NotFoundError } from "~/lib/errors";
 import type { WholesaleBroker } from "~/lib/db/types";
 import { normalizeAuthorisedRepresentative } from "~/lib/services/authorised-representatives/normalize";
 
@@ -76,7 +77,7 @@ export async function updateAuthorisedRepresentative(
     })
     .where(eq(authorisedRepresentative.authorisedRepresentativeId, id))
     .returning();
-  if (!updated) throw new Error("Authorised Representative not found");
+  if (!updated) throw new NotFoundError("Authorised Representative not found");
   return normalizeAuthorisedRepresentative(updated);
 }
 

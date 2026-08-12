@@ -1,9 +1,18 @@
+import { z } from "zod";
 import { requireAuth } from "~/lib/auth/session.server";
 import { AUDIT_ACTIONS, type AuditAction } from "~/constants";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import type { Route } from "./+types/audit";
 
 const CLIENT_ALLOWED = new Set<string>(["report.export"]);
+
+const auditBodySchema = z.object({
+  action: z.string().trim().min(1),
+  entityType: z.string().nullish(),
+  entityId: z.union([z.string(), z.number()]).nullish(),
+  summary: z.string().trim().min(1, "Summary is required"),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
 
 /**
  * Record a material audit event initiated from the browser (e.g. CSV export).
@@ -15,15 +24,14 @@ export async function action({ request }: Route.ActionArgs) {
   }
 
   const actor = await requireAuth(request);
-  const body = (await request.json()) as {
-    action?: string;
-    entityType?: string | null;
-    entityId?: string | number | null;
-    summary?: string;
-    metadata?: Record<string, unknown>;
-  };
+  const json = await request.json().catch(() => null);
+  const parsed = auditBodySchema.safeParse(json);
+  if (!parsed.success) {
+    return Response.json({ error: "Invalid audit payload" }, { status: 400 });
+  }
+  const body = parsed.data;
 
-  const actionCode = String(body.action ?? "").trim();
+  const actionCode = body.action;
   if (!CLIENT_ALLOWED.has(actionCode)) {
     return Response.json({ error: "Action not allowed" }, { status: 400 });
   }
@@ -31,17 +39,12 @@ export async function action({ request }: Route.ActionArgs) {
     return Response.json({ error: "Unknown action" }, { status: 400 });
   }
 
-  const summary = String(body.summary ?? "").trim();
-  if (!summary) {
-    return Response.json({ error: "Summary is required" }, { status: 400 });
-  }
-
   await writeAuditLog({
     actor,
     action: actionCode as AuditAction,
     entityType: body.entityType ?? null,
     entityId: body.entityId ?? null,
-    summary,
+    summary: body.summary,
     metadata: body.metadata ?? {},
     request,
   });

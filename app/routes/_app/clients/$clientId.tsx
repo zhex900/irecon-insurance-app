@@ -251,9 +251,12 @@ export default function ClientDetailRoute({
                 Delete
               </Button>
             ) : null}
-            <Link to={`/policies/new?clientId=${client.clientId}`}>
-              <Button>+ New Policy</Button>
-            </Link>
+            <Form
+              method="post"
+              action={`/policies/new?clientId=${client.clientId}`}
+            >
+              <Button type="submit">+ New Policy</Button>
+            </Form>
           </div>
         }
       />

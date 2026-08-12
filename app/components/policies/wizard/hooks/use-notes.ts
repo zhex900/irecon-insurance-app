@@ -29,27 +29,27 @@ export function usePolicyNotes({
   const saveNoteSawBusyRef = useRef(false);
   const noteFetcherDataRef = useRef(fetcher.data);
 
-  const lastPolicyNotesRef = useRef(policy.notes);
-  useEffect(() => {
-    if (lastPolicyNotesRef.current === policy.notes) return;
-    lastPolicyNotesRef.current = policy.notes;
+  // Resync notes/authors from fresh props or fetcher data during render
+  // (React's documented pattern for resetting state when a prop changes) —
+  // avoids the extra render pass a useEffect would cost for a plain state copy.
+  const [prevPolicyNotes, setPrevPolicyNotes] = useState(policy.notes);
+  if (prevPolicyNotes !== policy.notes) {
+    setPrevPolicyNotes(policy.notes);
     setNotes(policy.notes ?? []);
-  }, [policy.notes]);
+  }
 
-  const lastInitialAuthorsRef = useRef(initialAuthors);
-  useEffect(() => {
-    if (lastInitialAuthorsRef.current === initialAuthors) return;
-    lastInitialAuthorsRef.current = initialAuthors;
+  const [prevInitialAuthors, setPrevInitialAuthors] = useState(initialAuthors);
+  if (prevInitialAuthors !== initialAuthors) {
+    setPrevInitialAuthors(initialAuthors);
     setNoteAuthors(initialAuthors ?? {});
-  }, [initialAuthors]);
+  }
 
-  const lastFetcherNotesRef = useRef(fetcher.data?.notes);
-  useEffect(() => {
-    if (lastFetcherNotesRef.current === fetcher.data?.notes) return;
-    lastFetcherNotesRef.current = fetcher.data?.notes;
-    if (lastFetcherNotesRef.current) setNotes(lastFetcherNotesRef.current);
+  const [prevFetcherNotes, setPrevFetcherNotes] = useState(fetcher.data?.notes);
+  if (prevFetcherNotes !== fetcher.data?.notes) {
+    setPrevFetcherNotes(fetcher.data?.notes);
+    if (fetcher.data?.notes) setNotes(fetcher.data.notes);
     if (fetcher.data?.noteAuthors) setNoteAuthors(fetcher.data.noteAuthors);
-  }, [fetcher.data?.notes, fetcher.data?.noteAuthors]);
+  }
 
   useEffect(() => {
     if (!isSavingNote) {

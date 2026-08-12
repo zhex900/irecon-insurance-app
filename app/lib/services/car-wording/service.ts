@@ -1,6 +1,7 @@
 import { asc, eq, ilike, or, sql } from "drizzle-orm";
 import { getDb } from "~/lib/db/client";
 import { carWording } from "~/lib/db/schema";
+import { NotFoundError } from "~/lib/errors";
 import type { CarWording } from "~/lib/db/types";
 import type { CarWordingFormValues } from "~/lib/zod/car-wording";
 
@@ -115,7 +116,7 @@ export async function updateCarWording(
     })
     .where(eq(carWording.carWordingId, id))
     .returning();
-  if (!updated) throw new Error("Additional wording not found");
+  if (!updated) throw new NotFoundError("Additional wording not found");
   return mapRow(updated);
 }
 

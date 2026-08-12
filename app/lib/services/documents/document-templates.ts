@@ -268,7 +268,21 @@ export async function listDocumentTemplates(): Promise<
   DocumentTemplateListItem[]
 > {
   const db = getDb();
-  const rows = await db.select().from(appDocumentTemplateVersion);
+  // Metadata only — excludes templateJson/flowPushDown/mergeFields, which can
+  // be large jsonb blobs not needed for the list view (see performance.md
+  // "prefer latest + published queries over selecting every version row").
+  const rows = await db
+    .select({
+      documentTemplateKey: appDocumentTemplateVersion.documentTemplateKey,
+      coverTypeId: appDocumentTemplateVersion.coverTypeId,
+      title: appDocumentTemplateVersion.title,
+      label: appDocumentTemplateVersion.label,
+      versionNumber: appDocumentTemplateVersion.versionNumber,
+      isPublished: appDocumentTemplateVersion.isPublished,
+      createdWhen: appDocumentTemplateVersion.createdWhen,
+      createdBy: appDocumentTemplateVersion.createdBy,
+    })
+    .from(appDocumentTemplateVersion);
   const byKey = new Map<string, typeof rows>();
   for (const row of rows) {
     const list = byKey.get(row.documentTemplateKey) ?? [];
@@ -810,11 +824,4 @@ export async function deleteDocumentTemplateDraft(
   }
 
   return { versionNumber: target.versionNumber };
-}
-
-/** @deprecated Use deleteDocumentTemplate. */
-export async function resetDocumentTemplate(
-  documentTemplateKey: string,
-): Promise<boolean> {
-  return deleteDocumentTemplate(documentTemplateKey);
 }

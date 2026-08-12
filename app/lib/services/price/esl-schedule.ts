@@ -1,7 +1,14 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "~/lib/db/client";
+import { NotFoundError } from "~/lib/errors";
 import { priceEsl, priceEslRate } from "~/lib/db/price-schema";
-import { POLICY_TYPE_CAR, requireDate, stateIdByCode, strNum } from "./helpers";
+import {
+  POLICY_TYPE_CAR,
+  loadStateIdByCode,
+  requireDate,
+  requireStateId,
+  strNum,
+} from "./helpers";
 import type { EslScheduleInput } from "./types";
 
 export async function createEslSchedule(
@@ -11,6 +18,7 @@ export async function createEslSchedule(
   const db = getDb();
   const dateStart = requireDate(input.dateStart);
   return db.transaction(async (tx) => {
+    const stateIdByCode = await loadStateIdByCode(tx);
     const [header] = await tx
       .insert(priceEsl)
       .values({
@@ -22,7 +30,7 @@ export async function createEslSchedule(
       })
       .returning();
     for (const rate of input.rates) {
-      const stateId = await stateIdByCode(rate.stateCode);
+      const stateId = requireStateId(stateIdByCode, rate.stateCode);
       await tx.insert(priceEslRate).values({
         priceEslId: header.priceEslId,
         stateId,
@@ -41,12 +49,13 @@ export async function updateEslSchedule(
   const db = getDb();
   const dateStart = requireDate(input.dateStart);
   await db.transaction(async (tx) => {
+    const stateIdByCode = await loadStateIdByCode(tx);
     const [existing] = await tx
       .select()
       .from(priceEsl)
       .where(eq(priceEsl.priceEslId, priceEslId))
       .limit(1);
-    if (!existing) throw new Error("ESL schedule not found");
+    if (!existing) throw new NotFoundError("ESL schedule not found");
 
     await tx
       .update(priceEsl)
@@ -63,7 +72,7 @@ export async function updateEslSchedule(
       .delete(priceEslRate)
       .where(eq(priceEslRate.priceEslId, priceEslId));
     for (const rate of input.rates) {
-      const stateId = await stateIdByCode(rate.stateCode);
+      const stateId = requireStateId(stateIdByCode, rate.stateCode);
       await tx.insert(priceEslRate).values({
         priceEslId,
         stateId,

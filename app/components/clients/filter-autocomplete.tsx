@@ -1,16 +1,13 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { useMemo, useRef, useState } from "react";
 import { ChevronsUpDownIcon, XIcon } from "lucide-react";
 import { Field, FieldLabel } from "~/components/ui/field";
+import {
+  FloatingListbox,
+  useFloatingListPosition,
+} from "~/components/ui/floating-listbox";
 import { Input } from "~/components/ui/input";
 import { cn } from "~/lib/utils";
 import type { FormAutocompleteOption } from "~/components/clients/form-autocomplete";
-
-type ListPosition = {
-  top: number;
-  left: number;
-  width: number;
-};
 
 /** Standalone autocomplete for list/filter bars (not react-hook-form). */
 export function FilterAutocomplete({
@@ -38,7 +35,6 @@ export function FilterAutocomplete({
   const selected = options.find((item) => valuesEqual(item.value, value));
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [position, setPosition] = useState<ListPosition | null>(null);
   const blurTimer = useRef<number | null>(null);
   const anchorRef = useRef<HTMLDivElement>(null);
 
@@ -55,35 +51,7 @@ export function FilterAutocomplete({
   }, [options, query]);
 
   const displayValue = open ? query : selected ? selected.label : "";
-
-  function updatePosition() {
-    const el = anchorRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    setPosition({
-      top: rect.bottom + 4,
-      left: rect.left,
-      width: rect.width,
-    });
-  }
-
-  useLayoutEffect(() => {
-    if (!open) return;
-    updatePosition();
-  }, [open, filtered.length]);
-
-  useEffect(() => {
-    if (!open) return;
-    function onReposition() {
-      updatePosition();
-    }
-    window.addEventListener("resize", onReposition);
-    window.addEventListener("scroll", onReposition, true);
-    return () => {
-      window.removeEventListener("resize", onReposition);
-      window.removeEventListener("scroll", onReposition, true);
-    };
-  }, [open]);
+  const position = useFloatingListPosition(anchorRef, open, filtered.length);
 
   function selectOption(item: FormAutocompleteOption) {
     onChange(item.value);
@@ -98,54 +66,39 @@ export function FilterAutocomplete({
 
   const hasSelection = value !== "" && !!selected;
 
-  const listbox =
-    open && position
-      ? createPortal(
-          <ul
-            id={`${id}-listbox`}
-            role="listbox"
-            className="fixed z-50 max-h-56 overflow-auto rounded-lg border bg-popover p-1 text-sm shadow-md"
-            style={{
-              top: position.top,
-              left: position.left,
-              width: position.width,
-            }}
-          >
-            {filtered.length === 0 ? (
-              <li className="px-2.5 py-2 text-muted-foreground">
-                {emptyMessage}
-              </li>
-            ) : (
-              filtered.map((item, index) => {
-                const active = valuesEqual(item.value, value);
-                const enterTarget = Boolean(query.trim()) && index === 0;
-                return (
-                  <li key={String(item.value)} role="option">
-                    <button
-                      type="button"
-                      className={cn(
-                        "flex w-full flex-col items-start rounded-md px-2.5 py-2 text-left hover:bg-muted",
-                        active && "bg-accent text-accent-foreground",
-                        enterTarget && !active && "bg-muted",
-                      )}
-                      onMouseDown={(event) => event.preventDefault()}
-                      onClick={() => selectOption(item)}
-                    >
-                      <span className="font-medium">{item.label}</span>
-                      {item.secondary ? (
-                        <span className="text-xs text-muted-foreground">
-                          {item.secondary}
-                        </span>
-                      ) : null}
-                    </button>
-                  </li>
-                );
-              })
-            )}
-          </ul>,
-          document.body,
-        )
-      : null;
+  const listbox = (
+    <FloatingListbox id={`${id}-listbox`} open={open} position={position}>
+      {filtered.length === 0 ? (
+        <li className="px-2.5 py-2 text-muted-foreground">{emptyMessage}</li>
+      ) : (
+        filtered.map((item, index) => {
+          const active = valuesEqual(item.value, value);
+          const enterTarget = Boolean(query.trim()) && index === 0;
+          return (
+            <li key={String(item.value)} role="option">
+              <button
+                type="button"
+                className={cn(
+                  "flex w-full flex-col items-start rounded-md px-2.5 py-2 text-left hover:bg-muted",
+                  active && "bg-accent text-accent-foreground",
+                  enterTarget && !active && "bg-muted",
+                )}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => selectOption(item)}
+              >
+                <span className="font-medium">{item.label}</span>
+                {item.secondary ? (
+                  <span className="text-xs text-muted-foreground">
+                    {item.secondary}
+                  </span>
+                ) : null}
+              </button>
+            </li>
+          );
+        })
+      )}
+    </FloatingListbox>
+  );
 
   return (
     <Field

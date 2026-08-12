@@ -1,4 +1,4 @@
-import { Link } from "react-router";
+import { Form, Link } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { AppBreadcrumb } from "~/components/layout/app-breadcrumb";
@@ -54,9 +54,11 @@ export default function DashboardRoute({ loaderData }: Route.ComponentProps) {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link to="/clients/new">
-            <Button variant="outline">+ New Client</Button>
-          </Link>
+          <Form method="post" action="/clients/new">
+            <Button type="submit" variant="outline">
+              + New Client
+            </Button>
+          </Form>
           <NewPolicyClientDialog />
         </div>
       </div>

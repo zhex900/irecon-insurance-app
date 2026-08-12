@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "~/lib/db/client";
+import { NotFoundError } from "~/lib/errors";
 import { pricePlant } from "~/lib/db/price-schema";
 import { POLICY_TYPE_CAR, requireDate, strNum } from "./helpers";
 import type { PlantRateInput } from "./types";
@@ -37,7 +38,7 @@ export async function updatePlantRate(
     .from(pricePlant)
     .where(eq(pricePlant.pricePlantId, pricePlantId))
     .limit(1);
-  if (!existing) throw new Error("Plant rate not found");
+  if (!existing) throw new NotFoundError("Plant rate not found");
 
   await db
     .update(pricePlant)

@@ -37,6 +37,21 @@ const policyDocumentsBodySchema = z
   })
   .strict();
 
+/** Overwrite each document's `policyId` with the route's before validation. */
+function normalizeDocumentPolicyIds(body: unknown, policyId: string): unknown {
+  if (
+    typeof body !== "object" ||
+    body === null ||
+    !Array.isArray((body as { documents?: unknown }).documents)
+  ) {
+    return body;
+  }
+  const documents = (body as { documents: unknown[] }).documents.map((doc) =>
+    typeof doc === "object" && doc !== null ? { ...doc, policyId } : doc,
+  );
+  return { ...body, documents };
+}
+
 /** Persist generated policy documents (Postgres via Drizzle). */
 export async function action({ request, params }: Route.ActionArgs) {
   if (request.method !== "PUT" && request.method !== "POST") {
@@ -61,7 +76,11 @@ export async function action({ request, params }: Route.ActionArgs) {
       { status: 400 },
     );
   }
-  const parsedBody = policyDocumentsBodySchema.safeParse(rawBody);
+  // Documents always belong to the route's policy — force this before
+  // validating so legacy rows (pre "policy to uuid" migration stored a
+  // numeric policyId) don't fail schema validation for the whole batch.
+  const normalizedBody = normalizeDocumentPolicyIds(rawBody, policyId);
+  const parsedBody = policyDocumentsBodySchema.safeParse(normalizedBody);
   if (!parsedBody.success) {
     return Response.json(
       {
@@ -72,15 +91,6 @@ export async function action({ request, params }: Route.ActionArgs) {
       { status: 400 },
     );
   }
-  if (
-    parsedBody.data.documents.some((document) => document.policyId !== policyId)
-  ) {
-    return Response.json(
-      { ok: false, formError: "Document policy id does not match the route." },
-      { status: 400 },
-    );
-  }
-
   const existing = await getPolicy(policyId);
   if (!existing) {
     return new Response("Policy not found", { status: 404 });

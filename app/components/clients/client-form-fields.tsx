@@ -73,6 +73,8 @@ export function ClientFormFields({
           <div className="grid gap-4 md:grid-cols-2">
             <FieldInput
               label="Phone"
+              type="tel"
+              autoComplete="tel"
               error={errors.phone?.message}
               {...register("phone")}
             />
