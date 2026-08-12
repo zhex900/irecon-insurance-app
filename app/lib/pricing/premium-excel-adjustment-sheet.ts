@@ -1,5 +1,5 @@
 import type { AdjustmentBreakdown } from "~/lib/db/types";
-import { GST_RATE } from "~/lib/pricing/constants";
+import { GST_RATE } from "~/constants";
 import {
   setMoneyCell as moneyCell,
   setPercentCell as percentCell,

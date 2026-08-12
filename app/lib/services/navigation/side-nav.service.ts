@@ -68,6 +68,11 @@ async function listSettingsLinks(viewer: AppUser): Promise<SideNavLink[]> {
       label: "Authorised Representatives",
       href: "/settings/ar-brokers",
     });
+    links.push({
+      id: "settings-account-managers",
+      label: "Account Managers",
+      href: "/settings/account-managers",
+    });
   }
 
   if (additionalWordingEnabled || superAdmin) {

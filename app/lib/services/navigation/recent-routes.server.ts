@@ -35,6 +35,7 @@ const STATIC_LABELS: Record<string, string> = {
   "/settings": "Settings",
   "/settings/users": "User Management",
   "/settings/ar-brokers": "Authorised Representatives",
+  "/settings/account-managers": "Account Managers",
   "/settings/car-wording": "Additional Wording",
   "/settings/email-templates": "Email Templates",
   "/settings/library-documents": "Library Documents",

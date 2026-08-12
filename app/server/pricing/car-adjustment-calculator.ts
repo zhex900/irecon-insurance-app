@@ -4,7 +4,7 @@ import type {
   PremiumBreakdown,
   RatingSnapshot,
 } from "~/lib/db/types";
-import { GST_RATE } from "~/lib/pricing/constants";
+import { GST_RATE } from "~/constants";
 
 /**
  * End-of-term adjustment (legacy CARAdjust.aspx).

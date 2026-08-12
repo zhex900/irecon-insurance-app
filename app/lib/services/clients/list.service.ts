@@ -7,17 +7,15 @@ import {
   eq,
   exists,
   ilike,
-  inArray,
   not,
   or,
   sql,
   type SQL,
 } from "drizzle-orm";
 import { getDb } from "~/lib/db/client";
-import { authorisedRepresentative, client, policy } from "~/lib/db/schema";
+import { accountManager, authorisedRepresentative, client, policy } from "~/lib/db/schema";
 import type { Client } from "~/lib/db/types";
 import { type PageResult, toPageResult } from "~/lib/pagination";
-import { getReferenceData } from "~/lib/services/reference.service";
 import {
   digitsOnly,
   isDigitSearchQuery,
@@ -45,7 +43,6 @@ export type ListClientsPageResult = PageResult<ClientListItem> & {
 
 function buildClientFilters(input: ListClientsPageInput): SQL[] {
   const filters: SQL[] = [];
-  const reference = getReferenceData();
 
   if (input.accountManagerId) {
     filters.push(eq(client.accountManagerId, input.accountManagerId));
@@ -64,11 +61,7 @@ function buildClientFilters(input: ListClientsPageInput): SQL[] {
   const q = input.search?.trim();
   if (q) {
     const pattern = likePattern(q);
-    const qLower = q.toLowerCase();
     const qDigits = digitsOnly(q);
-    const managerIds = reference.accountManagers
-      .filter((m) => m.fullName.toLowerCase().includes(qLower))
-      .map((m) => m.accountManagerId);
 
     const textOr: SQL[] = [
       ilike(client.name, pattern),
@@ -78,10 +71,8 @@ function buildClientFilters(input: ListClientsPageInput): SQL[] {
       ilike(client.phone, pattern),
       ilike(authorisedRepresentative.fullName, pattern),
       ilike(authorisedRepresentative.companyName, pattern),
+      ilike(accountManager.fullName, pattern),
     ];
-    if (managerIds.length > 0) {
-      textOr.push(inArray(client.accountManagerId, managerIds));
-    }
     // Only strip formatting for pure numeric queries (e.g. "02 1234").
     // "w018" must not match phones/ABNs that merely contain "018".
     if (isDigitSearchQuery(q) && qDigits.length > 0) {
@@ -137,6 +128,10 @@ export async function listClientsPage(
       .select({ count: sql<number>`count(distinct ${client.clientId})::int` })
       .from(client)
       .leftJoin(
+        accountManager,
+        eq(client.accountManagerId, accountManager.accountManagerId),
+      )
+      .leftJoin(
         authorisedRepresentative,
         eq(
           client.authorisedRepresentativeId,
@@ -165,6 +160,10 @@ export async function listClientsPage(
       )`.as("policy_count"),
     })
     .from(client)
+    .leftJoin(
+      accountManager,
+      eq(client.accountManagerId, accountManager.accountManagerId),
+    )
     .leftJoin(
       authorisedRepresentative,
       eq(

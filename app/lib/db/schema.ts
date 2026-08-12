@@ -39,6 +39,19 @@ export const authorisedRepresentative = pgTable("authorised_representative", {
   createdBy: varchar("created_by", { length: 255 }).notNull().default(""),
 });
 
+export const accountManager = pgTable("account_manager", {
+  accountManagerId: serial("account_manager_id").primaryKey(),
+  fullName: varchar("full_name", { length: 255 }).notNull().default(""),
+  abbrev: varchar("abbrev", { length: 64 }).notNull().default(""),
+  email: varchar("email", { length: 255 }).notNull().default(""),
+  arNumber: varchar("ar_number", { length: 255 }).notNull().default(""),
+  mobile: varchar("mobile", { length: 64 }).notNull().default(""),
+  createdWhen: timestamp("created_when", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  createdBy: varchar("created_by", { length: 255 }).notNull().default(""),
+});
+
 /**
  * App login profile — 1:1 with Supabase Auth (`auth.users.id`).
  */

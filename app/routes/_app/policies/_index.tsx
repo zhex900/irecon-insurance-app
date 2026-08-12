@@ -14,7 +14,7 @@ import { writeAuditLog } from "~/lib/services/audit/service";
 import { getClientsByIds } from "~/lib/services/clients/service";
 import { listPoliciesPage } from "~/lib/services/policies/list.service";
 import { deletePolicies } from "~/lib/services/policy/data.service";
-import { getReferenceData } from "~/lib/services/reference.service";
+import { getReferenceDataAsync } from "~/lib/services/reference.service";
 import type { Route } from "./+types/_index";
 import { pageTitle } from "~/lib/brand";
 
@@ -49,7 +49,7 @@ export async function loader({ request }: Route.LoaderArgs) {
       limit: pagination.limit,
       offset: pagination.offset,
     }),
-    Promise.resolve(getReferenceData()),
+    getReferenceDataAsync(),
     getClientsByIds(filters.clientIds),
   ]);
 

@@ -1,4 +1,4 @@
-import { GST_RATE } from "~/lib/pricing/constants";
+import { GST_RATE } from "~/constants";
 import {
   formatCurrencyCell,
   setPercentCell as percentCell,

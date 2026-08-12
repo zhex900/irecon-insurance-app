@@ -4,10 +4,7 @@ import { getDb } from "~/lib/db/client";
 import { auditLog } from "~/lib/db/schema";
 import type { AppUser, AuditLogEntry } from "~/lib/db/types";
 import { logger } from "~/lib/observability/logger.server";
-import {
-  AUDIT_ACTIONS,
-  type AuditAction,
-} from "~/lib/services/audit/constants";
+import { AUDIT_ACTIONS, type AuditAction } from "~/constants";
 
 export { AUDIT_ACTIONS, type AuditAction };
 

@@ -1,5 +1,10 @@
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
-import { GST_RATE } from "~/lib/pricing/constants";
+import {
+  GST_RATE,
+  PLANT_CERTIFICATE_TURNOVER_LIMIT,
+  TERROR_START_DATE,
+  VERSION_21_START_DATE,
+} from "~/constants";
 import {
   buildReferralReasons,
   liabilityLimitLabel,
@@ -19,10 +24,6 @@ import type {
   ResolvedPlant,
   ResolvedPrice,
 } from "~/server/pricing/types";
-
-const TERROR_START_DATE = "2021-01-01";
-const VERSION_21_START_DATE = "2023-01-01";
-const PLANT_CERTIFICATE_TURNOVER_LIMIT = 2_500_000;
 
 export async function calculateCarPremium(
   input: CarPolicyFormValues,

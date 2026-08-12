@@ -75,6 +75,10 @@ export default [
     route("reports/car-renewals", "routes/_app/reports/car-renewals.tsx"),
     // More-specific /settings/* paths before the index so they always win.
     route("settings/ar-brokers", "routes/_app/settings/ar-brokers.tsx"),
+    route(
+      "settings/account-managers",
+      "routes/_app/settings/account-managers.tsx",
+    ),
     route("settings/car-wording", "routes/_app/settings/car-wording.tsx"),
     route("settings/users", "routes/_app/settings/users.tsx"),
     route(

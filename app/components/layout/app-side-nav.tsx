@@ -5,6 +5,7 @@ import {
   UsersIcon,
   FileTextIcon,
   BarChart3Icon,
+  ContactIcon,
   SettingsIcon,
   FileBarChart2Icon,
   RefreshCwIcon,
@@ -42,6 +43,7 @@ const CHILD_ICONS: Record<string, LucideIcon> = {
   "report-car-renewals": RefreshCwIcon,
   "settings-users": UserCogIcon,
   "settings-ar-brokers": UsersIcon,
+  "settings-account-managers": ContactIcon,
   "settings-email-templates": MailIcon,
   "settings-library-documents": FileStackIcon,
   "settings-document-templates": FilePenLineIcon,
@@ -105,6 +107,8 @@ function iconForRecentPath(path: string): LucideIcon {
       CHILD_ICONS["report-car-renewals"] ?? RefreshCwIcon,
     "/settings/users": CHILD_ICONS["settings-users"] ?? UserCogIcon,
     "/settings/ar-brokers": CHILD_ICONS["settings-ar-brokers"] ?? UsersIcon,
+    "/settings/account-managers":
+      CHILD_ICONS["settings-account-managers"] ?? ContactIcon,
     "/settings/email-templates":
       CHILD_ICONS["settings-email-templates"] ?? MailIcon,
     "/settings/library-documents":

@@ -8,7 +8,7 @@
 import { formatCurrency } from "~/lib/utils";
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
 
-const TERROR_START_DATE = "2021-01-01";
+import { TERROR_START_DATE } from "~/constants";
 
 /** Rating fields needed for rate-missing referral reasons. */
 export type ReferralRatingInput = {

@@ -362,6 +362,7 @@ export type ReferenceData = {
   policyStatuses: PolicyStatus[];
   liabilityLimitBands: { id: number; name: string }[];
   insurers: { code: string; name: string }[];
+  /** Live account managers from DB when loaded via getReferenceDataAsync. */
   accountManagers: AccountManager[];
   /** Live ARs from DB when loaded via getReferenceDataAsync. */
   wholesaleBrokers: WholesaleBroker[];

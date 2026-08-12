@@ -1,6 +1,7 @@
 import {
   ArrowRightIcon,
   BadgeDollarSignIcon,
+  ContactIcon,
   FilePenLineIcon,
   FileStackIcon,
   FileTextIcon,
@@ -60,6 +61,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   return {
     showUsers: isAdminRole(viewer),
     showAuthorisedRepresentatives: isAdminRole(viewer),
+    showAccountManagers: isAdminRole(viewer),
     showFeatures: superAdmin,
     showEmailTemplates: emailTemplatesEnabled || superAdmin,
     showLibraryDocuments: libraryDocumentsEnabled || superAdmin,
@@ -114,6 +116,17 @@ export default function SettingsIndexRoute({
             description:
               "Search, add, edit, and remove authorised representative brokers used on clients.",
             icon: UsersIcon,
+          },
+        ]
+      : []),
+    ...(loaderData.showAccountManagers
+      ? [
+          {
+            to: "/settings/account-managers",
+            title: "Account Managers",
+            description:
+              "Search, add, edit, and remove account managers assigned to clients.",
+            icon: ContactIcon,
           },
         ]
       : []),

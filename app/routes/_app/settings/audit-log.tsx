@@ -45,7 +45,7 @@ import {
 } from "~/lib/pagination";
 import { SearchHighlight } from "~/components/search/highlight-cell";
 import { fieldMatches } from "~/lib/search/match";
-import { AUDIT_ACTIONS } from "~/lib/services/audit/constants";
+import { AUDIT_ACTIONS } from "~/constants";
 import { listAuditLogs } from "~/lib/services/audit/service";
 import { isFeatureEnabled } from "~/lib/services/feature-flags";
 import { listUsers } from "~/lib/services/users/service";

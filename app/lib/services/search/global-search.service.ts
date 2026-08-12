@@ -4,6 +4,7 @@
 import { inArray } from "drizzle-orm";
 import { getDb } from "~/lib/db/client";
 import { authorisedRepresentative } from "~/lib/db/schema";
+import { listAccountManagers } from "~/lib/services/account-managers/service";
 import { listClientsPage } from "~/lib/services/clients/list.service";
 import { listPoliciesPage } from "~/lib/services/policies/list.service";
 import { getReferenceData } from "~/lib/services/reference.service";
@@ -34,9 +35,9 @@ export type GlobalSearchPolicyHit = {
 async function toClientHits(
   rows: Awaited<ReturnType<typeof listClientsPage>>["rows"],
 ): Promise<GlobalSearchClientHit[]> {
-  const reference = getReferenceData();
+  const accountManagers = await listAccountManagers();
   const managers = new Map(
-    reference.accountManagers.map((m) => [m.accountManagerId, m.fullName]),
+    accountManagers.map((m) => [m.accountManagerId, m.fullName]),
   );
 
   const db = getDb();
