@@ -2,6 +2,11 @@ import { asc, eq, inArray } from "drizzle-orm";
 import { getDb } from "~/lib/db/client";
 import { appUser } from "~/lib/db/schema";
 import type { AppUser } from "~/lib/db/types";
+import {
+  ExternalServiceError,
+  NotFoundError,
+  ValidationError,
+} from "~/lib/errors";
 import { normalizeAppUser } from "~/lib/services/users/normalize";
 
 export { normalizeAppUser };
@@ -94,12 +99,12 @@ async function syncAuthBan(userId: string, disabled: boolean) {
     ban_duration: disabled ? "876000h" : "none",
     app_metadata: { disabled },
   });
-  if (error) throw new Error(error.message);
+  if (error) throw new ExternalServiceError(error.message);
 }
 
 export async function createUser(input: AppUserWritable) {
   if (!input.password || input.password.length < 8) {
-    throw new Error("Password is required (min 8 characters)");
+    throw new ValidationError("Password is required (min 8 characters)");
   }
 
   const email = input.email.trim().toLowerCase();
@@ -121,7 +126,9 @@ export async function createUser(input: AppUserWritable) {
     },
   });
   if (error || !data.user) {
-    throw new Error(error?.message ?? "Failed to create auth user");
+    throw new ExternalServiceError(
+      error?.message ?? "Failed to create auth user",
+    );
   }
 
   if (input.disabled) {
@@ -150,7 +157,7 @@ export async function createUser(input: AppUserWritable) {
 
 export async function updateUser(userId: string, input: AppUserWritable) {
   const existing = await getUser(userId);
-  if (!existing) throw new Error("User not found");
+  if (!existing) throw new NotFoundError("User not found");
 
   const email = input.email.trim().toLowerCase();
   // Preserve super-admin; UI cannot assign or demote that role.
@@ -191,7 +198,7 @@ export async function updateUser(userId: string, input: AppUserWritable) {
   }
 
   const { error } = await admin.auth.admin.updateUserById(userId, authUpdate);
-  if (error) throw new Error(error.message);
+  if (error) throw new ExternalServiceError(error.message);
 
   const db = getDb();
   const [updated] = await db
@@ -205,7 +212,7 @@ export async function updateUser(userId: string, input: AppUserWritable) {
     })
     .where(eq(appUser.userId, userId))
     .returning();
-  if (!updated) throw new Error("User not found");
+  if (!updated) throw new NotFoundError("User not found");
   return normalizeAppUser(updated);
 }
 
@@ -225,7 +232,7 @@ export async function updateOwnProfile(
   options?: { allowRoleChange?: boolean },
 ) {
   const existing = await getUser(userId);
-  if (!existing) throw new Error("User not found");
+  if (!existing) throw new NotFoundError("User not found");
 
   const nextRole =
     options?.allowRoleChange &&
@@ -246,7 +253,7 @@ export async function updateOwnProfile(
 
 export async function setUserDisabled(userId: string, disabled: boolean) {
   const existing = await getUser(userId);
-  if (!existing) throw new Error("User not found");
+  if (!existing) throw new NotFoundError("User not found");
   await syncAuthBan(userId, disabled);
   const db = getDb();
   const [updated] = await db
@@ -256,18 +263,18 @@ export async function setUserDisabled(userId: string, disabled: boolean) {
     })
     .where(eq(appUser.userId, userId))
     .returning();
-  if (!updated) throw new Error("User not found");
+  if (!updated) throw new NotFoundError("User not found");
   return normalizeAppUser(updated);
 }
 
 export async function deleteUser(userId: string) {
   const existing = await getUser(userId);
-  if (!existing) throw new Error("User not found");
+  if (!existing) throw new NotFoundError("User not found");
 
   const { getSupabaseAdmin } = await import("~/lib/supabase/admin.server");
   const admin = getSupabaseAdmin();
   const { error } = await admin.auth.admin.deleteUser(userId);
-  if (error) throw new Error(error.message);
+  if (error) throw new ExternalServiceError(error.message);
   // app_user row is removed via ON DELETE CASCADE from auth.users
 }
 
@@ -281,6 +288,6 @@ export async function setUserAvatarKey(
     .set({ avatarR2Key })
     .where(eq(appUser.userId, userId))
     .returning();
-  if (!updated) throw new Error("User not found");
+  if (!updated) throw new NotFoundError("User not found");
   return normalizeAppUser(updated);
 }

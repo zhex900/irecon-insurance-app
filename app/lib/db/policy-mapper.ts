@@ -403,7 +403,7 @@ export function policyToRows(policyDoc: Policy): {
       deltaTotalPremium: String(
         a.adjustedTotalPremium - (premium?.originalTotalPremium ?? 0),
       ),
-      appSnapshot: a as unknown as Record<string, unknown>,
+      appSnapshot: a as Record<string, unknown>,
       createdWhen: new Date(a.adjustedDate || Date.now()),
       createdBy: policyDoc.createdBy,
       updatedWhen: new Date(),

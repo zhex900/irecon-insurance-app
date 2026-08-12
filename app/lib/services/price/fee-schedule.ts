@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "~/lib/db/client";
+import { NotFoundError } from "~/lib/errors";
 import {
   brokerFeeSchedule,
   brokerFeeScheduleLine,
@@ -51,7 +52,7 @@ export async function updateFeeSchedule(
       .from(brokerFeeSchedule)
       .where(eq(brokerFeeSchedule.brokerFeeScheduleId, brokerFeeScheduleId))
       .limit(1);
-    if (!existing) throw new Error("Fee schedule not found");
+    if (!existing) throw new NotFoundError("Fee schedule not found");
 
     await tx
       .update(brokerFeeSchedule)

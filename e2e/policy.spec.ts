@@ -31,7 +31,7 @@ test.describe("policy journeys", () => {
     );
 
     await page.goto(clientHref!);
-    const newPolicy = page.getByRole("link", {
+    const newPolicy = page.getByRole("button", {
       name: /new policy|add policy/i,
     });
     if (await newPolicy.count()) {

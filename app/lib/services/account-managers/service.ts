@@ -1,6 +1,7 @@
 import { asc, eq, sql } from "drizzle-orm";
 import { getDb } from "~/lib/db/client";
 import { accountManager, client } from "~/lib/db/schema";
+import { ConflictError, NotFoundError } from "~/lib/errors";
 import type { AccountManager } from "~/lib/db/types";
 import { normalizeAccountManager } from "~/lib/services/account-managers/normalize";
 
@@ -62,7 +63,7 @@ export async function updateAccountManager(
     })
     .where(eq(accountManager.accountManagerId, id))
     .returning();
-  if (!updated) throw new Error("Account manager not found");
+  if (!updated) throw new NotFoundError("Account manager not found");
   return normalizeAccountManager(updated);
 }
 
@@ -73,7 +74,7 @@ export async function deleteAccountManager(id: number) {
     .from(client)
     .where(eq(client.accountManagerId, id));
   if (Number(countRow?.count ?? 0) > 0) {
-    throw new Error(
+    throw new ConflictError(
       "This account manager is assigned to clients and cannot be deleted",
     );
   }

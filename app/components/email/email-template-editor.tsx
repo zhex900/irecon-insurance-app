@@ -12,6 +12,7 @@ import { Button } from "~/components/ui/button";
 import { Field, FieldLabel } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import { useEmailTemplateHistory } from "~/hooks/use-email-template-history";
+import type { EmailTemplateEditorLoaderData } from "~/lib/email/template-editor-types";
 import {
   applyEmailTemplate,
   buildOutboundTemplateHtml,
@@ -22,11 +23,12 @@ import {
   unwrapEmailPlaceholderTags,
   wrapEmailPlaceholderTags,
 } from "~/lib/email/templates";
-import type { Route } from "../../routes/_app/settings/+types/email-templates.$key";
 
 export function EmailTemplateEditor({
   loaderData,
-}: Pick<Route.ComponentProps, "loaderData">) {
+}: {
+  loaderData: EmailTemplateEditorLoaderData;
+}) {
   const {
     template,
     meta,

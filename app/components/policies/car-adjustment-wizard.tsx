@@ -21,6 +21,14 @@ import {
 import { Field, FieldError, FieldLabel } from "~/components/ui/field";
 import { FieldInput } from "~/components/ui/form-controls";
 import { FormulaTooltip } from "~/components/ui/formula-tooltip";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "~/components/ui/table";
 import type {
   AdjustmentBreakdown,
   AdjustmentSectionRow,
@@ -453,24 +461,24 @@ function AdjustmentTable({
       {title ? (
         <p className="mb-2 text-sm font-semibold text-foreground">{title}</p>
       ) : null}
-      <table className="min-w-full text-sm">
-        <thead>
-          <tr className="border-b border-border text-left text-muted-foreground">
-            <th className="py-2 pr-4">Cover</th>
-            <th className="py-2 pr-4">Total Premium</th>
-            <th className="py-2 pr-4">True Base Premium</th>
-            <th className="py-2 pr-4">Terrorism Levy</th>
-            <th className="py-2 pr-4">ESL</th>
-            <th className="py-2 pr-4">GST</th>
-            <th className="py-2">Stamp Duty</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border">
+      <Table className="min-w-full text-sm">
+        <TableHeader>
+          <TableRow className="border-border text-muted-foreground">
+            <TableHead className="py-2 pr-4">Cover</TableHead>
+            <TableHead className="py-2 pr-4">Total Premium</TableHead>
+            <TableHead className="py-2 pr-4">True Base Premium</TableHead>
+            <TableHead className="py-2 pr-4">Terrorism Levy</TableHead>
+            <TableHead className="py-2 pr-4">ESL</TableHead>
+            <TableHead className="py-2 pr-4">GST</TableHead>
+            <TableHead className="py-2">Stamp Duty</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           <AdjustmentRow label="Contract Works" row={section1} />
           <AdjustmentRow label="Legal Liability" row={section2} />
           <AdjustmentRow label="TOTAL" row={total} strong />
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }
@@ -486,14 +494,20 @@ function AdjustmentRow({
 }) {
   const cellClass = strong ? "py-2 pr-4 font-semibold" : "py-2 pr-4";
   return (
-    <tr>
-      <td className={cellClass}>{label}</td>
-      <td className={cellClass}>{formatCurrency(row.totalPremium)}</td>
-      <td className={cellClass}>{formatCurrency(row.trueBasePremium)}</td>
-      <td className={cellClass}>{formatCurrency(row.terrorismPremium)}</td>
-      <td className={cellClass}>{formatCurrency(row.esl)}</td>
-      <td className={cellClass}>{formatCurrency(row.gst)}</td>
-      <td className={cellClass}>{formatCurrency(row.sd)}</td>
-    </tr>
+    <TableRow>
+      <TableCell className={cellClass}>{label}</TableCell>
+      <TableCell className={cellClass}>
+        {formatCurrency(row.totalPremium)}
+      </TableCell>
+      <TableCell className={cellClass}>
+        {formatCurrency(row.trueBasePremium)}
+      </TableCell>
+      <TableCell className={cellClass}>
+        {formatCurrency(row.terrorismPremium)}
+      </TableCell>
+      <TableCell className={cellClass}>{formatCurrency(row.esl)}</TableCell>
+      <TableCell className={cellClass}>{formatCurrency(row.gst)}</TableCell>
+      <TableCell className={cellClass}>{formatCurrency(row.sd)}</TableCell>
+    </TableRow>
   );
 }

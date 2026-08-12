@@ -44,12 +44,25 @@ export function SessionTimeoutDialog({
   const clockOffsetRef = React.useRef(0);
   const expiredRef = React.useRef(false);
 
+  // `config` is a fresh object on nearly every render — the shell loader
+  // reruns on most navigations — so resetting on its identity would reset
+  // the idle clock on unrelated page loads. `startedAtMs` only changes when
+  // the broker actually signs in again, so key the reset off that instead.
+  // Resetting during render (rather than in an effect) avoids a disallowed
+  // synchronous setState-in-effect and the extra commit it would cause.
+  const [prevSessionStartedAtMs, setPrevSessionStartedAtMs] = React.useState(
+    config?.startedAtMs ?? null,
+  );
+  if ((config?.startedAtMs ?? null) !== prevSessionStartedAtMs) {
+    setPrevSessionStartedAtMs(config?.startedAtMs ?? null);
+    if (config) setLastActivityAtMs(config.lastActivityAtMs);
+    setExpiredReason(null);
+  }
+
   React.useEffect(() => {
     if (!config) return;
     clockOffsetRef.current = config.serverNowMs - Date.now();
-    setLastActivityAtMs(config.lastActivityAtMs);
     expiredRef.current = false;
-    setExpiredReason(null);
   }, [config]);
 
   React.useEffect(() => {

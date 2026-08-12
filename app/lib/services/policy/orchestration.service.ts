@@ -6,7 +6,7 @@ import {
 export { POLICY_MESSAGE_NOTE_TYPE_ID };
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
 import type { z } from "zod";
-import { ValidationError } from "~/lib/errors";
+import { NotFoundError, ValidationError } from "~/lib/errors";
 import {
   isTerminalStatus,
   POLICY_STATUS,
@@ -69,7 +69,7 @@ export async function assertPolicyNumberAvailable(
 
 export async function savePolicyDraft(policyId: string, values: DraftValues) {
   const existing = await getPolicy(policyId);
-  if (!existing) throw new Error("Policy not found");
+  if (!existing) throw new NotFoundError("Policy not found");
   if (isTerminalStatus(existing.policyStatusId)) {
     throw new PolicySaveError("This policy status cannot be changed.");
   }
@@ -108,7 +108,7 @@ export async function upsertPolicyFromForm(
   createdBy: string,
 ) {
   const existing = await getPolicy(policyId);
-  if (!existing) throw new Error("Policy not found");
+  if (!existing) throw new NotFoundError("Policy not found");
   if (isTerminalStatus(existing.policyStatusId)) {
     throw new PolicySaveError("This policy status cannot be changed.");
   }
@@ -165,7 +165,7 @@ export async function applyPremiumCalculation(
   createdBy: string,
 ) {
   const existing = await getPolicy(policyId);
-  if (!existing) throw new Error("Policy not found");
+  if (!existing) throw new NotFoundError("Policy not found");
   const { premium, rating, referralReasons } =
     await calculatePremiumForPolicy(values);
 
@@ -199,7 +199,7 @@ export async function addPolicyNote(
     throw new PolicySaveError("Note cannot be empty.");
   }
   const existing = await getPolicy(policyId);
-  if (!existing) throw new Error("Policy not found");
+  if (!existing) throw new NotFoundError("Policy not found");
   const note = createMessageNote(policyId, text, createdBy);
   return savePolicy({
     ...existing,
@@ -217,7 +217,7 @@ export async function updatePolicyNote(
     throw new PolicySaveError("Note cannot be empty.");
   }
   const existing = await getPolicy(policyId);
-  if (!existing) throw new Error("Policy not found");
+  if (!existing) throw new NotFoundError("Policy not found");
   const notes = existing.notes ?? [];
   const index = notes.findIndex((note) => note.policyNoteId === policyNoteId);
   if (index < 0) {
@@ -237,7 +237,7 @@ export async function updatePolicyNote(
 
 export async function clonePolicy(sourcePolicyId: string, createdBy: string) {
   const source = await getPolicy(sourcePolicyId);
-  if (!source) throw new Error("Policy not found");
+  if (!source) throw new NotFoundError("Policy not found");
 
   // Copy risk fields only — never carry terminal/pricing progress into the draft.
   const car: Policy["car"] = {

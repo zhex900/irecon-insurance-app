@@ -87,15 +87,15 @@ function describeFieldChange(prev: FieldSnap, next: FieldSnap): string[] {
   return parts;
 }
 
+const ALL_COVER_TYPES_LABEL = "All cover types";
 const COVER_LABELS: Record<string, string> = {
   "1": "Annual",
   "2": "Single",
   "3": "Owner Builder",
-  null: "All cover types",
 };
 
 function coverLabel(coverTypeId: number | null | undefined): string {
-  if (coverTypeId == null) return COVER_LABELS.null!;
+  if (coverTypeId == null) return ALL_COVER_TYPES_LABEL;
   return COVER_LABELS[String(coverTypeId)] ?? `Cover ${coverTypeId}`;
 }
 

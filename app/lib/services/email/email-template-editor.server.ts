@@ -1,4 +1,3 @@
-import { redirect } from "react-router";
 import { z } from "zod";
 import { requireFeatureOrSuperAdminPage } from "~/lib/auth/authorize.server";
 import { requireAuth } from "~/lib/auth/session.server";
@@ -9,7 +8,9 @@ import {
   htmlToPlainText,
   type EmailTemplateKey,
 } from "~/lib/email/templates";
+import type { EmailTemplateEditorLoaderData } from "~/lib/email/template-editor-types";
 import { writeAuditLog } from "~/lib/services/audit/service";
+import { redirectResponse } from "~/lib/http/redirect-response";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
 import { parseFormIntent } from "~/lib/http/route-input";
 import { getEmailFooterImage } from "~/lib/services/email/footer-image.server";
@@ -31,14 +32,14 @@ const emailTemplateKeySchema = z.enum(EMAIL_TEMPLATE_KEYS);
 export async function loadEmailTemplateEditor({
   request,
   params,
-}: EmailTemplateRequestArgs) {
+}: EmailTemplateRequestArgs): Promise<EmailTemplateEditorLoaderData> {
   const viewer = await requireAuth(request);
   const emailTemplatesEnabled = await isFeatureEnabled("email_templates");
   requireFeatureOrSuperAdminPage(emailTemplatesEnabled, viewer);
 
   const parsedKey = emailTemplateKeySchema.safeParse(params.key);
   if (!parsedKey.success) {
-    throw redirect("/settings/email-templates");
+    throw redirectResponse("/settings/email-templates");
   }
   const key: EmailTemplateKey = parsedKey.data;
 

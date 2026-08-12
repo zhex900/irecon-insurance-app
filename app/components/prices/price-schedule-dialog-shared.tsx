@@ -1,9 +1,16 @@
 import type { ReactNode } from "react";
-import { createPortal } from "react-dom";
-import { useNavigate } from "react-router";
-import { XIcon } from "lucide-react";
+import { Link, useNavigate } from "react-router";
 import { Badge } from "~/components/reui/badge";
+import { Button } from "~/components/ui/button";
 import { DateInput } from "~/components/ui/date-input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "~/components/ui/dialog";
 import { Field, FieldLabel } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import { cn, formatDate, rateToPercent } from "~/lib/utils";
@@ -95,34 +102,6 @@ export type ScheduleView =
   | TerrorScheduleView
   | FeesScheduleView;
 
-export function CloseControl({
-  closeHref,
-  onClose,
-}: {
-  closeHref?: string;
-  onClose?: () => void;
-}) {
-  const className =
-    "inline-flex size-7 items-center justify-center rounded-lg hover:bg-muted";
-  if (onClose) {
-    return (
-      <button
-        type="button"
-        aria-label="Close"
-        className={className}
-        onClick={onClose}
-      >
-        <XIcon className="size-4" />
-      </button>
-    );
-  }
-  return (
-    <a href={closeHref ?? ".."} aria-label="Close" className={className}>
-      <XIcon className="size-4" />
-    </a>
-  );
-}
-
 export function DialogShell({
   title,
   description,
@@ -150,44 +129,26 @@ export function DialogShell({
     void navigate(closeHref ?? "..");
   }
 
-  const overlay = (
-    <div
-      className="fixed inset-x-0 top-14 bottom-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 p-4 backdrop-blur-sm"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="price-schedule-title"
-      onClick={(event) => {
-        if (event.target === event.currentTarget) dismiss();
+  return (
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) dismiss();
       }}
     >
-      <div className="my-auto flex max-h-[min(90vh,56rem)] w-full max-w-5xl flex-col gap-4 overflow-y-auto rounded-xl bg-popover p-4 text-sm text-popover-foreground shadow-lg ring-1 ring-foreground/10">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex flex-col gap-1.5">
-            <h2
-              id="price-schedule-title"
-              className="font-heading text-base leading-none font-medium"
-            >
-              {title}
-            </h2>
-            {description ? (
-              <p className="text-sm text-muted-foreground">{description}</p>
-            ) : null}
-          </div>
-          <CloseControl closeHref={closeHref} onClose={onClose ?? dismiss} />
-        </div>
+      <DialogContent className="flex max-h-[min(90vh,56rem)] flex-col overflow-y-auto sm:max-w-5xl">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          {description ? (
+            <DialogDescription>{description}</DialogDescription>
+          ) : null}
+        </DialogHeader>
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
         {children}
-        {footer ? (
-          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            {footer}
-          </div>
-        ) : null}
-      </div>
-    </div>
+        {footer ? <DialogFooter>{footer}</DialogFooter> : null}
+      </DialogContent>
+    </Dialog>
   );
-
-  if (typeof document === "undefined") return overlay;
-  return createPortal(overlay, document.body);
 }
 
 export function PublishedBadge({ published }: { published: boolean }) {
@@ -319,24 +280,29 @@ export function RatePercentInput({
 export function FooterButton({
   href,
   onClick,
-  className,
+  variant = "outline",
   children,
 }: {
   href?: string;
   onClick?: () => void;
-  className: string;
+  variant?: "outline" | "default";
   children: ReactNode;
 }) {
   if (onClick) {
     return (
-      <button type="button" className={className} onClick={onClick}>
+      <Button type="button" variant={variant} onClick={onClick}>
         {children}
-      </button>
+      </Button>
     );
   }
   return (
-    <a href={href} className={className}>
+    <Button
+      type="button"
+      variant={variant}
+      nativeButton={false}
+      render={<Link to={href ?? ".."} />}
+    >
       {children}
-    </a>
+    </Button>
   );
 }

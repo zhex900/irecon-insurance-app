@@ -1,4 +1,4 @@
-import { Link, useActionData, useNavigation } from "react-router";
+import { Form, useActionData, useNavigation } from "react-router";
 import { useMemo, useState } from "react";
 import { ClientsIndexFilters } from "~/components/clients/clients-index-filters";
 import { ClientsIndexTable } from "~/components/clients/clients-index-table";
@@ -251,9 +251,9 @@ export default function ClientsIndexRoute({
         description="Manage and review all client records."
         breadcrumbs={[{ label: "Clients" }]}
         action={
-          <Link to="/clients/new">
-            <Button>+ New Client</Button>
-          </Link>
+          <Form method="post" action="/clients/new">
+            <Button type="submit">+ New Client</Button>
+          </Form>
         }
       />
 

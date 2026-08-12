@@ -176,63 +176,65 @@ export function WizardSectionStack({
   isExportingExcel = false,
   shellCardClassName,
 }: WizardSectionStackProps) {
+  const premiumSection = (
+    <PolicyCollapsibleSection
+      id="premium"
+      title="Premium"
+      description="Premium breakdown and confirmation"
+      open={openMap.premium ?? true}
+      onOpenChange={(open) =>
+        setOpenMap((prev) => ({ ...prev, premium: open }))
+      }
+      className={shellCardClassName}
+    >
+      <PricingDeclarationConfirmedStep
+        premium={premium}
+        referralReasons={referralReasons}
+        reference={reference}
+        notes={notes}
+        rating={rating ?? policy.car.rating}
+        initialManualKeys={policy.car.premiumManualKeys}
+        premiumEditable={!fieldsLocked}
+        onPremiumChange={
+          fieldsLocked
+            ? undefined
+            : (next) => {
+                premiumManuallyEditedRef.current = true;
+                premiumRef.current = next;
+                setPremium(next);
+                hasUnsavedChangesRef.current = true;
+                setHasUnsavedChanges(true);
+                void persistDraft({
+                  force: true,
+                  skipPremiumRefresh: true,
+                });
+              }
+        }
+        onManualKeysChange={
+          fieldsLocked
+            ? undefined
+            : (keys) => {
+                premiumManualKeysRef.current = keys;
+              }
+        }
+        onResetPremium={fieldsLocked ? undefined : onResetPremium}
+        isCalculating={isCalculating}
+        onExportExcel={onExportExcel}
+        isExportingExcel={isExportingExcel}
+        adjustmentBreakdown={
+          policy.car.adjusted ? policy.car.adjustment?.breakdown : undefined
+        }
+      />
+    </PolicyCollapsibleSection>
+  );
+
   return (
     <fieldset
       disabled={fieldsLocked}
       className="flex min-w-0 flex-col gap-4 border-0 p-0"
       onBlurCapture={handleFieldBlur}
     >
-      {premiumPinned ? (
-        <PolicyCollapsibleSection
-          id="premium"
-          title="Premium"
-          description="Premium breakdown and confirmation"
-          open={openMap.premium ?? true}
-          onOpenChange={(open) =>
-            setOpenMap((prev) => ({ ...prev, premium: open }))
-          }
-          className={shellCardClassName}
-        >
-          <PricingDeclarationConfirmedStep
-            premium={premium}
-            referralReasons={referralReasons}
-            reference={reference}
-            notes={notes}
-            rating={rating ?? policy.car.rating}
-            initialManualKeys={policy.car.premiumManualKeys}
-            premiumEditable={!fieldsLocked}
-            onPremiumChange={
-              fieldsLocked
-                ? undefined
-                : (next) => {
-                    premiumManuallyEditedRef.current = true;
-                    premiumRef.current = next;
-                    setPremium(next);
-                    hasUnsavedChangesRef.current = true;
-                    setHasUnsavedChanges(true);
-                    void persistDraft({
-                      force: true,
-                      skipPremiumRefresh: true,
-                    });
-                  }
-            }
-            onManualKeysChange={
-              fieldsLocked
-                ? undefined
-                : (keys) => {
-                    premiumManualKeysRef.current = keys;
-                  }
-            }
-            onResetPremium={fieldsLocked ? undefined : onResetPremium}
-            isCalculating={isCalculating}
-            onExportExcel={onExportExcel}
-            isExportingExcel={isExportingExcel}
-            adjustmentBreakdown={
-              policy.car.adjusted ? policy.car.adjustment?.breakdown : undefined
-            }
-          />
-        </PolicyCollapsibleSection>
-      ) : null}
+      {premiumPinned ? premiumSection : null}
 
       <PolicyCollapsibleSection
         id="risk-details"
@@ -289,46 +291,7 @@ export function WizardSectionStack({
         <ClaimsWordingStep carWording={carWording} />
       </PolicyCollapsibleSection>
 
-      {!premiumPinned ? (
-        <PolicyCollapsibleSection
-          id="premium"
-          title="Premium"
-          description="Premium breakdown and confirmation"
-          open={openMap.premium ?? true}
-          onOpenChange={(open) =>
-            setOpenMap((prev) => ({ ...prev, premium: open }))
-          }
-          className={shellCardClassName}
-        >
-          <PricingDeclarationConfirmedStep
-            premium={premium}
-            referralReasons={referralReasons}
-            reference={reference}
-            notes={notes}
-            rating={rating ?? policy.car.rating}
-            initialManualKeys={policy.car.premiumManualKeys}
-            premiumEditable={!fieldsLocked}
-            onPremiumChange={(next) => {
-              premiumManuallyEditedRef.current = true;
-              premiumRef.current = next;
-              setPremium(next);
-              hasUnsavedChangesRef.current = true;
-              setHasUnsavedChanges(true);
-              void persistDraft({ force: true, skipPremiumRefresh: true });
-            }}
-            onManualKeysChange={(keys) => {
-              premiumManualKeysRef.current = keys;
-            }}
-            onResetPremium={fieldsLocked ? undefined : onResetPremium}
-            isCalculating={isCalculating}
-            onExportExcel={onExportExcel}
-            isExportingExcel={isExportingExcel}
-            adjustmentBreakdown={
-              policy.car.adjusted ? policy.car.adjustment?.breakdown : undefined
-            }
-          />
-        </PolicyCollapsibleSection>
-      ) : null}
+      {!premiumPinned ? premiumSection : null}
     </fieldset>
   );
 }

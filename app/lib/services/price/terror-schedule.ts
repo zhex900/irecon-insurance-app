@@ -1,22 +1,20 @@
 import { eq, inArray } from "drizzle-orm";
 import { getDb } from "~/lib/db/client";
+import { NotFoundError } from "~/lib/errors";
 import {
   priceTerrorism,
   priceTerrorismPostcode,
   priceTerrorismRate,
-  state,
 } from "~/lib/db/price-schema";
-import { POLICY_TYPE_CAR, requireDate, strNum } from "./helpers";
+import {
+  POLICY_TYPE_CAR,
+  loadStateIdByCode,
+  requireDate,
+  strNum,
+} from "./helpers";
 import type { TerrorScheduleInput } from "./types";
 
 type TerrorTier = TerrorScheduleInput["tiers"][number];
-
-async function loadStateIdByCode(dbOrTx: {
-  select: ReturnType<typeof getDb>["select"];
-}) {
-  const rows = await dbOrTx.select().from(state);
-  return new Map(rows.map((row) => [row.code.toUpperCase(), row.stateId]));
-}
 
 async function insertTierPostcodes(
   dbOrTx: { insert: ReturnType<typeof getDb>["insert"] },
@@ -102,7 +100,7 @@ export async function updateTerrorSchedule(
       .from(priceTerrorism)
       .where(eq(priceTerrorism.priceTerrorismId, priceTerrorismId))
       .limit(1);
-    if (!existing) throw new Error("Terrorism schedule not found");
+    if (!existing) throw new NotFoundError("Terrorism schedule not found");
 
     await tx
       .update(priceTerrorism)

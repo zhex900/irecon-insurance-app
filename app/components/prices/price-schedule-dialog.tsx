@@ -1,6 +1,6 @@
 import { Form, useNavigation } from "react-router";
 import { LoadingButton } from "~/components/ui/loading-button";
-import type { PriceCatalogueKind } from "~/lib/services/price";
+import type { PriceCatalogueKind } from "~/lib/services/price/types";
 import {
   DialogShell,
   FooterButton,
@@ -48,18 +48,9 @@ export function PriceScheduleDialog({
     navigation.state === "submitting" &&
     navigation.formData?.get("intent") === "update";
 
-  const secondaryClass =
-    "inline-flex h-8 items-center justify-center rounded-lg border border-foreground/25 bg-background px-2.5 text-sm font-medium hover:bg-muted";
-  const primaryClass =
-    "inline-flex h-8 items-center justify-center rounded-lg bg-primary px-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/80";
-
   const footer = editing ? (
     <>
-      <FooterButton
-        href={closeHref}
-        onClick={onClose}
-        className={secondaryClass}
-      >
+      <FooterButton href={closeHref} onClick={onClose}>
         Cancel
       </FooterButton>
       <LoadingButton type="submit" form="price-schedule-form" loading={saving}>
@@ -68,15 +59,11 @@ export function PriceScheduleDialog({
     </>
   ) : (
     <>
-      <FooterButton
-        href={closeHref}
-        onClick={onClose}
-        className={secondaryClass}
-      >
+      <FooterButton href={closeHref} onClick={onClose}>
         Close
       </FooterButton>
       {canEdit ? (
-        <FooterButton href={editHref} onClick={onEdit} className={primaryClass}>
+        <FooterButton href={editHref} onClick={onEdit} variant="default">
           Edit
         </FooterButton>
       ) : null}
@@ -177,11 +164,7 @@ export function PriceDeleteDialog({
       error={error}
       footer={
         <>
-          <FooterButton
-            href={closeHref}
-            onClick={onClose}
-            className="inline-flex h-8 items-center justify-center rounded-lg border border-foreground/25 bg-background px-2.5 text-sm font-medium hover:bg-muted"
-          >
+          <FooterButton href={closeHref} onClick={onClose}>
             Cancel
           </FooterButton>
           <Form method="post" action={formAction}>

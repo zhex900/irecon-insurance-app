@@ -3,6 +3,7 @@ import { getReferenceDataAsync } from "~/lib/services/reference.service";
 import { getDb } from "~/lib/db/client";
 import { client, policy } from "~/lib/db/schema";
 import type { Client } from "~/lib/db/types";
+import { ConflictError, NotFoundError } from "~/lib/errors";
 import { trackUsage } from "~/lib/observability/metrics.server";
 import { isDigitSearchQuery } from "~/lib/services/shared/list-query";
 import { normalizeClient } from "~/lib/services/clients/normalize";
@@ -161,7 +162,7 @@ export async function updateClient(clientId: string, input: ClientWritable) {
     .set({ ...input })
     .where(eq(client.clientId, clientId))
     .returning();
-  if (!updated) throw new Error("Client not found");
+  if (!updated) throw new NotFoundError("Client not found");
   return normalizeClient(updated);
 }
 
@@ -177,11 +178,11 @@ export async function countClientPolicies(clientId: string) {
 /** Delete a client only when they have no policies. */
 export async function deleteClient(clientId: string) {
   const existing = await getClient(clientId);
-  if (!existing) throw new Error("Client not found");
+  if (!existing) throw new NotFoundError("Client not found");
 
   const policyCount = await countClientPolicies(clientId);
   if (policyCount > 0) {
-    throw new Error("Clients with policies cannot be deleted");
+    throw new ConflictError("Clients with policies cannot be deleted");
   }
 
   const db = getDb();

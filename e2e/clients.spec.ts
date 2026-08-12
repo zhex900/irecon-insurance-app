@@ -9,7 +9,8 @@ test.describe("clients", () => {
     const registeredName = `E2E Client ${stamp}`;
     const tradingName = `E2E Trade ${stamp}`;
 
-    await page.goto("/clients/new");
+    await page.goto("/clients");
+    await page.getByRole("button", { name: /new client/i }).click();
     await expect(page).toHaveURL(/\/clients\/\d+\/edit/);
 
     await page.getByLabel(/registered name/i).fill(registeredName);

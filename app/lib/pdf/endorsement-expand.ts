@@ -200,18 +200,31 @@ function splitPlainTextByHeight(
   return chunks.length > 0 ? chunks : [""];
 }
 
-function toDrawOp(
-  schema: SchemaLike,
-  pageIndex: number,
-  y: number,
-  height: number,
-  html: string,
-  continuationTopMm: number,
-  continuationHeightMm: number,
-  continuationHeightsMm: number[] = [],
-  pageBottomMarginMm: number = ENDORSEMENT_PAGE_BOTTOM_MARGIN_MM,
-  pageLineBudgets: number[] = [],
-): EndorsementRichDrawOp {
+type ToDrawOpOptions = {
+  schema: SchemaLike;
+  pageIndex: number;
+  y: number;
+  height: number;
+  html: string;
+  continuationTopMm: number;
+  continuationHeightMm: number;
+  continuationHeightsMm?: number[];
+  pageBottomMarginMm?: number;
+  pageLineBudgets?: number[];
+};
+
+function toDrawOp({
+  schema,
+  pageIndex,
+  y,
+  height,
+  html,
+  continuationTopMm,
+  continuationHeightMm,
+  continuationHeightsMm = [],
+  pageBottomMarginMm = ENDORSEMENT_PAGE_BOTTOM_MARGIN_MM,
+  pageLineBudgets = [],
+}: ToDrawOpOptions): EndorsementRichDrawOp {
   return {
     pageIndex,
     xMm: Number(schema.position?.x ?? 12),
@@ -482,33 +495,32 @@ export function expandEndorsementPairSchemas(
 
     if (!isWordingHtmlEmpty(pair.subject) && subjectIsHtml) {
       drawOps.push(
-        toDrawOp(
-          subjectSchema,
-          sectionPageIndex,
-          currentY,
-          subH,
-          pair.subject,
-          contTopMm,
-          usablePageH,
-          [],
+        toDrawOp({
+          schema: subjectSchema,
+          pageIndex: sectionPageIndex,
+          y: currentY,
+          height: subH,
+          html: pair.subject,
+          continuationTopMm: contTopMm,
+          continuationHeightMm: usablePageH,
           pageBottomMarginMm,
-        ),
+        }),
       );
     }
     if (!isWordingHtmlEmpty(pair.content) && contentIsHtml) {
       drawOps.push(
-        toDrawOp(
-          contentSchema,
-          sectionPageIndex,
-          contentYPos,
-          firstBodyH,
-          pair.content,
-          contTopMm,
-          usablePageH,
-          overflowHeightsMm,
+        toDrawOp({
+          schema: contentSchema,
+          pageIndex: sectionPageIndex,
+          y: contentYPos,
+          height: firstBodyH,
+          html: pair.content,
+          continuationTopMm: contTopMm,
+          continuationHeightMm: usablePageH,
+          continuationHeightsMm: overflowHeightsMm,
           pageBottomMarginMm,
-          lineChunks,
-        ),
+          pageLineBudgets: lineChunks,
+        }),
       );
     }
 

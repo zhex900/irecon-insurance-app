@@ -1,7 +1,14 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "~/lib/db/client";
+import { NotFoundError } from "~/lib/errors";
 import { priceStampDuty, priceStampDutyRate } from "~/lib/db/price-schema";
-import { POLICY_TYPE_CAR, requireDate, stateIdByCode, strNum } from "./helpers";
+import {
+  POLICY_TYPE_CAR,
+  loadStateIdByCode,
+  requireDate,
+  requireStateId,
+  strNum,
+} from "./helpers";
 import type { StampScheduleInput } from "./types";
 
 export async function createStampSchedule(
@@ -11,6 +18,7 @@ export async function createStampSchedule(
   const db = getDb();
   const dateStart = requireDate(input.dateStart);
   return db.transaction(async (tx) => {
+    const stateIdByCode = await loadStateIdByCode(tx);
     const [header] = await tx
       .insert(priceStampDuty)
       .values({
@@ -22,7 +30,7 @@ export async function createStampSchedule(
       })
       .returning();
     for (const rate of input.rates) {
-      const stateId = await stateIdByCode(rate.stateCode);
+      const stateId = requireStateId(stateIdByCode, rate.stateCode);
       await tx.insert(priceStampDutyRate).values({
         priceStampDutyId: header.priceStampDutyId,
         stateId,
@@ -40,12 +48,13 @@ export async function updateStampSchedule(
   const db = getDb();
   const dateStart = requireDate(input.dateStart);
   await db.transaction(async (tx) => {
+    const stateIdByCode = await loadStateIdByCode(tx);
     const [existing] = await tx
       .select()
       .from(priceStampDuty)
       .where(eq(priceStampDuty.priceStampDutyId, priceStampDutyId))
       .limit(1);
-    if (!existing) throw new Error("Stamp duty schedule not found");
+    if (!existing) throw new NotFoundError("Stamp duty schedule not found");
 
     await tx
       .update(priceStampDuty)
@@ -62,7 +71,7 @@ export async function updateStampSchedule(
       .delete(priceStampDutyRate)
       .where(eq(priceStampDutyRate.priceStampDutyId, priceStampDutyId));
     for (const rate of input.rates) {
-      const stateId = await stateIdByCode(rate.stateCode);
+      const stateId = requireStateId(stateIdByCode, rate.stateCode);
       await tx.insert(priceStampDutyRate).values({
         priceStampDutyId,
         stateId,

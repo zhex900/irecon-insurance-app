@@ -8,6 +8,7 @@ import {
   RotateCcwIcon,
   XIcon,
 } from "lucide-react";
+import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import {
   Card,
   CardAction,
@@ -24,8 +25,15 @@ import {
   DialogPortal,
   DialogTitle,
 } from "~/components/ui/dialog";
-import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import { Button } from "~/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "~/components/ui/table";
 import {
   Tooltip,
   TooltipContent,
@@ -263,20 +271,22 @@ export function PricingDeclarationConfirmedStep({
           ) : null}
         </CardHeader>
         <CardContent className="min-w-0 overflow-x-hidden">
-          <table className="w-full table-fixed text-sm">
-            <thead>
-              <tr className="border-b border-border text-left text-muted-foreground">
-                <th className="w-1/2 py-2 pr-2">Component</th>
-                <th className="w-[16.666%] py-2 pl-4 text-right">
+          <Table className="w-full table-fixed text-sm">
+            <TableHeader>
+              <TableRow className="border-border text-muted-foreground">
+                <TableHead className="w-1/2 py-2 pr-2">Component</TableHead>
+                <TableHead className="w-[16.666%] py-2 pl-4 text-right whitespace-normal">
                   Contract works
-                </th>
-                <th className="w-[16.666%] py-2 pl-4 text-right">
+                </TableHead>
+                <TableHead className="w-[16.666%] py-2 pl-4 text-right whitespace-normal">
                   Legal liability
-                </th>
-                <th className="w-[16.666%] py-2 pl-4 text-right">Combined</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
+                </TableHead>
+                <TableHead className="w-[16.666%] py-2 pl-4 text-right whitespace-normal">
+                  Combined
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               <PremiumRow
                 label="Base Premium"
                 s1={premium.contractWorksCalculatedBasePremium}
@@ -392,8 +402,8 @@ export function PricingDeclarationConfirmedStep({
                 manualKeys={manualKeys}
               />
               {reference.feeNames.map((fee) => (
-                <tr key={fee.name}>
-                  <td className="py-2 pr-2">
+                <TableRow key={fee.name}>
+                  <TableCell className="py-2 pr-2">
                     <span className="wrap-break-word">
                       {fee.name}{" "}
                       <PremiumExplainTrigger
@@ -425,13 +435,13 @@ export function PricingDeclarationConfirmedStep({
                         <InfoIcon className="size-3.5" aria-hidden />
                       </PremiumExplainTrigger>
                     </span>
-                  </td>
-                  <td className="py-2 pl-4" />
-                  <td className="py-2 pl-4" />
-                  <td className="py-2 pl-4 text-right whitespace-nowrap tabular-nums">
+                  </TableCell>
+                  <TableCell className="py-2 pl-4" />
+                  <TableCell className="py-2 pl-4" />
+                  <TableCell className="py-2 pl-4 text-right whitespace-nowrap tabular-nums">
                     {formatCurrency(fee.fee + fee.feeGst)}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
               <PremiumRow
                 label="Total Premium"
@@ -441,8 +451,8 @@ export function PricingDeclarationConfirmedStep({
                 manualKeys={manualKeys}
                 strong
               />
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
 
@@ -614,11 +624,11 @@ function PremiumRow({
   const rowId = s1Key ?? s2Key ?? combinedKey;
 
   return (
-    <tr
+    <TableRow
       id={rowId ? `premium-row-${rowId}` : undefined}
       className={cn(strong && "font-semibold")}
     >
-      <td className="min-w-0 py-2 pr-2">
+      <TableCell className="min-w-0 py-2 pr-2">
         <span
           className={cn(
             "wrap-break-word",
@@ -653,7 +663,7 @@ function PremiumRow({
             </>
           ) : null}
         </span>
-      </td>
+      </TableCell>
       <PremiumValueCell
         value={s1}
         editable={editable && Boolean(s1Key && onChange)}
@@ -681,7 +691,7 @@ function PremiumRow({
             : undefined
         }
       />
-    </tr>
+    </TableRow>
   );
 }
 
@@ -704,7 +714,7 @@ function PremiumValueCell({
   const cellClass = "py-2 pl-4 text-right whitespace-nowrap tabular-nums";
 
   if (value == null) {
-    return <td className={cellClass} />;
+    return <TableCell className={cellClass} />;
   }
 
   const valueClass = cn(
@@ -714,13 +724,15 @@ function PremiumValueCell({
 
   if (!editable || !onChange) {
     return (
-      <td className={cn(cellClass, valueClass)}>{formatCurrency(value)}</td>
+      <TableCell className={cn(cellClass, valueClass)}>
+        {formatCurrency(value)}
+      </TableCell>
     );
   }
 
   if (editing) {
     return (
-      <td className="py-1 pl-4 text-right">
+      <TableCell className="py-1 pl-4 text-right">
         <Input
           autoFocus
           type="text"
@@ -745,12 +757,12 @@ function PremiumValueCell({
             }
           }}
         />
-      </td>
+      </TableCell>
     );
   }
 
   return (
-    <td className={cellClass}>
+    <TableCell className={cellClass}>
       <button
         type="button"
         className={cn(
@@ -765,6 +777,6 @@ function PremiumValueCell({
       >
         {formatCurrency(value)}
       </button>
-    </td>
+    </TableCell>
   );
 }

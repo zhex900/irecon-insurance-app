@@ -7,7 +7,13 @@ import { getClient } from "~/lib/services/clients/service";
 import { createPolicyDraft } from "~/lib/services/policy/data.service";
 import type { Route } from "./+types/new";
 
+/** Direct GET (typed URL, refresh) has nothing to create yet — send to the list. */
 export async function loader({ request }: Route.LoaderArgs) {
+  await requireAuth(request);
+  return redirect("/clients");
+}
+
+export async function action({ request }: Route.ActionArgs) {
   const actor = await requireAuth(request);
   const parsedClientId = uuidParamSchema.safeParse(
     searchParamsObject(request).clientId,
@@ -28,4 +34,8 @@ export async function loader({ request }: Route.LoaderArgs) {
     request,
   });
   return redirect(`/policies/${policy.policyId}?new=1`);
+}
+
+export default function NewPolicyRoute() {
+  return null;
 }

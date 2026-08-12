@@ -1,18 +1,15 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { useMemo, useRef, useState } from "react";
 import { Input } from "~/components/ui/input";
+import {
+  FloatingListbox,
+  useFloatingListPosition,
+} from "~/components/ui/floating-listbox";
 import {
   EMAIL_DIRECTORY_KIND_LABEL,
   type EmailDirectoryEntry,
 } from "~/lib/email/directory";
 import { HighlightText } from "~/components/search/highlight";
 import { cn } from "~/lib/utils";
-
-type ListPosition = {
-  top: number;
-  left: number;
-  width: number;
-};
 
 /** Head (completed addresses + separator) and the fragment currently being typed. */
 function splitDraft(value: string): { head: string; draft: string } {
@@ -49,7 +46,6 @@ export function EmailRecipientsInput({
   "aria-label"?: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [position, setPosition] = useState<ListPosition | null>(null);
   const [highlight, setHighlight] = useState(0);
   const blurTimer = useRef<number | null>(null);
   const anchorRef = useRef<HTMLDivElement>(null);
@@ -68,34 +64,12 @@ export function EmailRecipientsInput({
       .slice(0, 40);
   }, [options, draftLower]);
 
-  function updatePosition() {
-    const el = anchorRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    setPosition({
-      top: rect.bottom + 4,
-      left: rect.left,
-      width: Math.max(rect.width, 280),
-    });
-  }
-
-  useLayoutEffect(() => {
-    if (!open) return;
-    updatePosition();
-  }, [open, filtered.length]);
-
-  useEffect(() => {
-    if (!open) return;
-    function onReposition() {
-      updatePosition();
-    }
-    window.addEventListener("resize", onReposition);
-    window.addEventListener("scroll", onReposition, true);
-    return () => {
-      window.removeEventListener("resize", onReposition);
-      window.removeEventListener("scroll", onReposition, true);
-    };
-  }, [open]);
+  const position = useFloatingListPosition(
+    anchorRef,
+    open,
+    filtered.length,
+    280,
+  );
 
   function selectEntry(entry: EmailDirectoryEntry) {
     onChange(replaceDraftWithEmail(value, entry.email));
@@ -104,54 +78,42 @@ export function EmailRecipientsInput({
   }
 
   const listbox =
-    open && position && filtered.length > 0
-      ? createPortal(
-          <ul
-            id={`${id}-listbox`}
-            role="listbox"
-            className="fixed z-[100] max-h-56 overflow-auto rounded-lg border bg-popover p-1 text-sm shadow-md"
-            style={{
-              top: position.top,
-              left: position.left,
-              width: position.width,
-            }}
-          >
-            {filtered.map((item, index) => {
-              const active = index === highlight;
-              return (
-                <li key={`${item.kind}:${item.email}`} role="option">
-                  <button
-                    type="button"
-                    className={cn(
-                      "flex w-full flex-col items-start rounded-md px-2.5 py-2 text-left hover:bg-muted",
-                      active && "bg-muted",
-                    )}
-                    onMouseDown={(event) => event.preventDefault()}
-                    onMouseEnter={() => setHighlight(index)}
-                    onClick={() => selectEntry(item)}
-                  >
-                    <span className="font-medium">
-                      <HighlightText text={item.email} query={draftLower} />
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {item.name ? (
-                        <>
-                          <HighlightText text={item.name} query={draftLower} />
-                          {" · "}
-                          {EMAIL_DIRECTORY_KIND_LABEL[item.kind]}
-                        </>
-                      ) : (
-                        EMAIL_DIRECTORY_KIND_LABEL[item.kind]
-                      )}
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>,
-          document.body,
-        )
-      : null;
+    filtered.length > 0 ? (
+      <FloatingListbox id={`${id}-listbox`} open={open} position={position}>
+        {filtered.map((item, index) => {
+          const active = index === highlight;
+          return (
+            <li key={`${item.kind}:${item.email}`} role="option">
+              <button
+                type="button"
+                className={cn(
+                  "flex w-full flex-col items-start rounded-md px-2.5 py-2 text-left hover:bg-muted",
+                  active && "bg-muted",
+                )}
+                onMouseDown={(event) => event.preventDefault()}
+                onMouseEnter={() => setHighlight(index)}
+                onClick={() => selectEntry(item)}
+              >
+                <span className="font-medium">
+                  <HighlightText text={item.email} query={draftLower} />
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {item.name ? (
+                    <>
+                      <HighlightText text={item.name} query={draftLower} />
+                      {" · "}
+                      {EMAIL_DIRECTORY_KIND_LABEL[item.kind]}
+                    </>
+                  ) : (
+                    EMAIL_DIRECTORY_KIND_LABEL[item.kind]
+                  )}
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </FloatingListbox>
+    ) : null;
 
   return (
     <div ref={anchorRef} className="min-w-0 flex-1">
