@@ -9,7 +9,9 @@ Unit, integration, and browser tests for Irecon Insurance (Phase 7).
 | `npm run test`             | Vitest unit + integration                        |
 | `npm run test:unit`        | Unit only                                        |
 | `npm run test:integration` | Integration only (skips if Postgres unreachable) |
-| `npm run test:e2e`         | Playwright critical paths                        |
+| `npm run test:e2e`         | Playwright critical paths (starts `npm run dev`) |
+| `npm run test:e2e:local`   | Same, against an already-running `localhost:5173` (skips webServer) |
+| `npm run test:e2e:ui`      | Same as `test:e2e:local` but opens Playwright's `--ui` mode        |
 | `npm run test:smoke`       | Playwright smoke subset (post-deploy)            |
 | `npm run typecheck`        | React Router typegen + `tsc`                     |
 
@@ -49,3 +51,7 @@ Resend is mocked in the email dialog path (`mockResendEmailApi`).
 ## Smoke
 
 `npm run test:smoke` — login + clients + policies lists. Point `E2E_BASE_URL` at staging/prod for post-deploy checks; never use production credentials in git.
+
+## Full E2E coverage plan
+
+See [docs/e2e-test-plan.md](e2e-test-plan.md) for the route × role coverage matrix, critical-workflow list, and phased rollout to close remaining Playwright gaps.
