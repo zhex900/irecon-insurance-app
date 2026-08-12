@@ -2,9 +2,7 @@ import { clsx, type ClassValue } from "clsx";
 import { formatDistance, isValid } from "date-fns";
 import { enAU } from "date-fns/locale";
 import { twMerge } from "tailwind-merge";
-
-/** App-wide calendar timezone — keeps SSR (Workers UTC) and browser output aligned. */
-const BUSINESS_TIME_ZONE = "Australia/Sydney";
+import { BUSINESS_TIME_ZONE } from "~/constants";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));

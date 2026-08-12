@@ -49,6 +49,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     libraryDocumentsEnabled,
     documentTemplatesEnabled,
     additionalWordingEnabled,
+    accountManagersEnabled,
   ] = await Promise.all([
     isFeatureEnabled("audit_log"),
     isFeatureEnabled("prices"),
@@ -56,12 +57,14 @@ export async function loader({ request }: Route.LoaderArgs) {
     isFeatureEnabled("library_documents"),
     isFeatureEnabled("document_templates"),
     isFeatureEnabled("additional_wording"),
+    isFeatureEnabled("account_managers"),
   ]);
   const superAdmin = isSuperAdmin(viewer);
   return {
     showUsers: isAdminRole(viewer),
     showAuthorisedRepresentatives: isAdminRole(viewer),
-    showAccountManagers: isAdminRole(viewer),
+    showAccountManagers:
+      isAdminRole(viewer) && (accountManagersEnabled || superAdmin),
     showFeatures: superAdmin,
     showEmailTemplates: emailTemplatesEnabled || superAdmin,
     showLibraryDocuments: libraryDocumentsEnabled || superAdmin,
@@ -75,6 +78,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     libraryDocumentsEnabled,
     documentTemplatesEnabled,
     additionalWordingEnabled,
+    accountManagersEnabled,
   };
 }
 
@@ -124,8 +128,9 @@ export default function SettingsIndexRoute({
           {
             to: "/settings/account-managers",
             title: "Account Managers",
-            description:
-              "Search, add, edit, and remove account managers assigned to clients.",
+            description: loaderData.accountManagersEnabled
+              ? "Search, add, edit, and remove account managers assigned to clients."
+              : "Account Managers is disabled for other roles. Super-admins can still manage it.",
             icon: ContactIcon,
           },
         ]

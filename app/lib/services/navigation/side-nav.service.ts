@@ -43,6 +43,7 @@ async function listSettingsLinks(viewer: AppUser): Promise<SideNavLink[]> {
     libraryDocumentsEnabled,
     documentTemplatesEnabled,
     additionalWordingEnabled,
+    accountManagersEnabled,
   ] = await Promise.all([
     isFeatureEnabled("audit_log"),
     isFeatureEnabled("prices"),
@@ -50,6 +51,7 @@ async function listSettingsLinks(viewer: AppUser): Promise<SideNavLink[]> {
     isFeatureEnabled("library_documents"),
     isFeatureEnabled("document_templates"),
     isFeatureEnabled("additional_wording"),
+    isFeatureEnabled("account_managers"),
   ]);
 
   const links: SideNavLink[] = [];
@@ -68,6 +70,9 @@ async function listSettingsLinks(viewer: AppUser): Promise<SideNavLink[]> {
       label: "Authorised Representatives",
       href: "/settings/ar-brokers",
     });
+  }
+
+  if (admin && (accountManagersEnabled || superAdmin)) {
     links.push({
       id: "settings-account-managers",
       label: "Account Managers",

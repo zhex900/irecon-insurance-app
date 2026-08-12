@@ -5,6 +5,9 @@
  * @see docs/pricing/car-premium-formulas.md §1 (GST)
  */
 
+/** App-wide calendar timezone — keeps SSR (Workers UTC) and browser output aligned. */
+export const BUSINESS_TIME_ZONE = "Australia/Sydney";
+
 /** Australian GST — legacy `GSTRate` (10%). */
 export const GST_RATE = 0.1;
 

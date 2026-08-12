@@ -41,7 +41,11 @@ import {
   TableRow,
 } from "~/components/ui/table";
 import { requireAuth } from "~/lib/auth/session.server";
-import { requireAdminPage } from "~/lib/auth/authorize.server";
+import { isSuperAdmin } from "~/lib/auth/roles";
+import {
+  requireAdminPage,
+  requireFeatureOrSuperAdminPage,
+} from "~/lib/auth/authorize.server";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
 import {
   parseFormIntent,
@@ -50,6 +54,7 @@ import {
 } from "~/lib/http/route-input";
 import type { AccountManager } from "~/lib/db/types";
 import { writeAuditLog } from "~/lib/services/audit/service";
+import { isFeatureEnabled } from "~/lib/services/feature-flags";
 import { SearchHighlight } from "~/components/search/highlight-cell";
 import { TablePagination } from "~/components/ui/table-pagination";
 import {
@@ -80,6 +85,8 @@ const PAGE_SIZE = 25;
 export async function loader({ request }: Route.LoaderArgs) {
   const viewer = await requireAuth(request);
   requireAdminPage(viewer);
+  const enabled = await isFeatureEnabled("account_managers");
+  requireFeatureOrSuperAdminPage(enabled, viewer);
   const url = new URL(request.url);
   const q = queryTextSchema.parse(url.searchParams.get("q") ?? "");
   const pagination = parsePagination(url, { defaultSize: PAGE_SIZE });
@@ -100,6 +107,10 @@ export async function loader({ request }: Route.LoaderArgs) {
 export async function action({ request }: Route.ActionArgs) {
   const actor = await requireAuth(request);
   requireAdminPage(actor);
+  const enabled = await isFeatureEnabled("account_managers");
+  if (!enabled && !isSuperAdmin(actor)) {
+    return { ok: false as const, error: "Account Managers is disabled." };
+  }
   const formData = await request.formData();
   const intent = parseFormIntent(formData, ["create", "update", "delete"]);
 

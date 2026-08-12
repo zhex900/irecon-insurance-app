@@ -9,6 +9,7 @@ export const FEATURE_KEYS = [
   "library_documents",
   "document_templates",
   "additional_wording",
+  "account_managers",
 ] as const;
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
 
@@ -57,6 +58,12 @@ const FEATURE_CATALOGUE: Record<
     label: "Additional Wording",
     description:
       "When disabled, Additional Wording settings is hidden from everyone except super-admins.",
+    defaultEnabled: true,
+  },
+  account_managers: {
+    label: "Account Managers",
+    description:
+      "When disabled, Account Managers settings is hidden from everyone except super-admins.",
     defaultEnabled: true,
   },
 };
