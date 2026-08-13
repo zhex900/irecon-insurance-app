@@ -7,7 +7,6 @@ export type CarPolicyWizardDialogsProps = {
   submitBusy: boolean;
   onSubmitConfirm: () => void;
   leaveDialogOpen: boolean;
-  isNew: boolean;
   pendingLeaveAfterSave: boolean;
   discarding: boolean;
   onStay: () => void;
@@ -22,7 +21,6 @@ export function CarPolicyWizardDialogs({
   submitBusy,
   onSubmitConfirm,
   leaveDialogOpen,
-  isNew,
   pendingLeaveAfterSave,
   discarding,
   onStay,
@@ -42,7 +40,6 @@ export function CarPolicyWizardDialogs({
 
       <LeaveDiscardDialog
         open={leaveDialogOpen}
-        isNew={isNew}
         pendingLeaveAfterSave={pendingLeaveAfterSave}
         discarding={discarding}
         onStay={onStay}

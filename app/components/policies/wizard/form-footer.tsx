@@ -3,10 +3,9 @@ import { toast } from "sonner";
 import { Button } from "~/components/ui/button";
 import { LoadingButton } from "~/components/ui/loading-button";
 import type { PolicyWizardActionData } from "./hooks/use-premium-calc";
+import { usePolicyWizardMode } from "./car-policy-wizard-mode-context";
 
 export type WizardFormFooterProps = {
-  readOnly: boolean;
-  isFormTerminal: boolean;
   actionData: PolicyWizardActionData | undefined;
   onCancel: () => void;
   onSubmit: () => void;
@@ -15,14 +14,13 @@ export type WizardFormFooterProps = {
 };
 
 export function WizardFormFooter({
-  readOnly,
-  isFormTerminal,
   actionData,
   onCancel,
   onSubmit,
   submitBusy,
   submitDisabled = false,
 }: WizardFormFooterProps) {
+  const { readOnly, canShowSubmitButton } = usePolicyWizardMode();
   const lastToastKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -58,7 +56,7 @@ export function WizardFormFooter({
         {readOnly ? "Back to client" : "Cancel"}
       </Button>
 
-      {!readOnly && !isFormTerminal ? (
+      {canShowSubmitButton ? (
         <LoadingButton
           type="button"
           className="ml-auto"

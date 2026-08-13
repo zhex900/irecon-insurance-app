@@ -29,7 +29,7 @@ function assignRef<T>(ref: React.Ref<T> | undefined, value: T | null) {
     return;
   }
   if (ref && typeof ref === "object") {
-    (ref as React.MutableRefObject<T | null>).current = value;
+    (ref as React.RefObject<T | null>).current = value;
   }
 }
 

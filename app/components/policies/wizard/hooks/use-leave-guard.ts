@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type MutableRefObject } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { useBlocker, useNavigate, type useFetcher } from "react-router";
 import type { Policy } from "~/lib/db/types";
 import { discardPolicyDraftClient } from "~/lib/services/policy/draft.client";
@@ -6,12 +6,10 @@ import { clearWizardStepState, consumeWizardLeave } from "../step-memory";
 import type { PolicyLeaveApi } from "./use-draft-save";
 import type { PolicyWizardActionData } from "./use-premium-calc";
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
+import { usePolicyWizardMode } from "../car-policy-wizard-mode-context";
 
 export function usePolicyLeaveGuard({
   policy,
-  readOnly,
-  isNew,
-  isFormTerminal,
   hasUnsavedChanges,
   hasUnsavedChangesRef,
   setHasUnsavedChanges,
@@ -21,11 +19,8 @@ export function usePolicyLeaveGuard({
   fetcher,
 }: {
   policy: Policy;
-  readOnly: boolean;
-  isNew: boolean;
-  isFormTerminal: boolean;
   hasUnsavedChanges: boolean;
-  hasUnsavedChangesRef: MutableRefObject<boolean>;
+  hasUnsavedChangesRef: RefObject<boolean>;
   setHasUnsavedChanges: (value: boolean) => void;
   saveDraftNow: () => Promise<boolean | void>;
   savePolicy: (overrides?: Partial<CarPolicyFormValues>) => Promise<boolean>;
@@ -54,6 +49,8 @@ export function usePolicyLeaveGuard({
   const allowLeaveRef = useRef(false);
   /** Where the user was headed when the leave dialog opened (survives blocker.reset). */
   const pendingLeaveDestinationRef = useRef<string | null>(null);
+
+  const { readOnly, isNew, isFormTerminal } = usePolicyWizardMode();
 
   // New policies: always confirm before leaving (avoids orphan drafts).
   // Existing policies: only block when there are unsaved edits.
@@ -148,33 +145,43 @@ export function usePolicyLeaveGuard({
     }
   }
 
+  async function saveAndLeaveForTerminalStatus() {
+    const ok = await savePolicy();
+    if (!ok) return false;
+    
+    setDiscardConfirmOpen(false);
+    if (blocker.state === "blocked") {
+      blocker.proceed();
+    } else {
+      navigate(
+        pendingLeaveDestinationRef.current ?? `/clients/${policy.clientId}`,
+      );
+    }
+    pendingLeaveDestinationRef.current = null;
+    return true;
+  }
+
+  async function saveAndLeaveForDraft() {
+    await saveDraftNow();
+  }
+
   async function saveAndLeave() {
     pendingLeaveAfterSaveRef.current = true;
     setPendingLeaveAfterSave(true);
+    
     try {
       if (isFormTerminal) {
-        const ok = await savePolicy();
-        if (!ok) {
+        const success = await saveAndLeaveForTerminalStatus();
+        if (!success) {
           pendingLeaveAfterSaveRef.current = false;
           setPendingLeaveAfterSave(false);
           return;
         }
-        pendingLeaveAfterSaveRef.current = false;
-        setPendingLeaveAfterSave(false);
-        setDiscardConfirmOpen(false);
-        if (blocker.state === "blocked") {
-          blocker.proceed();
-        } else {
-          navigate(
-            pendingLeaveDestinationRef.current ?? `/clients/${policy.clientId}`,
-          );
-        }
-        pendingLeaveDestinationRef.current = null;
-        return;
+      } else {
+        await saveAndLeaveForDraft();
       }
-      // Await the draft save. Leave navigation runs inside persistDraft on
-      // success; do not clear pending here if a follow-up save was queued.
-      await saveDraftNow();
+
+      // Clear pending state if not already cleared by save operations
       if (!pendingLeaveAfterSaveRef.current) {
         setPendingLeaveAfterSave(false);
       }

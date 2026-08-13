@@ -2,16 +2,16 @@ import { expect, type Page } from "@playwright/test";
 
 export const demoUsers = {
   broker: {
-    email: process.env.E2E_BROKER_EMAIL ?? "broker@demo.local",
-    password: process.env.E2E_BROKER_PASSWORD ?? "password123",
+    email:  "broker@demo.local",
+    password: "password123",
   },
   admin: {
-    email: process.env.E2E_ADMIN_EMAIL ?? "admin@demo.local",
-    password: process.env.E2E_ADMIN_PASSWORD ?? "password123",
+    email:  "admin@demo.local",
+    password: "password123",
   },
   superAdmin: {
-    email: process.env.E2E_SUPER_ADMIN_EMAIL ?? "",
-    password: process.env.E2E_SUPER_ADMIN_PASSWORD ?? "password123",
+    email:  "",
+    password: "password123",
   },
 } as const;
 
@@ -57,8 +57,33 @@ export async function logout(page: Page) {
   await expect(page).toHaveURL(/\/login/);
 }
 
-/** Intercept Resend-backed document email API for deterministic e2e. */
+/**
+ * Intercept Resend-backed document email API for deterministic e2e.
+ *
+ * Also neutralizes the app's `OfflineDialog` connectivity probe
+ * (`useNetworkStatus` → `fetch("/favicon.ico")`), which otherwise fails with
+ * "TypeError: Failed to fetch" as soon as *any* `page.route()` handler is
+ * registered on the page (a Playwright/CDP Fetch-domain interception quirk,
+ * not an app bug — the probe itself is fine outside of network interception).
+ * Without this, the resulting "No internet connection" dialog overlay blocks
+ * every subsequent click in the test.
+ */
 export async function mockResendEmailApi(page: Page) {
+  await page.addInitScript(() => {
+    const originalFetch = window.fetch.bind(window);
+    window.fetch = (input, init) => {
+      const url =
+        typeof input === "string"
+          ? input
+          : input instanceof Request
+            ? input.url
+            : String(input);
+      if (url.includes("/favicon.ico")) {
+        return Promise.resolve(new Response("", { status: 200 }));
+      }
+      return originalFetch(input, init);
+    };
+  });
   await page.route("**/api/policies/*/email-documents", async (route) => {
     if (route.request().method() !== "POST") {
       await route.continue();

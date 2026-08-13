@@ -8,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
+import { usePolicyWizardMode } from "./car-policy-wizard-mode-context";
 
 export type SubmitConfirmDialogProps = {
   open: boolean;
@@ -70,7 +71,6 @@ export function SubmitConfirmDialog({
 
 export type LeaveDiscardDialogProps = {
   open: boolean;
-  isNew: boolean;
   pendingLeaveAfterSave: boolean;
   discarding: boolean;
   onStay: () => void;
@@ -80,13 +80,13 @@ export type LeaveDiscardDialogProps = {
 
 export function LeaveDiscardDialog({
   open,
-  isNew,
   pendingLeaveAfterSave,
   discarding,
   onStay,
   onLeaveWithoutSaving,
   onSaveAndLeave,
 }: LeaveDiscardDialogProps) {
+  const { isNew } = usePolicyWizardMode();
   return (
     <Dialog
       open={open}

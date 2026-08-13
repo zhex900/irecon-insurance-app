@@ -11,6 +11,8 @@
     "types:documents-worker": "wrangler types --config wrangler.documents.jsonc --env-file workers/documents-local.env --env-interface DocumentWorkerEnv --include-runtime false workers/document-worker-env.d.ts",
     "dev": "react-router dev",
     "dev:documents-worker": "wrangler dev --config wrangler.documents.jsonc --env-file workers/documents-local.env",
+    "check:bundle": "npm run build && node scripts/simple-bundle-check.js",
+    "check:bundle:quick": "node scripts/simple-bundle-check.js",
     "db:start": "supabase start",
     "db:stop": "supabase stop",
     "db:status": "supabase status",
@@ -29,6 +31,10 @@
     "deploy": "node --env-file=.env.staging scripts/deploy-staging.mjs",
     "deploy:staging": "node --env-file=.env.staging scripts/deploy-staging.mjs",
     "deploy:documents:staging": "wrangler deploy --config wrangler.documents.jsonc",
+    "deploy:excel:staging": "wrangler deploy --config wrangler.excel.jsonc",
+    "dev:excel-worker": "wrangler dev --config wrangler.excel.jsonc",
+    "dev:all-workers": "node scripts/dev-all-workers.js",
+    "dev:both-workers": "bash scripts/start-both-workers.sh",
     "deploy:secret": "node --env-file=.env.staging scripts/deploy-staging.mjs --secret-only",
     "start": "react-router-serve ./build/server/index.js",
     "typecheck": "react-router typegen && tsc",
@@ -44,7 +50,7 @@
     "test:e2e:local": "E2E_SKIP_WEBSERVER=1 E2E_BASE_URL=http://localhost:5173 playwright test --project=e2e",
     "test:e2e:ui": "E2E_SKIP_WEBSERVER=1 E2E_BASE_URL=http://localhost:5173 playwright test --project=e2e --ui",
     "test:smoke": "playwright test --project=smoke",
-    "verify": "npm run lint && npm run format:check && npm run typecheck && npm run test:unit",
+    "verify": "npm run lint && npm run format:check && npm run typecheck && npm run test:unit && npm run check:bundle:quick",
     "prepare": "husky"
   },
   "lint-staged": {

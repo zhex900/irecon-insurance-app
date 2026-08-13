@@ -107,56 +107,60 @@ export async function upsertPolicyFromForm(
   },
   createdBy: string,
 ) {
-  const existing = await getPolicy(policyId);
-  if (!existing) throw new NotFoundError("Policy not found");
-  if (isTerminalStatus(existing.policyStatusId)) {
-    throw new PolicySaveError("This policy status cannot be changed.");
-  }
-
-  const { premium: calculatedPremium, rating } =
-    await calculatePremiumForPolicy(values);
-
-  // Prefer broker manual edits when provided; otherwise use the calculator.
-  const premium: PremiumBreakdown =
-    values.premium && typeof values.premium === "object"
-      ? {
-          ...calculatedPremium,
-          ...(values.premium as Partial<PremiumBreakdown>),
-        }
-      : calculatedPremium;
-
-  // Referral DH / ES use Limits of Liability fields, not premium lines.
-  const referralReasons = buildReferralReasons(
-    values,
-    rating,
-    liabilityLimitLabel(Number(values.liabilityLimitBand)),
-  );
-
-  if (
-    existing.policyStatusId !== POLICY_STATUS.Taken &&
-    values.policyStatusId === POLICY_STATUS.Taken
-  ) {
-    const takenErrors = getTakenStatusErrors(values, premium);
-    if (takenErrors.length > 0) {
-      throw new PolicySaveError(formatTakenStatusBlockMessage(takenErrors));
+  const { monitorCriticalOperation } = await import("~/lib/performance/internal-monitoring.server");
+  
+  return monitorCriticalOperation('policySubmit', async () => {
+    const existing = await getPolicy(policyId);
+    if (!existing) throw new NotFoundError("Policy not found");
+    if (isTerminalStatus(existing.policyStatusId)) {
+      throw new PolicySaveError("This policy status cannot be changed.");
     }
-  }
 
-  const policy = applyFormValues(existing, values, {
-    draft: false,
-    premium,
-    rating,
-    referralReasons,
-    notes: mergeReferralNotes(
-      existing.notes,
-      policyId,
+    const { premium: calculatedPremium, rating } =
+      await calculatePremiumForPolicy(values);
+
+    // Prefer broker manual edits when provided; otherwise use the calculator.
+    const premium: PremiumBreakdown =
+      values.premium && typeof values.premium === "object"
+        ? {
+            ...calculatedPremium,
+            ...(values.premium as Partial<PremiumBreakdown>),
+          }
+        : calculatedPremium;
+
+    // Referral DH / ES use Limits of Liability fields, not premium lines.
+    const referralReasons = buildReferralReasons(
+      values,
+      rating,
+      liabilityLimitLabel(Number(values.liabilityLimitBand)),
+    );
+
+    if (
+      existing.policyStatusId !== POLICY_STATUS.Taken &&
+      values.policyStatusId === POLICY_STATUS.Taken
+    ) {
+      const takenErrors = getTakenStatusErrors(values, premium);
+      if (takenErrors.length > 0) {
+        throw new PolicySaveError(formatTakenStatusBlockMessage(takenErrors));
+      }
+    }
+
+    const policy = applyFormValues(existing, values, {
+      draft: false,
+      premium,
+      rating,
       referralReasons,
-      createdBy,
-    ),
-  });
+      notes: mergeReferralNotes(
+        existing.notes,
+        policyId,
+        referralReasons,
+        createdBy,
+      ),
+    });
 
-  await assertPolicyNumberAvailable(policy, existing);
-  return savePolicy({ ...policy, isDraft: false }, { actor: createdBy });
+    await assertPolicyNumberAvailable(policy, existing);
+    return savePolicy({ ...policy, isDraft: false }, { actor: createdBy });
+  });
 }
 
 export async function applyPremiumCalculation(

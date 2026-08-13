@@ -5,7 +5,7 @@ import {
   endorsementPaintHeightForLinesMm,
   endorsementReserveHeightForLinesMm,
   splitLineCountsIntoPages,
-} from "~/lib/pdf/html-rich-text-lines";
+} from "~/lib/pdf/html-rich-text-geometry";
 
 describe("endorsement line packing", () => {
   const font = 9.5;

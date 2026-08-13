@@ -1,0 +1,1 @@
+This folder contains the built output assets for the worker "insurance-document-worker-staging" generated at 2026-08-13T05:10:33.032Z.

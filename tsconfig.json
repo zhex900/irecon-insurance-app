@@ -16,7 +16,8 @@
     "e2e",
     "tests",
     "vitest.config.ts",
-    "playwright.config.ts"
+    "playwright.config.ts",
+    "vite.config.ts"
   ],
   "compilerOptions": {
     "lib": ["DOM", "DOM.Iterable", "ES2022"],

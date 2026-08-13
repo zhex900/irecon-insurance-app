@@ -1,11 +1,12 @@
 import { useEffect, useRef } from "react";
+import { usePolicyWizardMode } from "../car-policy-wizard-mode-context";
 
 /** Cmd/Ctrl+S — same draft save path as blur autosave. */
 export function usePolicyDraftKeyboardSave(
-  fieldsLocked: boolean,
   saveDraftNow: () => void,
 ) {
   const saveDraftNowRef = useRef(saveDraftNow);
+  const { fieldsLocked } = usePolicyWizardMode();
 
   useEffect(() => {
     saveDraftNowRef.current = saveDraftNow;

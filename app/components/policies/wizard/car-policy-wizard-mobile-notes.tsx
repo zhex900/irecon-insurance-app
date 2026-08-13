@@ -1,13 +1,10 @@
 import { PolicyNotesCard } from "~/components/policies/policy-notes-card";
 import type { NoteAuthor } from "~/lib/services/users/service";
 import type { PolicyNote } from "~/lib/db/types";
-import {
-  wizardModeCardBorderClass,
-  type WizardMode,
-} from "./car-policy-wizard-shared";
+import { wizardModeCardBorderClass } from "./car-policy-wizard-shared";
+import { usePolicyWizardMode } from "./car-policy-wizard-mode-context";
 
 export function CarPolicyWizardMobileNotes({
-  wizardMode,
   notes,
   noteAuthors,
   policyIsDraft,
@@ -16,7 +13,6 @@ export function CarPolicyWizardMobileNotes({
   noteBusy,
   noteError,
 }: {
-  wizardMode: WizardMode;
   notes?: PolicyNote[];
   noteAuthors: Record<string, NoteAuthor>;
   policyIsDraft: boolean;
@@ -25,6 +21,7 @@ export function CarPolicyWizardMobileNotes({
   noteBusy: boolean;
   noteError: string | null;
 }) {
+  const { wizardMode } = usePolicyWizardMode();
   return (
     <PolicyNotesCard
       notes={notes ?? []}

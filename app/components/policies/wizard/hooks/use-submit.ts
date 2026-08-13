@@ -1,4 +1,4 @@
-import { useState, type MutableRefObject } from "react";
+import { useState, type RefObject } from "react";
 import type { useFetcher } from "react-router";
 import type { UseFormReturn } from "react-hook-form";
 import { toast } from "sonner";
@@ -21,6 +21,7 @@ import {
 } from "../step-memory";
 import type { PolicyWizardActionData } from "./use-premium-calc";
 import type { PolicyLeaveApi } from "./use-draft-save";
+import { INTENTS, SECTION_IDS } from "../constants";
 
 export function usePolicySubmit({
   policy,
@@ -48,7 +49,7 @@ export function usePolicySubmit({
   fetcher: ReturnType<typeof useFetcher<PolicyWizardActionData>>;
   step: number;
   premium: PremiumBreakdown | undefined;
-  premiumRef: MutableRefObject<PremiumBreakdown | undefined>;
+  premiumRef: RefObject<PremiumBreakdown | undefined>;
   setPremium: (premium: PremiumBreakdown | undefined) => void;
   setReferralReasons: (reasons: string[]) => void;
   regenerateDocumentsIfNeeded: (options?: {
@@ -62,10 +63,10 @@ export function usePolicySubmit({
   navigateToSection: (sectionId: string) => void;
   firstIssuePath: (fieldOrder?: string[]) => string | null;
   findStepForField: (path: string) => number | null;
-  pendingFocusPathRef: MutableRefObject<string | null>;
+  pendingFocusPathRef: RefObject<string | null>;
   getLeaveApi: () => PolicyLeaveApi | null;
-  savedSnapshotRef: MutableRefObject<string>;
-  hasUnsavedChangesRef: MutableRefObject<boolean>;
+  savedSnapshotRef: RefObject<string>;
+  hasUnsavedChangesRef: RefObject<boolean>;
   setHasUnsavedChanges: (value: boolean) => void;
 }) {
   const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
@@ -165,7 +166,7 @@ export function usePolicySubmit({
           PRICING_CONFIRMATION_STEP,
           PRICING_CONFIRMATION_STEP,
         );
-        rememberFocusSection(policy.policyId, "premium");
+        rememberFocusSection(policy.policyId, SECTION_IDS.PREMIUM);
       }
       return saved !== false;
     } finally {
@@ -176,7 +177,7 @@ export function usePolicySubmit({
   async function savePolicy(overrides?: Partial<CarPolicyFormValues>) {
     if (overrides) {
       for (const [key, value] of Object.entries(overrides)) {
-        form.setValue(key as keyof CarPolicyFormValues, value as never, {
+        form.setValue(key as keyof CarPolicyFormValues, value, {
           shouldDirty: true,
           shouldValidate: false,
         });
@@ -216,7 +217,7 @@ export function usePolicySubmit({
     hasUnsavedChangesRef.current = false;
     setHasUnsavedChanges(false);
     const body = new FormData();
-    body.set("intent", "save");
+    body.set("intent", INTENTS.SAVE);
     body.set("payload", payload);
     fetcher.submit(body, {
       method: "post",
@@ -238,7 +239,7 @@ export function usePolicySubmit({
           currentPremium?.contractWorksPlantPremium ?? 0,
       });
       if (takenErrors.length > 0) {
-        navigateToSection("premium");
+        navigateToSection(SECTION_IDS.PREMIUM);
         return;
       }
     }

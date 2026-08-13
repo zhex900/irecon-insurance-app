@@ -15,8 +15,6 @@ import {
   signInWithPassword,
 } from "~/lib/supabase/auth.server";
 import { writeAuditLog } from "~/lib/services/audit/service";
-import { publicErrorMessage } from "~/lib/http/public-error.server";
-import { trackUsage } from "~/lib/observability/metrics.server";
 import { getUser } from "~/lib/services/users/service";
 import type { Route } from "./+types/login";
 import { pageTitle } from "~/lib/brand";
@@ -75,10 +73,12 @@ export async function action({ request }: Route.ActionArgs) {
     const email = String(formData.get("email") ?? "").trim();
     const password = String(formData.get("password") ?? "");
     if (!email) {
+      const { trackUsage } = await import("~/lib/observability/metrics.server");
       trackUsage("auth.login", { result: "failure", reason: "missing_email" });
       return { error: "Email is required" };
     }
     if (!password) {
+      const { trackUsage } = await import("~/lib/observability/metrics.server");
       trackUsage("auth.login", {
         result: "failure",
         reason: "missing_password",
@@ -91,6 +91,7 @@ export async function action({ request }: Route.ActionArgs) {
         formData.get("cf-turnstile-response") ?? "",
       ).trim();
       if (!turnstileToken) {
+        const { trackUsage } = await import("~/lib/observability/metrics.server");
         trackUsage("auth.login", {
           result: "failure",
           reason: "turnstile_missing",
@@ -100,6 +101,7 @@ export async function action({ request }: Route.ActionArgs) {
 
       const secretKey = readTurnstileSecretKey();
       if (!secretKey) {
+        const { trackUsage } = await import("~/lib/observability/metrics.server");
         trackUsage("auth.login", {
           result: "failure",
           reason: "turnstile_unavailable",
@@ -115,6 +117,7 @@ export async function action({ request }: Route.ActionArgs) {
         clientIpFromRequest(request),
       );
       if (!turnstile.success) {
+        const { trackUsage } = await import("~/lib/observability/metrics.server");
         trackUsage("auth.login", {
           result: "failure",
           reason: "turnstile_failed",
@@ -125,19 +128,30 @@ export async function action({ request }: Route.ActionArgs) {
 
     const { data, error } = await signInWithPassword(email, password);
     if (error || !data.session || !data.user) {
+      const { trackUsage } = await import("~/lib/observability/metrics.server");
       trackUsage("auth.login", {
         result: "failure",
         reason: "invalid_credentials",
       });
+      
+      // Enhanced security logging for failed login
+      const { logAuthEvent } = await import("~/lib/security/basic-logging.server");
+      await logAuthEvent("failure", null, {
+        emailAttempted: email,
+        reason: "invalid_credentials",
+      }, request);
+      
       return { error: "Invalid email or password" };
     }
 
     const profile = await getUser(data.user.id);
     if (!profile) {
+      const { trackUsage } = await import("~/lib/observability/metrics.server");
       trackUsage("auth.login", { result: "failure", reason: "no_profile" });
       return { error: "No app profile for this account. Contact an admin." };
     }
     if (profile.disabled) {
+      const { trackUsage } = await import("~/lib/observability/metrics.server");
       trackUsage("auth.login", { result: "failure", reason: "disabled" });
       return { error: "This account is disabled. Contact an admin." };
     }
@@ -149,6 +163,13 @@ export async function action({ request }: Route.ActionArgs) {
       request,
     });
 
+    // Enhanced security logging for successful login
+    const { logAuthEvent } = await import("~/lib/security/basic-logging.server");
+    await logAuthEvent("success", profile, {
+      role: profile.role,
+    }, request);
+
+    const { trackUsage } = await import("~/lib/observability/metrics.server");
     trackUsage("auth.login", {
       result: "success",
       role: profile.role,
@@ -159,7 +180,9 @@ export async function action({ request }: Route.ActionArgs) {
     headers.set("Location", "/dashboard");
     return new Response(null, { status: 302, headers });
   } catch (error) {
+    const { trackUsage } = await import("~/lib/observability/metrics.server");
     trackUsage("auth.login", { result: "failure", reason: "exception" });
+    const { publicErrorMessage } = await import("~/lib/http/public-error.server");
     return {
       error: publicErrorMessage(error, {
         fallback: "Sign in failed. Try again shortly.",

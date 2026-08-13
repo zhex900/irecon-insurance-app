@@ -3,11 +3,11 @@ import { normalizeExcesses } from "~/lib/policies/excesses";
 import { normalizeSubLimits } from "~/lib/policies/sub-limits";
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
 
-export function policyToFormValues(policy: Policy): CarPolicyFormValues {
+export function policyToFormValues(policy: Policy): Partial<CarPolicyFormValues> {
   /** Draft DB rows use 0 as money placeholders — show empty until entered. */
   const blankZeros = Boolean(policy.isDraft);
-  const moneyOrEmpty = (value: number): number | ("" & {}) =>
-    blankZeros && value === 0 ? ("" as never) : value;
+  const moneyOrEmpty = (value: number): number | undefined =>
+    blankZeros && value === 0 ? undefined : value;
   /**
    * Sum-insured style amounts where 0 is a real answer ("none"), not a
    * draft placeholder — keep showing 0 even on drafts.
@@ -24,9 +24,9 @@ export function policyToFormValues(policy: Policy): CarPolicyFormValues {
     policyCategoryId: policy.policyCategoryId,
     policyNumber: policy.policyNumber,
     siteAddress: policy.car.siteAddress,
-    estimatedTurnover: moneyOrEmpty(policy.car.estimatedTurnover) as number,
+    estimatedTurnover: moneyOrEmpty(policy.car.estimatedTurnover),
     postcode: policy.postcode,
-    stateId: (policy.stateId === 0 ? "" : policy.stateId) as number,
+    stateId: policy.stateId === 0 ? undefined : policy.stateId,
     businessActivities: policy.car.businessActivities,
     insuredContracts: policy.car.insuredContracts,
     geographicalScopes: policy.car.geographicalScopes,
@@ -36,13 +36,11 @@ export function policyToFormValues(policy: Policy): CarPolicyFormValues {
     dateEnd: policy.dateEnd,
     hasExistingContractWorksCover: policy.car.hasExistingContractWorksCover,
     currentInsurer: policy.car.currentInsurer,
-    contractWorksSumInsured: moneyOrEmpty(
-      policy.car.contractWorksSumInsured,
-    ) as number,
+    contractWorksSumInsured: moneyOrEmpty(policy.car.contractWorksSumInsured),
     displayHomes: moneyKeepZero(policy.car.displayHomes),
     existingStructure: moneyKeepZero(policy.car.existingStructure),
-    section1DisplayHomes: "" as never,
-    section1ExistingStructure: "" as never,
+    section1DisplayHomes: undefined,
+    section1ExistingStructure: undefined,
     plantEquipment: moneyKeepZero(policy.car.plantEquipment),
     liabilityLimitBand: policy.car.liabilityLimitBand,
     // 0 is a real answer ("no claims") — never treat as an empty placeholder.

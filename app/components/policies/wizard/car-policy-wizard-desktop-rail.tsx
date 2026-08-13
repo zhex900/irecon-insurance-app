@@ -2,14 +2,10 @@ import { PolicyNotesCard } from "~/components/policies/policy-notes-card";
 import { PolicySectionNav } from "~/components/policies/policy-form-layout";
 import type { NoteAuthor } from "~/lib/services/users/service";
 import type { PolicyNote } from "~/lib/db/types";
-import {
-  wizardModeCardBorderClass,
-  type WizardMode,
-} from "./car-policy-wizard-shared";
+import { wizardModeCardBorderClass } from "./car-policy-wizard-shared";
+import { usePolicyWizardMode } from "./car-policy-wizard-mode-context";
 
 export type CarPolicyWizardDesktopRailProps = {
-  wizardMode: WizardMode;
-  isNew: boolean;
   navItems: { id: string; label: string }[];
   activeSectionId: string;
   openMap: Record<string, boolean>;
@@ -29,8 +25,6 @@ export type CarPolicyWizardDesktopRailProps = {
 };
 
 export function CarPolicyWizardDesktopRail({
-  wizardMode,
-  isNew,
   navItems,
   activeSectionId,
   openMap,
@@ -48,6 +42,7 @@ export function CarPolicyWizardDesktopRail({
   noteBusy,
   noteError,
 }: CarPolicyWizardDesktopRailProps) {
+  const { wizardMode, isNew } = usePolicyWizardMode();
   return (
     <aside className="hidden min-h-0 xl:flex xl:h-full xl:flex-col xl:gap-4 xl:overflow-hidden">
       <div className="shrink-0">

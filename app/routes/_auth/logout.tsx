@@ -14,6 +14,10 @@ async function logout(request: Request) {
       summary: `Signed out ${user.email}`,
       request,
     });
+    
+    // Enhanced security logging for logout
+    const { logAuthEvent } = await import("~/lib/security/basic-logging.server");
+    await logAuthEvent("logout", user, {}, request);
   }
   const headers = destroySessionCookieHeaders(new Headers(), request);
   const reason = new URL(request.url).searchParams.get("reason");

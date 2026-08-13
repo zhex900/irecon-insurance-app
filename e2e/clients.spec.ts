@@ -11,7 +11,7 @@ test.describe("clients", () => {
 
     await page.goto("/clients");
     await page.getByRole("button", { name: /new client/i }).click();
-    await expect(page).toHaveURL(/\/clients\/\d+\/edit/);
+    await expect(page).toHaveURL(/\/clients\/[^/]+\/edit/);
 
     await page.getByLabel(/registered name/i).fill(registeredName);
     await page.getByLabel(/trading name/i).fill(tradingName);

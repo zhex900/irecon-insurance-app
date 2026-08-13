@@ -131,6 +131,7 @@ export default tseslint.config(
       "app/components/forms/field-save-highlight.tsx",
       "app/components/policies/policy-form-layout.tsx",
       "app/components/policies/wizard/section-shared.tsx",
+      "app/components/policies/wizard/car-policy-wizard-mode-context.tsx",
     ],
     rules: {
       "react-refresh/only-export-components": "off",

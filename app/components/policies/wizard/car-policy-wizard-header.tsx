@@ -3,17 +3,16 @@ import { StatusBadge } from "~/components/ui/status-badge";
 import { PolicyStickyHeader } from "~/components/policies/policy-form-layout";
 import type { PolicySaveStatus } from "~/components/forms/field-save-highlight";
 import { PolicySaveStatusBadge } from "~/components/forms/field-save-highlight";
-import { MobileSectionNav } from "./section-stack";
+import { MobileSectionNav } from "./mobile-section-nav";
 import {
   wizardModeBadge,
   wizardModeHeaderClass,
-  type WizardMode,
 } from "./car-policy-wizard-shared";
+import { usePolicyWizardMode } from "./car-policy-wizard-mode-context";
 import { cn } from "~/lib/utils";
 import type { ReactNode } from "react";
 
 export type CarPolicyWizardHeaderProps = {
-  wizardMode: WizardMode;
   policyNumber: string;
   clientId: string;
   clientName: string;
@@ -22,8 +21,6 @@ export type CarPolicyWizardHeaderProps = {
   saveStatus: PolicySaveStatus;
   adjusted: boolean;
   headerActions?: ReactNode;
-  readOnly: boolean;
-  isFormTerminal: boolean;
   submitDisabled: boolean;
   submitBusy: boolean;
   onRequestSubmit: () => void;
@@ -35,7 +32,6 @@ export type CarPolicyWizardHeaderProps = {
 };
 
 export function CarPolicyWizardHeader({
-  wizardMode,
   policyNumber,
   clientId,
   clientName,
@@ -44,8 +40,6 @@ export function CarPolicyWizardHeader({
   saveStatus,
   adjusted,
   headerActions,
-  readOnly,
-  isFormTerminal,
   submitDisabled,
   submitBusy,
   onRequestSubmit,
@@ -55,6 +49,7 @@ export function CarPolicyWizardHeader({
   sectionIssueCounts,
   onNavigateToSectionFirstIssue,
 }: CarPolicyWizardHeaderProps) {
+  const { wizardMode, canShowSubmitButton } = usePolicyWizardMode();
   return (
     <div
       className={cn(
@@ -94,7 +89,7 @@ export function CarPolicyWizardHeader({
         adjusted={adjusted}
         actions={headerActions}
         expandControl={
-          !readOnly && !isFormTerminal ? (
+          canShowSubmitButton ? (
             <LoadingButton
               type="button"
               size="sm"

@@ -3,7 +3,7 @@ import {
   useEffect,
   useRef,
   useState,
-  type MutableRefObject,
+  type RefObject,
 } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { useRouteLoaderData } from "react-router";
@@ -16,7 +16,6 @@ import type {
 } from "~/lib/db/types";
 import type { BrokerFeeLineInput } from "~/lib/pdf/merge-fields";
 import {
-  buildPremiumExcelDocument,
   downloadPremiumExcelDocument,
   latestPremiumExcelDocument,
   premiumExcelExportEnabled,
@@ -51,9 +50,9 @@ export function usePolicyDocuments({
   form: UseFormReturn<CarPolicyFormValues>;
   premium: PremiumBreakdown | undefined;
   /** Latest premium including in-flight manual edits (preferred over state). */
-  premiumRef: MutableRefObject<PremiumBreakdown | undefined>;
+  premiumRef: RefObject<PremiumBreakdown | undefined>;
   /** Session Premium Breakdown keys the broker click-edited. */
-  premiumManualKeysRef: MutableRefObject<string[]>;
+  premiumManualKeysRef: RefObject<string[]>;
   referralReasons: string[];
   rating: Policy["car"]["rating"] | undefined;
   /** Fixed Additional Wording catalogue (checkbox list). */
@@ -281,13 +280,28 @@ export function usePolicyDocuments({
         // Fingerprint matched but bytes missing — fall through and rebuild.
       }
 
-      const doc = await buildPremiumExcelDocument({
-        policy: snapshot,
-        premium: snapshot.car.premium,
-        rating: snapshot.car.rating,
-        generatedBy,
-        existing: documentsRef.current,
+      // Call API endpoint for Excel generation
+      const response = await fetch("/api/generate-excel", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          policy: snapshot,
+          premium: snapshot.car.premium,
+          rating: snapshot.car.rating,
+          generatedBy,
+          existing: documentsRef.current,
+        }),
       });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to generate Excel");
+      }
+      
+      const result = await response.json();
+      const doc = result.document;
       // Download as soon as generation succeeds. Persistence is useful for the
       // Documents history, but a storage/API failure must not block the export.
       downloadPremiumExcelDocument(doc);

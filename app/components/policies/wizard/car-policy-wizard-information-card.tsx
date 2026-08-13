@@ -3,7 +3,9 @@ import { PolicyInformationCard } from "~/components/policies/policy-form-layout"
 import { getTakenStatusIssues } from "~/lib/policies/taken-status";
 import { POLICY_STATUS, type CarPolicyFormValues } from "~/lib/zod/policy-car";
 import type { Policy, PremiumBreakdown, ReferenceData } from "~/lib/db/types";
-import type { MutableRefObject } from "react";
+import type { RefObject } from "react";
+import { usePolicyWizardMode } from "./car-policy-wizard-mode-context";
+import { SECTION_IDS } from "./constants";
 
 export type CarPolicyWizardInformationCardProps = {
   policy: Policy;
@@ -12,11 +14,9 @@ export type CarPolicyWizardInformationCardProps = {
   selectedStatusId: number;
   selectedStatusName: string;
   canChangeStatus: boolean;
-  /** When false (Taken / Not taken, or read-only view), policy number is display-only. */
-  policyNumberEditable: boolean;
   onPolicyNumberBlur?: () => void;
   premium: PremiumBreakdown | undefined;
-  premiumRef: MutableRefObject<PremiumBreakdown | undefined>;
+  premiumRef: RefObject<PremiumBreakdown | undefined>;
   isFetcherBusy: boolean;
   isCalculating: boolean;
   className?: string;
@@ -32,7 +32,6 @@ export function CarPolicyWizardInformationCard({
   selectedStatusId,
   selectedStatusName,
   canChangeStatus,
-  policyNumberEditable,
   onPolicyNumberBlur,
   premium,
   premiumRef,
@@ -43,6 +42,7 @@ export function CarPolicyWizardInformationCard({
   onOpenPremiumSection,
   onMarkAttentionPaths,
 }: CarPolicyWizardInformationCardProps) {
+  const { policyNumberEditable } = usePolicyWizardMode();
   const form = useFormContext<CarPolicyFormValues>();
   const policyNumber = form.watch("policyNumber") || policy.policyNumber;
   const policyNumberError = form.formState.errors.policyNumber?.message;
@@ -105,7 +105,7 @@ export function CarPolicyWizardInformationCard({
           const target =
             (firstKey
               ? document.getElementById(`premium-row-${firstKey}`)
-              : null) ?? document.getElementById("premium");
+              : null) ?? document.getElementById(SECTION_IDS.PREMIUM);
           target?.scrollIntoView({ behavior: "smooth", block: "center" });
         }, 120);
       }}
