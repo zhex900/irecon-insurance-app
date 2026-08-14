@@ -3,7 +3,7 @@
  */
 
 import type { ExcelWorkerEnv } from "../types/env";
-import type { ZodSchema } from "zod";
+import type { z } from "zod";
 type WorkerEnv = { [key: string]: unknown } & ExcelWorkerEnv;
 import {
   excelWorkerRequestSchema,
@@ -28,7 +28,7 @@ export type RouteHandler = (
 export interface Route {
   method: string;
   path: string;
-  schema?: ZodSchema; // Zod schema for validation
+  schema?: z.ZodTypeAny; // Zod schema for validation
   handler: RouteHandler;
   requireAuth?: boolean;
   requireSignedRequest?: boolean;
@@ -40,39 +40,32 @@ import type { BuildPremiumExcelInput } from "../services/excel-types";
 /**
  * Generate premium Excel workbook
  */
-async function handleGeneratePremiumWorkbook(
-  request: Request,
+export async function handleGeneratePremiumWorkbook(
+  requestData: {
+    reportType: string;
+    data: {
+      policy: Policy;
+      premium: PremiumBreakdown;
+      rating?: RatingSnapshot;
+      adjustment?: AdjustmentBreakdown;
+    };
+    options?: Record<string, unknown>;
+  },
   env: WorkerEnv,
-  validatedData?: unknown,
 ): Promise<Response> {
   try {
     // Import services dynamically to avoid initial load time
     const { buildPremiumExcelWorkbook } = await import("../services");
 
-    if (!validatedData) {
-      return new Response(JSON.stringify({ error: "Missing request data" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    // Extract data from excelWorkerRequestSchema format
-    const requestData = validatedData as {
-      reportType: string;
-      data: {
-        policy: Policy;
-        premium: PremiumBreakdown;
-        rating?: RatingSnapshot;
-        adjustment?: AdjustmentBreakdown;
-      };
-      options?: Record<string, unknown>;
-    };
-
     // Validate that we have premium workbook data
     if (requestData.reportType !== "premiumWorkbook") {
       return new Response(
         JSON.stringify({
-          error: "Invalid report type, expected premiumWorkbook",
+          error:
+            "Invalid report type, expected premiumWorkbook, got " +
+            requestData.reportType +
+            " " +
+            JSON.stringify(requestData),
         }),
         { status: 400, headers: { "Content-Type": "application/json" } },
       );
@@ -262,14 +255,14 @@ async function handleGenericExcel(
  * Main route definitions
  */
 export const routes: Route[] = [
-  {
-    method: "POST",
-    path: "/api/excel/generate",
-    schema: excelWorkerRequestSchema,
-    handler: handleGeneratePremiumWorkbook,
-    requireAuth: false,
-    requireSignedRequest: false,
-  },
+  // {
+  //   method: "POST",
+  //   path: "/api/excel/generate",
+  //   schema: excelWorkerRequestSchema,
+  //   handler: handleGeneratePremiumWorkbook,
+  //   requireAuth: false,
+  //   requireSignedRequest: false,
+  // },
   {
     method: "GET",
     path: "/health",

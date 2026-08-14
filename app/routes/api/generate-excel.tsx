@@ -5,8 +5,9 @@ import {
   PREMIUM_EXCEL_TEMPLATE_KEY,
   PREMIUM_EXCEL_FILENAME_PREFIX,
 } from "~/lib/excel/constants";
+import { cloudflareContext } from "~/lib/cloudflare.server";
 
-export async function action({ request }: ActionFunctionArgs) {
+export async function action({ request, context }: ActionFunctionArgs) {
   if (request.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
   }
@@ -16,12 +17,21 @@ export async function action({ request }: ActionFunctionArgs) {
 
   try {
     const body = await request.json();
+    const { env } = context.get(cloudflareContext);
+    const excelService = env.EXCEL_SERVICE;
+
+    if (!excelService) {
+      return Response.json(
+        { error: "Excel service not found" },
+        { status: 500 },
+      );
+    }
 
     const { policy, premium, rating, generatedBy, existing } = body;
 
     // Always use Excel worker for generation
     // The worker wrapper handles calling the external Excel worker service
-    const bytes = await workerBuild({
+    const bytes = await workerBuild(excelService, {
       policy,
       premium,
       rating,

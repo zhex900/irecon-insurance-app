@@ -3,10 +3,26 @@ import type {
   ExcelWorkerRequest,
   ExcelWorkerResponse,
 } from "../../../workers/excel/types/schemas";
-import type { Policy, PremiumBreakdown } from "~/lib/db/types";
+import type {
+  AdjustmentBreakdown,
+  Policy,
+  PremiumBreakdown,
+  RatingSnapshot,
+} from "~/lib/db/types";
 
 export type ExcelServiceBinding = {
   fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
+  hello(request: string): Promise<Response>;
+  generatePremiumExcel(requestData: {
+    reportType: string;
+    data: {
+      policy: Policy;
+      premium: PremiumBreakdown;
+      rating?: RatingSnapshot;
+      adjustment?: AdjustmentBreakdown;
+    };
+    options?: Record<string, unknown>;
+  }): Promise<Response>;
 };
 
 export class ExcelServiceError extends Error {

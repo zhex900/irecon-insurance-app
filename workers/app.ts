@@ -51,6 +51,7 @@ function applyDatabaseEnv(env: Env) {
     process.env.SESSION_ABSOLUTE_TIMEOUT_HOURS =
       env.SESSION_ABSOLUTE_TIMEOUT_HOURS;
   }
+  
 }
 
 const handler = {

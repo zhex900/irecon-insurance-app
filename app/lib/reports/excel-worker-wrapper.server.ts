@@ -9,16 +9,17 @@
 
 import type { ReportExcelColumn } from "./report-excel.server";
 import type {
-  Policy,
-  PremiumBreakdown,
-  RatingSnapshot,
-  AdjustmentBreakdown,
-} from "~/lib/types/excel-worker-types";
+  Policy as DbPolicy,
+  PremiumBreakdown as DbPremiumBreakdown,
+  RatingSnapshot as DbRatingSnapshot,
+  AdjustmentBreakdown as DbAdjustmentBreakdown,
+} from "~/lib/db/types";
 
 import { logger } from "~/lib/observability/logger.server";
 import { ExternalServiceError } from "~/lib/errors";
 import { EXCEL_CONTENT_TYPE } from "~/lib/excel/constants";
 import { DEFAULT_EXCEL_WORKER_CONFIG } from "~/lib/excel/constants.server";
+import type { ExcelServiceBinding } from "./excel-worker.client.server";
 
 export interface ExcelWorkerOptions {
   /** Excel Worker service URL */
@@ -35,10 +36,10 @@ export interface ExcelWorkerOptions {
  * Premium Excel workbook input type
  */
 export interface BuildPremiumExcelInput {
-  policy: Policy;
-  premium: PremiumBreakdown;
-  rating?: RatingSnapshot;
-  adjustment?: AdjustmentBreakdown;
+  policy: DbPolicy;
+  premium: DbPremiumBreakdown;
+  rating?: DbRatingSnapshot;
+  adjustment?: DbAdjustmentBreakdown;
   generatedBy: string;
   appVersion?: string;
 }
@@ -285,6 +286,7 @@ export function reportExcelResponse(
  * Drop-in replacement for buildPremiumExcelWorkbook
  */
 export async function buildPremiumExcelWorkbook(
+  excelService: ExcelServiceBinding,
   input: BuildPremiumExcelInput,
   workerOptions: ExcelWorkerOptions = {},
 ): Promise<Uint8Array> {
@@ -294,7 +296,7 @@ export async function buildPremiumExcelWorkbook(
   } as Required<ExcelWorkerOptions>;
 
   // Call Excel Worker service for premium workbook
-  const response = await callExcelWorkerForPremium(input, config);
+  const response = await callExcelWorkerForPremium(input, config, excelService);
 
   return new Uint8Array(response);
 }
@@ -305,6 +307,7 @@ export async function buildPremiumExcelWorkbook(
 async function callExcelWorkerForPremium(
   input: BuildPremiumExcelInput,
   config: Required<ExcelWorkerOptions>,
+  excelService: ExcelServiceBinding,
 ): Promise<ArrayBuffer> {
   const startTime = Date.now();
 
@@ -312,10 +315,10 @@ async function callExcelWorkerForPremium(
   const requestBody = {
     reportType: "premiumWorkbook" as const,
     data: {
-      policy: input.policy,
-      premium: input.premium,
-      rating: input.rating,
-      adjustment: input.adjustment,
+      policy: input.policy as DbPolicy, // Cast to the expected DbPolicy type
+      premium: input.premium as DbPremiumBreakdown,
+      rating: input.rating as DbRatingSnapshot | undefined,
+      adjustment: input.adjustment as DbAdjustmentBreakdown | undefined,
     },
     options: {
       premiumWorkbook: {
@@ -330,17 +333,7 @@ async function callExcelWorkerForPremium(
   const timeoutId = setTimeout(() => controller.abort(), config.timeoutMs);
 
   try {
-    const response = await fetch(
-      `${config.excelWorkerUrl}/api/excel/generate`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestBody),
-        signal: controller.signal,
-      },
-    );
+    const response = await excelService.generatePremiumExcel(requestBody);
 
     clearTimeout(timeoutId);
 
