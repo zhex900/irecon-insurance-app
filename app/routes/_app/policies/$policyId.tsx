@@ -10,7 +10,7 @@ import {
 } from "react-router";
 import { toast } from "sonner";
 import { CopyIcon, SlidersHorizontalIcon, Trash2Icon } from "lucide-react";
-import { CarPolicyWizard } from "~/components/policies/wizard/car-policy-wizard";
+import { Wizard as CarPolicyWizard } from "~/components/policies/wizard/wizard";
 import {
   allowWizardLeave,
   clearWizardStepState,

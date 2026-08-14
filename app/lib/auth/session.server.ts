@@ -16,9 +16,7 @@ import type { AppUser } from "~/lib/db/types";
 
 export type SessionEndReason = "inactivity" | "absolute";
 
-export async function getSessionAppUser(
-  request: Request,
-): Promise<{
+export async function getSessionAppUser(request: Request): Promise<{
   user: AppUser | null;
   setCookieHeaders?: Headers;
   sessionEndReason?: SessionEndReason;
@@ -27,10 +25,7 @@ export async function getSessionAppUser(
   if (!authUser) return { user: null };
 
   const timing = readSessionTiming(request);
-  const timeout = evaluateSessionTimeout(
-    timing,
-    readSessionTimeoutConfig(),
-  );
+  const timeout = evaluateSessionTimeout(timing, readSessionTimeoutConfig());
   if (!timeout.ok) {
     trackUsage("auth.session_end", { reason: timeout.reason });
     const headers = new Headers();

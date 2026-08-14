@@ -4,7 +4,6 @@
  */
 
 import {
-  GST_RATE,
   PLANT_CERTIFICATE_TURNOVER_LIMIT,
   TERROR_START_DATE,
   VERSION_21_START_DATE,
@@ -87,7 +86,7 @@ export function plantPremium({
         ],
       };
     }
-    
+
     if (plantEquipment > plantValueMax) {
       const value = roundMoney(plantRate * (plantValueMax - plantValueMin));
       return {
@@ -102,7 +101,7 @@ export function plantPremium({
         ],
       };
     }
-    
+
     const value = roundMoney(plantRate * (plantEquipment - plantValueMin));
     return {
       value,
@@ -132,7 +131,7 @@ export function plantPremium({
       ],
     };
   }
-  
+
   const value = roundMoney(plantRate * plantEquipment);
   return {
     value,
@@ -167,13 +166,13 @@ export function getPlantPremiumRuleDescription({
   if (certificateDate >= VERSION_21_START_DATE) {
     return "Certificate date ≥ 2023-01-01";
   }
-  
+
   if (
     certificateDate < TERROR_START_DATE ||
     contractWorksSumInsured <= PLANT_CERTIFICATE_TURNOVER_LIMIT
   ) {
     return "Banded plant calculation with first band free";
   }
-  
+
   return "Post-terror, contract works > $2.5M";
 }

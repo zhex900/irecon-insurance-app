@@ -1,0 +1,39 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "insurance-documents-ui-staging",
+  "main": "./src/index.ts",
+  "compatibility_date": "2026-07-20",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "preview_urls": false,
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "destinations": ["sentry-logs"],
+    },
+    "traces": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "destinations": ["sentry-traces"],
+    },
+  },
+  "assets": {
+    "directory": "../../public/fonts",
+    "binding": "ASSETS",
+    "run_worker_first": true,
+  },
+  "vars": {
+    "APP_URL": "https://insurance.example.com",
+    "MAIN_WORKER_URL": "https://portal-staging.example.com",
+    "SUPABASE_URL": "{{ secrets.SUPABASE_URL }}",
+    "SUPABASE_ANON_KEY": "{{ secrets.SUPABASE_ANON_KEY }}",
+  },
+  "r2_buckets": [
+    {
+      "binding": "TEMPLATES",
+      "bucket_name": "insurance-app-templates",
+    },
+  ],
+}

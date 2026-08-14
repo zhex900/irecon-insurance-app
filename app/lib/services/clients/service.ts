@@ -119,9 +119,10 @@ export type ClientWritable = Omit<
 >;
 
 export async function createClient(input: ClientWritable, createdBy: string) {
-  const { monitorCriticalOperation } = await import("~/lib/performance/internal-monitoring.server");
-  
-  return monitorCriticalOperation('clientCreation', async () => {
+  const { monitorCriticalOperation } =
+    await import("~/lib/performance/internal-monitoring.server");
+
+  return monitorCriticalOperation("clientCreation", async () => {
     const db = getDb();
     const [created] = await db
       .insert(client)
@@ -130,11 +131,11 @@ export async function createClient(input: ClientWritable, createdBy: string) {
         createdBy,
       })
       .returning();
-    
+
     if (!created) {
       throw new ConflictError("Failed to create client");
     }
-    
+
     trackUsage("client.create", {
       draft: !input.name?.trim(),
     });

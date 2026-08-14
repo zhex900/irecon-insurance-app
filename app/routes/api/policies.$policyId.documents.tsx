@@ -28,6 +28,7 @@ const policyDocumentSchema = z
     pdfBase64: z.string().max(MAX_PDF_BASE64_LENGTH).optional(),
     generatedWhen: z.string().max(100),
     generatedBy: z.string().max(500),
+    documentTypeCode: z.string().trim().max(50).optional(),
   })
   .strict();
 

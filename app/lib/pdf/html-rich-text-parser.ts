@@ -92,17 +92,17 @@ export interface HtmlToken {
 export function tokenizeHtml(html: string): HtmlToken[] {
   const tokens: HtmlToken[] = [];
   let pos = 0;
-  
+
   while (pos < html.length) {
     // Skip whitespace between tokens
-    if (html[pos] === ' ') {
+    if (html[pos] === " ") {
       pos++;
       continue;
     }
-    
+
     // Handle comments
-    if (html.substr(pos, 4) === '<!--') {
-      const endPos = html.indexOf('-->', pos);
+    if (html.substr(pos, 4) === "<!--") {
+      const endPos = html.indexOf("-->", pos);
       if (endPos === -1) break;
       tokens.push({
         type: "comment",
@@ -111,25 +111,25 @@ export function tokenizeHtml(html: string): HtmlToken[] {
       pos = endPos + 3;
       continue;
     }
-    
+
     // Handle opening tags
-    if (html[pos] === '<' && html[pos + 1] !== '/') {
-      const endPos = html.indexOf('>', pos);
+    if (html[pos] === "<" && html[pos + 1] !== "/") {
+      const endPos = html.indexOf(">", pos);
       if (endPos === -1) break;
-      
+
       const tagContent = html.substring(pos + 1, endPos).trim();
-      const spaceIndex = tagContent.indexOf(' ');
-      
-      let tag = tagContent;
+      const spaceIndex = tagContent.indexOf(" ");
+
+      let tag: string;
       let attrs = "";
-      
+
       if (spaceIndex !== -1) {
         tag = tagContent.substring(0, spaceIndex).toLowerCase();
         attrs = tagContent.substring(spaceIndex + 1);
       } else {
         tag = tagContent.toLowerCase();
       }
-      
+
       tokens.push({
         type: "tag-open",
         tag,
@@ -138,13 +138,16 @@ export function tokenizeHtml(html: string): HtmlToken[] {
       pos = endPos + 1;
       continue;
     }
-    
+
     // Handle closing tags
-    if (html[pos] === '<' && html[pos + 1] === '/') {
-      const endPos = html.indexOf('>', pos);
+    if (html[pos] === "<" && html[pos + 1] === "/") {
+      const endPos = html.indexOf(">", pos);
       if (endPos === -1) break;
-      
-      const tag = html.substring(pos + 2, endPos).trim().toLowerCase();
+
+      const tag = html
+        .substring(pos + 2, endPos)
+        .trim()
+        .toLowerCase();
       tokens.push({
         type: "tag-close",
         tag,
@@ -152,9 +155,9 @@ export function tokenizeHtml(html: string): HtmlToken[] {
       pos = endPos + 1;
       continue;
     }
-    
+
     // Handle text content
-    const nextTagPos = html.indexOf('<', pos);
+    const nextTagPos = html.indexOf("<", pos);
     if (nextTagPos === -1) {
       // No more tags, rest is text
       const text = html.substring(pos);
@@ -166,7 +169,7 @@ export function tokenizeHtml(html: string): HtmlToken[] {
       }
       break;
     }
-    
+
     if (nextTagPos > pos) {
       const text = html.substring(pos, nextTagPos);
       if (text.trim()) {
@@ -178,7 +181,7 @@ export function tokenizeHtml(html: string): HtmlToken[] {
       pos = nextTagPos;
     }
   }
-  
+
   return tokens;
 }
 
@@ -197,7 +200,10 @@ export function extractListStyle(attrs: string): WordingListStyle | null {
 /**
  * Get default list marker for a tag type.
  */
-export function getDefaultListMarker(tag: string, listStyle: WordingListStyle | null): string {
+export function getDefaultListMarker(
+  tag: string,
+  listStyle: WordingListStyle | null,
+): string {
   if (tag === "ol" && listStyle) {
     return formatWordingListMarker(listStyle, 1);
   }

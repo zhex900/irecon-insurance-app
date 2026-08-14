@@ -37,16 +37,16 @@ export type DrawLine = {
   listGroupId?: number;
 };
 
-import { decodeEntities, readAttr, parseStyleDecls, cloneStyle } from "./html-utils";
+import {
+  decodeEntities,
+  readAttr,
+  parseStyleDecls,
+  cloneStyle,
+} from "./html-utils";
+
 import {
   heuristicTextWidthPt,
-  endorsementPaintTopInsetMm,
-  endorsementLineStepMm,
-  minEndorsementPaintBandMm,
-  endorsementPaintHeightForLinesMm,
   endorsementReserveHeightForLinesMm,
-  endorsementDrawBoxBottomMm,
-  countLinesFittingInBandMm,
 } from "~/lib/pdf/html-rich-text-geometry";
 
 export type HtmlToDrawLinesOptions = {
@@ -451,8 +451,6 @@ export function lineHasInk(line: DrawLine): boolean {
   return Boolean(line.marker) || line.runs.some((r) => r.text.trim());
 }
 
-
-
 export function wordingHtmlLineCount(
   html: string,
   widthMm: number,
@@ -485,8 +483,8 @@ export function estimateWordingHtmlHeightMm(
  */
 
 // Re-export geometry functions for backward compatibility
+// Re-export geometry functions for backward compatibility
 export {
-  heuristicTextWidthPt,
   endorsementPaintTopInsetMm,
   endorsementLineStepMm,
   minEndorsementPaintBandMm,

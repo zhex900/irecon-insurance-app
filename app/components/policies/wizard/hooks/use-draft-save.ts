@@ -5,11 +5,7 @@ import { useDraftFieldWatching } from "./use-draft-field-watching";
 import { useDraftSaveOperations } from "./use-draft-save-operations";
 
 export function usePolicyDraftSave(props: UseDraftSaveProps) {
-  const {
-    form,
-    premiumRef,
-    premiumManualKeysRef,
-  } = props;
+  const { form, premiumRef, premiumManualKeysRef } = props;
 
   // State management
   const {
@@ -30,7 +26,7 @@ export function usePolicyDraftSave(props: UseDraftSaveProps) {
     lastHandledSavedAtRef,
     pendingDraftPayloadRef,
     pendingDirtyPathsRef,
-    lastStatusRef,
+    lastStatusRef: _lastStatusRef,
     saveEpochTracker,
     savedSnapshotRef,
     previousSnapshotRef,

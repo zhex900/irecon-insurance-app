@@ -1,21 +1,22 @@
-import { useEffect, useRef, useState } from "react";
-import { usePolicyWizardMode } from "../car-policy-wizard-mode-context";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useMode } from "./use-mode";
 import type { PolicySaveStatus } from "~/components/forms/field-save-highlight";
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
 import type { PremiumBreakdown } from "~/lib/db/types";
 import { SaveEpochTracker } from "./use-draft-save-utils";
+import type { UseFormReturn } from "react-hook-form";
 
 export function useDraftStateManagement({
-  form,
-  premiumRef,
-  premiumManualKeysRef,
+  form: _form,
+  premiumRef: _premiumRef,
+  premiumManualKeysRef: _premiumManualKeysRef,
 }: {
-  form: any;
+  form: UseFormReturn<CarPolicyFormValues>;
   premiumRef: React.RefObject<PremiumBreakdown | undefined>;
   premiumManualKeysRef: React.RefObject<string[]>;
 }) {
-  const { fieldsLocked } = usePolicyWizardMode();
-  
+  const { fieldsLocked } = useMode();
+
   // State
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
   const [draftSaveError, setDraftSaveError] = useState<string | null>(null);
@@ -45,12 +46,15 @@ export function useDraftStateManagement({
   }, [hasUnsavedChanges]);
 
   // Save status management
-  function publishSaveStatus(status: PolicySaveStatus) {
-    if (fieldsLocked) return;
-    if (lastStatusRef.current === status) return;
-    lastStatusRef.current = status;
-    setSaveStatus(status);
-  }
+  const publishSaveStatus = useCallback(
+    (status: PolicySaveStatus) => {
+      if (fieldsLocked) return;
+      if (lastStatusRef.current === status) return;
+      lastStatusRef.current = status;
+      setSaveStatus(status);
+    },
+    [fieldsLocked],
+  );
 
   // Update save status based on state changes
   useEffect(() => {
@@ -68,7 +72,13 @@ export function useDraftStateManagement({
       return;
     }
     publishSaveStatus("idle");
-  }, [draftSaveError, draftSavedAt, hasUnsavedChanges, fieldsLocked]);
+  }, [
+    draftSaveError,
+    draftSavedAt,
+    hasUnsavedChanges,
+    fieldsLocked,
+    publishSaveStatus,
+  ]);
 
   return {
     // State
@@ -82,7 +92,7 @@ export function useDraftStateManagement({
     setHasUnsavedChanges,
     saveStatus,
     publishSaveStatus,
-    
+
     // Refs
     hasUnsavedChangesRef,
     isSavingDraftRef,
@@ -93,12 +103,12 @@ export function useDraftStateManagement({
     pendingDirtyPathsRef,
     lastStatusRef,
     saveEpochTracker,
-    
+
     // Snapshot refs
     savedSnapshotRef,
     previousSnapshotRef,
     previousSavedAtRef,
-    
+
     // Utilities
     fieldsLocked,
   };

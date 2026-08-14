@@ -20,7 +20,7 @@ import {
   latestPremiumExcelDocument,
   premiumExcelExportEnabled,
   premiumExcelFingerprint,
-} from "~/lib/pricing/premium-excel";
+} from "~/lib/excel/excel-client";
 import {
   ensureReviewDocumentsClient,
   savePolicyDocumentsClient,
@@ -294,31 +294,20 @@ export function usePolicyDocuments({
           existing: documentsRef.current,
         }),
       });
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || "Failed to generate Excel");
       }
-      
+
       const result = await response.json();
       const doc = result.document;
-      // Download as soon as generation succeeds. Persistence is useful for the
-      // Documents history, but a storage/API failure must not block the export.
+      // Download immediately when generation succeeds
       downloadPremiumExcelDocument(doc);
 
-      const next = [...documentsRef.current, doc];
-      try {
-        const saved = await savePolicyDocumentsClient(policy.policyId, next);
-        setDocuments(saved);
-        toast.success("Excel exported", {
-          description: "Saved to Documents and downloaded.",
-        });
-      } catch {
-        toast.warning("Excel downloaded", {
-          description:
-            "The spreadsheet could not be saved to Documents. You can still use the downloaded file.",
-        });
-      }
+      toast.success("Excel exported", {
+        description: "Downloaded to your computer.",
+      });
     } catch (err: unknown) {
       toast.error("Excel export failed", {
         description:

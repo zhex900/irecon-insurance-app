@@ -1,5 +1,5 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { usePolicyWizardMode } from "../car-policy-wizard-mode-context";
+import { useLayoutEffect, useRef, useState } from "react";
+import { useMode } from "./use-mode";
 import type { PremiumBreakdown } from "~/lib/db/types";
 import {
   readStoredMaxStep,
@@ -18,8 +18,8 @@ export function useWizardStepManagement({
   policyId: string;
   policyPremium: PremiumBreakdown | null | undefined;
 }) {
-  const { readOnly, fieldsLocked, freshSteps } = usePolicyWizardMode();
-  
+  const { readOnly, fieldsLocked, freshSteps } = useMode();
+
   const [step, setStep] = useState(() =>
     freshSteps ? 0 : (readStoredStep(policyId) ?? 0),
   );
@@ -30,8 +30,8 @@ export function useWizardStepManagement({
       freshSteps,
       policyPremium,
       readStoredStep,
-      readStoredMaxStep
-    )
+      readStoredMaxStep,
+    ),
   );
 
   // SSR renders step 0; restore remembered step before paint (read-only — do not write).
@@ -42,7 +42,7 @@ export function useWizardStepManagement({
     readOnly: boolean;
     policyPremium: PremiumBreakdown | null | undefined;
   } | null>(null);
-  
+
   useLayoutEffect(() => {
     if (freshSteps) return; // Fresh steps mode — keep step at 0
     const prev = lastNavRef.current;

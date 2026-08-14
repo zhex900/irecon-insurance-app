@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  formatAmountInput,
-  sanitizeAmountInput,
-} from "~/lib/amount-input";
+import { formatAmountInput, sanitizeAmountInput } from "~/lib/amount-input";
 
 describe("formatAmountInput", () => {
   it("adds thousands separators", () => {

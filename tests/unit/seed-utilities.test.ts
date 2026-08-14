@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { seedClients, seedPolicies, seedUtilities } from "../../e2e/helpers/seed";
+import {
+  seedClients,
+  seedPolicies,
+  seedUtilities,
+} from "../../e2e/helpers/seed";
 
 describe("Seed Utilities", () => {
   describe("Seed data validation", () => {
@@ -12,7 +16,7 @@ describe("Seed Utilities", () => {
     });
 
     it("seed clients have required properties", () => {
-      seedClients.forEach(client => {
+      seedClients.forEach((client) => {
         expect(client).toHaveProperty("id");
         expect(client).toHaveProperty("name");
         expect(client).toHaveProperty("abn");
@@ -25,7 +29,7 @@ describe("Seed Utilities", () => {
     });
 
     it("seed policies have required properties", () => {
-      seedPolicies.forEach(policy => {
+      seedPolicies.forEach((policy) => {
         expect(policy).toHaveProperty("id");
         expect(policy).toHaveProperty("policyNumber");
         expect(policy).toHaveProperty("clientId");
@@ -41,17 +45,21 @@ describe("Seed Utilities", () => {
     });
 
     it("policies reference valid client IDs", () => {
-      const clientIds = new Set(seedClients.map(c => c.id));
-      
-      seedPolicies.forEach(policy => {
+      const clientIds = new Set(seedClients.map((c) => c.id));
+
+      seedPolicies.forEach((policy) => {
         expect(clientIds.has(policy.clientId)).toBe(true);
       });
     });
 
     it("has one policy for each status", () => {
-      const pendingPolicies = seedPolicies.filter(p => p.policyStatusId === 1);
-      const takenPolicies = seedPolicies.filter(p => p.policyStatusId === 2);
-      const notTakenPolicies = seedPolicies.filter(p => p.policyStatusId === 3);
+      const pendingPolicies = seedPolicies.filter(
+        (p) => p.policyStatusId === 1,
+      );
+      const takenPolicies = seedPolicies.filter((p) => p.policyStatusId === 2);
+      const notTakenPolicies = seedPolicies.filter(
+        (p) => p.policyStatusId === 3,
+      );
 
       expect(pendingPolicies).toHaveLength(1);
       expect(takenPolicies).toHaveLength(1);
@@ -94,11 +102,13 @@ describe("Seed Utilities", () => {
     });
 
     it("getPoliciesForClient returns correct policies", () => {
-      const client1Policies = seedUtilities.getPoliciesForClient("e2e-client-1");
+      const client1Policies =
+        seedUtilities.getPoliciesForClient("e2e-client-1");
       expect(client1Policies).toHaveLength(1);
       expect(client1Policies[0].policyNumber).toBe("E2E-PENDING-001");
 
-      const client2Policies = seedUtilities.getPoliciesForClient("e2e-client-2");
+      const client2Policies =
+        seedUtilities.getPoliciesForClient("e2e-client-2");
       expect(client2Policies).toHaveLength(1);
       expect(client2Policies[0].policyNumber).toBe("E2E-TAKEN-002");
     });
@@ -113,33 +123,33 @@ describe("Seed Utilities", () => {
 
   describe("Seed data consistency", () => {
     it("policy numbers are unique", () => {
-      const policyNumbers = seedPolicies.map(p => p.policyNumber);
+      const policyNumbers = seedPolicies.map((p) => p.policyNumber);
       const uniquePolicyNumbers = new Set(policyNumbers);
-      
+
       expect(policyNumbers).toHaveLength(uniquePolicyNumbers.size);
     });
 
     it("policy IDs are unique", () => {
-      const policyIds = seedPolicies.map(p => p.id);
+      const policyIds = seedPolicies.map((p) => p.id);
       const uniquePolicyIds = new Set(policyIds);
-      
+
       expect(policyIds).toHaveLength(uniquePolicyIds.size);
     });
 
     it("client IDs are unique", () => {
-      const clientIds = seedClients.map(c => c.id);
+      const clientIds = seedClients.map((c) => c.id);
       const uniqueClientIds = new Set(clientIds);
-      
+
       expect(clientIds).toHaveLength(uniqueClientIds.size);
     });
 
     it("policies have valid dates", () => {
-      seedPolicies.forEach(policy => {
+      seedPolicies.forEach((policy) => {
         // Dates should be valid ISO strings
         expect(() => new Date(policy.dateEffective)).not.toThrow();
         expect(() => new Date(policy.dateStart)).not.toThrow();
         expect(() => new Date(policy.dateEnd)).not.toThrow();
-        
+
         // Start date should be before or equal to end date
         const startDate = new Date(policy.dateStart);
         const endDate = new Date(policy.dateEnd);
@@ -148,9 +158,9 @@ describe("Seed Utilities", () => {
     });
 
     it("policy car data is complete", () => {
-      seedPolicies.forEach(policy => {
+      seedPolicies.forEach((policy) => {
         expect(policy.car).toBeDefined();
-        
+
         if (policy.car) {
           // Check required car properties
           expect(policy.car).toHaveProperty("coverTypeId");
@@ -159,10 +169,12 @@ describe("Seed Utilities", () => {
           expect(policy.car).toHaveProperty("estimatedTurnover");
           expect(policy.car).toHaveProperty("businessActivities");
           expect(policy.car).toHaveProperty("contractWorksSumInsured");
-          
+
           // Check premium data
           expect(policy.car.premium).toBeDefined();
-          expect(policy.car.premium).toHaveProperty("contractWorksTotalPremium");
+          expect(policy.car.premium).toHaveProperty(
+            "contractWorksTotalPremium",
+          );
           expect(policy.car.premium).toHaveProperty("liabilityTotalPremium");
           expect(policy.car.premium).toHaveProperty("originalTotalPremium");
         }

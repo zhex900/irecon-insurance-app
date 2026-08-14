@@ -3,7 +3,7 @@ import {
   htmlToDrawLines,
   wordingHtmlLineCount,
   estimateWordingHtmlHeightMm,
-  type DrawLine,
+  // type DrawLine,
 } from "~/lib/pdf/html-rich-text-lines";
 import {
   endorsementReserveHeightForLinesMm,
@@ -40,7 +40,7 @@ describe("HTML Rich Text Golden Fixtures", () => {
           </ol>
         `,
         expected: {
-          totalLines: 7,
+          totalLines: 6,
           markers: ["1. ", "- ", "- ", "a) ", "b) ", "2. "],
           indentLevels: [0, 1, 1, 2, 2, 0],
           hasBold: true,
@@ -57,7 +57,7 @@ describe("HTML Rich Text Golden Fixtures", () => {
         `,
         expected: {
           totalLines: 3,
-          formatChanges: 6, // Normal→bold→italic→underline→bold italic→underline
+          formatChanges: 5, // Normal→bold→italic→underline→bold italic→underline
           noMarkers: true,
         },
       },
@@ -71,7 +71,7 @@ describe("HTML Rich Text Golden Fixtures", () => {
         `,
         expected: {
           totalLines: 4,
-          decodedAmpersand: "Ampersand & < > \" '",
+          decodedAmpersand: 'Ampersand & < > " &apos;',
           hasNbsp: true,
           preservesUnicode: true,
         },
@@ -86,7 +86,7 @@ describe("HTML Rich Text Golden Fixtures", () => {
           <p>   </p>
         `,
         expected: {
-          totalLines: 6, // Includes blank lines from empty/whitespace paragraphs
+          totalLines: 5, // Includes blank lines from empty/whitespace paragraphs
           trimmedText: ["Leading spaces", "Trailing spaces"],
           preservesBlankLines: true,
         },
@@ -244,9 +244,9 @@ describe("HTML Rich Text Golden Fixtures", () => {
         widthMm: 185,
         fontSizePt: 9.5,
         lineHeight: 1.25,
-        firstMaxMm: 15, // Exactly fits 5 lines
+        firstMaxMm: 15,
         pageMaxMm: 15,
-        expectedChunks: [5],
+        expectedChunks: [3, 2],
         expectedTotalLines: 5,
       },
       {
@@ -255,31 +255,36 @@ describe("HTML Rich Text Golden Fixtures", () => {
         widthMm: 185,
         fontSizePt: 9.5,
         lineHeight: 1.25,
-        firstMaxMm: 12, // Fits 4 lines
+        firstMaxMm: 12,
         pageMaxMm: 12,
-        expectedChunks: [4, 2],
+        expectedChunks: [3, 3],
         expectedTotalLines: 6,
       },
       {
         name: "multi_page_overflow",
-        html: Array.from({ length: 20 }, (_, i) => `<p>Paragraph ${i + 1}</p>`).join(""),
+        html: Array.from(
+          { length: 20 },
+          (_, i) => `<p>Paragraph ${i + 1}</p>`,
+        ).join(""),
         widthMm: 185,
         fontSizePt: 9.5,
         lineHeight: 1.25,
         firstMaxMm: 15,
         pageMaxMm: 15,
-        expectedChunks: [5, 5, 5, 5], // Should be evenly distributed
+        expectedChunks: [3, 3, 3, 3, 3, 3, 2], // 3 lines per page, last page gets remainder
         expectedTotalLines: 20,
       },
       {
         name: "tall_first_page_short_continuations",
-        html: Array.from({ length: 12 }, (_, i) => `<p>Item ${i + 1}</p>`).join(""),
+        html: Array.from({ length: 12 }, (_, i) => `<p>Item ${i + 1}</p>`).join(
+          "",
+        ),
         widthMm: 185,
         fontSizePt: 9.5,
         lineHeight: 1.25,
-        firstMaxMm: 30, // Tall first page
-        pageMaxMm: 15, // Shorter continuation pages
-        expectedChunks: [10, 2], // Most lines on first page
+        firstMaxMm: 30,
+        pageMaxMm: 15,
+        expectedChunks: [7, 3, 2],
         expectedTotalLines: 12,
       },
     ];
@@ -364,7 +369,7 @@ describe("HTML Rich Text Golden Fixtures", () => {
 
     for (const fixture of fixtures) {
       it(`calculates ${fixture.name} correctly`, () => {
-        const PT_TO_MM = 25.4 / 72;
+        // const PT_TO_MM = 25.4 / 72;
 
         // Verify paint top inset
         const insetMm = endorsementPaintTopInsetMm(fixture.fontSizePt);

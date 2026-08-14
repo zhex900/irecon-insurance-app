@@ -27,14 +27,14 @@ export function useDraftFieldWatching({
     const subscription = form.watch((values, info) => {
       const name = info.name;
       const root = name?.split(".")[0] ?? "";
-      
+
       // Only real value edits clear the manual-premium guard. Validation /
       // trigger callbacks must not — otherwise a premium-breakdown save can
       // race into a server recalculate that wipes ES/DH-folded terrorism.
       if (root && pricingRoots.has(root) && info.type === "change") {
         premiumManuallyEditedRef.current = false;
       }
-      
+
       if (name) {
         const { error } = form.getFieldState(
           name as FieldPath<CarPolicyFormValues>,
@@ -43,16 +43,23 @@ export function useDraftFieldWatching({
           void form.trigger(name as FieldPath<CarPolicyFormValues>);
         }
       }
-      
+
       const snapshot = createDraftSnapshot(
         values as CarPolicyFormValues,
         premiumRef.current,
-        premiumManualKeysRef.current
+        premiumManualKeysRef.current,
       );
       const dirty = snapshot !== savedSnapshotRef.current;
       setHasUnsavedChanges((prev: boolean) => (prev === dirty ? prev : dirty));
     });
-    
+
     return () => subscription.unsubscribe();
-  }, [form, premiumRef, premiumManualKeysRef, premiumManuallyEditedRef, savedSnapshotRef, setHasUnsavedChanges]);
+  }, [
+    form,
+    premiumRef,
+    premiumManualKeysRef,
+    premiumManuallyEditedRef,
+    savedSnapshotRef,
+    setHasUnsavedChanges,
+  ]);
 }

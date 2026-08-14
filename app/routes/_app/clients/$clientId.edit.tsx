@@ -1,4 +1,4 @@
-import { ClientForm } from "~/components/clients/client-form";
+import { Form as ClientForm } from "~/components/clients/form";
 import { PageHeader } from "~/components/layout/app-layout";
 import { requireAuth } from "~/lib/auth/session.server";
 import { booleanFlagSchema, parseUuid } from "~/lib/http/route-input";

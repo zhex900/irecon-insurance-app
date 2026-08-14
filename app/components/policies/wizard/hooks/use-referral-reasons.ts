@@ -6,7 +6,7 @@ import {
 } from "~/lib/pricing/referral-reasons";
 import type { Policy } from "~/lib/db/types";
 import { type CarPolicyFormValues } from "~/lib/zod/policy-car";
-import { FIELD_PATHS } from "../constants";
+import { FIELD_PATHS } from "../shared/constants";
 
 export function useReferralReasons({
   policy,
@@ -35,7 +35,7 @@ export function useReferralReasons({
 
   const referralReasons = useMemo(() => {
     if (!rating) return policy.car.referralReasons ?? [];
-    
+
     // Safely extract watched fields (order matches the name array above)
     const displayHomes = watchedFields[0];
     const existingStructure = watchedFields[1];
@@ -45,7 +45,7 @@ export function useReferralReasons({
     const plantEquipment = watchedFields[5];
     const liabilityLimitBand = watchedFields[6];
     const dateStart = watchedFields[7];
-    
+
     return buildReferralReasons(
       {
         displayHomes: Number(displayHomes) || 0,
@@ -60,11 +60,7 @@ export function useReferralReasons({
       rating,
       liabilityLimitLabel(Number(liabilityLimitBand) || 3),
     );
-  }, [
-    rating,
-    watchedFields,
-    policy.car.referralReasons,
-  ]);
+  }, [rating, watchedFields, policy.car.referralReasons]);
 
   // Kept for callers that still pass server reasons after fetch; display is derived.
   const setReferralReasons = (): void => {

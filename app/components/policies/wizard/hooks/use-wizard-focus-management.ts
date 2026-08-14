@@ -1,7 +1,11 @@
 import { useEffect, useRef } from "react";
 import { type UseFormReturn } from "react-hook-form";
 import { focusFormIssue } from "~/lib/form-validation-ui";
-import { rememberWizardStep, clearFocusSection, peekFocusSection } from "../step-memory";
+import {
+  rememberWizardStep,
+  clearFocusSection,
+  peekFocusSection,
+} from "../step-memory";
 import { sectionIdForStep } from "./use-wizard-navigation-utils";
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
 
@@ -9,7 +13,7 @@ export function useWizardFocusManagement({
   policyId,
   form,
   isDraft,
-  step,
+  step: _step,
   maxStep,
   setStep,
   setMaxStep,
@@ -28,10 +32,17 @@ export function useWizardFocusManagement({
   setStep: (step: number) => void;
   setMaxStep: (maxStep: number) => void;
   openMap: Record<string, boolean>;
-  setOpenMap: (map: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void;
+  setOpenMap: (
+    map:
+      | Record<string, boolean>
+      | ((prev: Record<string, boolean>) => Record<string, boolean>),
+  ) => void;
   activeSectionId: string;
   setActiveSectionId: (sectionId: string) => void;
-  navigateToSection: (sectionId: string, options?: { ensureOpen?: boolean }) => void;
+  navigateToSection: (
+    sectionId: string,
+    options?: { ensureOpen?: boolean },
+  ) => void;
   findStepForField: (path: string) => number | null;
 }) {
   const pendingFocusPathRef = useRef<string | null>(null);
@@ -62,8 +73,11 @@ export function useWizardFocusManagement({
     });
     return () => cancelAnimationFrame(frame);
     // Re-run when draft clears after submit (same URL revalidation) or remount.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional one-shot after submit
-  }, [policyId, isDraft]);
+  }, [
+    policyId,
+    isDraft,
+    navigateToSection,
+  ]);
 
   function navigateToIssue(path: string) {
     const targetStep = findStepForField(path);
@@ -73,7 +87,10 @@ export function useWizardFocusManagement({
       rememberWizardStep(policyId, targetStep, nextMax);
       setStep(targetStep);
       setMaxStep(nextMax);
-      setOpenMap((prev: Record<string, boolean>) => ({ ...prev, [sectionId]: true }));
+      setOpenMap((prev: Record<string, boolean>) => ({
+        ...prev,
+        [sectionId]: true,
+      }));
       setActiveSectionId(sectionId);
     }
 
@@ -95,7 +112,7 @@ export function useWizardFocusManagement({
 
   function navigateToSectionFirstIssue(
     sectionId: string,
-    sectionFirstIssuePaths: Record<string, string>
+    sectionFirstIssuePaths: Record<string, string>,
   ) {
     const path = sectionFirstIssuePaths[sectionId];
     if (path) {

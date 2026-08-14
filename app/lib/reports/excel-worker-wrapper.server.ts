@@ -1,45 +1,53 @@
 /**
  * Excel Worker Wrapper
- * 
+ *
  * Provides a drop-in replacement for buildReportExcelBuffer that
  * calls the external Excel Worker service instead of using ExcelJS directly.
- * 
+ *
  * This moves ExcelJS dependency out of the main Worker bundle to prevent Error 1102.
  */
 
 import type { ReportExcelColumn } from "./report-excel.server";
+import type {
+  Policy,
+  PremiumBreakdown,
+  RatingSnapshot,
+  AdjustmentBreakdown,
+} from "~/lib/types/excel-worker-types";
+
+import { logger } from "~/lib/observability/logger.server";
+import { ExternalServiceError } from "~/lib/errors";
+import { EXCEL_CONTENT_TYPE } from "~/lib/excel/constants";
+import { DEFAULT_EXCEL_WORKER_CONFIG } from "~/lib/excel/constants.server";
 
 export interface ExcelWorkerOptions {
   /** Excel Worker service URL */
   excelWorkerUrl?: string;
-  
+
   /** Enable/disable Excel Worker usage */
   enabled?: boolean;
-  
+
   /** Timeout for Excel Worker requests (ms) */
   timeoutMs?: number;
 }
 
 /**
- * Premium Excel workbook input type (matching original)
+ * Premium Excel workbook input type
  */
 export interface BuildPremiumExcelInput {
-  policy: any;
-  premium: any;
-  rating?: any;
-  adjustment?: {
-    originalTurnover: number;
-    adjustmentTurnover: number;
-    stampDutyExempt?: boolean;
-  };
+  policy: Policy;
+  premium: PremiumBreakdown;
+  rating?: RatingSnapshot;
+  adjustment?: AdjustmentBreakdown;
+  generatedBy: string;
   appVersion?: string;
 }
 
 // Default configuration (can be overridden by environment variables)
 const DEFAULT_CONFIG: ExcelWorkerOptions = {
-  excelWorkerUrl: process.env.EXCEL_WORKER_URL || 'http://localhost:8788',
-  enabled: process.env.EXCEL_WORKER_ENABLED !== 'false', // Enabled by default
-  timeoutMs: parseInt(process.env.EXCEL_WORKER_TIMEOUT_MS || '10000', 10)
+  excelWorkerUrl: DEFAULT_EXCEL_WORKER_CONFIG.EXCEL_WORKER_URL,
+  enabled: DEFAULT_EXCEL_WORKER_CONFIG.EXCEL_WORKER_ENABLED,
+  timeoutMs: DEFAULT_EXCEL_WORKER_CONFIG.EXCEL_WORKER_TIMEOUT_MS,
 };
 
 /**
@@ -53,21 +61,31 @@ export async function buildReportExcelBuffer(
     columns: ReportExcelColumn[];
     rows: Array<Record<string, string | number | null | undefined>>;
   },
-  workerOptions: ExcelWorkerOptions = {}
+  workerOptions: ExcelWorkerOptions = {},
+  request?: Request,
 ): Promise<ArrayBuffer> {
-  const config = { ...DEFAULT_CONFIG, ...workerOptions } as Required<ExcelWorkerOptions>;
-  
+  const config = {
+    ...DEFAULT_CONFIG,
+    ...workerOptions,
+  } as Required<ExcelWorkerOptions>;
+
   // If Excel Worker is disabled, throw error
   if (!config.enabled) {
-    throw new Error('Excel Worker is disabled. Enable it via EXCEL_WORKER_ENABLED environment variable.');
+    throw new Error(
+      "Excel Worker is disabled. Enable it via EXCEL_WORKER_ENABLED environment variable.",
+    );
   }
-  
+
+  // Log before calling Excel Worker
+  logger.info("Calling Excel Worker service", {
+    operation: "excel.generate",
+    excelWorkerUrl: config.excelWorkerUrl,
+    userAgent: request?.headers.get("user-agent") || undefined,
+  });
+
   // Call Excel Worker service
-  const response = await callExcelWorker(options, config);
-  
-  // Track successful call to Excel Worker
-  console.log(`Excel Worker generated report successfully (${response.byteLength} bytes)`);
-  
+  const response = await callExcelWorker(options, config, request);
+
   return response;
 }
 
@@ -81,124 +99,136 @@ async function callExcelWorker(
     columns: ReportExcelColumn[];
     rows: Array<Record<string, string | number | null | undefined>>;
   },
-  config: Required<ExcelWorkerOptions>
+  config: Required<ExcelWorkerOptions>,
+  request?: Request,
 ): Promise<ArrayBuffer> {
-  const startTime = Date.now();
-  
-  // Prepare request to Excel Worker
-  const excelWorkerRequest = {
-    reportType: 'custom' as const,
+  // Prepare request data for Excel Worker
+  const excelWorkerPayload = {
+    reportType: "custom" as const,
     data: {
-      columns: options.columns.map(col => ({
+      columns: options.columns.map((col) => ({
         key: col.key,
         header: col.header,
         type: col.type,
-        width: col.width
+        width: col.width,
       })),
-      rows: options.rows.map(row => {
-        const cleanRow: Record<string, any> = {};
+      rows: options.rows.map((row) => {
+        const cleanRow: Record<string, string | number> = {};
         Object.entries(row).forEach(([key, value]) => {
-          cleanRow[key] = value ?? '';
+          cleanRow[key] = value ?? "";
         });
         return cleanRow;
-      })
+      }),
     },
     options: {
       title: options.title,
       sheetName: options.sheetName,
-      formatCurrency: options.columns.some(col => col.type === 'currency'),
-      includeTimestamp: true
-    }
+      formatCurrency: options.columns.some((col) => col.type === "currency"),
+      includeTimestamp: true,
+    },
   };
-  
+
+  // Use direct payload without signature wrapper (signature validation removed)
+  const requestBody = excelWorkerPayload;
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), config.timeoutMs);
-  
+
   try {
     const response = await fetch(`${config.excelWorkerUrl}/api/reports/excel`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify(excelWorkerRequest),
-      signal: controller.signal
+      body: JSON.stringify(requestBody),
+      signal: controller.signal,
     });
-    
+
     clearTimeout(timeoutId);
-    
+
     if (!response.ok) {
       let errorMessage = `Excel Worker failed with status ${response.status}`;
+      let errorDetails: Record<string, unknown> = { status: response.status };
+
       try {
         const errorData = await response.json();
         errorMessage = errorData.error || errorMessage;
+        errorDetails = { ...errorDetails, ...errorData };
       } catch {
         // Ignore JSON parse errors
       }
-      throw new Error(errorMessage);
+
+      logger.error("Excel Worker request failed", {
+        operation: "excel.generate",
+        service: "excel-worker",
+        ...errorDetails,
+        userAgent: request?.headers.get("user-agent") || undefined,
+      });
+
+      throw new ExternalServiceError(errorMessage);
     }
-    
+
     const buffer = await response.arrayBuffer();
-    const generationTime = Date.now() - startTime;
-    
-    // Log performance metrics
-    console.log(`Excel Worker generated ${buffer.byteLength} bytes in ${generationTime}ms`);
-    
-    // Extract performance headers if available
-    const generationTimeHeader = response.headers.get('X-Generation-Time');
-    const reportSizeHeader = response.headers.get('X-Report-Size');
-    
-    if (generationTimeHeader) {
-      console.log(`Excel Worker reported generation time: ${generationTimeHeader}ms`);
-    }
-    if (reportSizeHeader) {
-      console.log(`Excel Worker reported size: ${reportSizeHeader} bytes`);
-    }
-    
     return buffer;
-    
   } catch (error) {
     clearTimeout(timeoutId);
-    
-    if (error instanceof Error && error.name === 'AbortError') {
-      throw new Error(`Excel Worker request timed out after ${config.timeoutMs}ms`);
+
+    if (error instanceof Error && error.name === "AbortError") {
+      logger.warn("Excel Worker request timed out", {
+        operation: "excel.generate",
+        service: "excel-worker",
+        timeoutMs: config.timeoutMs,
+        userAgent: request?.headers.get("user-agent") || undefined,
+      });
+
+      throw new ExternalServiceError(
+        `Excel Worker request timed out after ${config.timeoutMs}ms`,
+      );
     }
-    
+
+    logger.error("Excel Worker request failed", {
+      operation: "excel.generate",
+      service: "excel-worker",
+      error: error instanceof Error ? error.message : "unknown",
+      errorType: error instanceof Error ? error.name : typeof error,
+      userAgent: request?.headers.get("user-agent") || undefined,
+    });
+
     throw error;
   }
 }
-
 
 /**
  * Check if Excel Worker is healthy
  */
 export async function checkExcelWorkerHealth(
-  excelWorkerUrl?: string
+  excelWorkerUrl?: string,
 ): Promise<{ healthy: boolean; responseTime?: number; error?: string }> {
   const url = excelWorkerUrl || DEFAULT_CONFIG.excelWorkerUrl!;
   const startTime = Date.now();
-  
+
   try {
     const response = await fetch(`${url}/health`, {
-      method: 'GET',
-      headers: { 'Accept': 'application/json' }
+      method: "GET",
+      headers: { Accept: "application/json" },
     });
-    
+
     const responseTime = Date.now() - startTime;
-    
+
     if (response.ok) {
       return { healthy: true, responseTime };
     } else {
-      return { 
-        healthy: false, 
+      return {
+        healthy: false,
         responseTime,
-        error: `Health check failed with status ${response.status}` 
+        error: `Health check failed with status ${response.status}`,
       };
     }
   } catch (error) {
     return {
       healthy: false,
       responseTime: Date.now() - startTime,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : "Unknown error",
     };
   }
 }
@@ -206,24 +236,30 @@ export async function checkExcelWorkerHealth(
 /**
  * Get Excel Worker information
  */
-export async function getExcelWorkerInfo(
-  excelWorkerUrl?: string
-): Promise<{ service: string; version: string; endpoints: string[]; capabilities: string[] }> {
+export async function getExcelWorkerInfo(excelWorkerUrl?: string): Promise<{
+  service: string;
+  version: string;
+  endpoints: string[];
+  capabilities: string[];
+}> {
   const url = excelWorkerUrl || DEFAULT_CONFIG.excelWorkerUrl!;
-  
+
   try {
     const response = await fetch(`${url}/info`, {
-      method: 'GET',
-      headers: { 'Accept': 'application/json' }
+      method: "GET",
+      headers: { Accept: "application/json" },
     });
-    
+
     if (response.ok) {
       return await response.json();
     } else {
       throw new Error(`Info request failed with status ${response.status}`);
     }
   } catch (error) {
-    throw new Error(`Failed to get Excel Worker info: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `Failed to get Excel Worker info: ${error instanceof Error ? error.message : "Unknown error"}`,
+      { cause: error },
+    );
   }
 }
 
@@ -237,9 +273,9 @@ export function reportExcelResponse(
 ): Response {
   return new Response(buffer, {
     headers: {
-      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'Content-Disposition': `attachment; filename="${filename}"`,
-      'Content-Length': buffer.byteLength.toString(),
+      "Content-Type": EXCEL_CONTENT_TYPE,
+      "Content-Disposition": `attachment; filename="${filename}"`,
+      "Content-Length": buffer.byteLength.toString(),
     },
   });
 }
@@ -250,21 +286,16 @@ export function reportExcelResponse(
  */
 export async function buildPremiumExcelWorkbook(
   input: BuildPremiumExcelInput,
-  workerOptions: ExcelWorkerOptions = {}
+  workerOptions: ExcelWorkerOptions = {},
 ): Promise<Uint8Array> {
-  const config = { ...DEFAULT_CONFIG, ...workerOptions } as Required<ExcelWorkerOptions>;
-  
-  // If Excel Worker is disabled, throw error
-  if (!config.enabled) {
-    throw new Error('Excel Worker is disabled. Enable it via EXCEL_WORKER_ENABLED environment variable.');
-  }
-  
+  const config = {
+    ...DEFAULT_CONFIG,
+    ...workerOptions,
+  } as Required<ExcelWorkerOptions>;
+
   // Call Excel Worker service for premium workbook
   const response = await callExcelWorkerForPremium(input, config);
-  
-  // Track successful call to Excel Worker
-  console.log(`Excel Worker generated premium workbook successfully (${response.byteLength} bytes)`);
-  
+
   return new Uint8Array(response);
 }
 
@@ -273,85 +304,121 @@ export async function buildPremiumExcelWorkbook(
  */
 async function callExcelWorkerForPremium(
   input: BuildPremiumExcelInput,
-  config: Required<ExcelWorkerOptions>
+  config: Required<ExcelWorkerOptions>,
 ): Promise<ArrayBuffer> {
   const startTime = Date.now();
-  
-  // Prepare request to Excel Worker
-  const excelWorkerRequest = {
-    reportType: 'premiumWorkbook' as const,
+
+  // Prepare request to Excel Worker (without signature wrapper since validation removed)
+  const requestBody = {
+    reportType: "premiumWorkbook" as const,
     data: {
       policy: input.policy,
       premium: input.premium,
       rating: input.rating,
-      adjustment: input.adjustment
+      adjustment: input.adjustment,
     },
     options: {
       premiumWorkbook: {
         policyNumber: input.policy?.policyNumber,
-        clientName: input.policy?.clientName,
         appVersion: input.appVersion,
-        includeAdjustment: !!input.adjustment
-      }
-    }
+        includeAdjustment: !!input.adjustment,
+      },
+    },
   };
-  
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), config.timeoutMs);
-  
+
   try {
-    const response = await fetch(`${config.excelWorkerUrl}/api/excel/generate`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+    const response = await fetch(
+      `${config.excelWorkerUrl}/api/excel/generate`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+        signal: controller.signal,
       },
-      body: JSON.stringify(excelWorkerRequest),
-      signal: controller.signal
-    });
-    
+    );
+
     clearTimeout(timeoutId);
-    
+
     if (!response.ok) {
       let errorMessage = `Excel Worker failed with status ${response.status}`;
+      let errorDetails: Record<string, unknown> = { status: response.status };
+
       try {
         const errorData = await response.json();
         errorMessage = errorData.error || errorMessage;
+        errorDetails = { ...errorDetails, ...errorData };
       } catch {
         // Ignore JSON parse errors
       }
-      throw new Error(errorMessage);
+
+      logger.error("Excel Worker request failed (premium workbook)", {
+        operation: "excel.generate_premium",
+        service: "excel-worker",
+        ...errorDetails,
+      });
+
+      throw new ExternalServiceError(errorMessage);
     }
-    
+
     const buffer = await response.arrayBuffer();
     const generationTime = Date.now() - startTime;
-    
-    // Log performance metrics
-    console.log(`Excel Worker generated premium workbook (${buffer.byteLength} bytes) in ${generationTime}ms`);
-    
-    // Extract performance headers if available
-    const generationTimeHeader = response.headers.get('X-Generation-Time');
-    const reportSizeHeader = response.headers.get('X-Report-Size');
-    const reportType = response.headers.get('X-Report-Type');
-    
+
+    // Log performance metrics with structured logging
+    logger.info("Excel Worker generated premium workbook", {
+      reportType: "premiumWorkbook",
+      bufferBytes: buffer.byteLength,
+      generationTimeMs: generationTime,
+    });
+
+    // Extract and log performance headers if available
+    const generationTimeHeader = response.headers.get("X-Generation-Time");
+    const reportSizeHeader = response.headers.get("X-Report-Size");
+    const reportType = response.headers.get("X-Report-Type");
+
     if (generationTimeHeader) {
-      console.log(`Excel Worker reported generation time: ${generationTimeHeader}ms`);
+      logger.debug("Excel Worker reported generation time", {
+        generationTimeHeaderMs: generationTimeHeader,
+      });
     }
     if (reportSizeHeader) {
-      console.log(`Excel Worker reported size: ${reportSizeHeader} bytes`);
+      logger.debug("Excel Worker reported size", {
+        reportSizeBytes: reportSizeHeader,
+      });
     }
     if (reportType) {
-      console.log(`Excel Worker report type: ${reportType}`);
+      logger.debug("Excel Worker report type", {
+        reportType,
+      });
     }
-    
+
     return buffer;
-    
   } catch (error) {
     clearTimeout(timeoutId);
-    
-    if (error instanceof Error && error.name === 'AbortError') {
-      throw new Error(`Excel Worker request timed out after ${config.timeoutMs}ms`);
+
+    if (error instanceof Error && error.name === "AbortError") {
+      logger.warn("Excel Worker request timed out (premium workbook)", {
+        operation: "excel.generate_premium",
+        service: "excel-worker",
+        timeoutMs: config.timeoutMs,
+      });
+
+      throw new ExternalServiceError(
+        `Excel Worker request timed out after ${config.timeoutMs}ms`,
+      );
     }
-    
+
+    logger.error("Excel Worker request failed (premium workbook)", {
+      operation: "excel.generate_premium",
+      service: "excel-worker",
+      error: error instanceof Error ? error.message : "unknown",
+      errorType: error instanceof Error ? error.name : typeof error,
+    });
+
     throw error;
   }
 }

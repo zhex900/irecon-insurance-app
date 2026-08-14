@@ -272,10 +272,7 @@ function AccountMenu({ broker }: { broker: BrokerSession }) {
 
   if (!hydrated) {
     return (
-      <span
-        className="rounded-full outline-none"
-        aria-label="Account menu"
-      >
+      <span className="rounded-full outline-none" aria-label="Account menu">
         <UserAvatar
           email={broker.email}
           fullName={broker.fullName}

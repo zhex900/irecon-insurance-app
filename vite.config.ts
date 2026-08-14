@@ -47,5 +47,6 @@ export default defineConfig({
       "@tiptap/extension-text-style",
       "@tiptap/extension-font-family",
     ],
+    exclude: ["react/jsx-dev-runtime", "react/jsx-runtime", "@sentry/react"],
   },
 });

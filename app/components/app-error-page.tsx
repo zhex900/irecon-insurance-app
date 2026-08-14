@@ -17,8 +17,7 @@ function formatErrorDetails(error: unknown): {
 
   if (isRouteErrorResponse(error)) {
     if (error.status === 404) {
-      const message =
-        typeof error.data === "string" ? error.data.trim() : "";
+      const message = typeof error.data === "string" ? error.data.trim() : "";
       const resourceCopy = message ? getResourceNotFoundCopy(message) : null;
       if (resourceCopy) {
         return {
@@ -34,13 +33,16 @@ function formatErrorDetails(error: unknown): {
       return {
         heading: "Oops!",
         subheading: isUnknownRoute || !message ? "Page not found" : message,
-        details: isUnknownRoute || !message
-          ? "The requested page could not be found."
-          : "The requested resource could not be found.",
+        details:
+          isUnknownRoute || !message
+            ? "The requested page could not be found."
+            : "The requested resource could not be found.",
         status: 404,
         stack: showDebugDetails
           ? message ||
-            (error.data != null ? JSON.stringify(error.data, null, 2) : undefined) ||
+            (error.data != null
+              ? JSON.stringify(error.data, null, 2)
+              : undefined) ||
             error.statusText ||
             undefined
           : undefined,

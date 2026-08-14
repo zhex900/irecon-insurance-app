@@ -5,9 +5,11 @@ import { getReferenceData } from "~/lib/services/reference.service";
 import { monitorCriticalOperation } from "~/lib/performance/internal-monitoring.server";
 
 export async function calculatePremiumForPolicy(input: CarPolicyFormValues) {
-  return monitorCriticalOperation('premiumCalculation', async () => {
+  return monitorCriticalOperation("premiumCalculation", async () => {
     const reference = getReferenceData();
-    const state = reference.states.find((item) => item.stateId === input.stateId);
+    const state = reference.states.find(
+      (item) => item.stateId === input.stateId,
+    );
     const stateCode = state?.code ?? "NSW";
     const brokerFeeTotal = await resolveBrokerFeeTotal(input.dateStart);
 

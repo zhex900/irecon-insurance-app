@@ -3,7 +3,7 @@ import {
   expectedPremiumValue,
   buildPremiumLineWorking,
   isPremiumLineManual,
-  type PremiumLineWorking,
+  // type PremiumLineWorking,
   type PremiumWorkingInputs,
 } from "~/lib/pricing/premium-workings";
 import type { PremiumBreakdown, RatingSnapshot } from "~/lib/db/types";
@@ -31,7 +31,9 @@ function createRating(overrides: Partial<RatingSnapshot> = {}): RatingSnapshot {
   };
 }
 
-function createPremium(overrides: Partial<PremiumBreakdown> = {}): PremiumBreakdown {
+function createPremium(
+  overrides: Partial<PremiumBreakdown> = {},
+): PremiumBreakdown {
   return {
     contractWorksCalculatedBasePremium: 0,
     contractWorksBasePremium: 0,
@@ -57,7 +59,9 @@ function createPremium(overrides: Partial<PremiumBreakdown> = {}): PremiumBreakd
   };
 }
 
-function createInputs(overrides: Partial<PremiumWorkingInputs> = {}): PremiumWorkingInputs {
+function createInputs(
+  overrides: Partial<PremiumWorkingInputs> = {},
+): PremiumWorkingInputs {
   return {
     estimatedTurnover: 1000000,
     plantEquipment: 50000,
@@ -140,7 +144,7 @@ describe("Premium Workings Golden Fixtures", () => {
       {
         name: "plant_premium_first_band_free",
         key: "contractWorksPlantPremium" as const,
-        rating: createRating({ 
+        rating: createRating({
           plantRate: 0.0015,
           plantValueMin: 25000,
         }),
@@ -155,7 +159,7 @@ describe("Premium Workings Golden Fixtures", () => {
       {
         name: "plant_premium_capped_at_max",
         key: "contractWorksPlantPremium" as const,
-        rating: createRating({ 
+        rating: createRating({
           plantRate: 0.0015,
           plantValueMin: 25000,
           plantValueMax: 100000,
@@ -172,7 +176,7 @@ describe("Premium Workings Golden Fixtures", () => {
         name: "esl_calculation",
         key: "contractWorksESL" as const,
         rating: createRating({ eslRate: 0.2 }),
-        premium: createPremium({ 
+        premium: createPremium({
           contractWorksBasePremium: 1000,
           contractWorksTerrorismPremium: 53,
         }),
@@ -184,7 +188,7 @@ describe("Premium Workings Golden Fixtures", () => {
         name: "plant_esl_calculation",
         key: "contractWorksPlantESL" as const,
         rating: createRating({ eslRate: 0.2 }),
-        premium: createPremium({ 
+        premium: createPremium({
           contractWorksPlantPremium: 75,
           contractWorksPlantTerrorismPremium: 3.98, // 75 * 0.053
         }),
@@ -426,7 +430,10 @@ describe("Premium Workings Golden Fixtures", () => {
       if (fixture.keys) {
         it(`detects ${fixture.name} for multiple keys`, () => {
           for (const key of fixture.keys) {
-            const isManual = isPremiumLineManual(key, fixture.explicitManualKeys);
+            const isManual = isPremiumLineManual(
+              key,
+              fixture.explicitManualKeys,
+            );
             expect(isManual).toBe(fixture.expectedAllManual);
           }
         });
@@ -488,7 +495,7 @@ describe("Premium Workings Golden Fixtures", () => {
       },
       {
         name: "terrorism_rate_not_exist",
-        rating: createRating({ 
+        rating: createRating({
           terrorismRate: 0.053,
           isTerrorismRateExist: false,
         }),
@@ -514,7 +521,10 @@ describe("Premium Workings Golden Fixtures", () => {
             );
 
             if (fixture.expected.calculatedValue !== undefined) {
-              expect(calculated).toBeCloseTo(fixture.expected.calculatedValue, 2);
+              expect(calculated).toBeCloseTo(
+                fixture.expected.calculatedValue,
+                2,
+              );
             }
 
             // Test explanation if expected
@@ -532,7 +542,9 @@ describe("Premium Workings Golden Fixtures", () => {
             }
           } else {
             // Test multiple calculations
-            for (const [key, expectedValue] of Object.entries(fixture.expected)) {
+            for (const [key, expectedValue] of Object.entries(
+              fixture.expected,
+            )) {
               const calculated = expectedPremiumValue(
                 key as keyof PremiumBreakdown,
                 createPremium(),
@@ -614,7 +626,10 @@ describe("Premium Workings Golden Fixtures", () => {
         premium.liabilityTotalPremium +
         premium.combinedBrokerFee;
 
-      expect(premium.originalTotalPremium).toBeCloseTo(originalTotalExpected, 2);
+      expect(premium.originalTotalPremium).toBeCloseTo(
+        originalTotalExpected,
+        2,
+      );
     });
   });
 });

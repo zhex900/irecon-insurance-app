@@ -1,5 +1,6 @@
 import { createContext } from "react-router";
 import type { DocumentServiceBinding } from "~/lib/pdf/document-worker.client.server";
+import type { ExcelServiceBinding } from "~/lib/reports/excel-worker.client.server";
 
 export type R2BucketLike = {
   put(
@@ -37,10 +38,16 @@ export type CloudflareEnv = {
   SESSION_INACTIVITY_TIMEOUT_MINUTES?: string;
   /** Max hours from login before forced re-login (0 disables). Default 12. */
   SESSION_ABSOLUTE_TIMEOUT_HOURS?: string;
+  /** Shared secret for internal service authentication */
+  WORKER_SHARED_SECRET?: string;
   HYPERDRIVE?: { connectionString: string };
   AVATARS?: R2BucketLike;
   LIBRARY_DOCUMENTS?: R2BucketLike;
   DOCUMENT_SERVICE?: DocumentServiceBinding;
+  EXCEL_SERVICE?: ExcelServiceBinding;
+  SESSIONS?: {
+    get: (key: string, type: "json") => Promise<unknown>;
+  };
 };
 
 export const cloudflareContext = createContext<{
@@ -80,6 +87,16 @@ export function getDocumentService(
 ): DocumentServiceBinding | null {
   try {
     return context.get(cloudflareContext)?.env.DOCUMENT_SERVICE ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export function getExcelService(
+  context: CloudflareRouterContext,
+): ExcelServiceBinding | null {
+  try {
+    return context.get(cloudflareContext)?.env.EXCEL_SERVICE ?? null;
   } catch {
     return null;
   }

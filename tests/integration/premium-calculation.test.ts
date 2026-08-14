@@ -4,7 +4,7 @@ import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
 
 /**
  * Premium Calculation Integration Tests
- * 
+ *
  * Tests the critical premium calculation service with different scenarios,
  * edge cases, and performance validations.
  */
@@ -61,7 +61,9 @@ describe("Premium Calculation Integration Tests", () => {
   });
 
   // Helper function to create test policy values
-  function createTestPolicyValues(overrides: Partial<CarPolicyFormValues> = {}): CarPolicyFormValues {
+  function createTestPolicyValues(
+    overrides: Partial<CarPolicyFormValues> = {},
+  ): CarPolicyFormValues {
     return {
       coverTypeId: 1,
       annualCoverTypeId: null,
@@ -121,57 +123,75 @@ describe("Premium Calculation Integration Tests", () => {
     it("calculates different premiums for different turnover values", async () => {
       // Arrange
       const basePolicy = createTestPolicyValues({ estimatedTurnover: 1000000 });
-      const highTurnoverPolicy = createTestPolicyValues({ estimatedTurnover: 2000000 });
+      const highTurnoverPolicy = createTestPolicyValues({
+        estimatedTurnover: 2000000,
+      });
 
       // Act
       const baseResult = await calculatePremiumForPolicy(basePolicy);
       const highResult = await calculatePremiumForPolicy(highTurnoverPolicy);
 
       // Assert
-      expect(highResult.contractWorksCalculatedBasePremium)
-        .toBeGreaterThan(baseResult.contractWorksCalculatedBasePremium);
-      
+      expect(highResult.contractWorksCalculatedBasePremium).toBeGreaterThan(
+        baseResult.contractWorksCalculatedBasePremium,
+      );
+
       // Terrorism premium should also be higher
-      expect(highResult.contractWorksTerrorismPremium)
-        .toBeGreaterThan(baseResult.contractWorksTerrorismPremium);
+      expect(highResult.contractWorksTerrorismPremium).toBeGreaterThan(
+        baseResult.contractWorksTerrorismPremium,
+      );
     });
 
     it("includes plant equipment in premium calculation", async () => {
       // Arrange
       const noEquipmentPolicy = createTestPolicyValues({ plantEquipment: 0 });
-      const withEquipmentPolicy = createTestPolicyValues({ plantEquipment: 100000 });
+      const withEquipmentPolicy = createTestPolicyValues({
+        plantEquipment: 100000,
+      });
 
       // Act
-      const noEquipmentResult = await calculatePremiumForPolicy(noEquipmentPolicy);
-      const withEquipmentResult = await calculatePremiumForPolicy(withEquipmentPolicy);
+      const noEquipmentResult =
+        await calculatePremiumForPolicy(noEquipmentPolicy);
+      const withEquipmentResult =
+        await calculatePremiumForPolicy(withEquipmentPolicy);
 
       // Assert
-      expect(withEquipmentResult.contractWorksPlantPremium)
-        .toBeGreaterThan(noEquipmentResult.contractWorksPlantPremium);
-      
-      expect(withEquipmentResult.contractWorksPlantTerrorismPremium)
-        .toBeGreaterThan(noEquipmentResult.contractWorksPlantTerrorismPremium);
+      expect(withEquipmentResult.contractWorksPlantPremium).toBeGreaterThan(
+        noEquipmentResult.contractWorksPlantPremium,
+      );
+
+      expect(
+        withEquipmentResult.contractWorksPlantTerrorismPremium,
+      ).toBeGreaterThan(noEquipmentResult.contractWorksPlantTerrorismPremium);
     });
 
     it("handles display homes premium correctly", async () => {
       // Arrange
       const noDisplayHomesPolicy = createTestPolicyValues({ displayHomes: 0 });
-      const withDisplayHomesPolicy = createTestPolicyValues({ displayHomes: 2 });
+      const withDisplayHomesPolicy = createTestPolicyValues({
+        displayHomes: 2,
+      });
 
       // Act
-      const noDisplayResult = await calculatePremiumForPolicy(noDisplayHomesPolicy);
-      const withDisplayResult = await calculatePremiumForPolicy(withDisplayHomesPolicy);
+      const noDisplayResult =
+        await calculatePremiumForPolicy(noDisplayHomesPolicy);
+      const withDisplayResult = await calculatePremiumForPolicy(
+        withDisplayHomesPolicy,
+      );
 
       // Assert
-      expect(withDisplayResult.contractWorksDisplayHomesPremium)
-        .toBeGreaterThan(noDisplayResult.contractWorksDisplayHomesPremium);
+      expect(
+        withDisplayResult.contractWorksDisplayHomesPremium,
+      ).toBeGreaterThan(noDisplayResult.contractWorksDisplayHomesPremium);
     });
   });
 
   describe("edge cases and validation", () => {
     it("handles zero turnover correctly", async () => {
       // Arrange
-      const zeroTurnoverPolicy = createTestPolicyValues({ estimatedTurnover: 0 });
+      const zeroTurnoverPolicy = createTestPolicyValues({
+        estimatedTurnover: 0,
+      });
 
       // Act
       const result = await calculatePremiumForPolicy(zeroTurnoverPolicy);
@@ -203,14 +223,17 @@ describe("Premium Calculation Integration Tests", () => {
     it("validates required fields presence", async () => {
       // Arrange - create policy with missing required field
       const incompletePolicy = createTestPolicyValues();
-      // @ts-ignore - Testing invalid input
+      // @ts-expect-error - Testing invalid input
       delete incompletePolicy.estimatedTurnover;
 
       // Act & Assert
       // Note: The actual validation might happen in the car calculator
       // This test ensures the service doesn't crash on invalid input
-      await expect(calculatePremiumForPolicy(incompletePolicy as any))
-        .rejects.toThrow();
+      await expect(
+        calculatePremiumForPolicy(
+          incompletePolicy as Partial<CarPolicyFormValues>,
+        ),
+      ).rejects.toThrow();
     });
 
     it("handles different state codes correctly", async () => {
@@ -244,10 +267,11 @@ describe("Premium Calculation Integration Tests", () => {
       await calculatePremiumForPolicy(policyValues);
 
       // Assert
-      const { monitorCriticalOperation } = await import("~/lib/performance/internal-monitoring.server");
+      const { monitorCriticalOperation } =
+        await import("~/lib/performance/internal-monitoring.server");
       expect(monitorCriticalOperation).toHaveBeenCalledWith(
         "premiumCalculation",
-        expect.any(Function)
+        expect.any(Function),
       );
     });
 
@@ -276,16 +300,20 @@ describe("Premium Calculation Integration Tests", () => {
 
       // Act - run concurrently
       const startTime = performance.now();
-      const results = await Promise.all(policies.map(policy => calculatePremiumForPolicy(policy)));
+      const results = await Promise.all(
+        policies.map((policy) => calculatePremiumForPolicy(policy)),
+      );
       const endTime = performance.now();
       const totalTime = endTime - startTime;
 
       // Assert
       expect(results).toHaveLength(3);
-      expect(results[0].contractWorksCalculatedBasePremium)
-        .toBeLessThan(results[1].contractWorksCalculatedBasePremium);
-      expect(results[1].contractWorksCalculatedBasePremium)
-        .toBeLessThan(results[2].contractWorksCalculatedBasePremium);
+      expect(results[0].contractWorksCalculatedBasePremium).toBeLessThan(
+        results[1].contractWorksCalculatedBasePremium,
+      );
+      expect(results[1].contractWorksCalculatedBasePremium).toBeLessThan(
+        results[2].contractWorksCalculatedBasePremium,
+      );
 
       // Concurrent calculations should be efficient
       expect(totalTime).toBeLessThan(2000); // < 2 seconds for all 3
@@ -315,7 +343,8 @@ describe("Premium Calculation Integration Tests", () => {
       await calculatePremiumForPolicy(policyValues);
 
       // Assert
-      const { resolveBrokerFeeTotal } = await import("~/server/pricing/rate-resolver");
+      const { resolveBrokerFeeTotal } =
+        await import("~/server/pricing/rate-resolver");
       expect(resolveBrokerFeeTotal).toHaveBeenCalledWith("2026-06-01");
     });
   });

@@ -13,7 +13,12 @@ import {
   type SQL,
 } from "drizzle-orm";
 import { getDb } from "~/lib/db/client";
-import { accountManager, authorisedRepresentative, client, policy } from "~/lib/db/schema";
+import {
+  accountManager,
+  authorisedRepresentative,
+  client,
+  policy,
+} from "~/lib/db/schema";
 import type { Client } from "~/lib/db/types";
 import { type PageResult, toPageResult } from "~/lib/pagination";
 import {

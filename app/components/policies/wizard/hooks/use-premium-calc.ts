@@ -1,9 +1,12 @@
 import type { useFetcher } from "react-router";
 import { type UseFormReturn } from "react-hook-form";
 import type { Policy } from "~/lib/db/types";
-import { usePolicyWizardMode } from "../car-policy-wizard-mode-context";
+import type { NoteAuthor } from "~/lib/services/users/service";
 import { usePremiumStateManagement } from "./use-premium-state-management";
-import { usePremiumFetcherState, usePremiumFetcherUpdates } from "./use-premium-calculation";
+import {
+  usePremiumFetcherState,
+  usePremiumFetcherUpdates,
+} from "./use-premium-calculation";
 import { useReferralReasons } from "./use-referral-reasons";
 import { usePremiumActions } from "./use-premium-actions";
 import { usePremiumAutoCalculation } from "./use-premium-auto-calculation";
@@ -22,8 +25,6 @@ export type PolicyWizardActionData = {
   draft?: boolean;
   message?: string;
 };
-
-type NoteAuthor = any; // Re-exported for compatibility
 
 export function usePolicyPremiumCalc({
   policy,
@@ -68,14 +69,15 @@ export function usePolicyPremiumCalc({
   });
 
   // Premium actions
-  const { submitIntent, resetManualPremium, refreshPremiumAfterSave } = usePremiumActions({
-    policy,
-    form,
-    fetcher,
-    fieldsLocked,
-    premiumManuallyEditedRef,
-    premiumManualKeysRef,
-  });
+  const { submitIntent, resetManualPremium, refreshPremiumAfterSave } =
+    usePremiumActions({
+      policy,
+      form,
+      fetcher,
+      fieldsLocked,
+      premiumManuallyEditedRef,
+      premiumManualKeysRef,
+    });
 
   // Auto-calculation
   usePremiumAutoCalculation({

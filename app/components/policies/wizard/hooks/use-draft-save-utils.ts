@@ -1,6 +1,9 @@
 import { toast } from "sonner";
 import { labelForPolicyFieldPath } from "~/lib/policies/field-labels";
 import { pricingFields } from "~/lib/zod/policy-car";
+import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
+import type { PremiumBreakdown } from "~/lib/db/types";
+import type { UseFormReturn } from "react-hook-form";
 
 /**
  * Show toast notification for draft save
@@ -31,9 +34,7 @@ export function toastPolicyDraftSaved(
  */
 export function hasTouchedPricing(paths: string[]): boolean {
   const pricingRoots = new Set<string>(pricingFields);
-  return paths.some((path) =>
-    pricingRoots.has(path.split(".")[0] ?? path),
-  );
+  return paths.some((path) => pricingRoots.has(path.split(".")[0] ?? path));
 }
 
 /**
@@ -48,9 +49,9 @@ export interface SaveOptions {
  * Draft snapshot creation
  */
 export function createDraftSnapshot(
-  values: any,
-  premium: any,
-  premiumManualKeys: string[]
+  values: CarPolicyFormValues,
+  premium: PremiumBreakdown | undefined,
+  premiumManualKeys: string[],
 ): string {
   return JSON.stringify({
     ...values,
@@ -64,15 +65,15 @@ export function createDraftSnapshot(
  */
 export class SaveEpochTracker {
   private epoch = 0;
-  
+
   increment(): number {
     return ++this.epoch;
   }
-  
+
   isCurrent(epoch: number): boolean {
     return epoch === this.epoch;
   }
-  
+
   get current(): number {
     return this.epoch;
   }
@@ -81,13 +82,11 @@ export class SaveEpochTracker {
 /**
  * Validation utilities
  */
-export function validateSavedPaths<T>(
-  form: any,
-  paths: string[]
+export function validateSavedPaths(
+  form: UseFormReturn<CarPolicyFormValues>,
+  paths: string[],
 ): void {
-  const unique = [
-    ...new Set(paths.filter((path) => path.length > 0)),
-  ];
+  const unique = [...new Set(paths.filter((path) => path.length > 0))];
   if (unique.length === 0) return;
-  void form.trigger(unique);
+  void form.trigger(unique as (keyof CarPolicyFormValues)[]);
 }

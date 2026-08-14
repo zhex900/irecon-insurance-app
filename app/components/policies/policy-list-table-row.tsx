@@ -1,5 +1,5 @@
 import { Trash2Icon } from "lucide-react";
-import { ClientSummaryPopover } from "~/components/clients/client-summary-popover";
+import { Popover as ClientSummaryPopover } from "~/components/clients/summary";
 import { Badge } from "~/components/reui/badge";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";

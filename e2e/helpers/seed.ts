@@ -1,6 +1,6 @@
 /**
  * Deterministic seed fixtures for E2E testing
- * 
+ *
  * Provides predictable, consistent test data for end-to-end tests.
  * These fixtures are designed to work with the demo user accounts.
  */
@@ -312,28 +312,28 @@ export const seedUtilities = {
    * Get a client by ID
    */
   getClientById(id: string): SeedClient | undefined {
-    return seedClients.find(client => client.id === id);
+    return seedClients.find((client) => client.id === id);
   },
 
   /**
    * Get a policy by ID
    */
   getPolicyById(id: string): SeedPolicy | undefined {
-    return seedPolicies.find(policy => policy.id === id);
+    return seedPolicies.find((policy) => policy.id === id);
   },
 
   /**
    * Get policies by status
    */
   getPoliciesByStatus(statusId: number): SeedPolicy[] {
-    return seedPolicies.filter(policy => policy.policyStatusId === statusId);
+    return seedPolicies.filter((policy) => policy.policyStatusId === statusId);
   },
 
   /**
    * Get policies for a specific client
    */
   getPoliciesForClient(clientId: string): SeedPolicy[] {
-    return seedPolicies.filter(policy => policy.clientId === clientId);
+    return seedPolicies.filter((policy) => policy.clientId === clientId);
   },
 
   /**

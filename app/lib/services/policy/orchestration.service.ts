@@ -107,9 +107,10 @@ export async function upsertPolicyFromForm(
   },
   createdBy: string,
 ) {
-  const { monitorCriticalOperation } = await import("~/lib/performance/internal-monitoring.server");
-  
-  return monitorCriticalOperation('policySubmit', async () => {
+  const { monitorCriticalOperation } =
+    await import("~/lib/performance/internal-monitoring.server");
+
+  return monitorCriticalOperation("policySubmit", async () => {
     const existing = await getPolicy(policyId);
     if (!existing) throw new NotFoundError("Policy not found");
     if (isTerminalStatus(existing.policyStatusId)) {

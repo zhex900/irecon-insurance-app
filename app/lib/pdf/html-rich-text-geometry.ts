@@ -90,10 +90,10 @@ export function endorsementDrawBoxBottomMm(
   opts: EndorsementDrawBoxOptions,
 ): number {
   const { pageFloorMm, reservedBottomMm, lineStepMm } = opts;
-  
+
   // Content must stop above both the page floor and reserved bottom
   const limit = Math.min(pageFloorMm, reservedBottomMm);
-  
+
   // Ensure at least one line step remains above the limit
   return Math.max(0, limit - lineStepMm);
 }
@@ -107,17 +107,17 @@ export function countLinesFittingInBandMm(
   lineHeight: number,
 ): number {
   if (bandHeightMm <= 0) return 0;
-  
+
   const minBand = minEndorsementPaintBandMm(fontSizePt, lineHeight);
   if (bandHeightMm < minBand) return 0;
-  
+
   const inset = endorsementPaintTopInsetMm(fontSizePt);
   const step = endorsementLineStepMm(fontSizePt, lineHeight);
-  
+
   // First line consumes the inset
   const remaining = bandHeightMm - inset;
   if (remaining < 0) return 0;
-  
+
   // Remaining lines consume full steps
   const extraLines = Math.floor(remaining / step);
   return 1 + extraLines;
@@ -134,10 +134,10 @@ export function splitLineCountsIntoPages(
   lineHeight: number,
 ): number[] {
   if (totalLines <= 0) return [];
-  
+
   const chunks: number[] = [];
   let remaining = totalLines;
-  
+
   // First page (potentially shorter)
   const firstCapacity = countLinesFittingInBandMm(
     firstMaxMm,
@@ -149,7 +149,7 @@ export function splitLineCountsIntoPages(
     chunks.push(firstChunk);
     remaining -= firstChunk;
   }
-  
+
   // Subsequent pages (full height)
   const pageCapacity = countLinesFittingInBandMm(
     pageMaxMm,
@@ -161,7 +161,7 @@ export function splitLineCountsIntoPages(
     chunks.push(chunk);
     remaining -= chunk;
   }
-  
+
   return chunks;
 }
 
@@ -175,23 +175,23 @@ export function splitHeightIntoPageChunks(
   pageMaxMm: number,
 ): number[] {
   if (totalHeightMm <= 0) return [];
-  
+
   const chunks: number[] = [];
   let remaining = totalHeightMm;
-  
+
   // First page (potentially shorter)
   if (firstMaxMm > 0) {
     const firstChunk = Math.min(remaining, firstMaxMm);
     chunks.push(firstChunk);
     remaining -= firstChunk;
   }
-  
+
   // Subsequent pages (full height)
   while (remaining > 0) {
     const chunk = Math.min(remaining, pageMaxMm);
     chunks.push(chunk);
     remaining -= chunk;
   }
-  
+
   return chunks;
 }

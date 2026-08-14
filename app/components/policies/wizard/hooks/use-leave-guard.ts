@@ -6,7 +6,7 @@ import { clearWizardStepState, consumeWizardLeave } from "../step-memory";
 import type { PolicyLeaveApi } from "./use-draft-save";
 import type { PolicyWizardActionData } from "./use-premium-calc";
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
-import { usePolicyWizardMode } from "../car-policy-wizard-mode-context";
+import { useMode } from "./use-mode";
 
 export function usePolicyLeaveGuard({
   policy,
@@ -50,7 +50,7 @@ export function usePolicyLeaveGuard({
   /** Where the user was headed when the leave dialog opened (survives blocker.reset). */
   const pendingLeaveDestinationRef = useRef<string | null>(null);
 
-  const { readOnly, isNew, isFormTerminal } = usePolicyWizardMode();
+  const { readOnly, isNew, isFormTerminal } = useMode();
 
   // New policies: always confirm before leaving (avoids orphan drafts).
   // Existing policies: only block when there are unsaved edits.
@@ -148,7 +148,7 @@ export function usePolicyLeaveGuard({
   async function saveAndLeaveForTerminalStatus() {
     const ok = await savePolicy();
     if (!ok) return false;
-    
+
     setDiscardConfirmOpen(false);
     if (blocker.state === "blocked") {
       blocker.proceed();
@@ -168,7 +168,7 @@ export function usePolicyLeaveGuard({
   async function saveAndLeave() {
     pendingLeaveAfterSaveRef.current = true;
     setPendingLeaveAfterSave(true);
-    
+
     try {
       if (isFormTerminal) {
         const success = await saveAndLeaveForTerminalStatus();

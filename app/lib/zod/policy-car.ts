@@ -16,7 +16,7 @@ const standardTextField = z
   .max(500, "Must be 500 characters or fewer");
 
 /** Long text field for notes/descriptions */
-const longTextField = z
+const _longTextField = z
   .string()
   .trim()
   .max(2000, "Must be 2000 characters or fewer");
@@ -26,7 +26,7 @@ const urlSafeField = z
   .string()
   .trim()
   .max(200, "Must be 200 characters or fewer")
-  .regex(/^[a-zA-Z0-9\-_\.\s]*$/, "Contains invalid characters");
+  .regex(/^[a-zA-Z0-9\-_.\s]*$/, "Contains invalid characters");
 
 /** Required money: empty is invalid (do not coerce "" → 0). */
 const moneyNumber = z.preprocess(
@@ -126,7 +126,10 @@ const baseFields = {
     },
     z.coerce.number().min(1, "State is required"),
   ),
-  businessActivities: standardTextField.min(1, "Business activities is required"),
+  businessActivities: standardTextField.min(
+    1,
+    "Business activities is required",
+  ),
   insuredContracts: standardTextField.min(1, "Insured contracts is required"),
   geographicalScopes: standardTextField.optional().default(""),
   maximumConstructionPeriod: z.coerce.number().int().positive(),
@@ -152,13 +155,10 @@ const baseFields = {
   section1DisplayHomes: z.coerce.number().min(0).default(0),
   section1ExistingStructure: z.coerce.number().min(0).default(0),
   plantEquipment: moneyNumber,
-  liabilityLimitBand: z.preprocess(
-    (val) => {
-      if (val === "" || val === null || val === undefined) return undefined;
-      return val;
-    },
-    z.coerce.number().min(1),
-  ),
+  liabilityLimitBand: z.preprocess((val) => {
+    if (val === "" || val === null || val === undefined) return undefined;
+    return val;
+  }, z.coerce.number().min(1)),
   claimsCountLast3Years: z.preprocess(
     (val) => {
       const stripped = stripAmountCommas(val);
@@ -468,25 +468,19 @@ export const carPolicyPricingSchema = z
     coverTypeId: z.coerce.number().min(1),
     estimatedTurnover: moneyNumberPositive,
     postcode: z.string().regex(/^\d{4}$/),
-    stateId: z.preprocess(
-      (val) => {
-        if (val === "" || val === null || val === undefined) return undefined;
-        return val;
-      },
-      z.coerce.number().min(1),
-    ),
+    stateId: z.preprocess((val) => {
+      if (val === "" || val === null || val === undefined) return undefined;
+      return val;
+    }, z.coerce.number().min(1)),
     dateStart: z.string().min(1),
     contractWorksSumInsured: moneyNumber,
     displayHomes: moneyNumber,
     existingStructure: moneyNumber,
     plantEquipment: moneyNumber,
-    liabilityLimitBand: z.preprocess(
-      (val) => {
-        if (val === "" || val === null || val === undefined) return undefined;
-        return val;
-      },
-      z.coerce.number().min(1),
-    ),
+    liabilityLimitBand: z.preprocess((val) => {
+      if (val === "" || val === null || val === undefined) return undefined;
+      return val;
+    }, z.coerce.number().min(1)),
     claimsCountLast3Years: z.preprocess(
       (val) => {
         const stripped = stripAmountCommas(val);

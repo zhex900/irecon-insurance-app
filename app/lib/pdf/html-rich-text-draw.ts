@@ -21,11 +21,11 @@ import { ENDORSEMENT_PAGE_BOTTOM_MARGIN_MM } from "~/lib/pdf/endorsement-expand"
 import {
   countLinesFittingInBandMm,
   endorsementDrawBoxBottomMm,
-  heuristicTextWidthPt,
   htmlToDrawLines,
   lineHasInk,
   type DrawLine,
 } from "~/lib/pdf/html-rich-text-lines";
+import { heuristicTextWidthPt } from "~/lib/pdf/html-rich-text-geometry";
 
 export {
   htmlToDrawLines,

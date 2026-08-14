@@ -1,24 +1,27 @@
 # Worker Bundle Optimization Plan
-*Created: August 13, 2026*
-*Target: Reduce main Worker from 2.22MB (93% of limit) to <1.8MB (72%)*
-*Critical for Cloudflare deployment success*
+
+_Created: August 13, 2026_
+_Target: Reduce main Worker from 2.22MB (93% of limit) to <1.8MB (72%)_
+_Critical for Cloudflare deployment success_
 
 ## Current State Analysis
 
 ### **Worker Bundle Size (Critical)**
+
 - **Main Worker**: 2.22MB (93% of 2.5MB Cloudflare limit)
 - **Risk Level**: High - approaching Error 1102 threshold
 - **Current Split**: Document Worker already exists (`wrangler.documents.jsonc`)
 - **Browser Bundle**: Large assets affect broker productivity (10.74MB PDF worker)
 
 ### **Architecture Context**
+
 ```
 Current Architecture:
 ┌─────────────────────────────────────────────┐
 │         Main Worker (2.22MB)               │
 ├─────────────────────────────────────────────┤
 │ • Authentication & Session Management       │
-│ • Policy Orchestration                     │  
+│ • Policy Orchestration                     │
 │ • Client Management                        │
 │ • Premium Calculation                     │
 │ • Email Orchestration                      │
@@ -44,6 +47,7 @@ Current Architecture:
 **Rationale:** Analytics and reporting logic uses heavy Excel/PDF libraries that bloat the main Worker but are only needed for specific report generation endpoints.
 
 **Target Split:**
+
 ```
 ┌─────────────────────────────────────────────┐
 │           Main Worker (Target: 1.8MB)      │
@@ -70,6 +74,7 @@ Current Architecture:
 ### **Phase 2: Heavy Library Isolation (Strategic)**
 
 **Identify Heavy Dependencies in Main Worker:**
+
 1. **ExcelJS** (4MB+ in browser bundle) - Move to Analytics Worker
 2. **PDF Generation Dependencies** - Already in Document Worker
 3. **Data Processing Libraries** - Move where appropriate
@@ -78,9 +83,10 @@ Current Architecture:
 ### **Phase 3: Dynamic Import Strategy (Architectural)**
 
 **Implement Lazy Loading Pattern:**
+
 ```typescript
 // Before: Static import
-import { generateReport } from './heavy-report-service';
+import { generateReport } from "./heavy-report-service";
 
 // After: Dynamic import with Worker boundary
 export async function generateAnalyticsReport(data) {
@@ -92,6 +98,7 @@ export async function generateAnalyticsReport(data) {
 ## Implementation Plan (No Code)
 
 ### **Week 1: Analysis & Design**
+
 1. **Bundle Analysis** (`scripts/simple-bundle-check.js` enhanced)
    - Map dependencies to bundle size contribution
    - Identify heaviest libraries in main Worker
@@ -108,6 +115,7 @@ export async function generateAnalyticsReport(data) {
    - Plan deployment/dependency ordering
 
 ### **Week 2: Architecture Design**
+
 1. **Worker Configuration Design**
    - Create `wrangler.analytics.jsonc` configuration
    - Design service bindings and environment variables
@@ -124,6 +132,7 @@ export async function generateAnalyticsReport(data) {
    - Design data consistency approach
 
 ### **Week 3: Migration Strategy**
+
 1. **Phased Migration Plan**
    - Endpoint-by-endpoint migration strategy
    - Feature flag implementation plan
@@ -142,16 +151,19 @@ export async function generateAnalyticsReport(data) {
 ## Expected Benefits
 
 ### **Bundle Size Reduction**
+
 - **Main Worker**: 2.22MB → <1.8MB (20% reduction)
 - **Error 1102 Risk**: High → Low
 - **Cold Start Time**: Improved by 20-30%
 
 ### **System Architecture Improvements**
+
 - **Better Separation of Concerns**: Analytics logic isolated
 - **Independent Scaling**: Analytics Worker scales separately
 - **Focused Optimization**: Each Worker optimized for specific workload
 
 ### **Broker Productivity**
+
 - **Main App Responsiveness**: Faster routing/authentication
 - **Specialized Processing**: Heavy work offloaded to specialized Workers
 - **Parallel Processing**: Multiple reports can generate concurrently
@@ -159,6 +171,7 @@ export async function generateAnalyticsReport(data) {
 ## Technical Design Details
 
 ### **1. Analytics Worker Configuration (`wrangler.analytics.jsonc`)**
+
 ```jsonc
 {
   "name": "insurance-analytics-worker-staging",
@@ -168,24 +181,25 @@ export async function generateAnalyticsReport(data) {
   "observability": {
     "enabled": true,
     "logs": { "enabled": true },
-    "traces": { "enabled": true }
+    "traces": { "enabled": true },
   },
   "hyperdrive": [
     {
       "binding": "HYPERDRIVE",
-      "id": "1861601674b24d2ab8870dcb0c7a68ed"
-    }
+      "id": "1861601674b24d2ab8870dcb0c7a68ed",
+    },
   ],
   "r2_buckets": [
     {
       "binding": "ANALYTICS_CACHE",
-      "bucket_name": "insurance-app-analytics-cache"
-    }
-  ]
+      "bucket_name": "insurance-app-analytics-cache",
+    },
+  ],
 }
 ```
 
 ### **2. Service Binding Updates (`wrangler.jsonc`)**
+
 ```jsonc
 "services": [
   {
@@ -200,6 +214,7 @@ export async function generateAnalyticsReport(data) {
 ```
 
 ### **3. API Interface Design**
+
 ```typescript
 // Analytics Worker API
 export interface AnalyticsService {
@@ -207,11 +222,13 @@ export interface AnalyticsService {
   generateExcelReport(params: ExcelReportParams): Promise<ReportResult>;
   generatePDFReport(params: PDFReportParams): Promise<ReportResult>;
   generateCSVExport(params: CSVExportParams): Promise<ExportResult>;
-  
+
   // Analytics
-  calculateBrokerPerformance(params: PerformanceParams): Promise<PerformanceResult>;
+  calculateBrokerPerformance(
+    params: PerformanceParams,
+  ): Promise<PerformanceResult>;
   analyzePolicyTrends(params: TrendParams): Promise<TrendResult>;
-  
+
   // Data Processing
   processBulkData(params: BulkDataParams): Promise<BulkDataResult>;
   validateDataExport(params: ValidationParams): Promise<ValidationResult>;
@@ -221,17 +238,20 @@ export interface AnalyticsService {
 ### **4. Migration Priority List**
 
 **High Priority (Heaviest Dependencies First):**
+
 1. **Excel Report Generation** (ExcelJS ≈ 4MB)
 2. **Complex Analytics Calculations** (heavy math libraries)
 3. **Historical Data Processing** (large dataset operations)
 4. **Bulk Data Export** (CSV/Excel generation)
 
 **Medium Priority:**
+
 1. **Chart Generation** (if using heavy visualization libraries)
 2. **Data Validation Rules** (complex business logic)
 3. **Statistical Analysis** (if using stats libraries)
 
 **Low Priority:**
+
 1. **Simple Calculations** (keep in main Worker)
 2. **Basic Data Transformations** (keep in main Worker)
 3. **Authentication/Authorization** (must stay in main Worker)
@@ -239,6 +259,7 @@ export interface AnalyticsService {
 ## Risk Assessment & Mitigation
 
 ### **Technical Risks**
+
 1. **Increased Latency**: Worker-to-Worker calls add overhead
    - **Mitigation**: Implement request batching, caching
    - **Acceptable Tradeoff**: Better than Error 1102 failures
@@ -252,6 +273,7 @@ export interface AnalyticsService {
    - **Design**: Analytics Worker as read-focused, async updates
 
 ### **Business Risks**
+
 1. **Deployment Complexity**: Multiple Worker deployments
    - **Mitigation**: Automated CI/CD pipeline, deployment ordering
    - **Rollback Plan**: Feature flags, version pinning
@@ -263,16 +285,19 @@ export interface AnalyticsService {
 ## Success Metrics
 
 ### **Primary Metrics (Must Achieve)**
+
 - ✅ Main Worker bundle: <1.8MB (28% buffer from 2.5MB limit)
 - ✅ Zero Error 1102 occurrences post-migration
 - ✅ No regression in critical workflow completion times
 
 ### **Secondary Metrics (Should Achieve)**
+
 - ✅ Analytics Worker bundle: <1.5MB (reasonable for specialized Worker)
 - ✅ Worker-to-Worker call latency: <100ms P95
 - ✅ Report generation performance: Maintained or improved
 
 ### **Quality Metrics**
+
 - ✅ 100% endpoint test coverage for migrated functionality
 - ✅ Comprehensive error handling between Workers
 - ✅ Clear monitoring/alerts for cross-Worker issues
@@ -280,12 +305,14 @@ export interface AnalyticsService {
 ## Resource Requirements
 
 ### **Engineering Time**
+
 - **Phase 1 (Analysis)**: 1 engineer × 1 week
-- **Phase 2 (Design)**: 2 engineers × 1 week  
+- **Phase 2 (Design)**: 2 engineers × 1 week
 - **Phase 3 (Implementation)**: 2 engineers × 2 weeks
 - **Total**: ~5 engineer-weeks
 
 ### **Infrastructure**
+
 - **New Worker**: Analytics Worker ($0 Cloudflare free tier)
 - **R2 Storage**: Analytics cache bucket (minimal cost)
 - **Monitoring**: Enhanced Sentry/Alerts ($0 free tier)
@@ -293,21 +320,25 @@ export interface AnalyticsService {
 ## Timeline
 
 ### **Week 1-2: Planning & Design**
+
 - Complete bundle analysis
 - Finalize technical design
 - Create detailed migration plan
 
 ### **Week 3-4: Implementation**
+
 - Create Analytics Worker infrastructure
 - Migrate highest-priority endpoints
 - Implement monitoring/tracing
 
 ### **Week 5: Testing & Rollout**
+
 - Performance testing
 - User acceptance testing
 - Phased production rollout
 
 ### **Week 6: Optimization & Documentation**
+
 - Performance optimization
 - Documentation updates
 - Post-mortem/review
@@ -315,17 +346,20 @@ export interface AnalyticsService {
 ## Alternative Approaches Considered
 
 ### **Option A: Status Quo (Rejected)**
+
 - **Risk**: High probability of Error 1102 failures
 - **Limitation**: Cannot add new features without breaking Worker
 - **Decision**: Not acceptable for production stability
 
 ### **Option B: Aggressive Code Splitting (Considered)**
+
 - **Approach**: Dynamic imports within main Worker
 - **Pros**: Simpler, maintains single Worker
 - **Cons**: Limited reduction (≈10-15%), complex code
 - **Decision**: Combine with Worker split for maximum effect
 
 ### **Option C: Additional Workers (Chosen)**
+
 - **Approach**: Split by functional domain (Analytics Worker)
 - **Pros**: Maximum bundle reduction, better architecture
 - **Cons**: More infrastructure to manage
@@ -334,6 +368,7 @@ export interface AnalyticsService {
 ## Next Steps (Immediate)
 
 ### **1. Enhanced Bundle Analysis** (Day 1-2)
+
 ```bash
 # Create enhanced analysis tool
 npm run analyze:dependencies  # New script to be created
@@ -345,11 +380,13 @@ npm run analyze:dependencies  # New script to be created
 ```
 
 ### **2. Design Review** (Day 3-4)
+
 - Review with engineering team
 - Finalize Analytics Worker API design
 - Create detailed migration checklist
 
 ### **3. Proof of Concept** (Day 5-7)
+
 - Create basic Analytics Worker skeleton
 - Migrate one non-critical endpoint
 - Measure performance impact
@@ -361,6 +398,7 @@ npm run analyze:dependencies  # New script to be created
 **Strategic Direction:** 3-layer Worker architecture for scalability
 
 **Key Decision:** Implement Analytics Worker split to:
+
 1. **Immediately reduce** main Worker bundle by 20%+
 2. **Create scalable foundation** for future analytics features
 3. **Improve system architecture** with proper separation of concerns

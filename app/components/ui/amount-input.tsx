@@ -1,10 +1,7 @@
 import { useState } from "react";
 import { Controller, useFormContext } from "react-hook-form";
 import { CheckIcon } from "lucide-react";
-import {
-  formatAmountInput,
-  sanitizeAmountInput,
-} from "~/lib/amount-input";
+import { formatAmountInput, sanitizeAmountInput } from "~/lib/amount-input";
 import {
   InputGroup,
   InputGroupAddon,

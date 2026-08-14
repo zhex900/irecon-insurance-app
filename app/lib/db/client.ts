@@ -62,11 +62,6 @@ export async function withRequestDb<T>(
   }
 }
 
-/** @deprecated No-op — request scoping replaces global resets. */
-export function resetDbClients() {
-  // kept for older Worker entry imports
-}
-
 function getSql() {
   const scoped = dbContext.getStore();
   if (scoped) return scoped.sql;
@@ -85,7 +80,9 @@ function getSql() {
 
 export function getDb() {
   const scoped = dbContext.getStore();
-  if (scoped) return scoped.db;
+  if (scoped) {
+    return scoped.db;
+  }
 
   if (
     !globalForDb.__ireconDb ||

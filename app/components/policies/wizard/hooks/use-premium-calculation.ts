@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { useFetcher } from "react-router";
-import { type UseFormReturn } from "react-hook-form";
 import type { Policy, PremiumBreakdown } from "~/lib/db/types";
+import type { NoteAuthor } from "~/lib/services/users/service";
 import { withRolledTotals } from "./use-premium-calc-utils";
 
 export type PolicyWizardActionData = {
@@ -18,8 +18,6 @@ export type PolicyWizardActionData = {
   message?: string;
 };
 
-type NoteAuthor = any; // Simplified type for now
-
 export function usePremiumFetcherUpdates({
   fetcher,
   premiumManuallyEditedRef,
@@ -31,19 +29,19 @@ export function usePremiumFetcherUpdates({
 }) {
   // Track fetcher data updates
   const lastFetcherDataRef = useRef(fetcher.data);
-  
+
   useEffect(() => {
     if (lastFetcherDataRef.current === fetcher.data) return;
-    
+
     // Take atomic snapshot to prevent race conditions
     const snapshot = {
       data: fetcher.data,
       manualEdit: premiumManuallyEditedRef.current,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
-    
+
     lastFetcherDataRef.current = fetcher.data;
-    
+
     // Only update premium if data exists AND not manually edited
     // Atomic check to prevent race between check and set
     if (snapshot.data?.premium && !snapshot.manualEdit) {
@@ -60,7 +58,7 @@ export function usePremiumFetcherState({
   policy: Policy;
 }) {
   const rating = fetcher.data?.rating ?? policy.car.rating;
-  
+
   const isFetcherBusy = fetcher.state !== "idle";
   const isCalculating =
     isFetcherBusy && fetcher.formData?.get("intent") === "recalculate";

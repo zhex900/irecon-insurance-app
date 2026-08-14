@@ -1,10 +1,7 @@
 import { useMemo } from "react";
 import { useWatch, type UseFormReturn } from "react-hook-form";
 import { POLICY_FORM_SECTIONS } from "~/components/policies/policy-form-layout";
-import {
-  flattenFieldErrors,
-  orderFormIssues,
-} from "~/lib/form-validation-ui";
+import { flattenFieldErrors, orderFormIssues } from "~/lib/form-validation-ui";
 import { labelForPolicyFieldPath } from "~/lib/policies/field-labels";
 import {
   carPolicySchema,
@@ -12,8 +9,11 @@ import {
   wizardStepFields,
   type CarPolicyFormValues,
 } from "~/lib/zod/policy-car";
-import { SECTION_IDS } from "../constants";
-import { findStepForFieldPath, sectionIdForStep } from "./use-wizard-navigation-utils";
+import { SECTION_IDS } from "../shared/constants";
+import {
+  findStepForFieldPath,
+  sectionIdForStep,
+} from "./use-wizard-navigation-utils";
 
 export function useWizardValidationState({
   form,
@@ -23,7 +23,7 @@ export function useWizardValidationState({
   const watchedValues = useWatch({ control: form.control });
   const watchedKey = JSON.stringify(watchedValues);
   const rhfErrors = form.formState.errors;
-  
+
   const fieldOrder = useMemo(
     () => Object.values(wizardStepFields).flat().map(String),
     [],
@@ -36,9 +36,13 @@ export function useWizardValidationState({
     sectionIssuePaths,
     isFormValid,
   } = useMemo(() => {
-    const counts: Record<string, number> = { [SECTION_IDS.POLICY_INFORMATION]: 0 };
+    const counts: Record<string, number> = {
+      [SECTION_IDS.POLICY_INFORMATION]: 0,
+    };
     const firstPaths: Record<string, string> = {};
-    const allPaths: Record<string, string[]> = { [SECTION_IDS.POLICY_INFORMATION]: [] };
+    const allPaths: Record<string, string[]> = {
+      [SECTION_IDS.POLICY_INFORMATION]: [],
+    };
     for (const section of POLICY_FORM_SECTIONS) {
       counts[section.id] = 0;
       allPaths[section.id] = [];

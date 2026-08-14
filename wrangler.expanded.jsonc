@@ -1,0 +1,68 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "insurance-app-staging",
+  "compatibility_date": "2026-07-20",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "./workers/app.ts",
+  // Workers Logs + Traces. Export to Sentry via CF dashboard destinations named
+  // exactly `sentry-logs` / `sentry-traces` (OTLP → Sentry). See docs/observability.md.
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "destinations": ["sentry-logs"],
+    },
+    "traces": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "destinations": ["sentry-traces"],
+    },
+  },
+  "upload_source_maps": true,
+  "placement": {
+    "mode": "smart",
+  },
+  "services": [
+    {
+      "binding": "EXCEL_SERVICE",
+      "service": "insurance-excel-worker-staging",
+    },
+    {
+      "binding": "DOCUMENT_SERVICE",
+      "service": "insurance-document-worker-staging",
+    },
+    {
+      "binding": "DOCUMENTS_UI_SERVICE",
+      "service": "insurance-documents-ui-staging",
+    },
+    {
+      "binding": "ADMIN_SERVICE",
+      "service": "insurance-admin-ui-staging",
+    },
+  ],
+  // `limits.cpu_ms` requires a paid Workers plan — omit on Free (API code 100328).
+  "vars": {
+    "SUPABASE_URL": "https://tjnsygunohylofihoksl.supabase.co",
+    "SESSION_INACTIVITY_TIMEOUT_MINUTES": "30",
+    "SESSION_ABSOLUTE_TIMEOUT_HOURS": "12",
+    "DOCUMENTS_UI_URL": "https://documents-ui.example.com",
+    "ADMIN_UI_URL": "https://admin-ui.example.com",
+  },
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "1861601674b24d2ab8870dcb0c7a68ed",
+    },
+  ],
+  "r2_buckets": [
+    {
+      "binding": "AVATARS",
+      "bucket_name": "insurance-app-avatars",
+    },
+    {
+      "binding": "LIBRARY_DOCUMENTS",
+      "bucket_name": "insurance-app-library-documents",
+    },
+  ],
+}

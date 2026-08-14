@@ -1,9 +1,3 @@
-import {
-  formatCurrencyCell,
-  loadExcelJS,
-  styleWorkbookHeaderRow,
-} from "~/lib/pricing/premium-excel-workbook";
-
 export type ReportExcelColumnType = "text" | "currency" | "integer" | "date";
 
 export type ReportExcelColumn = {
@@ -13,7 +7,7 @@ export type ReportExcelColumn = {
   type?: ReportExcelColumnType;
 };
 
-/** Build a single-sheet .xlsx workbook (dynamic exceljs — server/API only). */
+/** Build a single-sheet .xlsx workbook using Excel Worker. */
 export async function buildReportExcelBuffer(options: {
   sheetName?: string;
   /** Merged title row above column headers (e.g. report period). */
@@ -21,9 +15,10 @@ export async function buildReportExcelBuffer(options: {
   columns: ReportExcelColumn[];
   rows: Array<Record<string, string | number | null | undefined>>;
 }): Promise<ArrayBuffer> {
-  // Try to use Excel Worker wrapper first, with fallback to direct ExcelJS
-  const { buildReportExcelBuffer: excelWorkerBuild } = await import('./excel-worker-wrapper.server');
-  
+  // Always use Excel Worker wrapper
+  const { buildReportExcelBuffer: excelWorkerBuild } =
+    await import("./excel-worker-wrapper.server");
+
   return excelWorkerBuild(options);
 }
 

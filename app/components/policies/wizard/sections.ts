@@ -1,6 +1,6 @@
-export { ClaimsWordingStep } from "./section-claims-wording";
-export { PremiumSummaryPanel } from "./section-premium-summary";
-export { PricingDeclarationConfirmedStep } from "./section-premium-declaration";
-export { RiskDetailsStep } from "./section-risk-details";
-export { ExcessesStep } from "./section-excesses";
-export { LimitsOfLiabilityStep } from "./section-limits";
+export { ClaimsWording } from "./sections/claims-wording";
+export { PremiumSummary } from "./sections/premium-summary";
+export { PricingDeclarationConfirmed } from "./sections/premium-declaration";
+export { RiskDetails } from "./sections/risk-details";
+export { Excesses } from "./sections/excesses";
+export { LimitsOfLiability } from "./sections/limits";

@@ -5,7 +5,7 @@ import {
   AppBreadcrumb,
   type AppBreadcrumbItem,
 } from "~/components/layout/app-breadcrumb";
-import { FilterAutocomplete } from "~/components/clients/filter-autocomplete";
+import { FilterAutocomplete } from "~/components/forms/autocomplete";
 import { Badge } from "~/components/reui/badge";
 import {
   Card,

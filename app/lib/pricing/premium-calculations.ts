@@ -47,10 +47,10 @@ export function calcBundle(
   const cwBase = roundMoney(Math.max(cwCalc, rating.contractWorksMinPremium));
   const liabCalc = roundMoney(rating.liabilityAppliedRate * turnover);
   const liabBase = roundMoney(Math.max(liabCalc, rating.liabilityMinPremium));
-  
+
   // Terrorism premium
   const terror = roundMoney(cwBase * rating.terrorismRate);
-  
+
   // Plant equipment premium
   const plantResult = plantPremium({
     certificateDate: inputs.dateStart,
@@ -62,11 +62,11 @@ export function calcBundle(
   });
   const plant = plantResult.value;
   const plantTerror = plant > 0 ? roundMoney(plant * rating.terrorismRate) : 0;
-  
+
   // Legacy: plant ESL uses construction ESL rate `e`, not PlantEslRate.
   const plantEsl =
     plant > 0 ? roundMoney((plant + plantTerror) * rating.eslRate) : 0;
-  
+
   // Contract Works calculations
   const esl = roundMoney((cwBase + terror) * rating.eslRate);
   const gst = roundMoney(
@@ -79,7 +79,7 @@ export function calcBundle(
   const cwTotal = roundMoney(
     cwBase + terror + plant + plantTerror + plantEsl + esl + gst + stamp,
   );
-  
+
   // Liability calculations
   const liabEsl = 0;
   const liabGst = roundMoney((liabBase + liabEsl) * GST_RATE);
@@ -87,7 +87,7 @@ export function calcBundle(
     (liabBase + liabEsl + liabGst) * rating.liabilityStampDutyRate,
   );
   const liabTotal = roundMoney(liabBase + liabEsl + liabGst + liabStamp);
-  
+
   // Broker fee and combined total
   const brokerFee = roundMoney(inputs.brokerFeeTotal);
   const combined = roundMoney(cwTotal + liabTotal + brokerFee);
@@ -131,7 +131,9 @@ export function calcContractWorksOnly(
   stamp: number;
   cwTotal: number;
 } {
-  const cwCalc = roundMoney(rating.contractWorksAppliedRate * estimatedTurnover);
+  const cwCalc = roundMoney(
+    rating.contractWorksAppliedRate * estimatedTurnover,
+  );
   const cwBase = roundMoney(Math.max(cwCalc, rating.contractWorksMinPremium));
   const terror = roundMoney(cwBase * rating.terrorismRate);
   const esl = roundMoney((cwBase + terror) * rating.eslRate);
@@ -209,9 +211,7 @@ export function calcEsl(
 /**
  * Calculate GST for given premiums.
  */
-export function calcGst(
-  ...premiums: number[]
-): number {
+export function calcGst(...premiums: number[]): number {
   const total = premiums.reduce((sum, p) => sum + p, 0);
   return roundMoney(total * GST_RATE);
 }

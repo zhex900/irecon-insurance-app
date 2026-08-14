@@ -36,3 +36,5 @@ _archive/mssql/.env.mssql
 
 # Nested git checkout under archive (not part of this repo)
 _archive/legacy-app/
+
+dist/

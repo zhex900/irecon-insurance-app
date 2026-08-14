@@ -8,18 +8,18 @@ This file is **behavior only**. Engineering rules live in `docs/`.
 
 | Task                                        | Document                                                                                             |
 | ------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| Layering, data flow, folder ownership       | [docs/architecture.md](docs/architecture.md)                                                         |
-| TypeScript, React, Router, errors, security | [docs/coding-standards.md](docs/coding-standards.md)                                                 |
-| Patterns (service, repository, mapper, …)   | [docs/design-patterns.md](docs/design-patterns.md)                                                   |
-| Queries, render, bundle                     | [docs/performance.md](docs/performance.md)                                                           |
-| UI / forms / a11y                           | [docs/ui-guidelines.md](docs/ui-guidelines.md)                                                       |
-| Before finishing any change                 | [docs/code-review.md](docs/code-review.md)                                                           |
-| Production roadmap                          | [docs/REFACTOR_TO_PRODUCTION.md](docs/REFACTOR_TO_PRODUCTION.md)                                     |
-| Testing                                     | [docs/testing.md](docs/testing.md)                                                                   |
-| Lint / format                               | [docs/tooling.md](docs/tooling.md)                                                                   |
-| CAR premium / terrorism formulas            | [docs/pricing/car-premium-formulas.md](docs/pricing/car-premium-formulas.md)                         |
-| Legacy vs rebuild manual premium quirks     | [docs/pricing/legacy-vs-rebuild-premium-manual.md](docs/pricing/legacy-vs-rebuild-premium-manual.md) |
-| Observability (CF + Sentry)                 | [docs/observability.md](docs/observability.md)                                                       |
+| Layering, data flow, folder ownership       | [docs/architecture/performance.md](docs/architecture/performance.md)                                 |
+| TypeScript, React, Router, errors, security | [docs/guidelines/coding-standards.md](docs/guidelines/coding-standards.md)                           |
+| Patterns (service, repository, mapper, …)   | [docs/guidelines/design-patterns.md](docs/guidelines/design-patterns.md)                             |
+| Queries, render, bundle                     | [docs/architecture/performance.md](docs/architecture/performance.md)                                 |
+| UI / forms / a11y                           | [docs/guidelines/ui-guidelines.md](docs/guidelines/ui-guidelines.md)                                 |
+| Before finishing any change                 | [docs/guidelines/code-review.md](docs/guidelines/code-review.md)                                     |
+| Production roadmap                          | [docs/architecture/refactor-to-production.md](docs/architecture/refactor-to-production.md)           |
+| Testing                                     | [docs/development/testing.md](docs/development/testing.md)                                          |
+| Lint / format                               | [docs/guidelines/tooling.md](docs/guidelines/tooling.md)                                             |
+| CAR premium / terrorism formulas            | [docs/domains/pricing/car-premium-formulas.md](docs/domains/pricing/car-premium-formulas.md)         |
+| Legacy vs rebuild manual premium quirks     | [docs/domains/pricing/legacy-vs-rebuild-premium-manual.md](docs/domains/pricing/legacy-vs-rebuild-premium-manual.md) |
+| Observability (CF + Sentry)                 | [docs/deployment/observability.md](docs/deployment/observability.md)                                 |
 | How to run                                  | [README.md](README.md)                                                                               |
 
 ## AI coding rules
@@ -36,7 +36,7 @@ When generating or editing code:
 8. **Leave unrelated code untouched.**
 9. **Prefer deleting code** over adding abstractions.
 10. **Self-review** with [docs/code-review.md](docs/code-review.md) before claiming done.
-11. **Prevent bundle balloons** — before adding imports to routes or shared SSR modules, check they won’t pull pdfme/TipTap/WASM into the Worker; use dynamic `import()`, light helper modules, and `vite.stub-client-only.ts` for client-only packages ([docs/performance.md](docs/performance.md) § Bundle & Workers).
+11. **Prevent bundle balloons** — before adding imports to routes or shared SSR modules, check they won’t pull pdfme/TipTap/WASM into the Worker; use dynamic `import()`, light helper modules, and `vite.stub-client-only.ts` for client-only packages ([docs/architecture/performance.md](docs/architecture/performance.md) § Bundle & Workers).
 
 ## Decision rule
 

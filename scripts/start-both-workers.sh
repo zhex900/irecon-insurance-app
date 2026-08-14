@@ -59,7 +59,7 @@ echo -e "${GREEN}Documents Worker PID: $DOCUMENTS_PID${NC}"
 
 # Start Excel Worker in background
 echo -e "${BLUE}Starting Excel Worker on port 8788...${NC}"
-npx wrangler dev --config wrangler.excel.jsonc --port 8788 --inspector-port 9231 &
+npx wrangler dev --config wrangler.excel.jsonc --port 8788 --inspector-port 9231 --env-file workers/excel-local.env &
 EXCEL_PID=$!
 echo -e "${GREEN}Excel Worker PID: $EXCEL_PID${NC}"
 

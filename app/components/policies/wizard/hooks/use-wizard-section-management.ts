@@ -1,17 +1,16 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import {
   POLICY_FORM_SECTIONS,
-  sectionIdForStep,
   stepIndexForSection,
   usePolicySectionScrollSpy,
 } from "~/components/policies/policy-form-layout";
-import { SECTION_IDS } from "../constants";
+import { SECTION_IDS } from "../shared/constants";
 import { rememberWizardStep } from "../step-memory";
 
 export function useWizardSectionManagement({
   policyId,
   navIds,
-  step,
+  step: _step,
   maxStep,
   setStep,
   setMaxStep,

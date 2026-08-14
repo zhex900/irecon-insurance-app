@@ -21,7 +21,7 @@ import {
 } from "../step-memory";
 import type { PolicyWizardActionData } from "./use-premium-calc";
 import type { PolicyLeaveApi } from "./use-draft-save";
-import { INTENTS, SECTION_IDS } from "../constants";
+import { INTENTS, SECTION_IDS } from "../shared/constants";
 
 export function usePolicySubmit({
   policy,

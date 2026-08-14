@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useLayoutEffect,
   useState,
@@ -28,7 +29,7 @@ export function useFloatingListPosition(
 ): FloatingListPosition | null {
   const [position, setPosition] = useState<FloatingListPosition | null>(null);
 
-  function updatePosition() {
+  const updatePosition = useCallback(() => {
     const el = anchorRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
@@ -37,13 +38,12 @@ export function useFloatingListPosition(
       left: rect.left,
       width: Math.max(rect.width, minWidth),
     });
-  }
+  }, [anchorRef, minWidth]);
 
   useLayoutEffect(() => {
     if (!open) return;
     updatePosition();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- updatePosition reads the live anchor rect, not a dependency
-  }, [open, recomputeKey]);
+  }, [open, recomputeKey, updatePosition]);
 
   useEffect(() => {
     if (!open) return;
@@ -56,8 +56,7 @@ export function useFloatingListPosition(
       window.removeEventListener("resize", onReposition);
       window.removeEventListener("scroll", onReposition, true);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- updatePosition reads the live anchor rect, not a dependency
-  }, [open]);
+  }, [open, updatePosition]);
 
   return position;
 }

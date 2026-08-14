@@ -1,10 +1,8 @@
 import { type UseFormReturn } from "react-hook-form";
 import { focusFormIssue, orderFormIssues } from "~/lib/form-validation-ui";
 import { flattenFieldErrors } from "~/lib/form-validation-ui";
-import { labelForPolicyFieldPath } from "~/lib/policies/field-labels";
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
 import type { PremiumBreakdown } from "~/lib/db/types";
-import { SECTION_IDS } from "../constants";
 import { useWizardStepManagement } from "./use-wizard-step-management";
 import { useWizardSectionManagement } from "./use-wizard-section-management";
 import { useWizardValidationState } from "./use-wizard-validation-state";
@@ -32,7 +30,7 @@ export function usePolicyWizardNavigation({
     setStep,
     setMaxStep,
     goToStep: goToStepRaw,
-    canNavigateToStep,
+    canNavigateToStep: _canNavigateToStep,
   } = useWizardStepManagement({
     policyId,
     policyPremium,
@@ -141,18 +139,18 @@ export function usePolicyWizardNavigation({
     activeSectionId,
     setActiveSectionId,
     pendingFocusPathRef,
-    
+
     // Navigation functions
     goToStep,
     navigateToSection,
     navigateToIssue,
     navigateToSectionFirstIssue,
-    
+
     // Utility functions
     firstIssuePath,
     findStepForField,
     focusFirstIssue,
-    
+
     // Validation state
     fieldOrder,
     invalidIssues,

@@ -25,6 +25,10 @@
   },
   "services": [
     {
+      "binding": "EXCEL_SERVICE",
+      "service": "insurance-excel-worker-staging",
+    },
+    {
       "binding": "DOCUMENT_SERVICE",
       "service": "insurance-document-worker-staging",
     },
@@ -34,6 +38,7 @@
     "SUPABASE_URL": "https://tjnsygunohylofihoksl.supabase.co",
     "SESSION_INACTIVITY_TIMEOUT_MINUTES": "30",
     "SESSION_ABSOLUTE_TIMEOUT_HOURS": "12",
+    "WORKER_SHARED_SECRET": "{{ secrets.WORKER_SHARED_SECRET }}",
   },
   "hyperdrive": [
     {

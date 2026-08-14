@@ -8,6 +8,7 @@ import tseslint from "typescript-eslint";
 export default tseslint.config(
   {
     ignores: [
+      "dist/**",
       "build/**",
       ".wrangler/**",
       ".react-router/**",
@@ -23,6 +24,7 @@ export default tseslint.config(
       "workers/*-env.d.ts",
       // Ops / one-off scripts — not part of the app lint gate.
       "scripts/**",
+      "test-excel-worker.js",
     ],
   },
   js.configs.recommended,
@@ -132,9 +134,12 @@ export default tseslint.config(
       "app/components/policies/policy-form-layout.tsx",
       "app/components/policies/wizard/section-shared.tsx",
       "app/components/policies/wizard/car-policy-wizard-mode-context.tsx",
+      // Federation loader exports both functions and components
+      "federation/loader/index.tsx",
     ],
     rules: {
       "react-refresh/only-export-components": "off",
+      "react-hooks/static-components": "off",
     },
   },
   {

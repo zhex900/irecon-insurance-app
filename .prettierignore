@@ -34,3 +34,5 @@ workers/documents-local.env
 *.eot
 pnpm-lock.yaml
 yarn.lock
+
+dist/*

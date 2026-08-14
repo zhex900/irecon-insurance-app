@@ -486,7 +486,10 @@ export default function SettingsAccountManagersRoute({
                     />
                   </TableCell>
                   <TableCell>
-                    <SearchHighlight text={manager.abbrev} query={searchQuery} />
+                    <SearchHighlight
+                      text={manager.abbrev}
+                      query={searchQuery}
+                    />
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     <SearchHighlight text={manager.email} query={searchQuery} />
@@ -498,7 +501,10 @@ export default function SettingsAccountManagersRoute({
                     />
                   </TableCell>
                   <TableCell className="tabular-nums">
-                    <SearchHighlight text={manager.mobile} query={searchQuery} />
+                    <SearchHighlight
+                      text={manager.mobile}
+                      query={searchQuery}
+                    />
                   </TableCell>
                   <InteractiveTableActionsCell className="text-right">
                     <Button

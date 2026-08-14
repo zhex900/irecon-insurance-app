@@ -3,8 +3,11 @@
  * Extracted from html-rich-text-lines.ts to reduce file size.
  */
 
-import type { PdfmeFontFamily } from "~/lib/pdf/font-config";
-import type { DrawLine, TextRun, RichTextRunStyle } from "./html-rich-text-parser";
+import type {
+  DrawLine,
+  TextRun,
+  RichTextRunStyle,
+} from "./html-rich-text-parser";
 
 const MM_TO_PT = 72 / 25.4;
 
@@ -28,7 +31,7 @@ export type WrapOptions = {
  */
 export function wrapBlockToLines(
   block: WrapBlock,
-  options: WrapOptions
+  options: WrapOptions,
 ): DrawLine[] {
   const { widthMm, measure, markerMeasureStyle } = options;
   const widthPt = widthMm * MM_TO_PT;
@@ -48,19 +51,19 @@ export function wrapBlockToLines(
   const ownMarkerWidth = block.marker
     ? measure(block.marker, markerMeasureStyle)
     : 0;
-  
+
   // Use shared marker column width for list groups
   const markerSlotPt =
     block.listGroupId != null && options.markerSlotByGroup
       ? (options.markerSlotByGroup.get(block.listGroupId) ?? ownMarkerWidth)
       : ownMarkerWidth;
-  
+
   const maxWidth = Math.max(20, widthPt - indentPt - markerSlotPt);
 
   // Split text into pieces for word-wrapping
   type Piece = { text: string; style: RichTextRunStyle };
   const pieces: Piece[] = [];
-  
+
   for (const run of block.runs) {
     const parts = run.text.split(/(\s+)/);
     for (const part of parts) {
@@ -80,7 +83,7 @@ export function wrapBlockToLines(
 
   const pushLine = () => {
     if (lineRuns.length === 0 && !block.marker) return;
-    
+
     // Drop leading whitespace on wrap lines so text sits on the hang column.
     if (!isFirstLine) {
       while (lineRuns.length > 0 && !lineRuns[0]!.text.trim()) {
@@ -91,7 +94,7 @@ export function wrapBlockToLines(
         return;
       }
     }
-    
+
     lines.push({
       runs: lineRuns,
       indentPx: block.indentPx,
@@ -99,7 +102,7 @@ export function wrapBlockToLines(
       // Keep group on every line (incl. wraps) so draw can hang-indent.
       listGroupId: block.listGroupId,
     });
-    
+
     lineRuns = [];
     lineWidth = 0;
     isFirstLine = false;
@@ -108,33 +111,32 @@ export function wrapBlockToLines(
   // Word wrap algorithm
   for (const piece of pieces) {
     const w = measure(piece.text, piece.style);
-    
+
     // If piece doesn't fit on current line, start new line
     if (lineWidth + w > maxWidth && lineRuns.length > 0) {
       pushLine();
     }
-    
+
     // Handle very long words that exceed max width
     if (w > maxWidth) {
       // Split long word
       const chars = piece.text.split("");
       let currentWord = "";
-      
+
       for (const char of chars) {
         const charWidth = measure(char, piece.style);
         if (lineWidth + charWidth > maxWidth && lineRuns.length > 0) {
           pushLine();
         }
-        
+
         if (currentWord) {
           lineRuns.push({ text: currentWord, style: piece.style });
           lineWidth += measure(currentWord, piece.style);
-          currentWord = "";
         }
-        
+
         currentWord = char;
       }
-      
+
       if (currentWord) {
         lineRuns.push({ text: currentWord, style: piece.style });
         lineWidth += measure(currentWord, piece.style);
@@ -145,7 +147,7 @@ export function wrapBlockToLines(
       lineWidth += w;
     }
   }
-  
+
   // Push any remaining content
   if (lineRuns.length > 0 || (isFirstLine && block.marker)) {
     pushLine();
@@ -161,17 +163,17 @@ export function wrapBlockToLines(
 export function calculateMarkerSlotWidths(
   blocks: WrapBlock[],
   measure: (text: string, style: RichTextRunStyle) => number,
-  markerMeasureStyle: RichTextRunStyle
+  markerMeasureStyle: RichTextRunStyle,
 ): Map<number, number> {
   const markerSlotByGroup = new Map<number, number>();
-  
+
   for (const block of blocks) {
     if (!block.marker || block.listGroupId == null) continue;
     const w = measure(block.marker, markerMeasureStyle);
     const prev = markerSlotByGroup.get(block.listGroupId) ?? 0;
     if (w > prev) markerSlotByGroup.set(block.listGroupId, w);
   }
-  
+
   return markerSlotByGroup;
 }
 
@@ -181,18 +183,15 @@ export function calculateMarkerSlotWidths(
 export function wrapBlocksToLines(
   blocks: WrapBlock[],
   options: WrapOptions,
-  markerSlotByGroup?: Map<number, number>
+  markerSlotByGroup?: Map<number, number>,
 ): DrawLine[] {
-  const { widthMm, measure, markerMeasureStyle } = options;
-  const widthPt = widthMm * MM_TO_PT;
+  const { measure, markerMeasureStyle } = options;
   const lines: DrawLine[] = [];
 
   // Calculate marker slots if not provided
-  const markerSlots = markerSlotByGroup ?? calculateMarkerSlotWidths(
-    blocks,
-    measure,
-    markerMeasureStyle
-  );
+  const markerSlots =
+    markerSlotByGroup ??
+    calculateMarkerSlotWidths(blocks, measure, markerMeasureStyle);
 
   for (const block of blocks) {
     const blockLines = wrapBlockToLines(block, {

@@ -8,18 +8,21 @@
     "enabled": true,
     "logs": {
       "enabled": true,
-      "head_sampling_rate": 1
+      "head_sampling_rate": 1,
     },
     "traces": {
       "enabled": true,
-      "head_sampling_rate": 1
-    }
+      "head_sampling_rate": 1,
+    },
   },
   "vars": {
-    "EXCEL_WORKER_VERSION": "1.0.0"
+    "WORKER_VERSION": "2.0.0",
+    "EXCEL_WORKER_SHARED_SECRET": "{{ secrets.EXCEL_WORKER_SHARED_SECRET }}",
+    "EXCEL_WORKER_SERVICE_TOKEN": "{{ secrets.EXCEL_WORKER_SERVICE_TOKEN }}",
+    "APP_URL": "{{ secrets.APP_URL }}",
   },
   "placement": {
-    "mode": "smart"
+    "mode": "smart",
   },
-  "upload_source_maps": true
+  "upload_source_maps": true,
 }

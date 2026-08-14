@@ -246,6 +246,8 @@ export type PolicyDocument = {
   pdfBase64?: string;
   generatedWhen: string;
   generatedBy: string;
+  /** Document type code (CARSCHED, CARRATING, CARADJUST, CARADDIT) */
+  documentTypeCode?: string;
 };
 
 export type Policy = {

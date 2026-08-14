@@ -22,7 +22,8 @@ test.describe("policy journeys", () => {
     // If the list is empty, skip the deep path.
     test.skip(
       (await firstClientRow.count()) === 0,
-      "No clients seeded for policy e2e. Use seed clients: " + seedClients.map(c => c.name).join(", "),
+      "No clients seeded for policy e2e. Use seed clients: " +
+        seedClients.map((c) => c.name).join(", "),
     );
     await firstClientRow.first().click();
     await expect(page).toHaveURL(/\/clients\/[^/]+$/);
@@ -121,38 +122,46 @@ test.describe("policy status transitions", () => {
     page,
   }) => {
     await loginAs(page, demoUsers.broker);
-    
+
     // Navigate to a pending policy
     await page.goto("/policies?status=1");
     const pendingRow = page.getByRole("row", { name: /^open policy/i });
     test.skip(
       (await pendingRow.count()) === 0,
-      "No pending policies seeded for status transition tests. Use seed data: " + seedPolicies.filter(p => p.policyStatusId === 1).map(p => p.policyNumber).join(", "),
+      "No pending policies seeded for status transition tests. Use seed data: " +
+        seedPolicies
+          .filter((p) => p.policyStatusId === 1)
+          .map((p) => p.policyNumber)
+          .join(", "),
     );
-    
+
     await pendingRow.first().click();
     await expect(page).toHaveURL(/\/policies\/[^/?]+$/);
-    
+
     // Verify we're in edit mode
     const wizardRoot = page.locator("[data-wizard-mode]");
     await expect(wizardRoot).toHaveAttribute("data-wizard-mode", "edit");
-    
+
     // Find and click submit button
-    const submitButton = page.getByRole("button", { name: /^submit$/i }).first();
+    const submitButton = page
+      .getByRole("button", { name: /^submit$/i })
+      .first();
     test.skip(
       (await submitButton.count()) === 0,
       "Submit button not available on this policy",
     );
-    
+
     // Submit the policy
     await submitButton.click();
-    
+
     // Verify status changed - check for success message or status indicator
-    await expect(page.getByText(/submitted successfully|policy taken/i)).toBeVisible();
-    
+    await expect(
+      page.getByText(/submitted successfully|policy taken/i),
+    ).toBeVisible();
+
     // Verify policy is now in Taken status (might need to reload or check status indicator)
     await page.reload();
-    
+
     // After submission, policy should be in Taken status and in view mode
     await expect(wizardRoot).toHaveAttribute("data-wizard-mode", "view");
   });
@@ -161,36 +170,44 @@ test.describe("policy status transitions", () => {
     page,
   }) => {
     await loginAs(page, demoUsers.broker);
-    
+
     // Navigate to a pending policy
     await page.goto("/policies?status=1");
     const pendingRow = page.getByRole("row", { name: /^open policy/i });
     test.skip(
       (await pendingRow.count()) === 0,
-      "No pending policies seeded for status transition tests. Use seed data: " + seedPolicies.filter(p => p.policyStatusId === 1).map(p => p.policyNumber).join(", "),
+      "No pending policies seeded for status transition tests. Use seed data: " +
+        seedPolicies
+          .filter((p) => p.policyStatusId === 1)
+          .map((p) => p.policyNumber)
+          .join(", "),
     );
-    
+
     await pendingRow.first().click();
     await expect(page).toHaveURL(/\/policies\/[^/?]+$/);
-    
+
     // Look for reject/cancel action
-    const rejectButton = page.getByRole("button", { name: /reject|cancel|not taken/i });
+    const rejectButton = page.getByRole("button", {
+      name: /reject|cancel|not taken/i,
+    });
     test.skip(
       (await rejectButton.count()) === 0,
       "Reject/Cancel button not available on this policy",
     );
-    
+
     await rejectButton.first().click();
-    
+
     // Handle confirmation dialog if present
-    const confirmButton = page.getByRole("button", { name: /confirm|yes|reject/i });
+    const confirmButton = page.getByRole("button", {
+      name: /confirm|yes|reject/i,
+    });
     if (await confirmButton.count()) {
       await confirmButton.first().click();
     }
-    
+
     // Verify rejection - check for success message
     await expect(page.getByText(/rejected|not taken|declined/i)).toBeVisible();
-    
+
     // After rejection, policy should be in Not taken status
     await page.reload();
     const wizardRoot = page.locator("[data-wizard-mode]");
@@ -201,61 +218,66 @@ test.describe("policy status transitions", () => {
     page,
   }) => {
     await loginAs(page, demoUsers.broker);
-    
+
     // Navigate to Taken policies
     await page.goto("/policies?status=2");
     const takenRow = page.getByRole("row", { name: /^open policy/i });
     test.skip(
       (await takenRow.count()) === 0,
-      "No Taken policies seeded for status transition tests. Use seed data: " + seedPolicies.filter(p => p.policyStatusId === 2).map(p => p.policyNumber).join(", "),
+      "No Taken policies seeded for status transition tests. Use seed data: " +
+        seedPolicies
+          .filter((p) => p.policyStatusId === 2)
+          .map((p) => p.policyNumber)
+          .join(", "),
     );
-    
+
     await takenRow.first().click();
     await expect(page).toHaveURL(/\/policies\/[^/?]+$/);
-    
+
     // Wait for view mode
     const wizardRoot = page.locator("[data-wizard-mode]");
     await expect(wizardRoot).toHaveAttribute("data-wizard-mode", "view");
-    
+
     // Clone the policy
     const cloneButton = page.getByRole("button", { name: /clone/i });
-    test.skip(
-      (await cloneButton.count()) === 0,
-      "Clone button not available",
-    );
-    
+    test.skip((await cloneButton.count()) === 0, "Clone button not available");
+
     await cloneButton.first().click();
     await expect(page).toHaveURL(/\/policies\/[^/]+\?cloned=1/);
-    
+
     // New clone should be in edit mode
     await expect(wizardRoot).toHaveAttribute("data-wizard-mode", "edit");
-    
+
     // Should have submit button available
-    await expect(page.getByRole("button", { name: /^submit$/i }).first()).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /^submit$/i }).first(),
+    ).toBeVisible();
   });
 
   test("policy status filters work correctly in policies list", async ({
     page,
   }) => {
     await loginAs(page, demoUsers.broker);
-    
+
     // Test each status filter
     const statusTests = [
       { status: "pending", query: "?status=1", expectedText: /pending/i },
       { status: "taken", query: "?status=2", expectedText: /taken/i },
       { status: "not taken", query: "?status=3", expectedText: /not taken/i },
     ];
-    
+
     for (const testCase of statusTests) {
       await page.goto(`/policies${testCase.query}`);
-      
+
       // Verify URL contains the status filter
-      await expect(page).toHaveURL(new RegExp(testCase.query.replace("?", "\\?")));
-      
+      await expect(page).toHaveURL(
+        new RegExp(testCase.query.replace("?", "\\?")),
+      );
+
       // Check that we can see policies (or empty state if none)
       const policyTable = page.getByRole("table");
       const emptyState = page.getByText(/no policies|empty/i);
-      
+
       if (await policyTable.count()) {
         // If there are policies, verify at least one row exists
         const policyRows = page.getByRole("row", { name: /^open policy/i });
@@ -267,34 +289,32 @@ test.describe("policy status transitions", () => {
         // Empty state is acceptable
         continue;
       }
-      
+
       // If we reach here, write a skip message
       test.skip(true, `No ${testCase.status} policies or empty state visible`);
     }
   });
 
-  test("policy status badges display correctly", async ({
-    page,
-  }) => {
+  test("policy status badges display correctly", async ({ page }) => {
     await loginAs(page, demoUsers.broker);
-    
+
     // Go to policies list
     await page.goto("/policies");
-    
+
     // Look for status badges in the table
     const statusCells = page.locator("[data-status]");
-    if (await statusCells.count() === 0) {
+    if ((await statusCells.count()) === 0) {
       test.skip(true, "No status badges visible in policies list");
       return;
     }
-    
+
     // Check that status badges have appropriate styling/text
     const firstStatusCell = statusCells.first();
     const statusText = await firstStatusCell.textContent();
-    
+
     // Status should be one of: Pending, Taken, Not taken
     expect(statusText).toMatch(/pending|taken|not taken/i);
-    
+
     // Status should have appropriate color/class
     const statusValue = await firstStatusCell.getAttribute("data-status");
     expect(statusValue).toMatch(/^[1-3]$/); // Should be 1, 2, or 3
@@ -317,7 +337,8 @@ test.describe("policy wizard modes", () => {
     const firstClientRow = page.getByRole("row", { name: /^open client/i });
     test.skip(
       (await firstClientRow.count()) === 0,
-      "No clients seeded for wizard-mode e2e. Use seed clients: " + seedClients.map(c => c.name).join(", "),
+      "No clients seeded for wizard-mode e2e. Use seed clients: " +
+        seedClients.map((c) => c.name).join(", "),
     );
     await firstClientRow.first().click();
     await expect(page).toHaveURL(/\/clients\/[^/]+$/);
@@ -355,7 +376,11 @@ test.describe("policy wizard modes", () => {
     const terminalRow = page.getByRole("row", { name: /^open policy/i });
     test.skip(
       (await terminalRow.count()) === 0,
-      "No Taken / Not taken policy seeded for wizard-mode e2e. Use seed data: " + seedPolicies.filter(p => p.policyStatusId === 2 || p.policyStatusId === 3).map(p => p.policyNumber).join(", "),
+      "No Taken / Not taken policy seeded for wizard-mode e2e. Use seed data: " +
+        seedPolicies
+          .filter((p) => p.policyStatusId === 2 || p.policyStatusId === 3)
+          .map((p) => p.policyNumber)
+          .join(", "),
     );
     await terminalRow.first().click();
     await expect(page).toHaveURL(/\/policies\/[^/?]+$/);
@@ -378,7 +403,11 @@ test.describe("policy wizard modes", () => {
     const terminalRow = page.getByRole("row", { name: /^open policy/i });
     test.skip(
       (await terminalRow.count()) === 0,
-      "No Taken / Not taken policy seeded for wizard-mode e2e. Use seed data: " + seedPolicies.filter(p => p.policyStatusId === 2 || p.policyStatusId === 3).map(p => p.policyNumber).join(", "),
+      "No Taken / Not taken policy seeded for wizard-mode e2e. Use seed data: " +
+        seedPolicies
+          .filter((p) => p.policyStatusId === 2 || p.policyStatusId === 3)
+          .map((p) => p.policyNumber)
+          .join(", "),
     );
     await terminalRow.first().click();
 

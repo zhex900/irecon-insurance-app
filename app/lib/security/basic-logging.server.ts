@@ -1,6 +1,6 @@
 /**
  * Basic security logging for simple internal insurance app
- * 
+ *
  * Minimal enhancement to existing audit logging - focuses on critical security events
  * that help identify potential issues without complex infrastructure.
  */
@@ -36,7 +36,7 @@ export interface SecurityEventLog {
 
 /**
  * Log a security event to enhance existing audit logging
- * 
+ *
  * For simple internal app, this logs to both:
  * 1. Console (for immediate visibility)
  * 2. Audit database (for historical tracking)
@@ -61,11 +61,11 @@ export async function logSecurityEvent({
   details?: Record<string, unknown>;
   request?: Request;
 }): Promise<void> {
-  const timestamp = new Date().toISOString();
-  
+  const _timestamp = new Date().toISOString();
+
   // Console logging for immediate visibility (development & production monitoring)
   const logMessage = `[SECURITY] ${type} - Severity: ${severity} - User: ${userEmail || userId || "unknown"}`;
-  
+
   switch (severity) {
     case "ERROR":
       logger.error(logMessage, { ...details, ipAddress, userAgent });
@@ -81,15 +81,17 @@ export async function logSecurityEvent({
   // For critical events or if we have user context
   if (userId || userEmail) {
     // Only create actor if we have a userId (required by AuditActor)
-    const actor = userId ? {
-      userId,
-      email: userEmail || "",
-      fullName: "",
-    } : null;
+    const actor = userId
+      ? {
+          userId,
+          email: userEmail || "",
+          fullName: "",
+        }
+      : null;
 
     // Map security event type to audit action
     const auditAction = getAuditActionForSecurityEvent(type);
-    
+
     await writeAuditLog({
       actor,
       action: auditAction,
@@ -145,11 +147,11 @@ export async function logAuthEvent(
   event: "success" | "failure" | "logout" | "password_reset",
   user: Partial<AppUser> | null,
   details?: Record<string, unknown>,
-  request?: Request
+  request?: Request,
 ): Promise<void> {
   let eventType: SecurityEventType;
   let severity: SecurityEventLog["severity"] = "INFO";
-  
+
   switch (event) {
     case "success":
       eventType = "LOGIN_SUCCESS";
@@ -165,7 +167,7 @@ export async function logAuthEvent(
       eventType = "PASSWORD_RESET_SUCCESS";
       break;
   }
-  
+
   await logSecurityEvent({
     type: eventType,
     severity,
@@ -185,7 +187,7 @@ export async function logSuspiciousActivity(
   userEmail?: string,
   ipAddress?: string,
   details?: Record<string, unknown>,
-  request?: Request
+  request?: Request,
 ): Promise<void> {
   await logSecurityEvent({
     type: "SUSPICIOUS_ACTIVITY",
@@ -209,7 +211,7 @@ export async function logAdminAction(
   adminUser: { userId: string; email: string },
   target?: { type: string; id: string },
   details?: Record<string, unknown>,
-  request?: Request
+  request?: Request,
 ): Promise<void> {
   await logSecurityEvent({
     type: "ADMIN_ACTION",

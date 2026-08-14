@@ -21,21 +21,21 @@ export function findStepForFieldPath(path: string): number | null {
  * Helper function for calculating max step
  */
 export function calculateMaxStep(
-  policyId: string, 
-  readOnly: boolean, 
+  policyId: string,
+  readOnly: boolean,
   freshSteps: boolean,
   policyPremium: PremiumBreakdown | null | undefined,
   readStoredStep: (policyId: string) => number | null,
-  readStoredMaxStep: (policyId: string, proposed: number) => number
+  readStoredMaxStep: (policyId: string, proposed: number) => number,
 ): number {
   if (freshSteps) return 0;
   if (readOnly) return wizardSteps.length - 1;
-  
+
   const remembered = readStoredStep(policyId) ?? 0;
   const unlockedByPremium = policyPremium
     ? PRICING_CONFIRMATION_STEP
     : remembered;
-  
+
   return readStoredMaxStep(policyId, Math.max(remembered, unlockedByPremium));
 }
 

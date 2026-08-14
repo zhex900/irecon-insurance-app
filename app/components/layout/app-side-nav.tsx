@@ -508,8 +508,7 @@ export const AppSideNav = React.memo(function AppSideNav({
     const active = sectionFromPathname(location.pathname);
     if (!active || navSectionsExpanded.includes(active)) return;
     onNavSectionsChange([...navSectionsExpanded, active]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- pathname-driven only
-  }, [location.pathname]);
+  }, [location.pathname, navSectionsExpanded, onNavSectionsChange]);
 
   React.useEffect(() => {
     recentRoutesRef.current = recentRoutes;

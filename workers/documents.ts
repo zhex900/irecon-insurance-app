@@ -2,7 +2,7 @@ import {
   MAX_PDF_RENDER_REQUEST_BYTES,
   PDF_RENDER_PATH,
   pdfRenderRequestSchema,
-} from "../app/lib/pdf/document-worker-contract";
+} from "./documents/types/schemas";
 import { generatePolicyPdf } from "../app/lib/pdf/generate";
 import { getDocumentWorkerFonts } from "./document-fonts";
 

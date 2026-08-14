@@ -44,7 +44,7 @@ export function createPolicySnapshot(policy: Policy): PolicySnapshot {
  */
 export function hasPolicyChanged(
   currentSnapshot: PolicySnapshot,
-  previousSnapshot: PolicySnapshot | null
+  previousSnapshot: PolicySnapshot | null,
 ): boolean {
   if (!previousSnapshot) return true;
   return (

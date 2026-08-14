@@ -1,7 +1,7 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "insurance-document-worker-staging",
-  "main": "./workers/documents.ts",
+  "main": "./workers/documents/index.ts",
   "compatibility_date": "2026-07-20",
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": false,
@@ -10,6 +10,9 @@
     "directory": "./public/fonts",
     "binding": "ASSETS",
     "run_worker_first": true,
+  },
+  "vars": {
+    "WORKER_SHARED_SECRET": "{{ secrets.WORKER_SHARED_SECRET }}",
   },
   "observability": {
     "enabled": true,

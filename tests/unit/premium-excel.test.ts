@@ -3,15 +3,15 @@ import type { PolicyDocument } from "~/lib/db/types";
 import type { Policy } from "~/lib/db/types";
 import {
   isPremiumExcelDocument,
-  PREMIUM_EXCEL_TEMPLATE_KEY,
   premiumExcelExportEnabled,
   premiumExcelFingerprint,
-} from "~/lib/pricing/premium-excel";
+} from "~/lib/excel/excel-client";
+import { PREMIUM_EXCEL_TEMPLATE_KEY } from "~/lib/excel/constants";
 
 function doc(partial: Partial<PolicyDocument>): PolicyDocument {
   return {
     policyDocumentId: 1,
-    policyId: 1,
+    policyId: "1",
     name: "Premium Excel",
     filename: "P1_Premium.xlsx",
     generationKey: "excel|abc",

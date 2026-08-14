@@ -33,10 +33,10 @@ async function computeSha256(bytes: Uint8Array): Promise<string> {
     // Fallback for environments without Web Crypto API
     return "no-crypto-available";
   }
-  
+
   const hashBuffer = await crypto.subtle.digest("SHA-256", bytes);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 // Test fixtures - these should match actual template keys and merge fields
@@ -65,12 +65,15 @@ const PDF_FIXTURES = [
       InsuredName: "Demo Builder Co",
       Endorsements: JSON.stringify([
         {
-          subject: "<p><strong>Open Trench Limitation (100 metres)</strong></p>",
-          content: "<p>Maximum 100 metres of open trench at any one time. All trenches must be backfilled at the end of each working day.</p>",
+          subject:
+            "<p><strong>Open Trench Limitation (100 metres)</strong></p>",
+          content:
+            "<p>Maximum 100 metres of open trench at any one time. All trenches must be backfilled at the end of each working day.</p>",
         },
         {
           subject: "<p><strong>Display Homes</strong></p>",
-          content: "<p>Cover limited to $50,000 per display home. Excess applies per display home.</p>",
+          content:
+            "<p>Cover limited to $50,000 per display home. Excess applies per display home.</p>",
         },
       ]),
       Address: "456 Demo Road, Melbourne VIC 3000",
@@ -132,61 +135,63 @@ function createMockTemplate(templateKey: string) {
         height: 297,
         padding: [15, 15, 15, 15],
       },
-      schemas: [[
-        {
-          name: "PolicyNumber",
-          type: "text",
-          position: { x: 15, y: 30 },
-          width: 80,
-          height: 8,
-          fontSize: 10,
-          fontName: "Roboto",
-        },
-        {
-          name: "InsuredName",
-          type: "text",
-          position: { x: 15, y: 45 },
-          width: 180,
-          height: 8,
-          fontSize: 12,
-          fontName: "Roboto Bold",
-        },
-        {
-          name: "Address",
-          type: "text",
-          position: { x: 15, y: 60 },
-          width: 180,
-          height: 8,
-          fontSize: 10,
-          fontName: "Roboto",
-        },
-        {
-          name: "EndorsementSubject",
-          type: "text",
-          position: { x: 15, y: 100 },
-          width: 180,
-          height: 6,
-          fontSize: 11,
-          fontName: "Roboto Bold",
-        },
-        {
-          name: "EndorsementContent",
-          type: "text",
-          position: { x: 15, y: 110 },
-          width: 180,
-          height: 40,
-          fontSize: 9.5,
-          fontName: "Roboto",
-          lineHeight: 1.25,
-        },
-      ]],
+      schemas: [
+        [
+          {
+            name: "PolicyNumber",
+            type: "text",
+            position: { x: 15, y: 30 },
+            width: 80,
+            height: 8,
+            fontSize: 10,
+            fontName: "Roboto",
+          },
+          {
+            name: "InsuredName",
+            type: "text",
+            position: { x: 15, y: 45 },
+            width: 180,
+            height: 8,
+            fontSize: 12,
+            fontName: "Roboto Bold",
+          },
+          {
+            name: "Address",
+            type: "text",
+            position: { x: 15, y: 60 },
+            width: 180,
+            height: 8,
+            fontSize: 10,
+            fontName: "Roboto",
+          },
+          {
+            name: "EndorsementSubject",
+            type: "text",
+            position: { x: 15, y: 100 },
+            width: 180,
+            height: 6,
+            fontSize: 11,
+            fontName: "Roboto Bold",
+          },
+          {
+            name: "EndorsementContent",
+            type: "text",
+            position: { x: 15, y: 110 },
+            width: 180,
+            height: 40,
+            fontSize: 9.5,
+            fontName: "Roboto",
+            lineHeight: 1.25,
+          },
+        ],
+      ],
     },
   };
 }
 
-async function captureGoldenReference(fixture: typeof PDF_FIXTURES[0]) {
+async function captureGoldenReference(fixture: (typeof PDF_FIXTURES)[0]) {
   console.log(`Capturing: ${fixture.name} (${fixture.templateKey})`);
-  
+
   try {
     // Generate PDF
     const result = await generatePolicyPdf(
@@ -196,28 +201,28 @@ async function captureGoldenReference(fixture: typeof PDF_FIXTURES[0]) {
       createMockTemplate(fixture.templateKey) as any,
       {
         // Optional: add wording catalogue or broker fee lines
-      }
+      },
     );
-    
+
     // Convert to base64
     const base64Output = uint8ToBase64(result.pdf);
-    
+
     // Compute checksum
     const checksum = await computeSha256(result.pdf);
-    
+
     // Create output directory
     const fixtureDir = join(OUTPUT_DIR, fixture.templateKey);
     if (!existsSync(fixtureDir)) {
       mkdirSync(fixtureDir, { recursive: true });
     }
-    
+
     // Save base64 PDF
     writeFileSync(
       join(fixtureDir, `${fixture.name}.base64.txt`),
       base64Output,
-      "utf8"
+      "utf8",
     );
-    
+
     // Save metadata
     const metadata = {
       fixtureName: fixture.name,
@@ -229,16 +234,18 @@ async function captureGoldenReference(fixture: typeof PDF_FIXTURES[0]) {
       pdfSize: result.pdf.length,
       verificationMethod: "byte-by-byte",
     };
-    
+
     writeFileSync(
       join(fixtureDir, `${fixture.name}.metadata.json`),
       JSON.stringify(metadata, null, 2),
-      "utf8"
+      "utf8",
     );
-    
-    console.log(`  ✓ Saved: ${fixture.name}.base64.txt (${result.pdf.length} bytes)`);
+
+    console.log(
+      `  ✓ Saved: ${fixture.name}.base64.txt (${result.pdf.length} bytes)`,
+    );
     console.log(`  ✓ Checksum: ${checksum.substring(0, 16)}...`);
-    
+
     return { success: true, checksum, size: result.pdf.length };
   } catch (error) {
     console.error(`  ✗ Failed: ${error.message}`);
@@ -249,13 +256,13 @@ async function captureGoldenReference(fixture: typeof PDF_FIXTURES[0]) {
 async function main() {
   console.log("📄 PDF Golden Reference Capture Tool");
   console.log("=====================================\n");
-  
+
   // Create output directory
   if (!existsSync(OUTPUT_DIR)) {
     mkdirSync(OUTPUT_DIR, { recursive: true });
     console.log(`Created output directory: ${OUTPUT_DIR}`);
   }
-  
+
   const results = [];
   for (const fixture of PDF_FIXTURES) {
     const result = await captureGoldenReference(fixture);
@@ -265,36 +272,41 @@ async function main() {
     });
     console.log();
   }
-  
+
   // Summary
   console.log("📊 Summary");
   console.log("==========");
-  
-  const succeeded = results.filter(r => r.success).length;
-  const failed = results.filter(r => !r.success).length;
-  
+
+  const succeeded = results.filter((r) => r.success).length;
+  const failed = results.filter((r) => !r.success).length;
+
   console.log(`Total fixtures: ${PDF_FIXTURES.length}`);
   console.log(`Succeeded: ${succeeded}`);
   console.log(`Failed: ${failed}`);
-  
+
   if (failed > 0) {
     console.log("\n❌ Failed fixtures:");
-    for (const result of results.filter(r => !r.success)) {
+    for (const result of results.filter((r) => !r.success)) {
       console.log(`  - ${result.fixture}: ${result.error}`);
     }
     process.exit(1);
   }
-  
+
   console.log(`\n✅ All golden references captured successfully!`);
   console.log(`Output directory: ${OUTPUT_DIR}`);
 }
 
 // Run if called directly
 if (import.meta.url === `file://${process.argv[1]}`) {
-  main().catch(error => {
+  main().catch((error) => {
     console.error("Fatal error:", error);
     process.exit(1);
   });
 }
 
-export { PDF_FIXTURES, captureGoldenReference, createMockPolicy, createMockTemplate };
+export {
+  PDF_FIXTURES,
+  captureGoldenReference,
+  createMockPolicy,
+  createMockTemplate,
+};
