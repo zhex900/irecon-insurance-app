@@ -218,18 +218,16 @@ export class DocumentServiceClient {
       policyData,
       options: {
         templateId: options?.templateId || "default-policy",
-        ...(options?.includeWatermark !== undefined && {
-          includeWatermark: options.includeWatermark,
-        }),
-        ...(options?.includeSignatures !== undefined && {
-          includeSignatures: options.includeSignatures,
-        }),
-        ...(options?.pageSize !== undefined && { pageSize: options.pageSize }),
-        ...(options?.orientation !== undefined && {
-          orientation: options.orientation,
-        }),
-        ...(options?.quality !== undefined && { quality: options.quality }),
+        includeWatermark: options?.includeWatermark ?? false,
+        includeSignatures: options?.includeSignatures ?? false,
+        includeCoverPage: true,
+        includeTableOfContents: false,
+        pageSize: options?.pageSize ?? "A4",
+        orientation: options?.orientation ?? "portrait",
+        quality: options?.quality ?? "high",
+        includeMetadata: true,
         generatedBy: options?.generatedBy || "system",
+        appVersion: "1.0.0",
       },
     };
 
@@ -264,9 +262,11 @@ export class DocumentServiceClient {
         },
       })),
       options: {
-        ...(options?.concurrentLimit !== undefined && { concurrentLimit: options.concurrentLimit }),
-        ...(options?.timeoutPerDocument !== undefined && { timeoutPerDocument: options.timeoutPerDocument }),
-        ...(options?.zipOutput !== undefined && { zipOutput: options.zipOutput }),
+        concurrentLimit: options?.concurrentLimit ?? 5,
+        timeoutPerDocument: options?.timeoutPerDocument ?? 30000,
+        stopOnError: false,
+        includeSummary: true,
+        zipOutput: options?.zipOutput ?? false,
       },
     };
 

@@ -101,7 +101,12 @@ export class NotFoundError extends RpcError {
  */
 export class BusinessRuleError extends RpcError {
   constructor(message: string, rule: string, details?: unknown) {
-    super(message, "BUSINESS_RULE_VIOLATION", { rule, ...details }, 422);
+    super(
+      message,
+      "BUSINESS_RULE_VIOLATION",
+      details ? { rule, ...details } : { rule },
+      422,
+    );
     this.name = "BusinessRuleError";
   }
 }
@@ -153,7 +158,7 @@ export function createErrorResponse(error: unknown, requestId?: string) {
 /**
  * Error handler middleware utility
  */
-export function withErrorHandling<T extends any[], R>(
+export function withErrorHandling<T extends unknown[], R>(
   fn: (...args: T) => Promise<R>,
   errorContext?: string,
 ): (...args: T) => Promise<R> {

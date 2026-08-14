@@ -39,11 +39,11 @@ export interface WorkerEnvironment {
   DOCUMENTS_SERVICE?: ServiceBinding;
 
   // Storage bindings (Cloudflare Workers types)
-  KV_NAMESPACE?: any; // KVNamespace
-  R2_BUCKET?: any; // R2Bucket
+  KV_NAMESPACE?: unknown; // KVNamespace
+  R2_BUCKET?: unknown; // R2Bucket
 
   // Database bindings (Cloudflare Workers types)
-  DB?: any; // D1Database
+  DB?: unknown; // D1Database
 
   // Configuration
   ENVIRONMENT: "development" | "staging" | "production";
@@ -58,20 +58,22 @@ export interface WorkerEnvironment {
 // Worker context type
 export interface WorkerContext {
   env: WorkerEnvironment;
-  ctx: any; // ExecutionContext
+  ctx: unknown; // ExecutionContext
   request: Request;
-  waitUntil(promise: Promise<any>): void;
+  waitUntil(promise: Promise<unknown>): void;
 }
 
 // Request handler type
 export type WorkerRequestHandler = (
   request: Request,
   env: WorkerEnvironment,
-  ctx: any, // ExecutionContext
+  ctx: unknown, // ExecutionContext
 ) => Promise<Response> | Response;
 
 // RPC handler type
-export type RpcHandler<S extends Record<string, any>> = {
+export type RpcHandler<
+  S extends Record<string, (...args: unknown[]) => unknown>,
+> = {
   [K in keyof S]: (
     input: Parameters<S[K]>[0],
     metadata?: Parameters<S[K]>[1],

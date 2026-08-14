@@ -65,8 +65,8 @@ export const templateDefinitionSchema = z.object({
   version: z.string(),
   sections: z.array(templateSectionSchema),
   metadata: z.object({
-    createdAt: z.string().datetime(),
-    updatedAt: z.string().datetime(),
+    createdAt: z.string().datetime({ offset: true }),
+    updatedAt: z.string().datetime({ offset: true }),
     createdBy: z.string(),
     category: z.string().optional(),
     tags: z.array(z.string()).optional(),
@@ -93,13 +93,13 @@ export type TemplateDefinition = z.infer<typeof templateDefinitionSchema>;
 export const templateInstanceSchema = z.object({
   templateId: z.string(),
   version: z.string(),
-  data: z.record(z.unknown()),
+  data: z.record(z.string(), z.unknown()),
   metadata: z.object({
     instanceId: z.string(),
-    createdAt: z.string().datetime(),
+    createdAt: z.string().datetime({ offset: true }),
     createdBy: z.string(),
     status: z.enum(["draft", "pending", "approved", "rejected", "archived"]),
-    lastModified: z.string().datetime().optional(),
+    lastModified: z.string().datetime({ offset: true }).optional(),
     lastModifiedBy: z.string().optional(),
     locale: z.string().optional().default("en-US"),
   }),
@@ -116,7 +116,7 @@ export const templateInstanceSchema = z.object({
         )
         .optional(),
       warnings: z.array(z.string()).optional(),
-      validatedAt: z.string().datetime(),
+      validatedAt: z.string().datetime({ offset: true }),
       validatedBy: z.string(),
     })
     .optional(),
@@ -206,7 +206,7 @@ export const templateValidationResultSchema = z.object({
   metadata: z.object({
     templateId: z.string(),
     templateVersion: z.string(),
-    validationTimestamp: z.string().datetime(),
+    validationTimestamp: z.string().datetime({ offset: true }),
     validatorId: z.string(),
     environment: z.string().optional(),
     requestId: z.string(),
@@ -301,7 +301,7 @@ export const compareTemplatesResultSchema = z.object({
   metadata: z.object({
     sourceVersion: z.string(),
     targetVersion: z.string(),
-    comparisonTimestamp: z.string().datetime(),
+    comparisonTimestamp: z.string().datetime({ offset: true }),
     requestId: z.string(),
   }),
 });
@@ -364,7 +364,7 @@ export const migrateTemplateResultSchema = z.object({
     sourceVersion: z.string(),
     targetTemplateId: z.string(),
     targetVersion: z.string(),
-    migrationTimestamp: z.string().datetime(),
+    migrationTimestamp: z.string().datetime({ offset: true }),
     migrationDuration: z.number(),
     requestId: z.string(),
   }),

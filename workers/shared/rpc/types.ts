@@ -37,7 +37,7 @@ export interface BaseRpcResponse<T = unknown> {
 }
 
 // RPC method definition
-export interface RpcMethodDefinition<TInput, TOutput> {
+export interface RpcMethodDefinition<_TInput = unknown, _TOutput = unknown> {
   name: string;
   description?: string;
   inputSchema?: unknown; // Zod schema reference
@@ -46,18 +46,21 @@ export interface RpcMethodDefinition<TInput, TOutput> {
 
 // RPC service interface
 export interface RpcService {
-  [method: string]: (input: any, metadata?: any) => Promise<any>;
+  [method: string]: (
+    input: unknown,
+    metadata?: Record<string, unknown>,
+  ) => Promise<unknown>;
 }
 
 // RPC service definition
 export interface RpcServiceDefinition {
   serviceName: string;
   version: string;
-  methods: Record<string, RpcMethodDefinition<any, any>>;
+  methods: Record<string, RpcMethodDefinition<unknown, unknown>>;
 }
 
 // Excel worker RPC service interface
-export interface ExcelRpcService extends RpcService {
+export interface ExcelRpcService {
   generatePremiumWorkbook: (
     input: import("../schemas/excel/premium-workbook.schema").GeneratePremiumWorkbookInput,
     metadata?: BaseRpcRequest["metadata"],
@@ -81,7 +84,7 @@ export interface ExcelRpcService extends RpcService {
 }
 
 // Document worker RPC service interface
-export interface DocumentRpcService extends RpcService {
+export interface DocumentRpcService {
   generatePolicyPdf: (
     input: unknown, // TODO: Define PDF generation schemas
     metadata?: BaseRpcRequest["metadata"],
@@ -94,19 +97,20 @@ export interface DocumentRpcService extends RpcService {
 }
 
 // Union type for all RPC services
-export type KnownRpcServices = ExcelRpcService | DocumentRpcService;
+export type KnownRpcServices =
+  ExcelRpcService | DocumentRpcService | RpcService;
 
 // RPC handler function type
-export type RpcHandler<TSchema, TService> = (
+export type RpcHandler<_TSchema, TService> = (
   service: TService,
-  input: any,
+  input: unknown,
   metadata?: BaseRpcRequest["metadata"],
 ) => Promise<BaseRpcResponse>;
 
 // RPC middleware function type
 export type RpcMiddleware = (
-  next: (input: any, metadata?: any) => Promise<any>,
-) => (input: any, metadata?: any) => Promise<any>;
+  next: (input: unknown, metadata?: unknown) => Promise<unknown>,
+) => (input: unknown, metadata?: unknown) => Promise<unknown>;
 
 // Telemetry types
 export interface RpcTelemetry {
@@ -121,7 +125,7 @@ export interface RpcTelemetry {
     code: string;
     message: string;
   };
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 // Configuration types

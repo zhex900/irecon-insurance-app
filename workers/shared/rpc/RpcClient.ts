@@ -82,9 +82,10 @@ export class RpcClient {
     for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
       try {
         const response = await this.makeRequest(method, input, {
-          ...metadata,
           requestId,
           timeoutMs,
+          correlationId: metadata?.correlationId ?? "",
+          traceId: metadata?.traceId ?? "",
         });
 
         const result = await this.handleResponse<TOutput>(response);
@@ -210,7 +211,8 @@ export class RpcClient {
     if (!responseData.success && responseData.error) {
       throw new RpcError(
         responseData.error.message,
-        responseData.error.code as any,
+        responseData.error
+          .code as (typeof RPC_ERROR_CODES)[keyof typeof RPC_ERROR_CODES],
         responseData.error.details,
       );
     }
@@ -258,7 +260,9 @@ export class RpcClient {
         RPC_ERROR_CODES.BUSINESS_RULE_VIOLATION,
       ];
 
-      return !nonRetryableCodes.includes(error.code);
+      return !nonRetryableCodes.includes(
+        error.code as typeof RPC_ERROR_CODES.VALIDATION_FAILED,
+      );
     }
 
     return true;
@@ -310,7 +314,9 @@ export class RpcClient {
   /**
    * Map HTTP status codes to RPC error codes
    */
-  private mapHttpStatusToErrorCode(status: number): string {
+  private mapHttpStatusToErrorCode(
+    status: number,
+  ): (typeof RPC_ERROR_CODES)[keyof typeof RPC_ERROR_CODES] {
     switch (status) {
       case 400:
         return RPC_ERROR_CODES.VALIDATION_FAILED;
@@ -363,7 +369,7 @@ export class RpcClient {
   /**
    * Get service info
    */
-  async getServiceInfo(): Promise<any> {
+  async getServiceInfo(): Promise<Record<string, unknown>> {
     try {
       const response = await this.serviceBinding.fetch(`${this.baseUrl}/info`, {
         method: "GET",

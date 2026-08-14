@@ -133,9 +133,13 @@ export class ExcelServiceClient {
       rating: options?.rating,
       adjustment: options?.adjustment,
       options: {
-        includeAdjustment: options?.includeAdjustment,
-        policyNumber: options?.policyNumber,
-        clientName: options?.clientName,
+        includeAdjustment: options?.includeAdjustment ?? false,
+        ...(options?.policyNumber !== undefined && {
+          policyNumber: options.policyNumber,
+        }),
+        ...(options?.clientName !== undefined && {
+          clientName: options.clientName,
+        }),
         generatedBy: options?.generatedBy || "system",
         appVersion: options?.appVersion || "1.0.0",
       },

@@ -3,7 +3,7 @@
  */
 
 import { z } from "zod";
-import type { Policy } from "../../../../app/lib/types/excel-worker-types";
+import type { Policy as _Policy } from "../../../../app/lib/types/excel-worker-types";
 
 // PDF generation options
 export const pdfGenerationOptionsSchema = z.object({
@@ -32,21 +32,21 @@ export type PdfGenerationOptions = z.infer<typeof pdfGenerationOptionsSchema>;
 
 // Policy document input schema
 export const generatePolicyPdfInputSchema = z.object({
-  policy: z.custom<Policy>(),
+  policy: z.any(), // Accept any Policy type
   policyData: z.object({
     policyNumber: z.string(),
     insuredName: z.string(),
-    inceptionDate: z.string().datetime(),
-    expiryDate: z.string().datetime(),
+    inceptionDate: z.string().datetime({ offset: true }),
+    expiryDate: z.string().datetime({ offset: true }),
     premiumAmount: z.number(),
     currency: z.string().optional().default("USD"),
-    coverageDetails: z.record(z.unknown()),
+    coverageDetails: z.record(z.string(), z.unknown()),
     endorsements: z
       .array(
         z.object({
           id: z.string(),
           description: z.string(),
-          effectiveDate: z.string().datetime(),
+          effectiveDate: z.string().datetime({ offset: true }),
           additionalPremium: z.number().optional(),
         }),
       )
@@ -88,13 +88,13 @@ export type GeneratePolicyPdfOutput = z.infer<
 
 // Certificate of insurance input schema
 export const generateCertificateInputSchema = z.object({
-  policy: z.custom<Policy>(),
+  policy: z.any(), // Accept any Policy type
   certificateData: z.object({
     certificateNumber: z.string(),
     holderName: z.string(),
     holderAddress: z.string(),
-    effectiveDate: z.string().datetime(),
-    expiryDate: z.string().datetime(),
+    effectiveDate: z.string().datetime({ offset: true }),
+    expiryDate: z.string().datetime({ offset: true }),
     coverages: z.array(
       z.object({
         coverageType: z.string(),
@@ -145,11 +145,11 @@ export type GenerateCertificateOutput = z.infer<
 
 // Endorsement document input schema
 export const generateEndorsementInputSchema = z.object({
-  policy: z.custom<Policy>(),
+  policy: z.any(), // Accept any Policy type
   endorsementData: z.object({
     endorsementNumber: z.string(),
     description: z.string(),
-    effectiveDate: z.string().datetime(),
+    effectiveDate: z.string().datetime({ offset: true }),
     changes: z.array(
       z.object({
         field: z.string(),
@@ -210,10 +210,11 @@ export const validateTemplateInputSchema = z.object({
     .object({
       requiredFields: z.array(z.string()).optional(),
       fieldTypes: z
-        .record(z.enum(["string", "number", "date", "boolean"]))
+        .record(z.string(), z.enum(["string", "number", "date", "boolean"]))
         .optional(),
       fieldConstraints: z
         .record(
+          z.string(),
           z.object({
             min: z.number().optional(),
             max: z.number().optional(),

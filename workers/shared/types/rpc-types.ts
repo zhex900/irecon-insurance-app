@@ -80,7 +80,7 @@ export interface RpcClientConfig {
 }
 
 // RPC method definition
-export interface RpcMethodDefinition<TInput, TOutput> {
+export interface RpcMethodDefinition<_TInput = unknown, _TOutput = unknown> {
   name: string;
   description?: string;
   inputSchema?: unknown; // Zod schema reference
@@ -100,7 +100,7 @@ export interface RpcServiceDefinition {
   version: string;
   description?: string;
   environment?: string;
-  methods: Record<string, RpcMethodDefinition<any, any>>;
+  methods: Record<string, RpcMethodDefinition<unknown, unknown>>;
   dependencies?: string[];
   capabilities?: string[];
 }

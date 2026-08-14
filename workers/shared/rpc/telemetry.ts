@@ -20,7 +20,7 @@ export interface TelemetryOptions {
 export class RpcTelemetryCollector {
   private telemetryQueue: RpcTelemetry[] = [];
   private options: TelemetryOptions;
-  private flushInterval: number | null = null;
+  private flushInterval: NodeJS.Timeout | null = null;
   private flushBatchSize = 50;
 
   constructor(options: Partial<TelemetryOptions> = {}) {
@@ -93,7 +93,7 @@ export class RpcTelemetryCollector {
     method: string,
     requestId: string,
     operation: () => Promise<T>,
-    additionalMetadata?: Record<string, any>,
+    additionalMetadata?: Record<string, unknown>,
   ): Promise<T> {
     const shouldSample = Math.random() < this.options.sampleRate;
 
@@ -246,12 +246,25 @@ export function withTelemetry(
   telemetryCollector: RpcTelemetryCollector = globalTelemetry,
 ) {
   return async function telemetryMiddleware(
-    next: (input: any, metadata?: any) => Promise<any>,
-  ): Promise<(input: any, metadata?: any) => Promise<any>> {
-    return async (input: any, metadata?: any): Promise<any> => {
-      const requestId = metadata?.requestId || `req-${Date.now()}`;
-      const service = metadata?.service || "unknown";
-      const method = metadata?.method || "unknown";
+    next: (
+      input: unknown,
+      metadata?: Record<string, unknown>,
+    ) => Promise<unknown>,
+  ): Promise<
+    (input: unknown, metadata?: Record<string, unknown>) => Promise<unknown>
+  > {
+    return async (
+      input: unknown,
+      metadata?: Record<string, unknown>,
+    ): Promise<unknown> => {
+      const requestId =
+        typeof metadata?.requestId === "string"
+          ? metadata.requestId
+          : `req-${Date.now()}`;
+      const service =
+        typeof metadata?.service === "string" ? metadata.service : "unknown";
+      const method =
+        typeof metadata?.method === "string" ? metadata.method : "unknown";
 
       return telemetryCollector.withTelemetry(
         service,
@@ -275,7 +288,7 @@ export class TelemetryRpcClient {
   private telemetryCollector: RpcTelemetryCollector;
 
   constructor(
-    private baseClient: any, // Should be RpcClient type
+    private baseClient: unknown, // Should be RpcClient type
     telemetryOptions?: Partial<TelemetryOptions>,
   ) {
     this.telemetryCollector = new RpcTelemetryCollector(telemetryOptions);
@@ -284,15 +297,29 @@ export class TelemetryRpcClient {
   async call<TMethod extends string, TInput, TOutput>(
     method: TMethod,
     input: TInput,
-    metadata?: any,
+    metadata?: Record<string, unknown>,
   ): Promise<TOutput> {
     return this.telemetryCollector.withTelemetry(
-      this.baseClient.constructor.name,
+      (this.baseClient as { constructor?: { name?: string } }).constructor
+        ?.name || "unknown",
       method,
-      metadata?.requestId || `req-${Date.now()}`,
-      () => this.baseClient.call(method, input, metadata),
+      typeof metadata?.requestId === "string"
+        ? metadata.requestId
+        : `req-${Date.now()}`,
+      async () => {
+        const result = await (
+          this.baseClient as {
+            call: (
+              method: string,
+              input: unknown,
+              metadata?: unknown,
+            ) => Promise<unknown>;
+          }
+        ).call(method, input, metadata);
+        return result as TOutput;
+      },
       {
-        service: this.baseClient.constructor.name,
+        service: "service", // Static string for service name
         method,
         inputSize: JSON.stringify(input).length,
         ...metadata,

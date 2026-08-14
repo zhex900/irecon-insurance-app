@@ -20,7 +20,7 @@ export {
 // Export shared schemas
 export * from "./schemas";
 
-// Export shared types - selective exports to avoid conflicts
+// Export shared types - careful exports to avoid conflicts
 export type {
   ServiceBinding,
   RpcRequest,
@@ -29,14 +29,6 @@ export type {
   WorkerEnvironment,
   WorkerRequestHandler,
   ValidationResult,
-  ExcelRpcService,
-  GeneratePremiumWorkbookInput,
-  GeneratePremiumWorkbookOutput,
-  ExcelServiceClientOptions,
-  DocumentRpcService,
-  GeneratePolicyPdfInput,
-  GeneratePolicyPdfOutput,
-  DocumentServiceClientOptions,
 } from "./types";
 
 // Export security utilities (if needed)
@@ -55,33 +47,6 @@ export {
 
 // Common utilities
 export { withErrorHandling } from "./rpc/errors";
-export { withTelemetry } from "./rpc/telemetry";
-
-// Type aliases for common usage
-export type {
-  // RPC core types
-  RpcRequest,
-  RpcResponse,
-  RpcErrorInterface as RpcError,
-  ServiceBinding,
-
-  // Excel service types
-  ExcelRpcService,
-  GeneratePremiumWorkbookInput,
-  GeneratePremiumWorkbookOutput,
-  ExcelServiceClientOptions,
-
-  // Document service types
-  DocumentRpcService,
-  GeneratePolicyPdfInput,
-  GeneratePolicyPdfOutput,
-  DocumentServiceClientOptions,
-
-  // Common types
-  WorkerEnvironment,
-  WorkerRequestHandler,
-  ValidationResult,
-} from "./types";
 
 // Helper functions
 export function generateRequestId(prefix: string = "req"): string {
@@ -112,32 +77,22 @@ export function createRpcResponse<T>(
   };
 }
 
-export function validateWithSchema<T>(
-  schema: any, // Zod schema
-  data: unknown,
-  options?: {
-    strict?: boolean;
-    context?: Record<string, unknown>;
-  },
-): { isValid: boolean; data?: T; errors?: any } {
-  try {
-    const result = options?.strict
-      ? schema.strict().parse(data, { context: options?.context })
-      : schema.parse(data, { context: options?.context });
-
-    return {
-      isValid: true,
-      data: result as T,
-    };
-  } catch (error) {
-    return {
-      isValid: false,
-      errors: error,
-    };
-  }
-}
+// Note: validateWithSchema removed due to TypeScript type issues
+// Use Zod schemas directly for validation
 
 // Performance monitoring utilities
+export interface PerformanceMetricsResult {
+  count: number;
+  average: number;
+  p50: number;
+  p90: number;
+  p95: number;
+  p99: number;
+  min: number;
+  max: number;
+  total: number;
+}
+
 export class PerformanceMonitor {
   private measurements = new Map<string, number[]>();
   private maxSamples = 1000;
@@ -155,7 +110,7 @@ export class PerformanceMonitor {
     }
   }
 
-  getMetrics(operation: string): PerformanceMetrics | null {
+  getMetrics(operation: string): PerformanceMetricsResult | null {
     const measurements = this.measurements.get(operation);
     if (!measurements || measurements.length === 0) {
       return null;

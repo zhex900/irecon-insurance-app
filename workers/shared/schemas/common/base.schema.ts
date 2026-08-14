@@ -52,10 +52,11 @@ export type RpcErrorCode =
 export const healthCheckSchema = z.object({
   status: z.enum(["healthy", "degraded", "unhealthy"]),
   version: z.string(),
-  timestamp: z.string().datetime(),
+  timestamp: z.string().datetime({ offset: true }),
   uptime: z.number().optional(),
   checks: z
     .record(
+      z.string(),
       z.object({
         status: z.enum(["healthy", "unhealthy"]),
         latencyMs: z.number().optional(),
