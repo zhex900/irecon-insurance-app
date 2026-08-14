@@ -216,7 +216,7 @@ app.get("/assets/*", async (c) => {
   }
   // Set other cache headers if needed
   headers.set("etag", object.httpEtag);
-  
+
   // Handle the ReadableStream type incompatibility between Cloudflare and standard types
   // Use unknown as an intermediate type for type safety
   const body = object.body as unknown as ReadableStream;

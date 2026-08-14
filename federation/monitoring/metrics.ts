@@ -426,7 +426,9 @@ export class FederationMetrics {
       if (win.Sentry) {
         // Type-safe integration would require proper Sentry types
         // For now, we'll use unknown and let the runtime handle it
-        const sentry = win.Sentry as { captureException: (error: Error, options: unknown) => void };
+        const sentry = win.Sentry as {
+          captureException: (error: Error, options: unknown) => void;
+        };
         sentry.captureException(new Error(metric.errorMessage), {
           tags: {
             domain: metric.domain,

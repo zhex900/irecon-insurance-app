@@ -42,22 +42,32 @@ Large files (all under ~500-line gate after Phase 3 follow-ups):
 ## Worker-to-Worker Communication
 
 ### Current State
+
 The application uses custom signed requests with HMAC signatures for worker-to-worker communication. This provides security but adds complexity:
 
 ```typescript
 // Current pattern: Manual signed requests
-const signedRequest = await createSignedRequest(payload, serviceName, sharedSecret);
-const response = await env.EXCEL_SERVICE.fetch("https://excel-service/api/generate", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify(signedRequest),
-});
+const signedRequest = await createSignedRequest(
+  payload,
+  serviceName,
+  sharedSecret,
+);
+const response = await env.EXCEL_SERVICE.fetch(
+  "https://excel-service/api/generate",
+  {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(signedRequest),
+  },
+);
 ```
 
 ### Refactor Goal: Cloudflare RPC Features
+
 Migrate to Cloudflare's built-in RPC capabilities for:
+
 - **Better security**: Built-in authentication via service bindings
-- **Improved performance**: Lower latency than public HTTP calls  
+- **Improved performance**: Lower latency than public HTTP calls
 - **Enhanced developer experience**: Type-safe APIs with autocomplete
 - **Reduced complexity**: Eliminates custom security implementation
 
@@ -71,16 +81,15 @@ const result = await excelService.generatePremiumWorkbook({
 ```
 
 ### Implementation Priorities
+
 1. **Create shared TypeScript interfaces** for all worker RPC methods
-2. **Implement type-safe client wrappers** around service bindings  
+2. **Implement type-safe client wrappers** around service bindings
 3. **Migrate critical paths** from REST endpoints to RPC methods
 4. **Adopt Cloudflare Worker RPC** as it matures for TypeScript-to-TypeScript communication
 
 See [workers/rpc-communication-guide.md](../workers/rpc-communication-guide.md) for detailed implementation guidelines.
 
 ---
-
-
 
 ## Principles (do not skip)
 

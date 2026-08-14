@@ -111,7 +111,11 @@ export class FederationErrorBoundary extends Component<
       this.props.onRetry?.();
 
       // Log retry
-      FederationMetrics.getInstance().recordModuleRetry(domain, module, retryCount + 1);
+      FederationMetrics.getInstance().recordModuleRetry(
+        domain,
+        module,
+        retryCount + 1,
+      );
     } catch (retryError) {
       this.setState({
         hasError: true,
@@ -239,4 +243,3 @@ export class FederationErrorBoundary extends Component<
     return children;
   }
 }
-

@@ -125,7 +125,10 @@ export function validateDependencyIsolation(): string[] {
 }
 
 // Generate Module Federation config
-export function generateFederationSharedConfig(): Record<string, SharedConfigEntry> {
+export function generateFederationSharedConfig(): Record<
+  string,
+  SharedConfigEntry
+> {
   const sharedConfig: Record<string, SharedConfigEntry> = {};
 
   // Add shared singletons

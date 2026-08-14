@@ -1,7 +1,11 @@
 // Document worker route definitions
 import { z } from "zod";
 import type { DocumentWorkerEnv } from "../types/env";
-import { pdfRenderRequestSchema, type PdfRenderRequest, PDF_RENDER_PATH } from "../types/schemas";
+import {
+  pdfRenderRequestSchema,
+  type PdfRenderRequest,
+  PDF_RENDER_PATH,
+} from "../types/schemas";
 import { generatePolicyPdf } from "../services/pdf-generation";
 import { getDocumentWorkerFonts } from "../services/font-management";
 

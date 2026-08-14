@@ -9,7 +9,10 @@ import { PolicyNumberField } from "~/components/policies/policy-number-field";
 import { type CarPolicyFormValues } from "~/lib/zod/policy-car";
 import type { ReferenceData } from "~/lib/db/types";
 import { SiteAddressAutocomplete } from "~/components/policies/wizard/site-address-autocomplete";
-import { applyAnnualCoverTypeDefaults, applyCoverTypeDefaults } from "../section-shared";
+import {
+  applyAnnualCoverTypeDefaults,
+  applyCoverTypeDefaults,
+} from "../section-shared";
 
 export function RiskDetails({ reference }: { reference: ReferenceData }) {
   const {

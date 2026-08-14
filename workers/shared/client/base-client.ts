@@ -135,12 +135,12 @@ export class ServiceClient {
     const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
 
     try {
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      "X-Request-Id": this.generateRequestId(attempt),
-      "X-Service-Name": this.serviceName,
-      ...additionalHeaders,
-    };
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        "X-Request-Id": this.generateRequestId(attempt),
+        "X-Service-Name": this.serviceName,
+        ...additionalHeaders,
+      };
 
       const requestInit: RequestInit = {
         method,

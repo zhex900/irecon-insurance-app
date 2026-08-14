@@ -7,6 +7,7 @@ This document outlines the recommended patterns for worker-to-worker communicati
 ## Current Implementation: Custom Signed Requests
 
 ### Current Pattern
+
 The application currently uses a custom request signing system for worker-to-worker communication:
 
 ```typescript
@@ -28,6 +29,7 @@ export async function createSignedRequest(
 ```
 
 ### Issues with Current Approach
+
 1. **Manual Security Implementation**: Custom HMAC signing requires careful implementation
 2. **Performance Overhead**: Extra serialization/deserialization steps
 3. **Maintenance Burden**: Need to maintain custom security logic
@@ -36,6 +38,7 @@ export async function createSignedRequest(
 ## Cloudflare RPC Features
 
 Cloudflare Workers provides built-in RPC capabilities through:
+
 1. **Service Bindings** (already configured)
 2. **Worker RPC** (experimental, for TypeScript-to-TypeScript communication)
 
@@ -44,6 +47,7 @@ Cloudflare Workers provides built-in RPC capabilities through:
 Service bindings provide secure, low-latency communication between Workers without going over the public internet.
 
 #### Current Configuration
+
 ```jsonc
 // wrangler.jsonc
 "services": [
@@ -61,13 +65,17 @@ Service bindings provide secure, low-latency communication between Workers witho
 #### Using Service Bindings
 
 **Current approach (manual fetch):**
+
 ```typescript
 // From main app to Excel worker
-const response = await env.EXCEL_SERVICE.fetch("https://excel-service/api/generate", {
-  method: "POST",
-  headers: { /* custom headers */ },
-  body: JSON.stringify(signedRequest),
-});
+const response = await env.EXCEL_SERVICE.fetch(
+  "https://excel-service/api/generate",
+  {
+    method: "POST",
+    headers: {/* custom headers */},
+    body: JSON.stringify(signedRequest),
+  },
+);
 ```
 
 **RPC Approach (recommended):**
@@ -77,21 +85,21 @@ Define TypeScript interfaces for type-safe RPC:
 // workers/shared/rpc/types.ts
 export interface ExcelWorkerRPC {
   generatePremiumWorkbook(
-    input: GeneratePremiumWorkbookInput
+    input: GeneratePremiumWorkbookInput,
   ): Promise<GeneratePremiumWorkbookOutput>;
-  
+
   generateAdjustmentSheet(
-    input: GenerateAdjustmentSheetInput  
+    input: GenerateAdjustmentSheetInput,
   ): Promise<GenerateAdjustmentSheetOutput>;
 }
 
 export interface DocumentWorkerRPC {
   generatePolicyPdf(
-    input: GeneratePolicyPdfInput
+    input: GeneratePolicyPdfInput,
   ): Promise<GeneratePolicyPdfOutput>;
-  
+
   validateDocumentTemplate(
-    input: ValidateTemplateInput
+    input: ValidateTemplateInput,
   ): Promise<ValidateTemplateOutput>;
 }
 ```
@@ -103,13 +111,14 @@ Cloudflare's Worker RPC allows direct method calls between Workers with TypeScri
 #### Implementation Pattern
 
 **1. Define RPC Service Interface**
+
 ```typescript
 // workers/excel/rpc-service.ts
 import { RpcService } from "workerd";
 
 export class ExcelRpcService implements RpcService {
   async generatePremiumWorkbook(
-    input: GeneratePremiumWorkbookInput
+    input: GeneratePremiumWorkbookInput,
   ): Promise<GeneratePremiumWorkbookOutput> {
     // Implementation logic
   }
@@ -117,6 +126,7 @@ export class ExcelRpcService implements RpcService {
 ```
 
 **2. Export Service from Worker**
+
 ```typescript
 // workers/excel/index.ts
 import { ExcelRpcService } from "./rpc-service";
@@ -128,6 +138,7 @@ export default {
 ```
 
 **3. Call from Main Worker**
+
 ```typescript
 // workers/app.ts
 export default {
@@ -137,9 +148,9 @@ export default {
       policy: policyData,
       premium: premiumData,
     });
-    
+
     return Response.json(result);
-  }
+  },
 };
 ```
 
@@ -153,9 +164,9 @@ Replace manual fetch calls with type-safe wrappers:
 // workers/shared/rpc/excel-client.ts
 export class ExcelServiceClient {
   constructor(private readonly binding: Fetcher) {}
-  
+
   async generatePremiumWorkbook(
-    input: GeneratePremiumWorkbookInput
+    input: GeneratePremiumWorkbookInput,
   ): Promise<GeneratePremiumWorkbookOutput> {
     const response = await this.binding.fetch(
       "https://excel-service/api/generate",
@@ -166,20 +177,20 @@ export class ExcelServiceClient {
           type: "generatePremiumWorkbook",
           data: input,
         }),
-      }
+      },
     );
-    
+
     if (!response.ok) {
       throw new Error(`Excel service error: ${response.status}`);
     }
-    
+
     return response.json() as Promise<GeneratePremiumWorkbookOutput>;
   }
 }
 
 // Usage in main app
 const excelClient = new ExcelServiceClient(env.EXCEL_SERVICE);
-const result = await excelClient.generatePremiumWorkbook({ /* input */ });
+const result = await excelClient.generatePremiumWorkbook({/* input */});
 ```
 
 ### Phase 2: Shared Type Definitions
@@ -193,11 +204,13 @@ import { z } from "zod";
 export const generatePremiumWorkbookInputSchema = z.object({
   policy: policySchema,
   premium: premiumBreakdownSchema,
-  options: z.object({
-    includeAdjustment: z.boolean().optional(),
-    policyNumber: z.string().optional(),
-    clientName: z.string().optional(),
-  }).optional(),
+  options: z
+    .object({
+      includeAdjustment: z.boolean().optional(),
+      policyNumber: z.string().optional(),
+      clientName: z.string().optional(),
+    })
+    .optional(),
 });
 
 export type GeneratePremiumWorkbookInput = z.infer<
@@ -226,11 +239,12 @@ export type GeneratePremiumWorkbookOutput = z.infer<
 Migrate from REST endpoints to RPC methods:
 
 **Before (REST):**
+
 ```typescript
 // Client
 const response = await fetch("https://excel-service/api/generate", {
   method: "POST",
-  body: JSON.stringify({ /* complex payload */ }),
+  body: JSON.stringify({/* complex payload */}),
 });
 
 // Server
@@ -243,6 +257,7 @@ if (url.pathname === "/api/generate") {
 ```
 
 **After (RPC):**
+
 ```typescript
 // Client
 const result = await excelService.generatePremiumWorkbook({
@@ -261,12 +276,15 @@ class ExcelRpcService {
 ## Security Considerations
 
 ### 1. Service Binding Security
+
 - **Already secure**: Service bindings provide private communication channels
 - **No public endpoints**: Workers only accessible via bindings
 - **Automatic authentication**: Cloudflare handles service authentication
 
 ### 2. Input Validation
+
 Even with RPC, maintain validation:
+
 ```typescript
 class ExcelRpcService {
   async generatePremiumWorkbook(input: unknown) {
@@ -278,7 +296,9 @@ class ExcelRpcService {
 ```
 
 ### 3. Rate Limiting & DoS Protection
+
 Implement worker-level protections:
+
 ```typescript
 import { rateLimit } from "workerd";
 
@@ -287,14 +307,14 @@ export default {
     // Apply rate limiting
     const limiter = rateLimit({
       requests: 100, // 100 requests per...
-      window: 60,    // ...60 seconds
+      window: 60, // ...60 seconds
       key: (request) => request.headers.get("x-request-id"),
     });
-    
+
     if (!limiter.limit(request)) {
       return new Response("Too many requests", { status: 429 });
     }
-    
+
     // Process request
   },
 };
@@ -303,15 +323,18 @@ export default {
 ## Performance Benefits
 
 ### 1. Reduced Latency
+
 - **Service bindings**: ~1ms overhead vs public network calls
 - **RPC serialization**: More efficient than JSON over HTTP
 
 ### 2. Better Type Safety
+
 - **Compile-time validation**: Catch errors before runtime
 - **Auto-completion**: IDE support for RPC methods
 - **Refactoring safety**: TypeScript ensures API compatibility
 
 ### 3. Simplified Error Handling
+
 ```typescript
 // Before: Manual error handling
 try {
@@ -338,12 +361,14 @@ try {
 ## Implementation Steps
 
 ### Step 1: Create Shared Types Package
+
 ```bash
 mkdir -p workers/shared/types
 # Define all RPC interfaces and Zod schemas
 ```
 
 ### Step 2: Create Type-Safe Client Wrappers
+
 ```typescript
 // workers/shared/rpc/clients.ts
 export { ExcelServiceClient } from "./excel-client";
@@ -351,21 +376,26 @@ export { DocumentServiceClient } from "./document-client";
 ```
 
 ### Step 3: Update Main Worker
+
 ```typescript
 // workers/app.ts
-import { ExcelServiceClient, DocumentServiceClient } from "./shared/rpc/clients";
+import {
+  ExcelServiceClient,
+  DocumentServiceClient,
+} from "./shared/rpc/clients";
 
 export default {
   async fetch(request: Request, env: Env) {
     const excelClient = new ExcelServiceClient(env.EXCEL_SERVICE);
     const documentClient = new DocumentServiceClient(env.DOCUMENT_SERVICE);
-    
+
     // Use type-safe clients
   },
 };
 ```
 
 ### Step 4: Update Service Workers
+
 ```typescript
 // workers/excel/index.ts
 import { ExcelRpcService } from "./rpc-service";
@@ -374,7 +404,7 @@ export default {
   async fetch(request: Request, env: ExcelWorkerEnv) {
     // Handle traditional HTTP requests
   },
-  
+
   // Export RPC service
   rpc: new ExcelRpcService(),
 };
@@ -394,6 +424,7 @@ export default {
 ## Example: Complete RPC Implementation
 
 ### Shared Types
+
 ```typescript
 // workers/shared/types/excel.ts
 export interface GeneratePremiumWorkbookInput {
@@ -420,20 +451,22 @@ export interface GeneratePremiumWorkbookOutput {
 ```
 
 ### RPC Service
+
 ```typescript
 // workers/excel/rpc-service.ts
 export class ExcelRpcService {
   async generatePremiumWorkbook(
-    input: GeneratePremiumWorkbookInput
+    input: GeneratePremiumWorkbookInput,
   ): Promise<GeneratePremiumWorkbookOutput> {
     // Implementation using existing business logic
     const workbook = await generatePremiumExcel(input);
-    
+
     return {
       workbook: {
         url: workbook.url,
         size: workbook.size,
-        mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        mimeType:
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       },
       metadata: {
         generationTime: workbook.generationTime,
@@ -445,14 +478,15 @@ export class ExcelRpcService {
 ```
 
 ### Client Usage
+
 ```typescript
 // app/lib/services/excel.service.ts
 export class ExcelService {
   constructor(private readonly excelClient: ExcelServiceClient) {}
-  
+
   async generatePremiumReport(
     policy: Policy,
-    premium: PremiumBreakdown
+    premium: PremiumBreakdown,
   ): Promise<string> {
     const result = await this.excelClient.generatePremiumWorkbook({
       policy,
@@ -463,7 +497,7 @@ export class ExcelService {
         clientName: policy.clientName,
       },
     });
-    
+
     return result.workbook.url;
   }
 }
@@ -472,6 +506,7 @@ export class ExcelService {
 ## Summary
 
 Migrating to Cloudflare's RPC features provides:
+
 1. **Enhanced Security**: Built-in authentication via service bindings
 2. **Better Performance**: Lower latency than public HTTP calls
 3. **Improved Developer Experience**: Type-safe APIs with autocomplete

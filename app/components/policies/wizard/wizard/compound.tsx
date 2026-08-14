@@ -43,7 +43,6 @@ interface WizardInnerProviderProps extends Omit<
   children: ReactNode;
 }
 
-
 export function WizardInnerProvider({
   policy,
   reference,
@@ -121,11 +120,7 @@ export function WizardInnerProvider({
 }
 
 // Container component with default styling
-export function Container({
-  children,
-}: {
-  children: ReactNode;
-}) {
+export function Container({ children }: { children: ReactNode }) {
   const { wizardMode } = useMode();
 
   return (

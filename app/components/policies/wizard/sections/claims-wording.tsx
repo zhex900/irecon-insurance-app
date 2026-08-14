@@ -28,11 +28,7 @@ import type { CarWording } from "~/lib/db/types";
 import { Section } from "../section-shared";
 import { CustomWordingsEditor } from "../section-custom-wordings";
 
-export function ClaimsWording({
-  carWording,
-}: {
-  carWording: CarWording[];
-}) {
+export function ClaimsWording({ carWording }: { carWording: CarWording[] }) {
   const {
     register,
     control,

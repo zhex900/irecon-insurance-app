@@ -162,7 +162,10 @@ export class CrossWorkerAuthentication {
     return null;
   }
 
-  private getWorkerPermissions(session: SessionData, workerName: string): string[] {
+  private getWorkerPermissions(
+    session: SessionData,
+    workerName: string,
+  ): string[] {
     // Base permissions from user role
     const basePermissions = session.permissions || [];
 

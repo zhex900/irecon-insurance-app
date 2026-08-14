@@ -128,10 +128,7 @@ export function New({
           />
 
           <div className="xl:hidden">
-            <PremiumPanel
-              documentsOnly
-              {...state.premiumPanelProps}
-            />
+            <PremiumPanel documentsOnly {...state.premiumPanelProps} />
           </div>
 
           {!state.isNew ? (

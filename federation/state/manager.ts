@@ -195,7 +195,11 @@ export class CrossDomainStateManager {
       }
     }
 
-    FederationMetrics.getInstance().recordDomainSync(sourceDomain, targetDomain, keys);
+    FederationMetrics.getInstance().recordDomainSync(
+      sourceDomain,
+      targetDomain,
+      keys,
+    );
   }
 
   // Event-driven state sharing

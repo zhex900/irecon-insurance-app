@@ -21,10 +21,7 @@ import { usePolicySubmit } from "../hooks/use-submit";
 import { usePolicyLeaveGuard } from "../hooks/use-leave-guard";
 import { useCarPolicyWizardSubmitGate } from "../hooks/use-submit-gate";
 import { usePolicyDraftKeyboardSave } from "../hooks/use-draft-keyboard-save";
-import {
-  wizardModeCardBorderClass,
-  type WizardProps,
-} from "../shared/shared";
+import { wizardModeCardBorderClass, type WizardProps } from "../shared/shared";
 import { useMode } from "../hooks/use-mode";
 
 /**
@@ -64,22 +61,24 @@ export function useWizardState({
 
   const selectedStatusId = Number(form.watch("policyStatusId"));
   const selectedStatus = reference.policyStatuses.find(
-    (item: { policyStatusId: number }) => item.policyStatusId === selectedStatusId,
+    (item: { policyStatusId: number }) =>
+      item.policyStatusId === selectedStatusId,
   );
   const livePolicyNumber =
     form.watch("policyNumber")?.trim() || policy.policyNumber;
   const coverTypeId =
     Number(form.watch("coverTypeId")) || policy.car.coverTypeId;
   const coverTypeName =
-    reference.coverTypes.find((item: { coverTypeId: number }) => item.coverTypeId === coverTypeId)
-      ?.name ?? "";
+    reference.coverTypes.find(
+      (item: { coverTypeId: number }) => item.coverTypeId === coverTypeId,
+    )?.name ?? "";
   const insurerCode = form.watch("insurerCode");
   const insurerName =
-    reference.insurers.find((item: { code: string }) => item.code === insurerCode)?.name ??
-    insurerCode;
+    reference.insurers.find(
+      (item: { code: string }) => item.code === insurerCode,
+    )?.name ?? insurerCode;
 
-  const { fieldsLocked, isNew, wizardMode, premiumPinned } =
-    useMode();
+  const { fieldsLocked, isNew, wizardMode, premiumPinned } = useMode();
 
   /**
    * After the first successful Submit, keep Submit off until values change again.
@@ -93,7 +92,10 @@ export function useWizardState({
     () => getPolicyFormNavItems(premiumPinned),
     [premiumPinned],
   );
-  const navIds = useMemo(() => navItems.map((item: { id: string }) => item.id), [navItems]);
+  const navIds = useMemo(
+    () => navItems.map((item: { id: string }) => item.id),
+    [navItems],
+  );
 
   const navigation = usePolicyWizardNavigation({
     policyId: policy.policyId,
@@ -417,4 +419,6 @@ export function useWizardState({
   };
 }
 
-export type CarPolicyWizardState = ReturnType<typeof useCarPolicyWizardSubmitGate>;
+export type CarPolicyWizardState = ReturnType<
+  typeof useCarPolicyWizardSubmitGate
+>;

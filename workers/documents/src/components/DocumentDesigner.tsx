@@ -5,7 +5,13 @@
  * Uses PDFME libraries that are isolated to this domain
  */
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
 
 // PDFME imports (24MB bundle - isolated to Documents domain)
 import { Designer } from "@pdfme/ui";
@@ -24,8 +30,10 @@ interface DocumentDesignerProps {
 // Stub functions for missing imports
 const getFontsData = async () => {
   return {
-    "helvetica": {
-      data: new Uint8Array(Array.from({ length: 1000 }).map(() => Math.random() * 255)),
+    helvetica: {
+      data: new Uint8Array(
+        Array.from({ length: 1000 }).map(() => Math.random() * 255),
+      ),
       fallback: false,
       subset: false,
     },
@@ -73,35 +81,42 @@ export default function DocumentDesigner({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [template, setTemplate] = useState<Template>(defaultTemplate);
-  const [formData, setFormData] = useState<Record<string, unknown>>(initialData);
+  const [formData, setFormData] =
+    useState<Record<string, unknown>>(initialData);
   const [lang] = useState<Lang>("en");
 
   // Internationalization - memoized to prevent unnecessary re-renders
-  const i18n = useMemo(() => ({
-    en: {
-      "field.required": "This field is required",
-      "field.invalid": "Invalid value",
-      save: "Save",
-      preview: "Preview",
-      clear: "Clear",
-      undo: "Undo",
-      redo: "Redo",
-    },
-  }), []);
+  const i18n = useMemo(
+    () => ({
+      en: {
+        "field.required": "This field is required",
+        "field.invalid": "Invalid value",
+        save: "Save",
+        preview: "Preview",
+        clear: "Clear",
+        undo: "Undo",
+        redo: "Redo",
+      },
+    }),
+    [],
+  );
 
   // Memoized event handlers to avoid dependency warnings
-  const handleTemplateSave = useCallback((updatedTemplate: unknown) => {
-    setTemplate(updatedTemplate as Template);
+  const handleTemplateSave = useCallback(
+    (updatedTemplate: unknown) => {
+      setTemplate(updatedTemplate as Template);
 
-    // Notify Portal domain
-    sendToPortal("TEMPLATE_UPDATED", {
-      templateId,
-      template: updatedTemplate,
-    });
+      // Notify Portal domain
+      sendToPortal("TEMPLATE_UPDATED", {
+        templateId,
+        template: updatedTemplate,
+      });
 
-    // Call parent onSave
-    onSave?.(updatedTemplate as Template, formData);
-  }, [templateId, onSave, formData]);
+      // Call parent onSave
+      onSave?.(updatedTemplate as Template, formData);
+    },
+    [templateId, onSave, formData],
+  );
 
   const handleInputsChange = useCallback((inputs: unknown) => {
     setFormData(inputs as Record<string, unknown>);
@@ -134,23 +149,39 @@ export default function DocumentDesigner({
         // Cast to DesignerInstance with proper methods
         const designerInstance: DesignerInstance = {
           destroy: () => {
-            const designerUnknown = designer as unknown as { destroy?: () => void };
+            const designerUnknown = designer as unknown as {
+              destroy?: () => void;
+            };
             return designerUnknown.destroy?.();
           },
           getTemplate: () => {
-            const designerUnknown = designer as unknown as { getTemplate?: () => Template };
+            const designerUnknown = designer as unknown as {
+              getTemplate?: () => Template;
+            };
             return designerUnknown.getTemplate?.() ?? defaultTemplate;
           },
           getInputs: () => {
-            const designerUnknown = designer as unknown as { getInputs?: () => Record<string, unknown> };
+            const designerUnknown = designer as unknown as {
+              getInputs?: () => Record<string, unknown>;
+            };
             return designerUnknown.getInputs?.() ?? {};
           },
           savePdf: () => {
-            const designerUnknown = designer as unknown as { savePdf?: () => Promise<{ blob: Blob }> };
-            return designerUnknown.savePdf?.() ?? Promise.resolve({ blob: new Blob() });
+            const designerUnknown = designer as unknown as {
+              savePdf?: () => Promise<{ blob: Blob }>;
+            };
+            return (
+              designerUnknown.savePdf?.() ??
+              Promise.resolve({ blob: new Blob() })
+            );
           },
           on: (event: string, handler: (...args: unknown[]) => void) => {
-            const designerUnknown = designer as unknown as { on?: (event: string, handler: (...args: unknown[]) => void) => void };
+            const designerUnknown = designer as unknown as {
+              on?: (
+                event: string,
+                handler: (...args: unknown[]) => void,
+              ) => void;
+            };
             return designerUnknown.on?.(event, handler);
           },
         };
@@ -178,7 +209,16 @@ export default function DocumentDesigner({
         designerRef.current = null;
       }
     };
-  }, [templateId, readOnly, mode, lang, template, i18n, handleTemplateSave, handleInputsChange]);
+  }, [
+    templateId,
+    readOnly,
+    mode,
+    lang,
+    template,
+    i18n,
+    handleTemplateSave,
+    handleInputsChange,
+  ]);
 
   // Load template from server
   useEffect(() => {

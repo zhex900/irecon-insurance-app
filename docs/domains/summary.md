@@ -42,7 +42,7 @@ docs/
 
 ```
 docs/archive/                            # Archived for reference only
-├── cleanup-summary.md                   # This cleanup process summary  
+├── cleanup-summary.md                   # This cleanup process summary
 ├── implementation-summary.md           # Superseded by domains/micro-frontend/README.md
 ├── micro-frontend-architecture.md       # Superseded by domains/micro-frontend/architecture.md
 ├── micro-frontend-implementation-guide.md # Superseded by domains/micro-frontend/refactor-plan.md
@@ -102,6 +102,7 @@ open docs/deployment/observability.md
 ## What Each Active Document Contains
 
 ### `docs/guidelines/coding-standards.md`
+
 - Opinionated, measurable rules for Irecon Insurance
 - Clean code principles and complexity limits
 - Import ordering and best practices
@@ -109,6 +110,7 @@ open docs/deployment/observability.md
 - Security and performance considerations
 
 ### `docs/guidelines/ui-guidelines.md`
+
 - Design system rules using shadcn/ui and ReUI
 - Accessibility and responsive design guidelines
 - Form and table implementation patterns
@@ -116,6 +118,7 @@ open docs/deployment/observability.md
 - Dark/light mode theming standards
 
 ### `docs/architecture/performance.md`
+
 - Performance optimization strategies
 - Bundle size management for Cloudflare Workers
 - Caching and lazy loading patterns
@@ -123,6 +126,7 @@ open docs/deployment/observability.md
 - Worker resource limit guidelines
 
 ### `docs/domains/micro-frontend/README.md`
+
 - Complete micro-frontend architecture overview
 - Key decisions & trade-offs for Module Federation
 - Performance expectations and impact analysis
@@ -130,6 +134,7 @@ open docs/deployment/observability.md
 - Getting started instructions for developers
 
 ### `docs/domains/pricing/car-premium-formulas.md`
+
 - CAR insurance premium calculation formulas
 - Terrorism coverage and rebuild calculations
 - Legacy vs rebuild premium comparisons
@@ -137,6 +142,7 @@ open docs/deployment/observability.md
 - Testing and validation procedures
 
 ### `docs/deployment/observability.md`
+
 - Monitoring and observability setup
 - Error tracking with Sentry
 - Performance monitoring configuration

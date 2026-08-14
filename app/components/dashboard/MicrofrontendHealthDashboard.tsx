@@ -115,7 +115,7 @@ export function MicrofrontendHealthDashboard() {
 
     const performChecks = async () => {
       await checkAllWorkers();
-      
+
       // Schedule next check if still mounted
       if (mounted) {
         setTimeout(performChecks, 60000);
@@ -278,13 +278,17 @@ export function MicrofrontendHealthDashboard() {
             {/* Metrics */}
             <div className="mt-4 grid grid-cols-2 gap-3">
               <div>
-                <div className="text-xs text-muted-foreground">Response Time</div>
+                <div className="text-xs text-muted-foreground">
+                  Response Time
+                </div>
                 <div className="text-sm font-medium">
                   {worker.responseTime ? `${worker.responseTime}ms` : "N/A"}
                 </div>
               </div>
               <div>
-                <div className="text-xs text-muted-foreground">Last Checked</div>
+                <div className="text-xs text-muted-foreground">
+                  Last Checked
+                </div>
                 <div className="text-sm font-medium">
                   {worker.lastChecked
                     ? new Date(worker.lastChecked).toLocaleTimeString()
@@ -296,7 +300,9 @@ export function MicrofrontendHealthDashboard() {
             {/* Error Details */}
             {worker.error && (
               <div className="mt-3 border-t border-dashed pt-3">
-                <div className="text-xs font-medium text-destructive">Error:</div>
+                <div className="text-xs font-medium text-destructive">
+                  Error:
+                </div>
                 <div className="mt-1 text-xs break-all opacity-90">
                   {worker.error}
                 </div>
@@ -345,17 +351,23 @@ export function MicrofrontendHealthDashboard() {
                 ? `${metrics.portalWorker.coldStartTime}ms`
                 : "300ms"}
             </div>
-            <div className="mt-1 text-xs text-muted-foreground">Target: 300ms</div>
+            <div className="mt-1 text-xs text-muted-foreground">
+              Target: 300ms
+            </div>
           </div>
           <div className="rounded-lg border p-4">
             <div className="text-xs text-muted-foreground uppercase">
               Total Bundle Size
             </div>
             <div className="mt-2 text-2xl font-bold">1.88MB → 1.7MB</div>
-            <div className="mt-1 text-xs text-muted-foreground">Reduction: 10%</div>
+            <div className="mt-1 text-xs text-muted-foreground">
+              Reduction: 10%
+            </div>
           </div>
           <div className="rounded-lg border p-4">
-            <div className="text-xs text-muted-foreground uppercase">Error Rate</div>
+            <div className="text-xs text-muted-foreground uppercase">
+              Error Rate
+            </div>
             <div className="mt-2 text-2xl font-bold">
               {Object.values(metrics).length > 0
                 ? `${(Object.values(metrics).reduce((sum, m) => sum + m.errorRate, 0) / Object.values(metrics).length).toFixed(2)}%`

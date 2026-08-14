@@ -110,7 +110,6 @@ function isOriginAllowed(origin: string, env: WorkerEnv): boolean {
   );
 }
 
-
 /**
  * Check rate limit for client IP
  */

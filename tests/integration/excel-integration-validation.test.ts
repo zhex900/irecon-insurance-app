@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 /**
  * Excel Integration Validation Test
- * 
+ *
  * Validates that the Excel report export fix is working correctly.
  * This test doesn't mock dependencies - it validates the contract and structure.
  */
@@ -15,12 +15,22 @@ describe("Excel Integration Validation", () => {
         data: {
           columns: [
             { key: "status", header: "Status", width: 22 },
-            { key: "policyCount", header: "Number of Policies", width: 20, type: "integer" as const },
-            { key: "totalBasePremium", header: "Total Base Premium Combined", width: 28, type: "currency" as const },
+            {
+              key: "policyCount",
+              header: "Number of Policies",
+              width: 20,
+              type: "integer" as const,
+            },
+            {
+              key: "totalBasePremium",
+              header: "Total Base Premium Combined",
+              width: 28,
+              type: "currency" as const,
+            },
           ],
           rows: [
             { status: "Pending", policyCount: 5, totalBasePremium: 12500.75 },
-            { status: "Bound", policyCount: 12, totalBasePremium: 32500.50 },
+            { status: "Bound", policyCount: 12, totalBasePremium: 32500.5 },
           ],
         },
         options: {
@@ -44,8 +54,18 @@ describe("Excel Integration Validation", () => {
         data: {
           columns: [
             { key: "status", header: "Status", width: 22 },
-            { key: "policyCount", header: "Number of Policies", width: 20, type: "integer" as const },
-            { key: "totalBasePremium", header: "Total Base Premium Combined", width: 28, type: "currency" as const },
+            {
+              key: "policyCount",
+              header: "Number of Policies",
+              width: 20,
+              type: "integer" as const,
+            },
+            {
+              key: "totalBasePremium",
+              header: "Total Base Premium Combined",
+              width: 28,
+              type: "currency" as const,
+            },
           ],
           rows: [
             { status: "Pending", policyCount: 5, totalBasePremium: 12500.75 },
@@ -82,16 +102,16 @@ describe("Excel Integration Validation", () => {
       // The Excel worker would reject this with:
       // "Invalid report type, expected premiumWorkbook"
       // because premiumWorkbook expects different data structure
-      
+
       expect(brokenRequest.reportType).toBe("premiumWorkbook");
       expect(brokenRequest.data.columns).toBeDefined();
-      
+
       // After the fix, it should be:
       const fixedRequest = {
         ...brokenRequest,
         reportType: "custom" as const, // FIXED!
       };
-      
+
       expect(fixedRequest.reportType).toBe("custom");
     });
   });
@@ -102,10 +122,10 @@ describe("Excel Integration Validation", () => {
       // 1. excel-worker-wrapper.server.ts - Sends "custom" reportType
       // 2. workers/excel/handler/routes.ts - Handles "custom" reportType
       // 3. workers/excel/services/excel-generic.ts - Creates generic Excel files
-      
+
       const implementationChanges = [
         "Excel worker wrapper sends reportType: 'custom' for generic reports",
-        "Excel worker handles reportType: 'custom' with generic Excel generation", 
+        "Excel worker handles reportType: 'custom' with generic Excel generation",
         "Car policy exports use the correct data structure",
         "Error messages are clear for report type mismatches",
       ];
@@ -115,7 +135,7 @@ describe("Excel Integration Validation", () => {
         expect(typeof change).toBe("string");
         expect(change.length).toBeGreaterThan(0);
       }
-      
+
       expect(implementationChanges.length).toBe(4);
     });
   });

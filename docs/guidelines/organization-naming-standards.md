@@ -38,6 +38,7 @@ Use consistent naming patterns across the codebase. Developers should be able to
 File names should be descriptive and meaningful (minimum 2 words, maximum 3 words). Avoid single-word names that are too generic, and avoid verbose names.
 
 **Examples:**
+
 - ✅ `new-policy.tsx` (descriptive, 2 words)
 - ✅ `car-policy-wizard.tsx` (acceptable, 3 words)
 - ❌ `new.tsx` (too generic, 1 word)
@@ -165,6 +166,7 @@ Components containing business logic remain in their source domain, even if used
 All file names must be ≥2 and ≤3 descriptive words. Domain information is already clear from directory structure.
 
 **Examples:**
+
 - ✅ `policy-form.tsx`, `info-card.tsx`, `nav-dialog.tsx` (2 words, descriptive)
 - ✅ `car-policy-wizard.tsx`, `client-form-fields.tsx` (3 words, acceptable)
 - ❌ `new.tsx`, `form.tsx`, `list.tsx` (1 word, too generic)
@@ -217,11 +219,13 @@ export function someUtility() {
 **Multi-word Violations (Too Verbose):**
 
 **4+ Word Violations:**
+
 - `client-form-leave-dialog.tsx` (4 words)
 - `car-policy-wizard-information-card.tsx` (4+ words)
 - `authorised-representative-autocomplete.tsx` (3+ words)
 
 **3-word Examples (Now Acceptable):**
+
 - `client-form-fields.tsx` (3 words)
 - `client-form-inner.tsx` (3 words)
 - `client-summary-popover.tsx` (3 words)
@@ -422,6 +426,7 @@ git mv app/components/clients/client-policies-table.tsx app/components/clients/s
 File names should be descriptive and meaningful (minimum 2 words, maximum 3 words). Avoid single-word generic names like "new.tsx" or "form.tsx". Three-word names like "car-policy-wizard.tsx" are acceptable when necessary for clarity. Use abbreviations when appropriate, but ensure the meaning remains clear. Create subdirectories if more specificity needed.
 
 **Examples:**
+
 - ✅ `policy-form.tsx` (meaningful, 2 words)
 - ✅ `car-policy-wizard.tsx` (acceptable, 3 words)
 - ❌ `new.tsx` (too generic, 1 word)

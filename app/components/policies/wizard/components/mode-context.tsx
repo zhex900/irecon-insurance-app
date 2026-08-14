@@ -123,11 +123,7 @@ export function ModeProvider({
     hasSubmittedOnce,
   ]);
 
-  return (
-    <ModeContext.Provider value={value}>
-      {children}
-    </ModeContext.Provider>
-  );
+  return <ModeContext.Provider value={value}>{children}</ModeContext.Provider>;
 }
 
 export { ModeContext };

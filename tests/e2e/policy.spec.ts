@@ -192,20 +192,20 @@ test.describe("policy status transitions", () => {
       .getByRole("button")
       .filter({ hasText: /pending/i })
       .first();
-    
+
     test.skip(
       (await statusButton.count()) === 0,
       "Status selector button not found - UI may have changed",
     );
 
     await statusButton.click();
-    
+
     // Select "Not taken" from the dropdown menu
     const notTakenOption = page
       .getByRole("menuitem")
       .filter({ hasText: /not taken/i })
       .first();
-    
+
     test.skip(
       (await notTakenOption.count()) === 0,
       "Not taken option not available in status menu",
@@ -218,7 +218,7 @@ test.describe("policy status transitions", () => {
       .getByRole("button")
       .filter({ hasText: /confirm/i })
       .first();
-    
+
     if (await confirmDialogButton.count()) {
       await confirmDialogButton.click();
     }

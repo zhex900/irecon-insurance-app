@@ -5,8 +5,8 @@
 import type { ExcelWorkerEnv } from "../types/env";
 import type { ZodSchema } from "zod";
 type WorkerEnv = { [key: string]: unknown } & ExcelWorkerEnv;
-import { 
-  excelWorkerRequestSchema, 
+import {
+  excelWorkerRequestSchema,
   type ExcelWorkerRequest,
   customReportDataSchema,
 } from "../types/schemas";
@@ -71,8 +71,10 @@ async function handleGeneratePremiumWorkbook(
     // Validate that we have premium workbook data
     if (requestData.reportType !== "premiumWorkbook") {
       return new Response(
-        JSON.stringify({ error: "Invalid report type, expected premiumWorkbook" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
+        JSON.stringify({
+          error: "Invalid report type, expected premiumWorkbook",
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
       );
     }
 
@@ -172,7 +174,7 @@ async function handleGenericExcel(
   validatedData?: unknown,
 ): Promise<Response> {
   const startTime = Date.now();
-  
+
   try {
     // Parse and validate request data
     let requestData: ExcelWorkerRequest;
@@ -187,19 +189,21 @@ async function handleGenericExcel(
     if (requestData.reportType !== "custom") {
       return new Response(
         JSON.stringify({ error: "Invalid report type, expected custom" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
+        { status: 400, headers: { "Content-Type": "application/json" } },
       );
     }
 
     // Extract and validate custom report data
-    const customDataValidation = customReportDataSchema.safeParse(requestData.data);
+    const customDataValidation = customReportDataSchema.safeParse(
+      requestData.data,
+    );
     if (!customDataValidation.success) {
       return new Response(
-        JSON.stringify({ 
-          error: "Invalid custom report data format", 
-          details: customDataValidation.error.issues 
+        JSON.stringify({
+          error: "Invalid custom report data format",
+          details: customDataValidation.error.issues,
         }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
+        { status: 400, headers: { "Content-Type": "application/json" } },
       );
     }
 
@@ -231,7 +235,8 @@ async function handleGenericExcel(
     return new Response(arrayBuffer as ArrayBuffer, {
       status: 200,
       headers: {
-        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Type":
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         "Content-Disposition": `attachment; filename="${filename}"`,
         "Content-Length": bytes.byteLength.toString(),
         "X-Generation-Time": generationTime.toString(),
@@ -241,7 +246,8 @@ async function handleGenericExcel(
     });
   } catch (error) {
     console.error("Generic Excel generation failed:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
     return new Response(
       JSON.stringify({
         error: "Generic Excel generation failed",

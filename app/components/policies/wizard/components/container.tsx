@@ -1,9 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "~/lib/utils";
-import {
-  wizardModeCardBorderClass,
-  type WizardMode,
-} from "../shared/shared";
+import { wizardModeCardBorderClass, type WizardMode } from "../shared/shared";
 import { POLICY_STICKY_RAIL_CLASS } from "~/components/policies/policy-form-layout";
 
 export type ContainerProps = {
@@ -12,11 +9,7 @@ export type ContainerProps = {
   className?: string;
 };
 
-export function Container({
-  children,
-  wizardMode,
-  className,
-}: ContainerProps) {
+export function Container({ children, wizardMode, className }: ContainerProps) {
   const borderClassName = wizardModeCardBorderClass(wizardMode);
 
   return (

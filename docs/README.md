@@ -73,15 +73,15 @@ All documentation files now follow **kebab-case** naming (lowercase with hyphens
 
 ### Quick Access
 
-| Documentation Type | Primary Location |
-|-------------------|-----------------|
-| Coding Standards | `docs/guidelines/coding-standards.md` |
-| UI Guidelines | `docs/guidelines/ui-guidelines.md` |
-| Performance | `docs/architecture/performance.md` |
-| Testing | `docs/development/testing.md` |
-| Deployment | `docs/deployment/observability.md` |
-| Architecture | `docs/domains/micro-frontend/architecture.md` |
-| Plans | `docs/plans/` |
+| Documentation Type | Primary Location                              |
+| ------------------ | --------------------------------------------- |
+| Coding Standards   | `docs/guidelines/coding-standards.md`         |
+| UI Guidelines      | `docs/guidelines/ui-guidelines.md`            |
+| Performance        | `docs/architecture/performance.md`            |
+| Testing            | `docs/development/testing.md`                 |
+| Deployment         | `docs/deployment/observability.md`            |
+| Architecture       | `docs/domains/micro-frontend/architecture.md` |
+| Plans              | `docs/plans/`                                 |
 
 ### Reference Documentation
 
@@ -116,6 +116,7 @@ When adding new documentation:
 ## Archive Policy
 
 The `docs/archive/` folder contains outdated documentation that has been:
+
 - Superseded by newer versions
 - Consolidated into other documents
 - No longer actively maintained
@@ -124,4 +125,4 @@ Refer to `docs/domains/summary.md` for details on what was archived and why.
 
 ---
 
-*Last updated: Aug 14, 2026 - Documentation reorganization complete*
+_Last updated: Aug 14, 2026 - Documentation reorganization complete_

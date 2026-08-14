@@ -73,11 +73,7 @@ export function useWizardFocusManagement({
     });
     return () => cancelAnimationFrame(frame);
     // Re-run when draft clears after submit (same URL revalidation) or remount.
-  }, [
-    policyId,
-    isDraft,
-    navigateToSection,
-  ]);
+  }, [policyId, isDraft, navigateToSection]);
 
   function navigateToIssue(path: string) {
     const targetStep = findStepForField(path);

@@ -5,6 +5,7 @@ These guidelines ensure consistent observability and error handling across the I
 ## Overview
 
 The goal is to have predictable, structured logging and error handling that:
+
 - Provides good observability for debugging
 - Maintains user privacy (no PII in logs)
 - Correlates errors across services via request IDs
@@ -14,11 +15,11 @@ The goal is to have predictable, structured logging and error handling that:
 
 ### When to Log
 
-| Level   | Use                                                                                                                              |
-|---------|----------------------------------------------------------------------------------------------------------------------------------|
-| `debug` | Detailed information for debugging only, never in production (sampled)                                                          |
-| `info`  | Normal operations: service start/stop, significant lifecycle events, performance metrics                                          |
-| `warn`  | Unusual but expected conditions (deprecation warnings, rate limiting, external service transient failures)                       |
+| Level   | Use                                                                                                                                  |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `debug` | Detailed information for debugging only, never in production (sampled)                                                               |
+| `info`  | Normal operations: service start/stop, significant lifecycle events, performance metrics                                             |
+| `warn`  | Unusual but expected conditions (deprecation warnings, rate limiting, external service transient failures)                           |
 | `error` | Unexpected errors that prevent normal operation (database failures, validation errors, unhandled exceptions, service unavailability) |
 
 ### Structured Logging Format
@@ -43,17 +44,17 @@ console.log("Client created successfully");
 
 Always include relevant context in log fields:
 
-| Field           | Description                                                                                             | When to Include                           |
-|-----------------|---------------------------------------------------------------------------------------------------------|-------------------------------------------|
-| `requestId`     | The request correlation ID (auto-included by main logger)                                             | Always (auto-included)                    |
-| `userId`        | User ID performing the action (auto-included by main logger)                                           | When available                            |
-| `route`         | Route path being executed (auto-included by main logger)                                                | When available                            |
-| `operation`     | High-level operation name (e.g., "client.create", "policy.submit")                                      | Always                                    |
-| `durationMs`    | Operation duration in milliseconds                                                                      | For performance tracking                  |
-| `resourceId`    | ID of the affected resource (clientId, policyId, etc.)                                                 | When relevant                             |
-| `errorType`     | Type of error (e.g., "ValidationError", "ExternalServiceError")                                         | For errors                                |
-| `externalService`| Name of external service when relevant (e.g., "excel-worker", "email-service")                         | When calling external services            |
-| `workerType`    | For workers: type of worker ("excel", "documents")                                                      | In worker environments                    |
+| Field             | Description                                                                    | When to Include                |
+| ----------------- | ------------------------------------------------------------------------------ | ------------------------------ |
+| `requestId`       | The request correlation ID (auto-included by main logger)                      | Always (auto-included)         |
+| `userId`          | User ID performing the action (auto-included by main logger)                   | When available                 |
+| `route`           | Route path being executed (auto-included by main logger)                       | When available                 |
+| `operation`       | High-level operation name (e.g., "client.create", "policy.submit")             | Always                         |
+| `durationMs`      | Operation duration in milliseconds                                             | For performance tracking       |
+| `resourceId`      | ID of the affected resource (clientId, policyId, etc.)                         | When relevant                  |
+| `errorType`       | Type of error (e.g., "ValidationError", "ExternalServiceError")                | For errors                     |
+| `externalService` | Name of external service when relevant (e.g., "excel-worker", "email-service") | When calling external services |
+| `workerType`      | For workers: type of worker ("excel", "documents")                             | In worker environments         |
 
 ### Privacy Rules (Never Log)
 
@@ -69,7 +70,11 @@ Always include relevant context in log fields:
 Use typed domain errors from `app/lib/errors.ts` instead of generic `Error`:
 
 ```typescript
-import { ValidationError, NotFoundError, ExternalServiceError } from "~/lib/errors";
+import {
+  ValidationError,
+  NotFoundError,
+  ExternalServiceError,
+} from "~/lib/errors";
 
 // Correct: Domain error with proper type and HTTP status
 throw new ValidationError("Invalid email format");
@@ -83,13 +88,13 @@ throw new Error("Invalid email format");
 
 ### Domain Error Classes
 
-| Class                  | HTTP Status | Use                                                                 |
-|------------------------|-------------|---------------------------------------------------------------------|
-| `ValidationError`      | 400         | Bad input (after Zod or domain rules)                                |
-| `AuthorizationError`   | 403         | Authenticated but not allowed                                      |
-| `NotFoundError`        | 404         | Missing entity                                                     |
-| `ConflictError`        | 409         | Version / unique / state conflict                                  |
-| `ExternalServiceError` | 502         | Supabase, R2, email, workers, etc.                                |
+| Class                  | HTTP Status | Use                                   |
+| ---------------------- | ----------- | ------------------------------------- |
+| `ValidationError`      | 400         | Bad input (after Zod or domain rules) |
+| `AuthorizationError`   | 403         | Authenticated but not allowed         |
+| `NotFoundError`        | 404         | Missing entity                        |
+| `ConflictError`        | 409         | Version / unique / state conflict     |
+| `ExternalServiceError` | 502         | Supabase, R2, email, workers, etc.    |
 
 ### Worker-Specific Error Handling
 
@@ -103,14 +108,14 @@ if (!response.ok) {
     status: response.status,
     operation: "generate-report",
   });
-  
+
   // Return structured error response
   return new Response(
     JSON.stringify({
       error: "Excel generation failed",
       status: response.status,
-    }), 
-    { status: 502 }
+    }),
+    { status: 502 },
   );
 }
 ```
@@ -129,7 +134,7 @@ try {
     fallback: "An error occurred",
     operation: "policy.create",
   });
-  
+
   // Return error to client
   return json({ error: message }, { status: 500 });
 }
@@ -144,14 +149,13 @@ const startTime = Date.now();
 
 try {
   // ... operation ...
-  
+
   const duration = Date.now() - startTime;
   logger.info("Operation completed", {
     operation: "excel.generate",
     durationMs: duration,
     bufferBytes: buffer.byteLength,
   });
-  
 } catch (error) {
   const duration = Date.now() - startTime;
   logger.error("Operation failed", {
@@ -160,7 +164,7 @@ try {
     error: error instanceof Error ? error.message : "unknown",
     errorType: error instanceof Error ? error.name : typeof error,
   });
-  
+
   throw error;
 }
 ```
@@ -179,12 +183,14 @@ When updating code for consistency:
 ## Examples
 
 ### Before (Inconsistent)
+
 ```typescript
 console.warn(`Excel Worker request timed out after ${timeoutMs}ms`);
 throw new Error("Excel Worker failed with status 500");
 ```
 
 ### After (Consistent)
+
 ```typescript
 logger.warn("Excel Worker request timed out", {
   operation: "excel.generate",

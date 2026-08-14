@@ -3,7 +3,11 @@
  * Worker-compatible version for simple column/row based reports
  */
 
-import { loadExcelJS, formatCurrencyCell, styleWorkbookHeaderRow } from "./excel-workbook";
+import {
+  loadExcelJS,
+  formatCurrencyCell,
+  styleWorkbookHeaderRow,
+} from "./excel-workbook";
 
 export interface GenericExcelColumn {
   key: string;
@@ -49,25 +53,27 @@ export async function buildGenericExcelWorkbook(
     const titleRow = worksheet.addRow([input.title]);
     titleRow.font = { bold: true, size: 14 };
     titleRow.alignment = { horizontal: "center" };
-    worksheet.mergeCells(`A${rowIndex}:${String.fromCharCode(64 + input.columns.length)}${rowIndex}`);
+    worksheet.mergeCells(
+      `A${rowIndex}:${String.fromCharCode(64 + input.columns.length)}${rowIndex}`,
+    );
     rowIndex++;
   }
 
   // Add header row
-  const headers = input.columns.map(col => col.header);
+  const headers = input.columns.map((col) => col.header);
   const headerRow = worksheet.addRow(headers);
   styleWorkbookHeaderRow(headerRow, input.columns.length);
   rowIndex++;
 
   // Add data rows
   for (const rowData of input.rows) {
-    const rowValues = input.columns.map(col => rowData[col.key] ?? "");
+    const rowValues = input.columns.map((col) => rowData[col.key] ?? "");
     const row = worksheet.addRow(rowValues);
-    
+
     // Apply formatting based on column type
     input.columns.forEach((col, colIndex) => {
       const cell = row.getCell(colIndex + 1);
-      
+
       switch (col.type) {
         case "currency":
           if (input.formatCurrency !== false) {
@@ -86,7 +92,7 @@ export async function buildGenericExcelWorkbook(
           cell.alignment = { vertical: "top", wrapText: true };
       }
     });
-    
+
     rowIndex++;
   }
 
