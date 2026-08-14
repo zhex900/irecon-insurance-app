@@ -186,29 +186,47 @@ test.describe("policy status transitions", () => {
     await pendingRow.first().click();
     await expect(page).toHaveURL(/\/policies\/[^/?]+$/);
 
-    // Look for reject/cancel action
-    const rejectButton = page.getByRole("button", {
-      name: /reject|cancel|not taken/i,
-    });
+    // Find the status dropdown/selector - based on PolicyStatusMenu component
+    // It should be a button showing the current status ("Pending")
+    const statusButton = page
+      .getByRole("button")
+      .filter({ hasText: /pending/i })
+      .first();
+    
     test.skip(
-      (await rejectButton.count()) === 0,
-      "Reject/Cancel button not available on this policy",
+      (await statusButton.count()) === 0,
+      "Status selector button not found - UI may have changed",
     );
 
-    await rejectButton.first().click();
+    await statusButton.click();
+    
+    // Select "Not taken" from the dropdown menu
+    const notTakenOption = page
+      .getByRole("menuitem")
+      .filter({ hasText: /not taken/i })
+      .first();
+    
+    test.skip(
+      (await notTakenOption.count()) === 0,
+      "Not taken option not available in status menu",
+    );
 
-    // Handle confirmation dialog if present
-    const confirmButton = page.getByRole("button", {
-      name: /confirm|yes|reject/i,
-    });
-    if (await confirmButton.count()) {
-      await confirmButton.first().click();
+    await notTakenOption.click();
+
+    // Handle confirmation dialog - PolicyStatusMenu shows a confirmation dialog for terminal statuses
+    const confirmDialogButton = page
+      .getByRole("button")
+      .filter({ hasText: /confirm/i })
+      .first();
+    
+    if (await confirmDialogButton.count()) {
+      await confirmDialogButton.click();
     }
 
-    // Verify rejection - check for success message
-    await expect(page.getByText(/rejected|not taken|declined/i)).toBeVisible();
+    // Verify status changed to Not taken
+    await expect(page.getByText(/not taken/i)).toBeVisible();
 
-    // After rejection, policy should be in Not taken status
+    // After rejection, policy should be in Not taken status (terminal) and in view mode
     await page.reload();
     const wizardRoot = page.locator("[data-wizard-mode]");
     await expect(wizardRoot).toHaveAttribute("data-wizard-mode", "view");

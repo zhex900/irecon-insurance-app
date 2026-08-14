@@ -133,7 +133,7 @@ function createMockTemplate(templateKey: string) {
       basePdf: {
         width: 210,
         height: 297,
-        padding: [15, 15, 15, 15],
+        padding: [15, 15, 15, 15] as [number, number, number, number],
       },
       schemas: [
         [

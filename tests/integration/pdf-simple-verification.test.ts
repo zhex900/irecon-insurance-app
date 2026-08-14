@@ -24,7 +24,7 @@ const mockCache = {
             basePdf: {
               width: 210,
               height: 297,
-              padding: [15, 15, 15, 15],
+              padding: [15, 15, 15, 15] as [number, number, number, number],
             },
             schemas: [
               [
@@ -195,11 +195,11 @@ function createMockTemplate(templateKey: string) {
     mergeFields: ["PolicyNumber"],
     flowPushDown: null,
     template: {
-      basePdf: {
-        width: 210,
-        height: 297,
-        padding: [15, 15, 15, 15],
-      },
+    basePdf: {
+      width: 210,
+      height: 297,
+      padding: [15, 15, 15, 15] as [number, number, number, number],
+    },
       schemas: [[]], // Empty schema to avoid PDFME validation
     },
   };

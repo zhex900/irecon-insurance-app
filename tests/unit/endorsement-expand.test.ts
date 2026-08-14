@@ -17,7 +17,7 @@ function blankTemplate(schemas: Template["schemas"]): Template {
     basePdf: {
       width: 210,
       height: 297,
-      padding: [10, 10, 10, 10],
+      padding: [10, 10, 10, 10] as [number, number, number, number],
     },
     schemas,
   };

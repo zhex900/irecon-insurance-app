@@ -10,7 +10,6 @@ import {
   type ExcelWorkerRequest,
   customReportDataSchema,
 } from "../types/schemas";
-import type { z } from "zod";
 import type {
   Policy,
   PremiumBreakdown,
@@ -192,16 +191,20 @@ async function handleGenericExcel(
       );
     }
 
-    // Extract custom report data
-    const customData = requestData.data as z.infer<typeof customReportDataSchema>;
-    const options = requestData.options || {};
-    
-    if (!customData || !customData.columns || !customData.rows) {
+    // Extract and validate custom report data
+    const customDataValidation = customReportDataSchema.safeParse(requestData.data);
+    if (!customDataValidation.success) {
       return new Response(
-        JSON.stringify({ error: "Invalid custom report data: columns and rows are required" }),
+        JSON.stringify({ 
+          error: "Invalid custom report data format", 
+          details: customDataValidation.error.issues 
+        }),
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
+
+    const customData = customDataValidation.data;
+    const options = requestData.options || {};
 
     // Call generic Excel generation
     const { buildGenericExcelWorkbook } = await import("../services");

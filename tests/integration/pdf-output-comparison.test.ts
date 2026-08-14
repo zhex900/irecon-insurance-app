@@ -17,7 +17,7 @@ const mockCache = {
         label: templateKey,
         versionNumber: 1,
         template: {
-          basePdf: { width: 210, height: 297, padding: [15, 15, 15, 15] },
+          basePdf: { width: 210, height: 297, padding: [15, 15, 15, 15] as [number, number, number, number] },
           schemas: [[]],
         },
         flowPushDown: null,
@@ -289,7 +289,7 @@ function createMockTemplate(templateKey: string): DocumentTemplate {
       basePdf: {
         width: 210,
         height: 297,
-        padding: [15, 15, 15, 15],
+        padding: [15, 15, 15, 15] as [number, number, number, number],
       },
       schemas: [
         [
@@ -357,7 +357,7 @@ async function computeSha256(bytes: Uint8Array): Promise<string> {
 
     const hashBuffer = await window.crypto.subtle.digest(
       "SHA-256",
-      bytes.buffer,
+      bytes.buffer as ArrayBuffer,
     );
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");

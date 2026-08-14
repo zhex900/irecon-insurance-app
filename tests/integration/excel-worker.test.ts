@@ -26,7 +26,7 @@ const mockCache = {
         title: "Premium Breakdown Excel",
         label: "Premium Excel Template",
         template: {
-          basePdf: { width: 210, height: 297, padding: [15, 15, 15, 15] },
+          basePdf: { width: 210, height: 297, padding: [15, 15, 15, 15] as [number, number, number, number] },
           schemas: [[]],
         },
         flowPushDown: null,
@@ -63,7 +63,7 @@ function createMockResponse(
     ok,
     status,
     headers: {
-      get: (key: string) => mergedHeaders[key] || null,
+      get: (key: string) => (mergedHeaders as Record<string, string>)[key] || null,
     },
     json: async () => ({
       success: true,

@@ -36,7 +36,7 @@ const defaultTemplate: Template = {
   basePdf: {
     width: 595,
     height: 842,
-    padding: [0, 0, 0, 0],
+    padding: [0, 0, 0, 0] as [number, number, number, number],
   },
   schemas: [],
   columns: [],
