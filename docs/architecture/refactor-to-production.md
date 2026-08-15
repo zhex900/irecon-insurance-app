@@ -39,73 +39,6 @@ Large files (all under ~500-line gate after Phase 3 follow-ups):
 
 ---
 
-## Worker-to-Worker Communication
-
-### Current State (August 2026)
-
-The application has been partially migrated from custom signed requests to type-safe RPC communication. Key changes:
-
-1. **Worker Renaming**: Document Worker renamed to **PDF Worker**
-   - Configuration: `wrangler.documents.jsonc` → `wrangler.pdf.jsonc`
-   - Directory: `workers/documents/` → `workers/pdf/`
-   - Service binding: `PDF_SERVICE` (formerly `DOCUMENT_SERVICE`)
-
-2. **RPC Communication Pattern**: Type-safe service bindings implemented
-   ```typescript
-   // Current pattern: Type-safe RPC calls
-   const excelClient = getExcelService(context);
-   const result = await excelClient.generatePremiumWorkbook({
-     policy: policyData,
-     premium: premiumData,
-     options: { includeAdjustment: true },
-   });
-   
-   const pdfClient = getPdfService(context);
-   const pdfBytes = await renderPolicyPdf(pdfClient, renderRequest);
-   ```
-
-3. **Service Interfaces**: Defined in `app/lib/cloudflare.server.ts`
-   - `PdfServiceBinding`: Type-safe interface for PDF generation
-   - `ExcelServiceBinding`: Type-safe interface for Excel generation
-
-### Refactor Progress Status
-
-✅ **COMPLETED**:
-- Worker renaming (Document → PDF Worker)
-- Type-safe service binding interfaces
-- RPC-style method exports from workers
-- Updated configuration and documentation
-
-🔧 **IN PROGRESS**:
-- Migration from HTTP endpoints to pure RPC
-- Shared RPC infrastructure (`workers/shared/`)
-- Comprehensive Zod validation
-
-❌ **PENDING**:
-- Removal of custom signing implementation
-- Full RPC migration completion
-- Shared schema library implementation
-
-### Implementation Priorities (Updated)
-
-1. **✅ Create shared TypeScript interfaces** for all worker RPC methods - **COMPLETED**
-2. **🔧 Implement type-safe client wrappers** around service bindings - **IN PROGRESS**
-3. **🔧 Migrate critical paths** from REST endpoints to RPC methods - **IN PROGRESS**
-4. **❌ Adopt Cloudflare Worker RPC** as it matures for TypeScript-to-TypeScript communication - **PENDING**
-
-See [workers-refactor-plan.md](../workers-refactor-plan.md) for current status and detailed implementation guidelines.
-
-### Implementation Priorities
-
-1. **Create shared TypeScript interfaces** for all worker RPC methods
-2. **Implement type-safe client wrappers** around service bindings
-3. **Migrate critical paths** from REST endpoints to RPC methods
-4. **Adopt Cloudflare Worker RPC** as it matures for TypeScript-to-TypeScript communication
-
-See [workers/rpc-communication-guide.md](../workers/rpc-communication-guide.md) for detailed implementation guidelines.
-
----
-
 ## Principles (do not skip)
 
 1. **One concern per PR** — e.g. “move routes into folders” is not mixed with “add Resend”.
@@ -196,14 +129,14 @@ Suggested order (historical):
 
 - `legacy-app/`, root `CAR_*.md`, `script.sql`, CSVs, `db.txt*`, `notes`, SOW docs, `questions.md`, MSSQL env examples.
 
-2. **Hoist** `web/` **→ root**:
+1. **Hoist** `web/` **→ root**:
 
 - Move app package files to `/`.
 - Update paths in `wrangler.jsonc`, `drizzle.config.ts`, `react-router.config.ts`, Docker, scripts, agent skills, MCP configs.
 - Keep `supabase/` at root (already correct); fix any `cd ..` assumptions in npm scripts.
 
-3. **Update README** for new layout; fold old `web/README.md` into root README.
-4. **Fix CI/local scripts** until `npm run dev`, `db:reset`, `typecheck`, `deploy:staging` work from root.
+1. **Update README** for new layout; fold old `web/README.md` into root README.
+2. **Fix CI/local scripts** until `npm run dev`, `db:reset`, `typecheck`, `deploy:staging` work from root.
 
 **Risks:** broken relative imports, Wrangler root, Supabase path, Cursor skills pointing at `web/`.
 
