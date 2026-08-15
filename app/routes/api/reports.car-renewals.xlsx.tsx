@@ -1,4 +1,5 @@
 import { requireAuth } from "~/lib/auth/session.server";
+import { getExcelService } from "~/lib/cloudflare.server";
 import { queryTextSchema } from "~/lib/http/route-input";
 import { trackUsage } from "~/lib/observability/metrics.server";
 import {
@@ -12,7 +13,7 @@ import { dueNextDays, todayIsoDate } from "~/lib/services/reports/service";
 import { POLICY_STATUS } from "~/lib/zod/policy-car";
 import type { Route } from "./+types/reports.car-renewals.xlsx";
 
-export async function loader({ request }: Route.LoaderArgs) {
+export async function loader({ request, context }: Route.LoaderArgs) {
   const actor = await requireAuth(request);
   const url = new URL(request.url);
   const referenceDate =
@@ -60,5 +61,9 @@ export async function loader({ request }: Route.LoaderArgs) {
 
   trackUsage("report.export", { report: "car_renewals", view: "list" });
 
-  return exportCarRenewalReportExcel(rows, filename);
+  const excelService = getExcelService(context);
+  if (!excelService) {
+    throw new Error("Excel service not available");
+  }
+  return exportCarRenewalReportExcel(rows, filename, excelService);
 }

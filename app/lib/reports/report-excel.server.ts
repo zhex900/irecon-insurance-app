@@ -14,12 +14,70 @@ export async function buildReportExcelBuffer(options: {
   title?: string;
   columns: ReportExcelColumn[];
   rows: Array<Record<string, string | number | null | undefined>>;
+  /** Excel service binding (required - pass from route context) */
+  excelService?: {
+    fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
+  };
 }): Promise<ArrayBuffer> {
-  // Always use Excel Worker wrapper
-  const { buildReportExcelBuffer: excelWorkerBuild } =
-    await import("./excel-worker-wrapper.server");
+  // Check if excelService is provided
+  if (!options.excelService) {
+    throw new Error(
+      "Excel service binding is required. Pass excelService from route context." +
+      " Example: const excelService = env.EXCEL_SERVICE;" +
+      " await buildReportExcelBuffer({ ..., excelService });"
+    );
+  }
 
-  return excelWorkerBuild(options);
+  const { excelService, ...excelOptions } = options;
+
+  // Prepare request data for Excel Worker
+  const requestBody = {
+    reportType: "custom" as const,
+    data: {
+      columns: excelOptions.columns.map((col) => ({
+        key: col.key,
+        header: col.header,
+        type: col.type,
+        width: col.width,
+      })),
+      rows: excelOptions.rows.map((row) => {
+        const cleanRow: Record<string, string | number> = {};
+        Object.entries(row).forEach(([key, value]) => {
+          cleanRow[key] = value ?? "";
+        });
+        return cleanRow;
+      }),
+    },
+    options: {
+      title: excelOptions.title,
+      sheetName: excelOptions.sheetName,
+      formatCurrency: excelOptions.columns.some((col) => col.type === "currency"),
+      includeTimestamp: true,
+    },
+  };
+
+  try {
+    // Call Excel service via service binding
+    const response = await excelService.fetch(`https://excel-service/api/reports/excel`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Excel service failed: ${response.status} ${errorText}`);
+    }
+
+    return await response.arrayBuffer();
+  } catch (error) {
+    throw new Error(
+      `Failed to generate Excel report: ${error instanceof Error ? error.message : "Unknown error"}`,
+      { cause: error }
+    );
+  }
 }
 
 export function reportExcelResponse(

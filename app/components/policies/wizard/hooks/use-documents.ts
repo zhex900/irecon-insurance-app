@@ -15,12 +15,7 @@ import type {
   PremiumBreakdown,
 } from "~/lib/db/types";
 import type { BrokerFeeLineInput } from "~/lib/pdf/merge-fields";
-import {
-  downloadPremiumExcelDocument,
-  latestPremiumExcelDocument,
-  premiumExcelExportEnabled,
-  premiumExcelFingerprint,
-} from "~/lib/excel/excel-client";
+import { downloadPremiumExcelDocument } from "~/lib/excel/excel-client";
 import {
   ensureReviewDocumentsClient,
   savePolicyDocumentsClient,
@@ -263,23 +258,9 @@ export function usePolicyDocuments({
       });
       return;
     }
-    const fingerprint = premiumExcelFingerprint(snapshot);
-    const needsRegenerate = premiumExcelExportEnabled(
-      documentsRef.current,
-      fingerprint,
-    );
 
     setIsExportingExcel(true);
     try {
-      if (!needsRegenerate) {
-        const existing = latestPremiumExcelDocument(documentsRef.current);
-        if (existing?.pdfBase64) {
-          downloadPremiumExcelDocument(existing);
-          return;
-        }
-        // Fingerprint matched but bytes missing — fall through and rebuild.
-      }
-
       // Call API endpoint for Excel generation
       const response = await fetch("/api/generate-excel", {
         method: "POST",

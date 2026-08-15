@@ -1,6 +1,5 @@
 import type { ActionFunctionArgs } from "react-router";
 import { requireAuth } from "~/lib/auth/session.server";
-import { buildPremiumExcelWorkbook as workerBuild } from "~/lib/reports/excel-worker-wrapper.server";
 import {
   PREMIUM_EXCEL_TEMPLATE_KEY,
   PREMIUM_EXCEL_FILENAME_PREFIX,
@@ -13,7 +12,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
   }
 
   // Require authentication for this API endpoint
-  const _user = await requireAuth(request);
+  const user = await requireAuth(request);
 
   try {
     const body = await request.json();
@@ -27,36 +26,47 @@ export async function action({ request, context }: ActionFunctionArgs) {
       );
     }
 
-    const { policy, premium, rating, generatedBy, existing } = body;
+    const { policy, premium, rating, generatedBy: requestGeneratedBy } = body;
+    const generatedBy = requestGeneratedBy || user.userId;
 
-    // Always use Excel worker for generation
-    // The worker wrapper handles calling the external Excel worker service
-    const bytes = await workerBuild(excelService, {
-      policy,
-      premium,
-      rating,
-      adjustment: policy.car.adjusted
-        ? policy.car.adjustment?.breakdown
-        : undefined,
-      generatedBy,
+    // Call Excel service directly using RPC
+    const excelResponse = await excelService.generatePremiumExcel({
+      reportType: "premiumWorkbook",
+      data: {
+        policy,
+        premium,
+        rating,
+        adjustment: policy.car.adjusted
+          ? policy.car.adjustment?.breakdown
+          : undefined,
+      },
+      options: {
+        policyNumber: policy.policyNumber,
+        generatedBy,
+      },
     });
 
-    const when = new Date();
-    // Calculate amendment from existing documents
-    const existingExcelDocs = (existing || []).filter(
-      (doc: { templateKey?: string; filename?: string }) =>
-        doc.templateKey === PREMIUM_EXCEL_TEMPLATE_KEY ||
-        /\.xlsx$/i.test(doc.filename ?? ""),
-    );
-    const amendment = existingExcelDocs.length;
-    const filename = `${PREMIUM_EXCEL_FILENAME_PREFIX}-${policy.policyNumber ?? policy.policyId}${`-v${amendment + 1}`}.xlsx`;
+    if (!excelResponse.ok) {
+      const errorText = await excelResponse.text();
+      throw new Error(
+        `Excel service failed: ${excelResponse.status} ${errorText}`,
+      );
+    }
 
-    // Convert to base64
+    // Get the Excel file bytes from the response
+    const bytes = await excelResponse.arrayBuffer();
+
+    const when = new Date();
+
+    const filename = `${PREMIUM_EXCEL_FILENAME_PREFIX}-${policy.policyNumber ?? policy.policyId}.xlsx`;
+
+    // Convert to base64 for database (optional, could store R2 key only)
     let contentBase64;
     if (typeof Buffer !== "undefined") {
       contentBase64 = Buffer.from(bytes).toString("base64");
     } else {
-      contentBase64 = btoa(String.fromCharCode(...bytes));
+      const uint8Array = new Uint8Array(bytes);
+      contentBase64 = btoa(String.fromCharCode(...uint8Array));
     }
 
     const doc = {
@@ -65,7 +75,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
       name: filename.replace(".xlsx", ""),
       filename,
       generationKey: `excel|${policy.policyId}|${policy.car.adjusted ? "adjusted" : "unadjusted"}`,
-      content: contentBase64,
+      content: contentBase64, // Still store base64 in database for backward compatibility
       templateKey: PREMIUM_EXCEL_TEMPLATE_KEY,
       generatedWhen: when.toISOString(),
       generatedBy,

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { requireAuth } from "~/lib/auth/session.server";
+import { getExcelService } from "~/lib/cloudflare.server";
 import { invalidInputResponse } from "~/lib/http/route-input";
 import { trackUsage } from "~/lib/observability/metrics.server";
 import {
@@ -26,7 +27,7 @@ const querySchema = z.object({
   status: z.enum(CAR_SEARCH_STATUSES).optional(),
 });
 
-export async function loader({ request }: Route.LoaderArgs) {
+export async function loader({ request, context }: Route.LoaderArgs) {
   const actor = await requireAuth(request);
   const url = new URL(request.url);
   const parsed = querySchema.safeParse(Object.fromEntries(url.searchParams));
@@ -75,7 +76,11 @@ export async function loader({ request }: Route.LoaderArgs) {
       view: "detail",
     });
 
-    return exportCarPolicyDetailExcel(page.rows, status, filename);
+    const excelService = getExcelService(context);
+    if (!excelService) {
+      throw new Error("Excel service not available");
+    }
+    return exportCarPolicyDetailExcel(page.rows, status, filename, excelService);
   }
 
   const summary = await getCarPolicyReportSummary(dateFrom, dateTo);
@@ -99,5 +104,9 @@ export async function loader({ request }: Route.LoaderArgs) {
     view: "summary",
   });
 
-  return exportCarPolicySummaryExcel(summary, filename);
+  const excelService = getExcelService(context);
+  if (!excelService) {
+    throw new Error("Excel service not available");
+  }
+  return exportCarPolicySummaryExcel(summary, filename, excelService);
 }

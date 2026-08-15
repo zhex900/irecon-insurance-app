@@ -3,11 +3,7 @@
  * Client-only functions for working with premium Excel documents.
  */
 
-import type { Policy, PolicyDocument } from "~/lib/db/types";
-import {
-  adjustmentDocumentsFingerprint,
-  reviewDocumentsFingerprint,
-} from "~/lib/services/policy/documents/fingerprints";
+import type { PolicyDocument } from "~/lib/db/types";
 
 import { PREMIUM_EXCEL_TEMPLATE_KEY, EXCEL_CONTENT_TYPE } from "./constants";
 
@@ -16,34 +12,6 @@ export function isPremiumExcelDocument(doc: PolicyDocument): boolean {
     doc.templateKey === PREMIUM_EXCEL_TEMPLATE_KEY ||
     /\.xlsx$/i.test(doc.filename)
   );
-}
-
-export function latestPremiumExcelDocument(
-  documents: PolicyDocument[],
-): PolicyDocument | undefined {
-  return [...documents]
-    .filter(isPremiumExcelDocument)
-    .sort((a, b) => b.policyDocumentId - a.policyDocumentId)[0];
-}
-
-export function premiumExcelExportEnabled(
-  documents: PolicyDocument[],
-  fingerprint: string,
-): boolean {
-  const latest = latestPremiumExcelDocument(documents);
-  if (!latest) return true;
-  const base = latest.generationKey.split("|force|")[0] ?? latest.generationKey;
-  return base !== fingerprint;
-}
-
-export function premiumExcelFingerprint(policy: Policy): string {
-  // Include adjustment so a post-bind adjust forces a new workbook with the Adjustment tab.
-  return [
-    "excel",
-    reviewDocumentsFingerprint(policy),
-    policy.car.adjusted ? "adjusted" : "unadjusted",
-    adjustmentDocumentsFingerprint(policy),
-  ].join("|");
 }
 
 /** Trigger a browser download from a stored excel PolicyDocument. */

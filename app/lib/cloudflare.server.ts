@@ -1,6 +1,6 @@
 import { createContext } from "react-router";
 import type { DocumentServiceBinding } from "~/lib/pdf/document-worker.client.server";
-import type { ExcelServiceBinding } from "~/lib/reports/excel-worker.client.server";
+import type { ExcelServiceBinding } from "~/lib/excel/excel-service.server";
 
 export type R2BucketLike = {
   put(
