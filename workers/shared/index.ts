@@ -5,16 +5,6 @@
  * Zero public endpoints, full Zod validation, consistent patterns
  */
 
-// Export RPC infrastructure
-export * from "./rpc/RpcClient";
-export * from "./rpc/errors";
-export {
-  RpcTelemetryCollector,
-  TelemetryRpcClient,
-  withTelemetry,
-  globalTelemetry,
-  PerformanceMetricsCollector,
-} from "./rpc/telemetry";
 // Note: types are exported separately to avoid conflicts
 
 // Export shared schemas
@@ -36,17 +26,6 @@ export * from "./security";
 
 // Re-export from client utilities
 export { ServiceClient } from "./client/base-client";
-export {
-  ExcelServiceClient,
-  createExcelServiceClient,
-} from "./clients/excel-client";
-export {
-  DocumentServiceClient,
-  createDocumentServiceClient,
-} from "./clients/document-client";
-
-// Common utilities
-export { withErrorHandling } from "./rpc/errors";
 
 // Helper functions
 export function generateRequestId(prefix: string = "req"): string {
