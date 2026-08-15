@@ -1,3 +1,5 @@
+import type { ExcelServiceBinding } from "../excel/excel-service.server";
+
 export type ReportExcelColumnType = "text" | "currency" | "integer" | "date";
 
 export type ReportExcelColumn = {
@@ -8,27 +10,17 @@ export type ReportExcelColumn = {
 };
 
 /** Build a single-sheet .xlsx workbook using Excel Worker. */
-export async function buildReportExcelBuffer(options: {
-  sheetName?: string;
-  /** Merged title row above column headers (e.g. report period). */
-  title?: string;
-  columns: ReportExcelColumn[];
-  rows: Array<Record<string, string | number | null | undefined>>;
-  /** Excel service binding (required - pass from route context) */
-  excelService?: {
-    fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
-  };
-}): Promise<ArrayBuffer> {
-  // Check if excelService is provided
-  if (!options.excelService) {
-    throw new Error(
-      "Excel service binding is required. Pass excelService from route context." +
-      " Example: const excelService = env.EXCEL_SERVICE;" +
-      " await buildReportExcelBuffer({ ..., excelService });"
-    );
-  }
-
-  const { excelService, ...excelOptions } = options;
+export async function buildReportExcelBuffer(
+  excelService: ExcelServiceBinding,
+  options: {
+    sheetName?: string;
+    /** Merged title row above column headers (e.g. report period). */
+    title?: string;
+    columns: ReportExcelColumn[];
+    rows: Array<Record<string, string | number | null | undefined>>;
+  },
+): Promise<ArrayBuffer> {
+  const { ...excelOptions } = options;
 
   // Prepare request data for Excel Worker
   const requestBody = {
@@ -51,20 +43,16 @@ export async function buildReportExcelBuffer(options: {
     options: {
       title: excelOptions.title,
       sheetName: excelOptions.sheetName,
-      formatCurrency: excelOptions.columns.some((col) => col.type === "currency"),
+      formatCurrency: excelOptions.columns.some(
+        (col) => col.type === "currency",
+      ),
       includeTimestamp: true,
     },
   };
 
   try {
     // Call Excel service via service binding
-    const response = await excelService.fetch(`https://excel-service/api/reports/excel`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(requestBody),
-    });
+    const response = await excelService.generateGenericExcel(requestBody);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -75,7 +63,7 @@ export async function buildReportExcelBuffer(options: {
   } catch (error) {
     throw new Error(
       `Failed to generate Excel report: ${error instanceof Error ? error.message : "Unknown error"}`,
-      { cause: error }
+      { cause: error },
     );
   }
 }

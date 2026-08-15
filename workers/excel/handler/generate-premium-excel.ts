@@ -1,13 +1,8 @@
-import type { ExcelWorkerEnv } from "../types/env";
-import type {
-  GeneratePremiumExcelRequestData,
-  GeneratePremiumExcelOptions,
-} from "../types/generate-types";
+import type { GeneratePremiumExcelRequestData } from "../types/generate-types";
 import type { BuildPremiumExcelInput } from "../services/excel-types";
 
 export async function generatePremiumExcel(
   requestData: GeneratePremiumExcelRequestData,
-  env: ExcelWorkerEnv,
 ): Promise<Response> {
   try {
     // Import services dynamically to avoid initial load time
@@ -33,13 +28,15 @@ export async function generatePremiumExcel(
       rating: requestData.data.rating,
       adjustment: requestData.data.adjustment,
       generatedBy: requestData.options?.generatedBy || "Excel Worker Handler",
-      appVersion: requestData.options?.appVersion || env.WORKER_VERSION || "1.0.0",
     };
 
     const bytes = await buildPremiumExcelWorkbook(input);
 
     // Create filename
-    const policyNumber = requestData.options?.policyNumber || requestData.data.policy?.policyNumber || "unknown";
+    const policyNumber =
+      requestData.options?.policyNumber ||
+      requestData.data.policy?.policyNumber ||
+      "unknown";
     const when = new Date();
     const filename = `premium-breakdown-${policyNumber}-${when.getTime()}.xlsx`;
 

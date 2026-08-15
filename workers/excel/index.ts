@@ -8,6 +8,6 @@ import { generateGenericExcel } from "./handler/generate-generic-excel";
 
 // Export the handler as the worker entry point
 export default {
-  generatePremiumExcel,
-  generateGenericExcel,
+  generatePremiumExcel: generatePremiumExcel,
+  generateGenericExcel: generateGenericExcel,
 };

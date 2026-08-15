@@ -3,14 +3,13 @@
  * Used by both the worker handler and the app service binding
  */
 
-import type { ReportExcelColumn } from "~/lib/reports/report-excel.server";
 import type {
   Policy,
   PremiumBreakdown,
   RatingSnapshot,
   AdjustmentBreakdown,
 } from "../../../app/lib/types/excel-worker-types";
-import type { ExcelWorkerEnv } from "./env";
+import type { ExcelWorkerRequest } from "./schemas";
 
 /**
  * Generate Premium Excel Options
@@ -56,25 +55,10 @@ export type GeneratePremiumExcelRequestData = {
  */
 export type GeneratePremiumExcelFunction = (
   requestData: GeneratePremiumExcelRequestData,
-  env: ExcelWorkerEnv,
 ) => Promise<Response>;
 
-export type GenerateGenericExcelRequestData = {
-  /** Report type (must be "custom" for custom reports) */
-  reportType: string;
-  /** The data for the report */
-  data: {
-    /** Columns for the report */
-    columns: ReportExcelColumn[];
-    /** Rows for the report */
-    rows: Array<Record<string, string | number | null | undefined>>;
-  };
-};
+export type GenerateGenericExcelRequestData = ExcelWorkerRequest;
 
-/**
- * Generate Generic Excel Function Type
- */
 export type GenerateGenericExcelFunction = (
   requestData: GenerateGenericExcelRequestData,
-  env: ExcelWorkerEnv,
 ) => Promise<Response>;

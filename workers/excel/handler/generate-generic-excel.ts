@@ -1,5 +1,3 @@
-import type { ExcelWorkerEnv } from "../types/env";
-type WorkerEnv = { [key: string]: unknown } & ExcelWorkerEnv;
 import {
   type ExcelWorkerRequest,
   customReportDataSchema,
@@ -9,21 +7,12 @@ import {
  * Generic Excel generation handler
  */
 export async function generateGenericExcel(
-  request: Request,
-  env: WorkerEnv,
-  validatedData?: unknown,
+  requestData: ExcelWorkerRequest,
 ): Promise<Response> {
   const startTime = Date.now();
 
   try {
     // Parse and validate request data
-    let requestData: ExcelWorkerRequest;
-    if (validatedData) {
-      requestData = validatedData as ExcelWorkerRequest;
-    } else {
-      const body = await request.text();
-      requestData = JSON.parse(body) as ExcelWorkerRequest;
-    }
 
     // Validate that we have custom report data
     if (requestData.reportType !== "custom") {

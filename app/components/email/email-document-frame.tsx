@@ -24,6 +24,10 @@ type EmailDocumentFrameProps = {
 function buildEmailDocumentSrcDoc(bodyHtml: string): string {
   // cellpadding → inline padding (same look as inboxes / sent mail)
   const body = materializeEmailTableAttrs(bodyHtml.trim()) || "&nbsp;";
+  // Basic security sanitization - remove script tags and dangerous attributes
+  const sanitizedBody = body
+    .replace(/<\/?(script|iframe|object|embed)[^>]*>/gi, "")
+    .replace(/\bon\w+\s*=\s*["'][^"']*["']/gi, '');
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -56,7 +60,7 @@ function buildEmailDocumentSrcDoc(bodyHtml: string): string {
   }
 </style>
 </head>
-<body>${body}</body>
+<body>${sanitizedBody}</body>
 </html>`;
 }
 
@@ -146,7 +150,7 @@ export function EmailDocumentFrame({
     <iframe
       ref={iframeRef}
       title={title}
-      sandbox="allow-same-origin"
+      sandbox="allow-same-origin allow-scripts allow-forms"
       className={cn("block w-full border-0 bg-white", className)}
     />
   );

@@ -13,6 +13,7 @@ import {
   buildReportExcelBuffer,
   reportExcelResponse,
 } from "~/lib/reports/report-excel.server";
+import type { ExcelServiceBinding } from "../excel/excel-service.server";
 
 export function resolveOptionalIsoDateParam(raw: string | null): string {
   if (raw == null || raw === "") return "";
@@ -60,11 +61,9 @@ export const CAR_POLICY_SUMMARY_COLUMNS: ReportExcelColumn[] = [
 export async function exportCarPolicySummaryExcel(
   summary: CarPolicySummaryRow[],
   filename: string,
-  excelService?: {
-    fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
-  },
+  excelService: ExcelServiceBinding,
 ) {
-  const buffer = await buildReportExcelBuffer({
+  const buffer = await buildReportExcelBuffer(excelService, {
     sheetName: "Summary",
     columns: CAR_POLICY_SUMMARY_COLUMNS,
     rows: summary.map((row) => ({
@@ -72,7 +71,6 @@ export async function exportCarPolicySummaryExcel(
       policyCount: row.policyCount,
       totalBasePremium: row.totalBasePremium,
     })),
-    excelService,
   });
   return reportExcelResponse(buffer, filename);
 }
@@ -88,11 +86,9 @@ export async function exportCarPolicyDetailExcel(
   rows: ReportPolicyRow[],
   statusLabel: CarSearchStatus,
   filename: string,
-  excelService?: {
-    fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
-  },
+  excelService: ExcelServiceBinding,
 ) {
-  const buffer = await buildReportExcelBuffer({
+  const buffer = await buildReportExcelBuffer(excelService, {
     sheetName: statusLabel.slice(0, 31),
     columns: CAR_POLICY_DETAIL_COLUMNS,
     rows: rows.map((row) => ({
@@ -101,7 +97,6 @@ export async function exportCarPolicyDetailExcel(
       dateQuoted: formatDate(row.createdWhen),
       basePremium: row.basePremium,
     })),
-    excelService,
   });
   return reportExcelResponse(buffer, filename);
 }
@@ -119,11 +114,9 @@ export const CAR_RENEWAL_REPORT_COLUMNS: ReportExcelColumn[] = [
 export async function exportCarRenewalReportExcel(
   rows: RenewalReportRow[],
   filename: string,
-  excelService?: {
-    fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
-  },
+  excelService: ExcelServiceBinding,
 ) {
-  const buffer = await buildReportExcelBuffer({
+  const buffer = await buildReportExcelBuffer(excelService, {
     sheetName: "Renewals",
     columns: CAR_RENEWAL_REPORT_COLUMNS,
     rows: rows.map((row) => ({
@@ -135,7 +128,6 @@ export async function exportCarRenewalReportExcel(
       arEmail: row.arEmail.trim() || "",
       dueNextDays: row.dueNextDays,
     })),
-    excelService,
   });
   return reportExcelResponse(buffer, filename);
 }
