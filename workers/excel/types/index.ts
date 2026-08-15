@@ -1,9 +1,3 @@
-/**
- * Type exports for Excel worker
- */
-
-export * from "./schemas";
-
 // Re-export worker-types for backward compatibility
 export type {
   Policy,
@@ -13,3 +7,12 @@ export type {
   AdjustmentSectionRow,
   CarInfo,
 } from "~/lib/types/excel-worker-types";
+
+// Export generate types
+export type {
+  GeneratePremiumExcelOptions,
+  GeneratePremiumExcelRequestData,
+  GeneratePremiumExcelFunction,
+  GenerateGenericExcelRequestData,
+  GenerateGenericExcelFunction,
+} from "./generate-types";

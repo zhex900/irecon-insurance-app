@@ -1,24 +1,12 @@
 import type { ExcelWorkerEnv } from "../types/env";
 import type {
-  AdjustmentBreakdown,
-  Policy,
-  PremiumBreakdown,
-  RatingSnapshot,
-} from "../../../app/lib/db/types";
-
+  GeneratePremiumExcelRequestData,
+  GeneratePremiumExcelOptions,
+} from "../types/generate-types";
 import type { BuildPremiumExcelInput } from "../services/excel-types";
 
 export async function generatePremiumExcel(
-  requestData: {
-    reportType: string;
-    data: {
-      policy: Policy;
-      premium: PremiumBreakdown;
-      rating?: RatingSnapshot;
-      adjustment?: AdjustmentBreakdown;
-    };
-    options?: Record<string, unknown>;
-  },
+  requestData: GeneratePremiumExcelRequestData,
   env: ExcelWorkerEnv,
 ): Promise<Response> {
   try {
@@ -44,14 +32,14 @@ export async function generatePremiumExcel(
       premium: requestData.data.premium,
       rating: requestData.data.rating,
       adjustment: requestData.data.adjustment,
-      generatedBy: "Excel Worker Handler",
-      appVersion: env.WORKER_VERSION || "1.0.0",
+      generatedBy: requestData.options?.generatedBy || "Excel Worker Handler",
+      appVersion: requestData.options?.appVersion || env.WORKER_VERSION || "1.0.0",
     };
 
     const bytes = await buildPremiumExcelWorkbook(input);
 
     // Create filename
-    const policyNumber = requestData.data.policy?.policyNumber || "unknown";
+    const policyNumber = requestData.options?.policyNumber || requestData.data.policy?.policyNumber || "unknown";
     const when = new Date();
     const filename = `premium-breakdown-${policyNumber}-${when.getTime()}.xlsx`;
 
