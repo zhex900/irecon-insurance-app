@@ -22,7 +22,7 @@ import { cn, formatDate, formatRelativeTimeAgo } from "~/lib/utils";
 
 type HistoryTab = "current" | "drafts" | "published";
 
-export function DocumentTemplateHistorySheet({
+export function HistorySheet({
   open,
   onOpenChange,
   versions,

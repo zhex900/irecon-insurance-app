@@ -6,16 +6,16 @@ import {
   FooterButton,
   MetaRow,
   type ScheduleView,
-} from "~/components/prices/price-schedule-dialog-shared";
+} from "~/components/prices/shared/dialog-shell";
 import {
   CarBody,
   EslBody,
   PlantBody,
   StampBody,
-} from "~/components/prices/price-schedule-primary-bodies";
-import { TerrorBody } from "~/components/prices/price-schedule-terror-body";
-import { FeesBody } from "~/components/prices/price-schedule-fees-body";
-export function PriceScheduleDialog({
+} from "~/components/prices/bodies/primary";
+import { TerrorBody } from "~/components/prices/bodies/terror";
+import { FeesBody } from "~/components/prices/bodies/fees";
+export function Schedule({
   title,
   closeHref,
   editHref,
@@ -133,7 +133,7 @@ function ScheduleBody({
       return <FeesBody schedule={schedule} editing={editing} />;
   }
 }
-export function PriceDeleteDialog({
+export function DeleteDialog({
   label,
   closeHref,
   onClose,

@@ -17,7 +17,7 @@ function pdfSrcWithoutNavPanes(src: string) {
   return `${base}#${hash ? `${hash}&` : ""}navpanes=0`;
 }
 
-export function PdfPreviewDialog({
+export function PreviewDialog({
   open,
   onOpenChange,
   title,

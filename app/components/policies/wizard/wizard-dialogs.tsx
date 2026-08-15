@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
-import { useMode } from "./hooks/use-mode";
+import { useMode } from "./hooks/utils/use-mode";
 
 export type SubmitConfirmDialogProps = {
   open: boolean;

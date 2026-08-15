@@ -7,7 +7,7 @@ import {
 } from "~/components/ui/floating-listbox";
 import { Input } from "~/components/ui/input";
 import { cn } from "~/lib/utils";
-import type { FormAutocompleteOption } from "./form";
+import type { FormAutocompleteOption } from "./form-autocomplete";
 import { valuesEqual } from "./utils";
 
 /** Standalone autocomplete for list/filter bars (not react-hook-form). */

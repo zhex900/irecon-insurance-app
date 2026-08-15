@@ -21,7 +21,7 @@ type PdfmeDesignerMergePanelProps = {
   onAddMergeField: (fieldName: string) => void;
 };
 
-export function PdfmeDesignerMergePanel({
+export function MergePanel({
   editable,
   status,
   mergePanelOpen,

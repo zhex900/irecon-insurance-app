@@ -1,12 +1,12 @@
 import { createPortal } from "react-dom";
 import { useMemo, useState } from "react";
 import type { Template } from "@pdfme/common";
-import { DocumentTemplatesEditorSkeleton } from "~/components/documents/document-templates-loading";
-import { PdfmeDesignerMergePanel } from "~/components/documents/pdfme-designer-merge-panel";
-import { PdfmeDesignerOverlayToolbar } from "~/components/documents/pdfme-designer-overlay-toolbar";
-import { PdfmeDesignerSelectionToolbar } from "~/components/documents/pdfme-designer-selection-toolbar";
-import { usePdfmeDesignerActions } from "~/hooks/use-pdfme-designer-actions";
-import { usePdfmeDesignerLifecycle } from "~/hooks/use-pdfme-designer-lifecycle";
+import { EditorSkeleton } from "~/components/documents/templates/loading";
+import { MergePanel } from "~/components/documents/pdf/designer";
+import { OverlayToolbar } from "~/components/documents/pdf/designer";
+import { SelectionToolbar } from "~/components/documents/pdf/designer";
+import { usePdfmeDesignerActions } from "~/hooks/pdfme-designer/use-actions";
+import { usePdfmeDesignerLifecycle } from "~/hooks/pdfme-designer/use-lifecycle";
 import {
   ENDORSEMENT_CONTENT_FIELD,
   ENDORSEMENT_SUBJECT_FIELD,
@@ -34,7 +34,7 @@ type PdfmeDesignerProps = {
   toolbarHost?: HTMLElement | null;
 };
 
-export function PdfmeDesigner({
+export function MainDesigner({
   ref,
   template,
   editable = true,
@@ -107,7 +107,7 @@ export function PdfmeDesigner({
   });
 
   const toolbar = showToolbar ? (
-    <PdfmeDesignerSelectionToolbar
+    <SelectionToolbar
       selectionCount={selectionCount}
       textSelected={textSelected}
       tableSelected={tableSelected}
@@ -145,7 +145,7 @@ export function PdfmeDesigner({
     <div className={cn("relative flex h-full min-h-0", className)}>
       {status === "loading" ? (
         <div className="absolute inset-0 z-10 bg-background">
-          <DocumentTemplatesEditorSkeleton className="h-full min-h-0 rounded-none border-0" />
+          <EditorSkeleton className="h-full min-h-0 rounded-none border-0" />
         </div>
       ) : null}
       {status === "error" ? (
@@ -157,11 +157,11 @@ export function PdfmeDesigner({
       {toolbarHost ? (
         createPortal(toolbar, toolbarHost)
       ) : toolbar ? (
-        <PdfmeDesignerOverlayToolbar>{toolbar}</PdfmeDesignerOverlayToolbar>
+        <OverlayToolbar>{toolbar}</OverlayToolbar>
       ) : null}
 
       {editable ? (
-        <PdfmeDesignerMergePanel
+        <MergePanel
           editable={editable}
           status={status}
           mergePanelOpen={mergePanelOpen}

@@ -10,7 +10,7 @@ import {
 } from "~/components/ui/dialog";
 import { Label } from "~/components/ui/label";
 import { Spinner } from "~/components/ui/spinner";
-import type { CoverTypeOption } from "~/components/documents/library-documents-model";
+import type { CoverTypeOption } from "~/components/documents/shared";
 import type { LibraryDocumentRecord } from "~/lib/documents/library-documents";
 
 type CoverTypesDialogProps = {
@@ -24,7 +24,7 @@ type CoverTypesDialogProps = {
   onSave: () => void;
 };
 
-export function LibraryDocumentCoverTypesDialog({
+export function CoverTypesDialog({
   document: coverEditDoc,
   coverTypes,
   selectedIds: coverDraftIds,

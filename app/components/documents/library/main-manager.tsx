@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useFetcher, useRevalidator } from "react-router";
 import { CircleAlertIcon, UploadIcon } from "lucide-react";
 import { toast } from "sonner";
-import { PdfPreviewDialog } from "~/components/documents/pdf-preview-dialog";
+import { PreviewDialog } from "~/components/documents/pdf/preview";
 import {
   completedItem,
   type CoverTypeOption,
@@ -12,9 +12,9 @@ import {
   type UploadItem,
   toMetadata,
   toUploadItems,
-} from "~/components/documents/library-documents-model";
-import { LibraryDocumentCoverTypesDialog } from "~/components/documents/library-document-cover-types-dialog";
-import { LibraryDocumentsTable } from "~/components/documents/library-documents-table";
+} from "~/components/documents/shared";
+import { CoverTypesDialog } from "~/components/documents/library/dialogs";
+import { MainTable } from "~/components/documents/library";
 
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { formatBytes, useFileUpload } from "~/hooks/use-file-upload";
@@ -25,7 +25,7 @@ import {
 } from "~/lib/documents/library-documents";
 import { cn, formatDate } from "~/lib/utils";
 
-export function LibraryDocumentsManager({
+export function MainManager({
   documents,
   coverTypes,
   canEdit,
@@ -383,7 +383,7 @@ export function LibraryDocumentsManager({
         </Alert>
       )}
 
-      <LibraryDocumentsTable
+      <MainTable
         files={uploadFiles}
         documentsById={docsById}
         coverTypes={coverTypes}
@@ -416,7 +416,7 @@ export function LibraryDocumentsManager({
         </Alert>
       ) : null}
 
-      <PdfPreviewDialog
+      <PreviewDialog
         open={previewDoc != null}
         onOpenChange={(open) => {
           if (!open) setPreviewDoc(null);
@@ -434,7 +434,7 @@ export function LibraryDocumentsManager({
         }
       />
 
-      <LibraryDocumentCoverTypesDialog
+      <CoverTypesDialog
         document={coverEditDoc}
         coverTypes={coverTypes}
         selectedIds={coverDraftIds}

@@ -1,9 +1,5 @@
 import { redirect, useActionData } from "react-router";
-import { parseScheduleFormData } from "~/components/prices/parse-schedule-form-data";
-import {
-  PriceDeleteDialog,
-  PriceScheduleDialog,
-} from "~/components/prices/price-schedule-dialog";
+import { parseScheduleFormData, Schedule, DeleteDialog } from "~/components/prices";
 import { requireAuth } from "~/lib/auth/session.server";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
 import {
@@ -223,7 +219,7 @@ export default function SettingsPricesItemRoute({
 
   if (deleting) {
     return (
-      <PriceDeleteDialog
+      <DeleteDialog
         label={label}
         closeHref={pricesItemHref(slug, id)}
         catalogue={kind}
@@ -234,7 +230,7 @@ export default function SettingsPricesItemRoute({
   }
 
   return (
-    <PriceScheduleDialog
+    <Schedule
       title={label}
       closeHref={editing ? pricesItemHref(slug, id) : pricesListHref(slug)}
       editHref={pricesEditHref(slug, id)}

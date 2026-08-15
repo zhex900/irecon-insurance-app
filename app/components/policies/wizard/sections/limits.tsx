@@ -5,7 +5,7 @@ import type { ReferenceData } from "~/lib/db/types";
 import { SUB_LIMIT_FIELDS } from "~/lib/policies/sub-limits";
 import { Section, SubLimitField } from "../section-shared";
 
-export function LimitsOfLiability({ reference }: { reference: ReferenceData }) {
+export function Limits({ reference }: { reference: ReferenceData }) {
   const {
     formState: { errors },
   } = useFormContext<CarPolicyFormValues>();

@@ -1,2 +1,2 @@
 // Barrel exports for authorised representative components
-export { Autocomplete } from "./autocomplete";
+export { ArAutocomplete as ArAutocomplete } from "./ar-autocomplete";

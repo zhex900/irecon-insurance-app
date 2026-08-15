@@ -17,7 +17,7 @@ export type DeleteClientDialogProps = {
   onOpenChange: (open: boolean) => void;
 };
 
-export function Delete({
+export function DeleteClient({
   client,
   deletingInFlight,
   onOpenChange,

@@ -66,7 +66,7 @@ import {
   type ManualPremiumSessionRates,
 } from "~/lib/pricing/premium-manual-recalc";
 
-export function PricingDeclarationConfirmed({
+export function PremiumDeclaration({
   premium,
   referralReasons: _referralReasons,
   reference,

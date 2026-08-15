@@ -29,7 +29,7 @@ import {
   TableRow,
 } from "~/components/ui/table";
 import { TablePagination } from "~/components/ui/table-pagination";
-import type { PolicyListSelection } from "~/hooks/use-policy-list-selection";
+import type { PolicyListSelection } from "~/hooks/policy-list/use-selection";
 import type { ReferenceData } from "~/lib/db/types";
 import { pageSearchHref, pageSizeSearchHref } from "~/lib/pagination";
 import {

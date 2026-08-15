@@ -1,28 +1,60 @@
-# Domain-Based Micro Frontends with Module Federation
+# Domain-Based Micro Frontends with Worker Isolation
 
-Complete architecture and implementation guide for refactoring the insurance app from monolith to domain-based micro frontends.
+**Status: IMPLEMENTATION IN PROGRESS**  
+**Pattern: Domain Worker Isolation with Module Federation**
+
+Complete architecture and implementation guide for refactoring from monolith to domain-based micro frontends using Cloudflare Workers.
+
+## Current Implementation Status
+
+### ✅ Foundation Established
+- Worker architecture pattern defined and documented
+- Configuration templates created (`workers/_template/`)
+- Standard patterns documented (`IMPLEMENTED_PATTERNS.md`)
+
+### 🚧 Documents Domain in Progress
+- Worker structure: `workers/documents/` (READY)
+- Configuration: `wrangler.documents.jsonc` (READY)
+- Heavy dependencies isolated: PDFME (24MB), TiTap (3MB)
+- Implementation: READY for component migration
+
+### 📋 Ready for Implementation
+- Standard template for new domains (`workers/_template/`)
+- RPC communication pattern (`USAGE_EXAMPLES.md`)
+- Module Federation setup (`IMPLEMENTED_PATTERNS.md`)
+- Migration checklist (`MIGRATION_CHECKLIST.md`)
+- Deployment procedures (`DEPLOYMENT_WORKER_PATTERNS.md`)
 
 ## Quick Start
 
-### 1. Review Architecture
+### 1. Review Implemented Patterns
+
+```bash
+# Review the current implementation approach
+open docs/domains/micro-frontend/IMPLEMENTED_PATTERNS.md
+```
+
+### 2. Check Current Architecture
 
 ```bash
 # Understand the domain-based approach
 open docs/domains/micro-frontend/architecture.md
 ```
 
-### 2. Follow Refactor Plan
+### 3. Follow Implementation Guide
 
 ```bash
 # Step-by-step implementation guide
 open docs/domains/micro-frontend/refactor-plan.md
 ```
 
-### 3. Prepare for Deployment
+### 4. Prepare Domain Worker
 
 ```bash
-# Deployment procedures & monitoring
-open docs/domains/micro-frontend/deployment.md
+# Create a new domain worker using the standard template
+cp -r workers/_template workers/new-domain
+# Update configuration files
+sed -i 's/_template/new-domain/g' workers/new-domain/**/*.jsonc workers/new-domain/**/*.ts
 ```
 
 ## Core Documentation
@@ -56,59 +88,112 @@ open docs/domains/micro-frontend/deployment.md
 
 ## Implementation Packages
 
-### **Foundation Infrastructure** (`federation/`)
+### **Worker Infrastructure** (`workers/`)
 
 ```
-federation/
-├── shared-deps.ts              # Shared vs isolated dependency rules
-├── loader/                      # Dynamic module loading
-│   ├── index.ts               # Core loader with retry logic
-│   └── error-boundary.tsx     # Error handling with iframe fallback
-├── state/                      # Cross-domain state management
-│   └── manager.ts             # Event-driven state synchronization
-└── monitoring/                 # Performance tracking
-    └── metrics.ts             # Comprehensive metrics collection
+workers/
+├── documents/                  # PDF-heavy Documents domain (ACTIVE)
+│   ├── package.json           # Isolated dependencies (PDFME, TiTap)
+│   ├── vite.config.ts        # Module Federation exports
+│   ├── wrangler.documents.jsonc  # Worker configuration
+│   └── src/exports/          # Federated component exports
+├── excel/                     # Excel generation domain (EXISTING)
+│   ├── package.json          # ExcelJS dependencies
+│   └── index.ts              # Excel API endpoints
+├── pdf/                       # PDF generation domain (EXISTING)
+│   └── generate-pdf.ts      # PDF generation service
+└── _template/                 # Template for new domains
+    ├── package.json          # Domain dependency template
+    ├── vite.config.ts        # Federation config template
+    └── index.ts             # Worker API template
 ```
 
 ### **Build Configuration**
 
-- `vite.config.federation.ts` - Portal Module Federation config
-- `workers/documents/vite.config.ts` - Documents domain config
-- Shared dependency strategy implemented
-- Development/production optimizations
+- `wrangler.documents.jsonc` - Documents worker Cloudflare config
+- `workers/documents/vite.config.ts` - Documents Module Federation config
+- Shared dependency strategy: React singletons shared, heavy libs isolated
+- Development: Local dev servers on different ports (5173, 5174, 8787)
 
-### **Domain Structures**
+### **Current Domain Status**
 
-```
-workers/documents/              # PDF-heavy Documents domain
-├── package.json               # Own dependencies (PDFME, TiTap)
-├── vite.config.ts            # Module Federation exports
-└── src/components/DocumentDesigner.tsx
-```
+**✅ Excel Domain** (`workers/excel/`)
+- Status: Fully implemented
+- Purpose: Excel report generation
+- Heavy dependency: `exceljs`
+- Pattern: RPC API endpoints
 
-## Key Decisions & Trade-offs
+**✅ PDF Generation Domain** (`workers/pdf/`)
+- Status: Fully implemented  
+- Purpose: PDF document generation
+- Heavy dependency: `@pdfme/generator`
+- Pattern: RPC service worker
 
-### Domain Architecture Decision
+**🚧 Documents Domain** (`workers/documents/`)
+- Status: Implementation in progress
+- Purpose: PDF template editing UI
+- Heavy dependencies: `@pdfme/ui`, `@tiptap/*`
+- Pattern: Module Federation + RPC APIs
 
-**Domain-Driven** ✅ (Recommended)
+**📋 Future Domains Pattern**
+- `workers/reports/`: Excel-heavy reporting UI
+- `workers/admin/`: System configuration UI
+- `workers/analytics/`: Data visualization dashboards
 
+## Key Decisions & Implementation Status
+
+### Architecture Decision: Domain Worker Isolation ✅ (ACTIVE)
+
+**Current Implementation**:
 ```yaml
 domains:
-  portal: "Core shell, auth, navigation"
-  documents: "PDF-heavy (PDFME/TiTap isolated)"
-  admin: "Configuration, user management"
-  reports: "Excel-heavy (future)"
+  portal: 
+    path: "app/" (Core shell, auth, routing)
+    status: "MONOLITH → MICRO-FRONTEND TRANSITION"
+    
+  documents:
+    path: "workers/documents/" (PDF template editing)
+    status: "IMPLEMENTATION IN PROGRESS"
+    heavy_deps: "@pdfme/ui (24MB), @tiptap/* (3MB)"
+    
+  excel:
+    path: "workers/excel/" (Excel report generation)  
+    status: "FULLY IMPLEMENTED"
+    heavy_deps: "exceljs (1MB)"
+    pattern: "RPC API ENDPOINTS"
+    
+  pdf-generation:
+    path: "workers/pdf/" (PDF document generation)
+    status: "FULLY IMPLEMENTED"
+    heavy_deps: "@pdfme/generator"
+    pattern: "RPC SERVICE WORKER"
 ```
 
-vs **Component-Driven** ❌ (Not recommended)
+### Implementation Pattern: Hybrid Approach
 
-```yaml
-issues:
-  - Still need cross-domain coordination
-  - State management complexity remains
-  - Less clear team ownership
-  - Harder to optimize per domain
+**Module Federation** ✅ (For UI components)
+```typescript
+// Portal loads federated UI components
+const DocumentDesigner = lazy(() => 
+  import('documents/DocumentDesigner')
+);
 ```
+
+**RPC APIs** ✅ (For data operations)
+```typescript
+// Portal calls domain-specific APIs
+await fetch('https://documents-worker/api/templates/save', {
+  method: 'POST',
+  body: JSON.stringify(templateData)
+});
+```
+
+**Benefits of Current Approach**:
+1. **Clear separation**: Heavy dependencies isolated per domain
+2. **Team autonomy**: Each domain can deploy independently
+3. **Performance**: Bundle size reduction from Day 1
+4. **Scalability**: Per-domain resource allocation
+5. **Fallbacks**: RPC can work even if Module Federation fails
 
 ### Module Federation Integration
 
@@ -298,23 +383,43 @@ training:
 
 ## Getting Started
 
-### Immediate Next Steps (Today)
+### Immediate Next Steps
 
+**1. Review Implementation Approach**:
 ```bash
-# 1. Review architecture with team
-open docs/micro-frontend/ARCHITECTURE.md
+# Understand the worker-based architecture
+open docs/domains/micro-frontend/IMPLEMENTED_PATTERNS.md
 
-# 2. Set up foundation
-npm install @module-federation/vite
-cp -r federation/* src/federation/
+# Review migration checklist
+open docs/domains/micro-frontend/MIGRATION_CHECKLIST.md
 
-# 3. Extract first component (PDFME designer)
-mv app/components/documents/pdfme-designer.tsx workers/documents/src/components/
+# Check usage examples
+open docs/domains/micro-frontend/USAGE_EXAMPLES.md
+```
 
-# 4. Test integration
-npm run dev:federation
-# Portal: http://localhost:5173
-# Documents: http://localhost:5174
+**2. Prepare Documents Worker**:
+```bash
+# Install dependencies for documents domain
+cd workers/documents && npm install
+
+# Start development server
+npm run dev  # Starts on port 5174 (federation) + 8787 (worker)
+
+# In separate terminal, start portal
+cd ../.. && npm run dev  # Port 5173
+```
+
+**3. Begin Migration**:
+```bash
+# Follow migration checklist step-by-step
+# Phase 1: Move PDFME components
+# Phase 2: Update portal integration  
+# Phase 3: Test thoroughly
+# Phase 4: Deploy gradually
+
+# Use template for future domains
+cp -r workers/_template workers/reports
+# Update for reports domain
 ```
 
 ### Quick Validation Test

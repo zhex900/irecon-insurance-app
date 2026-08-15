@@ -8,7 +8,7 @@ import {
   SendToBackIcon,
   UnfoldVerticalIcon,
 } from "lucide-react";
-import type { TableColumnDraft } from "~/components/documents/pdfme-designer-helpers";
+import type { TableColumnDraft } from "~/components/documents/shared";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 
@@ -37,7 +37,7 @@ type PdfmeDesignerSelectionToolbarProps = {
   onApplyTableColumns: () => void;
 };
 
-export function PdfmeDesignerSelectionToolbar({
+export function SelectionToolbar({
   selectionCount,
   textSelected,
   tableSelected,

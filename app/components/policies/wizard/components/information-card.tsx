@@ -4,7 +4,7 @@ import { getTakenStatusIssues } from "~/lib/policies/taken-status";
 import { POLICY_STATUS, type CarPolicyFormValues } from "~/lib/zod/policy-car";
 import type { Policy, PremiumBreakdown, ReferenceData } from "~/lib/db/types";
 import type { RefObject } from "react";
-import { useMode } from "../hooks/use-mode";
+import { useMode } from "../hooks/utils/use-mode";
 import { SECTION_IDS } from "../shared/constants";
 
 export type CarPolicyWizardInformationCardProps = {

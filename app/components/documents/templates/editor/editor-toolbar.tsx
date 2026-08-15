@@ -46,7 +46,7 @@ type EditorToolbarProps = {
   onPublish: () => void;
 };
 
-export function DocumentTemplateEditorToolbar(props: EditorToolbarProps) {
+export function EditorToolbar(props: EditorToolbarProps) {
   const disabled = props.busy || props.previewLoading;
   return (
     <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">

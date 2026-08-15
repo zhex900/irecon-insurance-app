@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDownIcon, FileTypeIcon, MailIcon } from "lucide-react";
-import { PdfPreviewDialog } from "~/components/documents/pdf-preview-dialog";
+import { PreviewDialog } from "~/components/documents/pdf/preview";
 import { EmailDocumentsDialog } from "~/components/email/email-documents-dialog";
 import { Badge } from "~/components/reui/badge";
 import { Button } from "~/components/ui/button";
@@ -364,7 +364,7 @@ export function PremiumSummaryDocuments({
             footerImageWidth={footerImageWidth}
             emailDirectory={emailDirectory}
           />
-          <PdfPreviewDialog
+          <PreviewDialog
             open={previewDoc != null}
             onOpenChange={(open) => {
               if (!open) setPreviewDoc(null);

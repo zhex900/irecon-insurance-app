@@ -5,9 +5,9 @@ import {
   carPolicySchema,
   type CarPolicyFormValues,
 } from "~/lib/zod/policy-car";
-import { Inner } from "./inner";
-import type { WizardProps } from "../shared/shared";
-import { policyToFormValues } from "../shared/policy-to-form-values";
+import { WizardInner as Inner } from "./wizard-inner";
+import type { WizardProps } from "../shared/wizard-shared";
+import { policyToFormValues } from "../shared/policy-to-values";
 
 export function Wizard({
   policy,

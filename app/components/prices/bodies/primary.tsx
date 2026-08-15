@@ -16,7 +16,7 @@ import {
   type EslScheduleView,
   type PlantScheduleView,
   type StampScheduleView,
-} from "~/components/prices/price-schedule-dialog-shared";
+} from "~/components/prices/shared";
 export function CarBody({
   schedule,
   editing,

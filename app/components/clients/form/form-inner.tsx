@@ -1,5 +1,5 @@
 import { useFormContext } from "react-hook-form";
-import { Fields } from "./fields";
+import { FormFields } from "./form-fields";
 import { LeaveDialog } from "./leave-dialog";
 import { useFormDraft } from "./hooks/use-draft";
 import { useJustSaved } from "~/components/forms/field-save-highlight";
@@ -33,7 +33,7 @@ export function FormInner({
 
   return (
     <>
-      <Fields
+      <FormFields
         reference={reference}
         cancelTo={cancelTo}
         isNew={isNew}

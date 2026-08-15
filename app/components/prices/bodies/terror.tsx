@@ -15,7 +15,7 @@ import { formatNumber, formatRate } from "~/lib/utils";
 import {
   RatePercentInput,
   type TerrorScheduleView,
-} from "~/components/prices/price-schedule-dialog-shared";
+} from "~/components/prices/shared";
 export function TerrorBody({
   schedule,
   editing,

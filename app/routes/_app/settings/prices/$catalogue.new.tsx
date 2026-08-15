@@ -1,5 +1,5 @@
 import { redirect, useActionData } from "react-router";
-import { PriceEditorDialog } from "~/components/prices/price-editor-dialog";
+import { Editor } from "~/components/prices";
 import { requireSuperAdminPage } from "~/lib/auth/authorize.server";
 import { isSuperAdmin } from "~/lib/auth/roles";
 import { requireAuth } from "~/lib/auth/session.server";
@@ -155,7 +155,7 @@ export default function SettingsPricesNewRoute({
   const { slug, kind, json } = loaderData;
 
   return (
-    <PriceEditorDialog
+    <Editor
       title={`New ${slugLabel(slug)}`}
       description="Edit the JSON payload, then save. Prefills from the latest schedule when one exists."
       closeHref={pricesListHref(slug)}

@@ -6,12 +6,12 @@ import { DesktopRail } from "../components/desktop-rail";
 import { MobileNotes } from "../components/mobile-notes";
 import { SectionStack } from "../components/section-stack";
 import { Footer } from "../components/footer";
-import { Dialogs } from "../components/dialogs";
+import { DialogsContainer } from "../components/dialogs-container";
 import { POLICY_STICKY_RAIL_CLASS } from "~/components/policies/policy-form-layout";
 import { SECTION_IDS } from "../shared/constants";
-import { useWizardState } from "../components/decomposed";
+import { useWizardState } from "../components/use-wizard-state";
 
-export function New({
+export function NewWizard({
   policy,
   reference,
   carWording,
@@ -189,7 +189,7 @@ export function New({
         </aside>
       </div>
 
-      <Dialogs
+      <DialogsContainer
         submitConfirmOpen={state.submitConfirmOpen}
         onSubmitConfirmOpenChange={state.setSubmitConfirmOpen}
         submitDocumentNames={state.submitDocumentNames}

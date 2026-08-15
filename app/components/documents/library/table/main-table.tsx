@@ -26,7 +26,7 @@ import {
   coverTypeLabel,
   type CoverTypeOption,
   type UploadItem,
-} from "~/components/documents/library-documents-model";
+} from "~/components/documents/shared";
 import { formatBytes } from "~/hooks/use-file-upload";
 import { DOCUMENT_LABEL_MAX_LENGTH } from "~/lib/documents/document-label";
 import type { LibraryDocumentRecord } from "~/lib/documents/library-documents";
@@ -52,7 +52,7 @@ type LibraryDocumentsTableProps = {
   onAddFiles: () => void;
 };
 
-export function LibraryDocumentsTable({
+export function MainTable({
   files: uploadFiles,
   documentsById: docsById,
   coverTypes,

@@ -38,7 +38,7 @@ export type ClientsIndexFiltersProps = {
   onClearFilters: () => void;
 };
 
-export function Filters({
+export function TableFilters({
   search,
   onSearchChange,
   onSearchClear,

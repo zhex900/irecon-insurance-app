@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 import { useFormContext } from "react-hook-form";
-import { Autocomplete as AuthorisedRepresentativeAutocomplete } from "~/components/clients/representatives";
+import { ArAutocomplete as AuthorisedRepresentativeAutocomplete } from "~/components/clients/representatives";
 import { FormAutocomplete } from "~/components/forms/autocomplete";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
@@ -13,7 +13,7 @@ import {
 import type { ReferenceData } from "~/lib/db/types";
 import type { ClientFormValues } from "~/lib/zod/client";
 
-export function Fields({
+export function FormFields({
   reference,
   cancelTo,
   isNew,

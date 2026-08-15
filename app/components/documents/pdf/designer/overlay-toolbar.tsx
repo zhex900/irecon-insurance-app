@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import { GripVerticalIcon } from "lucide-react";
 import { cn } from "~/lib/utils";
 
-export function PdfmeDesignerOverlayToolbar({
+export function OverlayToolbar({
   children,
 }: {
   children: React.ReactNode;

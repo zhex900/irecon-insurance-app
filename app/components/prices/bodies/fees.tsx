@@ -11,7 +11,7 @@ import { formatCurrency } from "~/lib/utils";
 import {
   NumInput,
   type FeesScheduleView,
-} from "~/components/prices/price-schedule-dialog-shared";
+} from "~/components/prices/shared";
 export function FeesBody({
   schedule,
   editing,

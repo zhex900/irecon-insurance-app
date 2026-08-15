@@ -4,9 +4,9 @@ import { FilePenLineIcon, PlusIcon } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "~/components/layout/app-layout";
 import {
-  DocumentTemplatesEditorShell,
-  DocumentTemplatesListShell,
-} from "~/components/documents/document-templates-loading";
+  EditorShell,
+  ListShell,
+} from "~/components/documents/templates/loading";
 import { Button } from "~/components/ui/button";
 import {
   Card,
@@ -58,7 +58,7 @@ export function meta() {
 
 /** Shown immediately while the list (or a template editor) is loading. */
 export function HydrateFallback() {
-  return <DocumentTemplatesListShell />;
+  return <ListShell />;
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -361,7 +361,7 @@ export default function DocumentTemplatesRoute({
   const loadingEditor = navigation.state !== "idle" && Boolean(editorMatch);
 
   if (loadingEditor && editorMatch) {
-    return <DocumentTemplatesEditorShell title="Document Template" />;
+    return <EditorShell templateTitle="Document Template" />;
   }
 
   return (

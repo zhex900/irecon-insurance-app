@@ -1,26 +1,21 @@
 import { useCallback, useRef } from "react";
 import type { Template } from "@pdfme/common";
-import { DocumentTemplateDeleteDialog } from "~/components/documents/document-template-delete-dialog";
-import { DocumentTemplateConfirmDialog } from "~/components/documents/document-template-confirm-dialog";
 import {
   EditableTitle,
   TemplateVersionBadges,
-} from "~/components/documents/document-template-editor-header";
-import { DocumentTemplateEditorToolbar } from "~/components/documents/document-template-editor-toolbar";
-import { DocumentTemplateHistorySheet } from "~/components/documents/document-template-history-sheet";
-import { DocumentTemplateLeaveDialog } from "~/components/documents/document-template-leave-dialog";
-import { PdfPreviewDialog } from "~/components/documents/pdf-preview-dialog";
-import {
-  PdfmeDesigner,
-  type PdfmeDesignerHandle,
-} from "~/components/documents/pdfme-designer";
+  EditorToolbar,
+} from "~/components/documents/templates/editor";
+import { MainDesigner, type PdfmeDesignerHandle } from "~/components/documents/pdf/designer";
+import { DeleteDialog, TemplateConfirmDialog, LeaveDialog } from "~/components/documents/templates/dialogs";
+import { HistorySheet } from "~/components/documents/templates/history";
+import { PreviewDialog } from "~/components/documents/pdf/preview";
 import { PageHeader } from "~/components/layout/app-layout";
-import { useDocumentTemplateEditorController } from "~/hooks/use-document-template-editor-controller";
+import { useDocumentTemplateEditorController } from "~/hooks/document-template-editor/use-controller";
 import { useDocumentTemplatePreview } from "~/hooks/use-document-template-preview";
 import { formatDocumentTemplateTitle } from "~/lib/documents/template-title";
 import type { DocumentTemplateEditorLoaderData } from "~/lib/documents/template-editor-types";
 
-export function DocumentTemplateEditor({
+export function MainEditor({
   loaderData,
 }: {
   loaderData: DocumentTemplateEditorLoaderData;
@@ -102,7 +97,7 @@ export function DocumentTemplateEditor({
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col gap-2">
-        <DocumentTemplateEditorToolbar
+        <EditorToolbar
           editable={editor.canEdit}
           deletable={editor.canDelete}
           busy={editor.busy}
@@ -116,12 +111,12 @@ export function DocumentTemplateEditor({
           coverType={editor.coverTypeValue}
           orientation={editor.orientation}
           onLabelChange={editor.setLabelValue}
-          onSaveLabel={(next) => {
+          onSaveLabel={(next: string) => {
             if (next === docTemplate.label) return;
             editor.setLabelValue(next);
             editor.submitMeta({ label: next });
           }}
-          onCoverTypeChange={(next) => {
+          onCoverTypeChange={(next: string) => {
             editor.setCoverTypeValue(next);
             editor.submitMeta({ coverTypeId: next });
           }}
@@ -137,7 +132,7 @@ export function DocumentTemplateEditor({
           onPublish={() => editor.submitTemplate("publish")}
         />
 
-        <PdfmeDesigner
+        <MainDesigner
           key={docTemplate.key}
           ref={designerRef}
           template={docTemplate.template as Template}
@@ -147,7 +142,7 @@ export function DocumentTemplateEditor({
         />
       </div>
 
-      <DocumentTemplateHistorySheet
+      <HistorySheet
         open={editor.historyOpen}
         onOpenChange={editor.setHistoryOpen}
         versions={loaderData.history}
@@ -158,7 +153,7 @@ export function DocumentTemplateEditor({
         unsavedChanges={editor.unsavedChanges}
         editorName={loaderData.viewerName}
         basedOnVersion={loaderData.editingVersionNumber}
-        onPreviewVersion={(entry) => void editor.handlePreviewVersion(entry)}
+        onPreviewVersion={(entry: import("~/lib/services/documents/document-template-history").DocumentTemplateHistoryEntry) => void editor.handlePreviewVersion(entry)}
         onPublishVersion={editor.publishVersion}
         onDeleteDraft={editor.deleteDraft}
         onOpenInEditor={editor.handleOpenVersionInEditor}
@@ -166,7 +161,7 @@ export function DocumentTemplateEditor({
         onSaveDraft={() => editor.submitTemplate("draft")}
       />
 
-      <DocumentTemplateLeaveDialog
+      <LeaveDialog
         open={editor.leaveOpen}
         changes={editor.unsavedChanges}
         saving={
@@ -183,7 +178,7 @@ export function DocumentTemplateEditor({
       />
 
       {editor.canDelete ? (
-        <DocumentTemplateDeleteDialog
+        <DeleteDialog
           open={editor.deleteOpen}
           title={displayTitle}
           deleting={editor.busy && editor.intent === "reset"}
@@ -192,19 +187,19 @@ export function DocumentTemplateEditor({
         />
       ) : null}
 
-      <DocumentTemplateConfirmDialog
+      <TemplateConfirmDialog
         action={editor.confirmAction}
         busy={editor.busy}
         intent={editor.intent}
-        onOpenChange={(open) => {
+        onOpenChange={(open: boolean) => {
           if (!open) editor.setConfirmAction(null);
         }}
         onConfirm={editor.resolveConfirmAction}
       />
 
-      <PdfPreviewDialog
+      <PreviewDialog
         open={previewOpen}
-        onOpenChange={(open) => {
+        onOpenChange={(open: boolean) => {
           setPreviewOpen(open);
           if (!open) closePreview();
         }}

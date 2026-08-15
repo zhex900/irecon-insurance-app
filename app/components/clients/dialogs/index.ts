@@ -1,2 +1,2 @@
 // Barrel exports for client dialog components
-export { Delete } from "./delete";
+export { DeleteClient as DeleteClient } from "./delete-client";

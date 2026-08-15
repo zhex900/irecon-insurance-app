@@ -14,9 +14,9 @@ import {
 import { Link, useNavigation } from "react-router";
 import { PageHeader } from "~/components/layout/app-layout";
 import {
-  DocumentTemplatesEditorShell,
-  DocumentTemplatesListShell,
-} from "~/components/documents/document-templates-loading";
+  EditorShell,
+  ListShell,
+} from "~/components/documents/templates/loading";
 import { ThemeModePicker } from "~/components/theme-toggle";
 import {
   Card,
@@ -96,9 +96,9 @@ export default function SettingsIndexRoute({
       /^\/settings\/document-templates\/([^/]+)/,
     );
     if (editorMatch) {
-      return <DocumentTemplatesEditorShell title="Document Template" />;
+      return <EditorShell templateTitle="Document Template" />;
     }
-    return <DocumentTemplatesListShell />;
+    return <ListShell />;
   }
 
   const settingsItems = [

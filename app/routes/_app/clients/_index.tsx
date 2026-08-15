@@ -1,8 +1,8 @@
 import { Form, useActionData, useNavigation } from "react-router";
 import { useMemo, useState } from "react";
-import { Filters as ClientsIndexFilters } from "~/components/clients/list";
-import { Table as ClientsIndexTable } from "~/components/clients/list";
-import { Delete as DeleteClientDialog } from "~/components/clients/dialogs";
+import { TableFilters as ClientsIndexFilters } from "~/components/clients/list";
+import { ClientsTable as ClientsIndexTable } from "~/components/clients/list";
+import { DeleteClient as DeleteClientDialog } from "~/components/clients/dialogs";
 import { PageHeader } from "~/components/layout/app-layout";
 import { Button } from "~/components/ui/button";
 import { useHandledActionData } from "~/hooks/use-handled-action-data";

@@ -1,6 +1,20 @@
 // Barrel exports for wizard components
-export { Wizard } from "./main";
-export { Inner } from "./inner";
-export { Content } from "./content";
-export { Default } from "./compound";
-export { New } from "./new";
+export { Wizard } from "./main-wizard";
+export { WizardInner as Inner } from "./wizard-inner";
+export { WizardContent as Content } from "./wizard-content";
+export { WizardDefault as Default } from "./wizard-default";
+export { NewWizard as New } from "./new-wizard";
+export { WizardInnerProvider, useWizardInner } from "./provider";
+export { WizardContainer as Container } from "./wizard-container";
+export { WizardGrid as Grid } from "./wizard-grid";
+export { MainContent } from "./main-content";
+export { PremiumAside } from "./premium-aside";
+export { WizardHeader } from "./wizard-header";
+export { WizardDesktopRail } from "./desktop-rail";
+export { InfoCard } from "./info-card";
+export { MobilePremium } from "./mobile-premium";
+export { MobileNotes } from "./mobile-notes";
+export { SectionStack } from "./section-stack";
+export { FormFooter } from "./form-footer";
+export { DesktopPremium } from "./desktop-premium";
+export { Dialogs } from "./dialogs";

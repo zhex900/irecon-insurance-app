@@ -14,7 +14,7 @@ import { Wizard as CarPolicyWizard } from "~/components/policies/wizard/wizard";
 import {
   allowWizardLeave,
   clearWizardStepState,
-} from "~/components/policies/wizard/step-memory";
+} from "~/components/policies/wizard/wizard-step-memory";
 import { DeletePoliciesDialog } from "~/components/policies/delete-policies-dialog";
 import { Button } from "~/components/ui/button";
 import { LoadingButton } from "~/components/ui/loading-button";

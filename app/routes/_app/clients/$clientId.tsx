@@ -6,7 +6,7 @@ import {
   useActionData,
   useNavigation,
 } from "react-router";
-import { Policies as ClientPoliciesTable } from "~/components/clients/summary";
+import { ClientPolicies as ClientPoliciesTable } from "~/components/clients/summary";
 import { Button } from "~/components/ui/button";
 import { LoadingButton } from "~/components/ui/loading-button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";

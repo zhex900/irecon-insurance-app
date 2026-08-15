@@ -1,5 +1,5 @@
 import { ConfirmDialog } from "~/components/ui/confirm-dialog";
-import type { DocumentTemplateConfirmAction } from "~/hooks/use-document-template-editor-controller";
+import type { DocumentTemplateConfirmAction } from "~/hooks/document-template-editor/use-controller";
 
 function confirmCopy(action: DocumentTemplateConfirmAction): {
   title: string;
@@ -50,7 +50,7 @@ function confirmCopy(action: DocumentTemplateConfirmAction): {
   }
 }
 
-export function DocumentTemplateConfirmDialog({
+export function TemplateConfirmDialog({
   action,
   busy,
   intent,
@@ -73,14 +73,11 @@ export function DocumentTemplateConfirmDialog({
       (action.kind === "delete-draft" && intent === "delete-draft"));
 
   return (
-    <ConfirmDialog
-      open
+    <TemplateConfirmDialog
+      action={action}
+      busy={busy}
+      intent={intent}
       onOpenChange={onOpenChange}
-      title={copy.title}
-      description={copy.description}
-      confirmLabel={copy.confirmLabel}
-      confirmVariant={copy.confirmVariant}
-      loading={loading}
       onConfirm={onConfirm}
     />
   );

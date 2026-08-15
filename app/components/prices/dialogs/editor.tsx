@@ -12,16 +12,7 @@ import { Field, FieldLabel } from "~/components/ui/field";
 import { LoadingButton } from "~/components/ui/loading-button";
 import { Textarea } from "~/components/ui/textarea";
 
-export function PriceEditorDialog({
-  title,
-  description,
-  closeHref,
-  intent,
-  catalogue,
-  id,
-  json,
-  error,
-}: {
+export interface EditorProps {
   title: string;
   description: string;
   closeHref: string;
@@ -30,7 +21,18 @@ export function PriceEditorDialog({
   id?: number;
   json: string;
   error?: string | null;
-}) {
+}
+
+export function Editor({
+  title,
+  description,
+  closeHref,
+  intent,
+  catalogue,
+  id,
+  json,
+  error,
+}: EditorProps) {
   const navigate = useNavigate();
   const navigation = useNavigation();
   const saving =

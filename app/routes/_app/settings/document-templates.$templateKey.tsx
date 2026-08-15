@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { DocumentTemplatesEditorShell } from "~/components/documents/document-templates-loading";
+import { EditorShell } from "~/components/documents/templates/loading";
 import type { DocumentTemplateEditorLoaderData } from "~/lib/documents/template-editor-types";
 import { pageTitle } from "~/lib/brand";
 import {
@@ -9,8 +9,8 @@ import {
 import type { Route } from "./+types/document-templates.$templateKey";
 
 const DocumentTemplateEditor = lazy(() =>
-  import("~/components/documents/document-template-editor").then((module) => ({
-    default: module.DocumentTemplateEditor,
+  import("~/components/documents/templates/editor").then((module) => ({
+    default: module.MainEditor,
   })),
 );
 
@@ -19,7 +19,7 @@ export function meta() {
 }
 
 export function HydrateFallback() {
-  return <DocumentTemplatesEditorShell title="Document Template" />;
+  return <EditorShell templateTitle="Document Template" />;
 }
 
 export function loader(args: Route.LoaderArgs) {
@@ -36,9 +36,8 @@ export default function DocumentTemplateEditorRoute({
   return (
     <Suspense
       fallback={
-        <DocumentTemplatesEditorShell
-          title={loaderData.template.title}
-          description="Loading document template editor..."
+        <EditorShell
+          templateTitle={loaderData.template.title}
         />
       }
     >

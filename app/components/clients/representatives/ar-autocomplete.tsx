@@ -1,7 +1,7 @@
 import { FormAutocomplete } from "~/components/forms/autocomplete";
 import type { WholesaleBroker } from "~/lib/db/types";
 
-export function Autocomplete({
+export function ArAutocomplete({
   options,
   name = "authorisedRepresentativeId",
   label = "Authorised Representative",

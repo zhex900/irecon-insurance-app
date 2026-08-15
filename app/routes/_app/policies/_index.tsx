@@ -4,7 +4,7 @@ import { PageHeader } from "~/components/layout/app-layout";
 import { NewPolicyClientDialog } from "~/components/policies/new-policy-client-dialog";
 import { PolicyListTable } from "~/components/policies/policy-list-table";
 import { useActionSuccessToast } from "~/hooks/use-success-toast";
-import { usePolicyListPage } from "~/hooks/use-policy-list-page";
+import { usePolicyListPage } from "~/hooks/policy-list/use-page";
 import { requireAuth } from "~/lib/auth/session.server";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
 import { parseFormIntent, parseUuid } from "~/lib/http/route-input";

@@ -1,9 +1,9 @@
 import type { Dispatch, RefObject, SetStateAction } from "react";
 import { ClaimsWording } from "../sections/claims-wording";
-import { PricingDeclarationConfirmed } from "../sections/premium-declaration";
+import { PremiumDeclaration } from "../sections/premium-declaration";
 import { RiskDetails } from "../sections/risk-details";
 import { Excesses } from "../sections/excesses";
-import { LimitsOfLiability } from "../sections/limits";
+import { Limits } from "../sections/limits";
 import { PolicyCollapsibleSection } from "~/components/policies/policy-form-layout";
 import type {
   CarWording,
@@ -11,7 +11,7 @@ import type {
   PremiumBreakdown,
   ReferenceData,
 } from "~/lib/db/types";
-import { useMode } from "../hooks/use-mode";
+import { useMode } from "../hooks/utils/use-mode";
 import { SECTION_IDS } from "../shared/constants";
 
 export type WizardSectionStackProps = {
@@ -79,7 +79,7 @@ export function SectionStack({
       }
       className={shellCardClassName}
     >
-      <PricingDeclarationConfirmed
+        <PremiumDeclaration
         premium={premium}
         referralReasons={referralReasons}
         reference={reference}
@@ -154,7 +154,7 @@ export function SectionStack({
         }
         className={shellCardClassName}
       >
-        <LimitsOfLiability reference={reference} />
+        <Limits reference={reference} />
       </PolicyCollapsibleSection>
 
       <PolicyCollapsibleSection

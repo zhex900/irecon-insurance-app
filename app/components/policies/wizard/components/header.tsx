@@ -4,8 +4,8 @@ import { PolicyStickyHeader } from "~/components/policies/policy-form-layout";
 import type { PolicySaveStatus } from "~/components/forms/field-save-highlight";
 import { PolicySaveStatusBadge } from "~/components/forms/field-save-highlight";
 import { MobileSectionNav } from "./mobile-section-nav";
-import { wizardModeBadge, wizardModeHeaderClass } from "../shared/shared";
-import { useMode } from "../hooks/use-mode";
+import { wizardModeBadge, wizardModeHeaderClass } from "../shared/wizard-shared";
+import { useMode } from "../hooks/utils/use-mode";
 import { cn } from "~/lib/utils";
 import type { ReactNode } from "react";
 

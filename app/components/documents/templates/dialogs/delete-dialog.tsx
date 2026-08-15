@@ -9,7 +9,7 @@ import {
 } from "~/components/ui/dialog";
 import { LoadingButton } from "~/components/ui/loading-button";
 
-export function DocumentTemplateDeleteDialog({
+export function DeleteDialog({
   open,
   title,
   deleting,

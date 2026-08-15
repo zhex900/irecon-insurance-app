@@ -1,5 +1,5 @@
 import { createContext, useMemo, type ReactNode } from "react";
-import type { WizardMode } from "../shared/shared";
+import type { WizardMode } from "../shared/wizard-shared";
 
 /**
  * Single source of truth for the wizard's mode-driven UI, replacing the raw

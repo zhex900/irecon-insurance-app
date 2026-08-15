@@ -1,4 +1,4 @@
-import { SubmitConfirmDialog, LeaveDiscardDialog } from "../dialogs";
+import { SubmitConfirmDialog, LeaveDiscardDialog } from "../wizard-dialogs";
 
 export type DialogsProps = {
   submitConfirmOpen: boolean;
@@ -14,7 +14,7 @@ export type DialogsProps = {
   onSaveAndLeave: () => void | Promise<void>;
 };
 
-export function Dialogs({
+export function DialogsContainer({
   submitConfirmOpen,
   onSubmitConfirmOpenChange,
   submitDocumentNames,
