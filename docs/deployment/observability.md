@@ -26,7 +26,7 @@ Builds use Vite `build.sourcemap: "hidden"` (maps on disk, no public `sourceMapp
 
 ## Cloudflare dashboard setup
 
-1. **Workers Observability** — enabled in `[wrangler.jsonc](../wrangler.jsonc)` and `[wrangler.documents.jsonc](../wrangler.documents.jsonc)` (`logs` + `traces`, staging sample rate `1`).
+1. **Workers Observability** — enabled in `[wrangler.jsonc](../wrangler.jsonc)` and `[wrangler.pdf.jsonc](../wrangler.pdf.jsonc)` (`logs` + `traces`, staging sample rate `1`).
 2. **OTLP → Sentry** (required for CF export):
 
 - Follow [Export to Sentry](https://developers.cloudflare.com/workers/observability/exporting-opentelemetry-data/sentry/)

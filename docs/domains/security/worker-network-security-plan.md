@@ -322,7 +322,7 @@ export function trackServiceCall(
 }
 ```
 
-### **Document Worker (`wrangler.documents.jsonc`) - INTERNAL ONLY**
+### **PDF Worker (`wrangler.pdf.jsonc`) - INTERNAL ONLY**
 
 ```jsonc
 {
@@ -502,7 +502,7 @@ describe("Worker Security", () => {
 
 ```bash
 # 1. Revert wrangler configuration changes
-git checkout wrangler.excel.jsonc wrangler.documents.jsonc wrangler.jsonc
+git checkout wrangler.excel.jsonc wrangler.pdf.jsonc wrangler.jsonc
 
 # 2. Redeploy with previous configuration
 wrangler deploy --config wrangler.jsonc

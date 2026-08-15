@@ -40,7 +40,7 @@
 - Basic UI components
 - Database client
 
-### Worker 2: Document Management Worker (`wrangler.documents.jsonc`)
+### Worker 2: PDF Worker (`wrangler.pdf.jsonc`)
 
 **Size Target:** ~800KB gzipped (existing)
 **Routes:**

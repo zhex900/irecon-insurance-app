@@ -1,5 +1,5 @@
 import { createContext } from "react-router";
-import type { DocumentServiceBinding } from "~/lib/pdf/document-worker.client.server";
+import type { PdfServiceBinding } from "~/lib/pdf/pdf-worker.server";
 import type { ExcelServiceBinding } from "~/lib/excel/excel-service.server";
 
 export type R2BucketLike = {
@@ -43,7 +43,7 @@ export type CloudflareEnv = {
   HYPERDRIVE?: { connectionString: string };
   AVATARS?: R2BucketLike;
   LIBRARY_DOCUMENTS?: R2BucketLike;
-  DOCUMENT_SERVICE?: DocumentServiceBinding;
+  PDF_SERVICE?: PdfServiceBinding;
   EXCEL_SERVICE?: ExcelServiceBinding;
   SESSIONS?: {
     get: (key: string, type: "json") => Promise<unknown>;
@@ -82,11 +82,11 @@ export function getLibraryDocumentsBucket(
   return getR2Bucket(context, "LIBRARY_DOCUMENTS");
 }
 
-export function getDocumentService(
+export function getPdfService(
   context: CloudflareRouterContext,
-): DocumentServiceBinding | null {
+): PdfServiceBinding | null {
   try {
-    return context.get(cloudflareContext)?.env.DOCUMENT_SERVICE ?? null;
+    return context.get(cloudflareContext)?.env.PDF_SERVICE ?? null;
   } catch {
     return null;
   }

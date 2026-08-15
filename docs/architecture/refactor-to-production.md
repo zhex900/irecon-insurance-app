@@ -41,44 +41,59 @@ Large files (all under ~500-line gate after Phase 3 follow-ups):
 
 ## Worker-to-Worker Communication
 
-### Current State
+### Current State (August 2026)
 
-The application uses custom signed requests with HMAC signatures for worker-to-worker communication. This provides security but adds complexity:
+The application has been partially migrated from custom signed requests to type-safe RPC communication. Key changes:
 
-```typescript
-// Current pattern: Manual signed requests
-const signedRequest = await createSignedRequest(
-  payload,
-  serviceName,
-  sharedSecret,
-);
-const response = await env.EXCEL_SERVICE.fetch(
-  "https://excel-service/api/generate",
-  {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(signedRequest),
-  },
-);
-```
+1. **Worker Renaming**: Document Worker renamed to **PDF Worker**
+   - Configuration: `wrangler.documents.jsonc` → `wrangler.pdf.jsonc`
+   - Directory: `workers/documents/` → `workers/pdf/`
+   - Service binding: `PDF_SERVICE` (formerly `DOCUMENT_SERVICE`)
 
-### Refactor Goal: Cloudflare RPC Features
+2. **RPC Communication Pattern**: Type-safe service bindings implemented
+   ```typescript
+   // Current pattern: Type-safe RPC calls
+   const excelClient = getExcelService(context);
+   const result = await excelClient.generatePremiumWorkbook({
+     policy: policyData,
+     premium: premiumData,
+     options: { includeAdjustment: true },
+   });
+   
+   const pdfClient = getPdfService(context);
+   const pdfBytes = await renderPolicyPdf(pdfClient, renderRequest);
+   ```
 
-Migrate to Cloudflare's built-in RPC capabilities for:
+3. **Service Interfaces**: Defined in `app/lib/cloudflare.server.ts`
+   - `PdfServiceBinding`: Type-safe interface for PDF generation
+   - `ExcelServiceBinding`: Type-safe interface for Excel generation
 
-- **Better security**: Built-in authentication via service bindings
-- **Improved performance**: Lower latency than public HTTP calls
-- **Enhanced developer experience**: Type-safe APIs with autocomplete
-- **Reduced complexity**: Eliminates custom security implementation
+### Refactor Progress Status
 
-```typescript
-// Future pattern: Type-safe RPC calls
-const result = await excelService.generatePremiumWorkbook({
-  policy: policyData,
-  premium: premiumData,
-  options: { includeAdjustment: true },
-});
-```
+✅ **COMPLETED**:
+- Worker renaming (Document → PDF Worker)
+- Type-safe service binding interfaces
+- RPC-style method exports from workers
+- Updated configuration and documentation
+
+🔧 **IN PROGRESS**:
+- Migration from HTTP endpoints to pure RPC
+- Shared RPC infrastructure (`workers/shared/`)
+- Comprehensive Zod validation
+
+❌ **PENDING**:
+- Removal of custom signing implementation
+- Full RPC migration completion
+- Shared schema library implementation
+
+### Implementation Priorities (Updated)
+
+1. **✅ Create shared TypeScript interfaces** for all worker RPC methods - **COMPLETED**
+2. **🔧 Implement type-safe client wrappers** around service bindings - **IN PROGRESS**
+3. **🔧 Migrate critical paths** from REST endpoints to RPC methods - **IN PROGRESS**
+4. **❌ Adopt Cloudflare Worker RPC** as it matures for TypeScript-to-TypeScript communication - **PENDING**
+
+See [workers-refactor-plan.md](../workers-refactor-plan.md) for current status and detailed implementation guidelines.
 
 ### Implementation Priorities
 

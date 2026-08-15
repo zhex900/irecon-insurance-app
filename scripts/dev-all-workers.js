@@ -17,8 +17,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // Configuration
 const WORKERS = [
   {
-    name: "Documents Worker",
-    config: "wrangler.documents.jsonc",
+    name: "PDF Worker",
+    config: "wrangler.pdf.jsonc",
     port: 8787,
     inspectorPort: 9230,
     envFile: "workers/documents-local.env",
@@ -131,13 +131,13 @@ async function main() {
   console.log("\n✅ All Workers started!");
   console.log("\n📊 Status:");
   console.log("---------");
-  console.log("• Documents Worker: http://localhost:8787");
-  console.log("• Excel Worker: http://localhost:8788");
+console.log("• PDF Worker: http://localhost:8787");
+console.log("• Excel Worker: http://localhost:8788");
   console.log("• Main App: npm run dev (in another terminal)");
 
   console.log("\n🩺 Health Check URLs:");
   console.log("-------------------");
-  console.log("• Documents Worker: curl http://localhost:8787");
+  console.log("• PDF Worker: curl http://localhost:8787");
   console.log("• Excel Worker: curl http://localhost:8788/health");
   console.log("• Excel Worker Info: curl http://localhost:8788/info");
 

@@ -58,7 +58,7 @@ Ask before every new import: _“Does the Worker need this on every request to t
 ### PDF Worker boundary
 
 Server PDF generation belongs to the private document Worker
-(`wrangler.documents.jsonc`), not the React Router SSR graph. The application
+(`wrangler.pdf.jsonc`), not the React Router SSR graph. The application
 Worker owns auth, policy/template reads, and email orchestration, then sends a
 bounded render snapshot through `DOCUMENT_SERVICE`. Browser preview remains a
 client-only dynamic import and does not call the document Worker.

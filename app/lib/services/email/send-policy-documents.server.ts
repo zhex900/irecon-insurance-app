@@ -3,8 +3,8 @@ import type { CarWording, Policy, PolicyDocument } from "~/lib/db/types";
 import type { EmailSendRecipient } from "~/lib/email/templates";
 import {
   renderPolicyPdf,
-  type DocumentServiceBinding,
-} from "~/lib/pdf/document-worker.client.server";
+  type PdfServiceBinding,
+} from "~/lib/pdf/pdf-worker.server";
 import { buildLegacyTextPdfBlob } from "~/lib/pdf/legacy-text-pdf";
 import type { BrokerFeeLineInput } from "~/lib/pdf/merge-fields";
 import { getRequestContext } from "~/lib/observability/request-context.server";
@@ -49,7 +49,7 @@ export type SendPolicyDocumentsInput = {
   html?: string;
   recipientType: EmailSendRecipient;
   libraryBucket?: R2BucketLike | null;
-  documentService: DocumentServiceBinding;
+  pdfService: PdfServiceBinding;
 };
 
 export type SendPolicyDocumentsResult = {
@@ -98,7 +98,7 @@ type ResolveDocumentPdfInput = {
   libraryBucket?: R2BucketLike | null;
   wordingCatalogue?: CarWording[];
   brokerFeeLines?: BrokerFeeLineInput[];
-  documentService: DocumentServiceBinding;
+  pdfService: PdfServiceBinding;
   requestId: string;
 };
 
@@ -108,7 +108,7 @@ async function resolveDocumentPdfBytes({
   libraryBucket,
   wordingCatalogue,
   brokerFeeLines,
-  documentService,
+  pdfService,
   requestId,
 }: ResolveDocumentPdfInput): Promise<Uint8Array> {
   if (!doc.templateKey) {
@@ -142,7 +142,7 @@ async function resolveDocumentPdfBytes({
     return blobToUint8(await buildLegacyTextPdfBlob(doc.name, doc.content));
   }
 
-  return renderPolicyPdf(documentService, {
+  return renderPolicyPdf(pdfService, {
     contractVersion: 1,
     requestId,
     templateKey: doc.templateKey,
@@ -201,7 +201,7 @@ export async function sendPolicyDocumentsEmail(
       libraryBucket: input.libraryBucket,
       wordingCatalogue,
       brokerFeeLines,
-      documentService: input.documentService,
+      pdfService: input.pdfService,
       requestId,
     });
     totalBytes += bytes.byteLength;

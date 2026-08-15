@@ -10,7 +10,7 @@ _Critical for Cloudflare deployment success_
 
 - **Main Worker**: 2.22MB (93% of 2.5MB Cloudflare limit)
 - **Risk Level**: High - approaching Error 1102 threshold
-- **Current Split**: Document Worker already exists (`wrangler.documents.jsonc`)
+- **Current Split**: PDF Worker already exists (`wrangler.pdf.jsonc`)
 - **Browser Bundle**: Large assets affect broker productivity (10.74MB PDF worker)
 
 ### **Architecture Context**

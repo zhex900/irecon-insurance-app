@@ -17,7 +17,7 @@ NC='\033[0m' # No Color
 # Function to clean up on exit
 cleanup() {
     echo -e "\n${YELLOW}🛑 Stopping all Workers...${NC}"
-    kill $DOCUMENTS_PID $EXCEL_PID 2>/dev/null
+    kill $PDF_PID $EXCEL_PID 2>/dev/null
     echo -e "${GREEN}✅ All Workers stopped${NC}"
     exit 0
 }
@@ -27,8 +27,8 @@ trap cleanup SIGINT SIGTERM
 
 echo -e "${BLUE}📋 Worker Configuration:${NC}"
 echo "------------------------"
-echo -e "• ${GREEN}Documents Worker:${NC}"
-echo "  - Config: wrangler.documents.jsonc"
+echo -e "• ${GREEN}PDF Worker:${NC}"
+echo "  - Config: wrangler.pdf.jsonc"
 echo "  - Port: 8787"
 echo "  - Inspector Port: 9230"
 echo "  - URL: http://localhost:8787"
@@ -51,11 +51,11 @@ echo ""
 echo -e "${YELLOW}🚦 Starting Workers...${NC}"
 echo ""
 
-# Start Documents Worker in background
-echo -e "${BLUE}Starting Documents Worker on port 8787...${NC}"
-npx wrangler dev --config wrangler.documents.jsonc --port 8787 --inspector-port 9230 --env-file workers/documents-local.env &
-DOCUMENTS_PID=$!
-echo -e "${GREEN}Documents Worker PID: $DOCUMENTS_PID${NC}"
+# Start PDF Worker in background
+echo -e "${BLUE}Starting PDF Worker on port 8787...${NC}"
+npx wrangler dev --config wrangler.pdf.jsonc --port 8787 --inspector-port 9230 --env-file workers/documents-local.env &
+PDF_PID=$!
+echo -e "${GREEN}PDF Worker PID: $PDF_PID${NC}"
 
 # Start Excel Worker in background
 echo -e "${BLUE}Starting Excel Worker on port 8788...${NC}"
@@ -68,13 +68,13 @@ echo -e "${GREEN}✅ All Workers started!${NC}"
 echo ""
 echo -e "${BLUE}📊 Status:${NC}"
 echo "---------"
-echo "• Documents Worker: http://localhost:8787"
+echo "• PDF Worker: http://localhost:8787"
 echo "• Excel Worker: http://localhost:8788"
 echo "• Main App: Run 'npm run dev' in another terminal"
 echo ""
 echo -e "${BLUE}🩺 Health Check URLs:${NC}"
 echo "-------------------"
-echo "• Documents Worker: curl http://localhost:8787"
+echo "• PDF Worker: curl http://localhost:8787"
 echo "• Excel Worker: curl http://localhost:8788/health"
 echo "• Excel Worker Info: curl http://localhost:8788/info"
 echo ""
@@ -84,4 +84,4 @@ echo -e "${BLUE}📝 Logs will appear above${NC}"
 echo "----------------------------------------"
 
 # Wait for both processes
-wait $DOCUMENTS_PID $EXCEL_PID
+wait $PDF_PID $EXCEL_PID

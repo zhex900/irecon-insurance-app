@@ -281,9 +281,9 @@ async function main() {
     "wrangler",
     "deploy",
     "--config",
-    "wrangler.documents.jsonc",
+    "wrangler.pdf.jsonc",
   ]);
-  console.log("✓ Document Worker deployed");
+  console.log("✓ PDF Worker deployed");
 
   console.log("→ Deploying application Worker…");
   await run("npx", ["wrangler", "deploy"]);

@@ -1,7 +1,6 @@
 import {
   MAX_PDF_RENDER_REQUEST_BYTES,
   MAX_PDF_RENDER_RESPONSE_BYTES,
-  PDF_RENDER_PATH,
   pdfRenderErrorSchema,
   pdfRenderRequestSchema,
   type PdfRenderRequest,
@@ -11,11 +10,11 @@ import {
   trackUsage,
 } from "~/lib/observability/metrics.server";
 
-export type DocumentServiceBinding = {
-  fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
+export type PdfServiceBinding = {
+  generatePdf(input: PdfRenderRequest): Promise<Response>;
 };
 
-export class DocumentRenderServiceError extends Error {
+export class PdfRenderServiceError extends Error {
   constructor(
     message: string,
     readonly status: number,
@@ -31,7 +30,7 @@ function byteLength(value: string): number {
 
 /** Render a bounded PDF through the private Cloudflare service binding. */
 export async function renderPolicyPdf(
-  service: DocumentServiceBinding,
+  pdfService: PdfServiceBinding,
   input: PdfRenderRequest,
 ): Promise<Uint8Array> {
   const payload = pdfRenderRequestSchema.parse(input);
@@ -41,7 +40,7 @@ export async function renderPolicyPdf(
       result: "failure",
       reason: "request_too_large",
     });
-    throw new DocumentRenderServiceError(
+    throw new PdfRenderServiceError(
       "Document render request is too large.",
       413,
     );
@@ -50,24 +49,13 @@ export async function renderPolicyPdf(
   const started = Date.now();
   let response: Response;
   try {
-    response = await service.fetch(
-      `https://document-service${PDF_RENDER_PATH}`,
-      {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "x-request-id": payload.requestId,
-        },
-        body,
-        signal: AbortSignal.timeout(30_000),
-      },
-    );
+    response = await pdfService.generatePdf(payload);
   } catch {
     trackUsage("document.render", {
       result: "failure",
       reason: "unavailable",
     });
-    throw new DocumentRenderServiceError(
+    throw new PdfRenderServiceError(
       "Document generation is temporarily unavailable.",
       503,
     );
@@ -84,7 +72,7 @@ export async function renderPolicyPdf(
           ? "request_too_large"
           : "upstream_error",
     });
-    throw new DocumentRenderServiceError(
+    throw new PdfRenderServiceError(
       errorBody.success && errorBody.data.error === "payload_too_large"
         ? "Document render request is too large."
         : "Document generation is temporarily unavailable.",
@@ -99,10 +87,7 @@ export async function renderPolicyPdf(
       result: "failure",
       reason: "response_too_large",
     });
-    throw new DocumentRenderServiceError(
-      "Generated document is too large.",
-      502,
-    );
+    throw new PdfRenderServiceError("Generated document is too large.", 502);
   }
   const bytes = new Uint8Array(await response.arrayBuffer());
   if (bytes.byteLength > MAX_PDF_RENDER_RESPONSE_BYTES) {
@@ -110,10 +95,7 @@ export async function renderPolicyPdf(
       result: "failure",
       reason: "response_too_large",
     });
-    throw new DocumentRenderServiceError(
-      "Generated document is too large.",
-      502,
-    );
+    throw new PdfRenderServiceError("Generated document is too large.", 502);
   }
 
   trackUsage("document.render", { result: "success" });

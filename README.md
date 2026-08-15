@@ -51,7 +51,7 @@ npm run db:start       # starts local Postgres on :54322
 npm run db:reset       # apply migrations + seed
 npm run dev            # http://127.0.0.1:5173
 # Second terminal: private PDF service used by email attachment rendering
-npm run dev:documents-worker
+npm run dev:pdf-worker
 ```
 
 Sign in with a seeded user from `_archive/data/users.json`. Default password: `password123`.
@@ -81,7 +81,7 @@ npm run db:export:prices  # MSSQL → JSON snapshot only
 npm run db:push           # drizzle-kit push (dev only)
 npm run dev
 npm run build
-npm run build:documents-worker # document Worker dry-run bundle
+npm run build:pdf-worker # PDF Worker dry-run bundle
 npm run typecheck
 npm run lint
 npm run format:check
