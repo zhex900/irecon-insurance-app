@@ -1,4 +1,4 @@
-import { useDebouncedSearchQuery } from "~/hooks/use-debounced-search-query";
+import { useDebouncedSearchQuery } from "~/hooks/search";
 import { usePolicyListSelection } from "./use-selection";
 import {
   policyListFiltersKey,

@@ -64,8 +64,8 @@ export async function calculateCarPremium(
   );
   // Legacy CARCalculator: Terrorism Levy = True Base Premium × τ only.
   // Display Homes / Existing Structure are manual premium lines (not SI → premium).
-  const contractWorksDisplayHomesPremium = 0;
-  const contractWorksExistingStructurePremium = 0;
+  const contractWorksDisplayHomesPremium = undefined;
+  const contractWorksExistingStructurePremium = undefined;
   const contractWorksTerrorismPremium = round(
     contractWorksBasePremium * terrorismRate,
   );

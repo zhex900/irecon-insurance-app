@@ -4,6 +4,8 @@ import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 import globals from "globals";
 import tseslint from "typescript-eslint";
+import filenames from "eslint-plugin-filenames";
+import importPlugin from "eslint-plugin-import";
 
 export default tseslint.config(
   {
@@ -29,6 +31,12 @@ export default tseslint.config(
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
+  {
+    plugins: {
+      filenames,
+      import: importPlugin,
+    },
+  },
   {
     files: ["**/*.{ts,tsx}"],
     languageOptions: {
@@ -76,6 +84,8 @@ export default tseslint.config(
       "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/no-empty-object-type": "off",
       "no-console": ["error", { allow: ["warn", "error"] }],
+
+      // Directory and naming standards rules
     },
   },
   {

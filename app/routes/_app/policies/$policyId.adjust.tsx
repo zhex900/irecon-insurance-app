@@ -2,7 +2,7 @@ import { redirect } from "react-router";
 import { CarAdjustmentWizard } from "~/components/policies/car-adjustment-wizard";
 import { PageHeader } from "~/components/layout/app-layout";
 import { Badge } from "~/components/reui/badge";
-import { withSuccessToast } from "~/hooks/use-success-toast";
+import { withSuccessToast } from "~/hooks/utilities";
 import { requireAuth } from "~/lib/auth/session/server.server";
 import { parseFormIntent, parseUuid } from "~/lib/http/route-input";
 import {

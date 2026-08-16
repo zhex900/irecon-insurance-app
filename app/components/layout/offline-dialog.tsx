@@ -6,7 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
-import { useNetworkStatus } from "~/hooks/use-network-status";
+import { useNetworkStatus } from "~/hooks/network";
 import { cn } from "~/lib/utils";
 
 /** Global dialog when the browser or reachability check reports no connection. */

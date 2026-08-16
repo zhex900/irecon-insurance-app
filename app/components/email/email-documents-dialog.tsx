@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FileTextIcon, MailIcon, PaperclipIcon, XIcon } from "lucide-react";
 import { toast } from "sonner";
 import { EmailDocumentFrame } from "~/components/email/email-document-frame";
@@ -32,7 +32,11 @@ import {
   type EmailTemplate,
   type EmailTemplateVars,
 } from "~/lib/email/templates";
-import { formatBytes, useFileUpload } from "~/hooks/use-file-upload";
+import { formatBytes } from "~/hooks/utilities";
+import {
+  useFileUploadFixed,
+  type FileWithPreview,
+} from "~/hooks/utilities/use-file-upload-fixed";
 import { sendPolicyDocumentsEmail } from "~/components/email/email-documents-send";
 import {
   EMAIL_DOCUMENTS_EXTRA_ACCEPT,
@@ -103,28 +107,41 @@ export function EmailDocumentsDialog({
   const [sending, setSending] = useState(false);
   const editorHandleRef = useRef<EmailRichEditorHandle>(null);
 
-  const [
-    { files: extraFiles, isDragging },
-    {
-      removeFile,
-      clearFiles,
-      clearErrors,
-      openFileDialog,
-      getInputProps,
-      handleDragEnter,
-      handleDragLeave,
-      handleDragOver,
-      handleDrop,
-    },
-  ] = useFileUpload({
+  // For email dialog, we need to manage files state externally
+  const [extraFiles, setExtraFiles] = useState<FileWithPreview[]>([]);
+
+  const {
+    isDragging,
+    openFileDialog,
+    getInputProps,
+    handleDragEnter,
+    handleDragLeave,
+    handleDragOver,
+    handleDrop,
+  } = useFileUploadFixed({
     multiple: true,
     maxFiles: EMAIL_DOCUMENTS_EXTRA_MAX_FILES,
     maxSize: EMAIL_DOCUMENTS_EXTRA_MAX_SIZE,
     accept: EMAIL_DOCUMENTS_EXTRA_ACCEPT,
-    onError: (errors) => {
+    onFilesAdded: (added: FileWithPreview[]) => {
+      setExtraFiles((prev) => [...prev, ...added]);
+    },
+    onError: (errors: string[]) => {
       if (errors[0]) toast.error(errors[0]);
     },
   });
+
+  const removeFile = useCallback((id: string) => {
+    setExtraFiles((prev) => prev.filter((file) => file.id !== id));
+  }, []);
+
+  const clearFiles = useCallback(() => {
+    setExtraFiles([]);
+  }, []);
+
+  const clearErrors = useCallback(() => {
+    // Errors are managed by the hook
+  }, []);
 
   const directoryOptions = useMemo(() => {
     const extras: EmailDirectoryEntry[] = [];
@@ -350,7 +367,7 @@ export function EmailDocumentsDialog({
                           </Button>
                         </li>
                       ))}
-                      {extraFiles.map((item) => {
+                      {extraFiles.map((item: FileWithPreview) => {
                         const name = item.file.name;
                         const size =
                           "size" in item.file ? item.file.size : undefined;

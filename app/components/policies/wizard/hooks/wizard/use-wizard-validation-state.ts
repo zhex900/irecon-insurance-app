@@ -152,7 +152,6 @@ export function useWizardValidationState({
         message: issue.message,
       });
     }
-
     return {
       invalidIssues: listed,
       sectionIssueCounts: counts,

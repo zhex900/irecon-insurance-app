@@ -1,4 +1,4 @@
-import type { FileMetadata, FileWithPreview } from "~/hooks/use-file-upload";
+import type { FileMetadata, FileWithPreview } from "~/hooks/utilities";
 import {
   libraryDocumentPublicPath,
   type LibraryDocumentRecord,

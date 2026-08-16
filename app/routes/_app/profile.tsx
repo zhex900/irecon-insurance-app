@@ -15,7 +15,7 @@ import {
 } from "~/lib/services/users/service";
 import { deleteUserAvatar, putUserAvatar } from "~/lib/storage/avatars.server";
 import { parseProfileFormData } from "~/lib/zod/app-user";
-import { useActionSuccessToast } from "~/hooks/use-success-toast";
+import { useActionSuccessToast } from "~/hooks/utilities";
 import type { Route } from "./+types/profile";
 
 export function meta() {

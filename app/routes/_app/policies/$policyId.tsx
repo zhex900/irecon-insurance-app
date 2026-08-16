@@ -23,7 +23,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "~/components/ui/tooltip";
-import { withSuccessToast } from "~/hooks/use-success-toast";
+import { withSuccessToast } from "~/hooks/utilities";
 import {
   carPolicyDraftSchema,
   carPolicyPricingSchema,

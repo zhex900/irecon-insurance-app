@@ -1,2 +1,2 @@
 // Barrel exports for library dialog components
-export { CoverTypesDialog as CoverTypesDialog } from "./cover-types-dialog";
+export { CoverTypesDialog } from "./cover-types-dialog";

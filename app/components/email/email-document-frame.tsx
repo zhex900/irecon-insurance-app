@@ -146,11 +146,11 @@ export function EmailDocumentFrame({
     };
   }, [editable, reloadKey]);
 
-  return (
+    return (
     <iframe
       ref={iframeRef}
       title={title}
-      sandbox="allow-same-origin allow-scripts allow-forms"
+      sandbox="allow-same-origin allow-scripts"
       className={cn("block w-full border-0 bg-white", className)}
     />
   );

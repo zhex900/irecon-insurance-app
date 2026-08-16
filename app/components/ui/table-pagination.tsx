@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router";
 import { AppSelect } from "~/components/ui/app-select";
-import { useHydrated } from "~/hooks/use-hydrated";
+import { useHydrated } from "~/hooks/network";
 import {
   Pagination,
   PaginationContent,

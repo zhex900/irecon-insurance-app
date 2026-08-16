@@ -17,7 +17,7 @@ import {
 } from "~/components/ui/popover";
 import { Spinner } from "~/components/ui/spinner";
 import { ClientSearchResultDetails } from "~/components/search/client-result";
-import { useApiSearch } from "~/hooks/use-api-search";
+import { useApiSearch } from "~/hooks/search";
 import {
   CLIENT_FILTER_SEARCH_PARAMS,
   type ClientsSearchApiResponse,

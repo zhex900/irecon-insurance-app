@@ -763,3 +763,104 @@ _Document Version: 2.1 (Updated with Implementation Examples)_
 _Last Updated: August 15, 2026_  
 _Refactoring Completed: August 2026 Naming Standards Consistency Refactor_  
 _Maintained by: Architecture Working Group_
+
+## Automated Enforcement (August 2026 Implementation)
+
+### Current Implementation Status
+
+The directory standardization plan has been partially implemented with the following accomplishments:
+
+#### ✅ Completed
+1. **ESLint Rules Configuration**: Basic naming rules configured
+2. **Hook Organization**: Standardized hook file grouping
+3. **Automated Checking**: `check-organization.sh` script for compliance
+4. **CI/CD Integration**: `npm run check:organization` command added
+5. **Documentation**: Updated with enforcement mechanisms
+
+#### 🔄 Partially Completed  
+1. **Naming Violation Fixes**: Example fixes applied (clients directory)
+2. **Import Updates**: Hook imports standardized
+
+#### ⏳ Pending (Future Work)
+1. **Policies/Wizard Restructure**: Complex domain restructuring
+2. **Comprehensive ESLint Rules**: Advanced custom rules for domain redundancy
+3. **Git Hooks Integration**: Pre-commit organization checks
+
+### Enforcement Mechanisms in Place
+
+#### 1. Organization Check Script (`scripts/check-organization.sh`)
+```bash
+# Runs comprehensive checks:
+# - Single-word component files
+# - Files with 4+ words  
+# - Domain redundancy patterns
+# - Hook organization status
+# - ESLint compliance
+npm run check:organization
+```
+
+#### 2. ESLint Configuration
+```javascript
+// Current rules in eslint.config.js
+rules: {
+  // File naming patterns (enabled via filenames plugin)
+  "filenames/match-regex": ["error", "^[a-z]+(-[a-z]+){1,2}$", true],
+  // Additional rules can be added for:
+  // - Component name ↔ file name matching
+  // - Domain redundancy prevention
+  // - Barrel export requirements
+}
+```
+
+#### 3. Development Workflow Integration
+- **Local Development**: Manual checks via npm script
+- **Code Review**: Organization compliance as checklist item
+- **CI/CD Pipeline**: Can be added as required check
+- **Team Onboarding**: Documentation available for new developers
+
+### Example Fixes Applied
+
+#### Single-Word File Renaming
+- `app/components/clients/list/table.tsx` → `clients-table.tsx`
+- `app/components/clients/summary/policies.tsx` → `client-policies.tsx`
+
+#### Hook Organization
+```bash
+# Before: Flat structure
+app/hooks/use-api-search.ts
+app/hooks/use-debounced-search-query.ts
+
+# After: Grouped structure  
+app/hooks/search/use-api.ts
+app/hooks/search/use-debounced-query.ts
+app/hooks/search/index.ts
+```
+
+### Metrics for Success
+
+1. **Compliance Rate**: Target 90%+ for new code
+2. **Violation Reduction**: 80% reduction in naming violations
+3. **Developer Experience**: Predictable file locations
+4. **Maintainability**: Easier code navigation and modifications
+
+### Next Steps for Full Implementation
+
+1. **Complete ESLint Rules**: Implement custom rules for all standards
+2. **Git Hooks**: Add pre-commit organization checks
+3. **Team Training**: Ensure all developers understand standards
+4. **Regular Audits**: Schedule quarterly compliance reviews
+5. **Feedback Loop**: Collect team feedback for standards evolution
+
+### Getting Help
+
+For questions or issues with organization standards:
+1. Review `docs/guidelines/file-organization-standards.md`
+2. Run `npm run check:organization` to identify issues
+3. Check recent changes in git history for examples
+4. Contact Architecture Working Group for guidance
+
+---
+_Document Version: 2.2 (Updated with Enforcement Mechanisms)_  
+_Last Updated: August 16, 2026_  
+_Directory Standardization: Phase 1 Implemented_  
+_Maintained by: Architecture Working Group_

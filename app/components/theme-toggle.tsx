@@ -1,7 +1,7 @@
 import { MonitorIcon, MoonIcon, SunIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "~/components/ui/button";
-import { useHydrated } from "~/hooks/use-hydrated";
+import { useHydrated } from "~/hooks/network";
 import {
   DropdownMenu,
   DropdownMenuContent,

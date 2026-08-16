@@ -5,7 +5,7 @@ import { Badge } from "~/components/reui/badge";
 import { ClientSearchResultDetails } from "~/components/search/client-result";
 import { SearchResultsStatus } from "~/components/search/search-results-status";
 import { HighlightText } from "~/components/search/highlight";
-import { useApiSearch } from "~/hooks/use-api-search";
+import { useApiSearch } from "~/hooks/search";
 import {
   GLOBAL_SEARCH_PARAMS,
   type GlobalSearchApiResponse,

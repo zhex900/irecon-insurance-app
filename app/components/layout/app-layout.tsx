@@ -9,7 +9,7 @@ import {
 import { Logo } from "~/components/logo";
 import { UserAvatar } from "~/components/ui/user-avatar";
 import { Toaster } from "~/components/ui/sonner";
-import { useSuccessToastFromSearch } from "~/hooks/use-success-toast";
+import { useSuccessToastFromSearch } from "~/hooks/utilities";
 import {
   AppBreadcrumb,
   type AppBreadcrumbItem,
@@ -46,7 +46,7 @@ import { Badge } from "~/components/reui/badge";
 import { Button } from "~/components/ui/button";
 import { Spinner } from "~/components/ui/spinner";
 import { TooltipProvider } from "~/components/ui/tooltip";
-import { useHydrated } from "~/hooks/use-hydrated";
+import { useHydrated } from "~/hooks/network";
 import {
   getAppEnvironment,
   getAppEnvironmentBadgeClass,

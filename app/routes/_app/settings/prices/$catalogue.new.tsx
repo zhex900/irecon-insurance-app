@@ -12,7 +12,7 @@ import {
   slugLabel,
   slugToKind,
 } from "~/lib/pricing/settings-shared";
-import { withSuccessToast } from "~/hooks/use-success-toast";
+import { withSuccessToast } from "~/hooks/utilities";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import {
   createCarSchedule,

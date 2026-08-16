@@ -188,7 +188,7 @@ function buildSteps(
         step("Auto-calculated value", formatCurrency(0)),
         step(
           "Current value",
-          formatCurrency(premium.contractWorksDisplayHomesPremium),
+          formatCurrency(premium.contractWorksDisplayHomesPremium ?? 0),
         ),
       ];
     case "contractWorksExistingStructurePremium":
@@ -197,7 +197,7 @@ function buildSteps(
         step("Auto-calculated value", formatCurrency(0)),
         step(
           "Current value",
-          formatCurrency(premium.contractWorksExistingStructurePremium),
+          formatCurrency(premium.contractWorksExistingStructurePremium ?? 0),
         ),
       ];
     case "contractWorksPlantPremium":

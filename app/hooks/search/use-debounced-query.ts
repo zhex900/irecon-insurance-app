@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useSearchParams } from "react-router";
-import { useUrlFilterDraft } from "~/hooks/use-url-filter-draft";
+import { useUrlFilterDraft } from "~/hooks/utilities";
 
 const DEFAULT_DELAY_MS = 250;
 

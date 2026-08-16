@@ -204,10 +204,10 @@ export const useFileUpload = (
               existingFile.file.size === file.size,
           );
 
-          // Skip duplicate files silently
-          if (isDuplicate) {
-            return;
-          }
+        // Skip duplicate files silently
+        if (isDuplicate) {
+          continue;
+        }
         }
 
         // Check file size

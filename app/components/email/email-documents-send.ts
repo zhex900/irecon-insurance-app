@@ -13,7 +13,7 @@ import {
   emailAttachmentToBase64,
   isBrowserUploadFile,
 } from "~/components/email/email-documents-dialog-helpers";
-import type { FileWithPreview } from "~/hooks/use-file-upload";
+import type { FileWithPreview } from "~/hooks/utilities";
 
 export async function sendPolicyDocumentsEmail({
   policyId,

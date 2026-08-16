@@ -8,7 +8,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "~/components/ui/empty";
-import { useActionSuccessToast } from "~/hooks/use-success-toast";
+import { useActionSuccessToast } from "~/hooks/utilities";
 import { usePolicyListPage } from "~/hooks/policy-list/use-page";
 import type { ReferenceData } from "~/lib/db/types";
 import type { PolicyListUrlFilters } from "~/lib/search/policy-list-filters";

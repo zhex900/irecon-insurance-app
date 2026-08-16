@@ -42,8 +42,6 @@ export function Wizard({
             anyClaimsExceed20k: undefined,
             stateId: undefined,
             liabilityLimitBand: undefined,
-            section1DisplayHomes: undefined,
-            section1ExistingStructure: undefined,
           }
         : {}),
     },

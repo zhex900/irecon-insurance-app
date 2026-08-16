@@ -87,7 +87,7 @@ export async function listLibraryDocuments(): Promise<LibraryDocumentRecord[]> {
   const rows = await db
     .select()
     .from(libraryDocument)
-    .orderBy(asc(libraryDocument.filename));
+    .orderBy(asc(libraryDocument.createdWhen));
   const coverMap = await coverTypeIdsByDocumentIds(
     rows.map((row) => row.libraryDocumentId),
   );

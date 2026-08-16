@@ -82,8 +82,8 @@ export type PremiumBreakdown = {
   contractWorksStampDuty: number;
   contractWorksTerrorismPremium: number;
   contractWorksPlantTerrorismPremium: number;
-  contractWorksDisplayHomesPremium: number;
-  contractWorksExistingStructurePremium: number;
+  contractWorksDisplayHomesPremium?: number;
+  contractWorksExistingStructurePremium?: number;
   contractWorksTotalPremium: number;
   liabilityCalculatedBasePremium: number;
   liabilityBasePremium: number;

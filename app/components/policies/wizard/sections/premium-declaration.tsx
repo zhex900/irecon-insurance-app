@@ -319,7 +319,7 @@ export function PremiumDeclaration({
               />
               <PremiumRow
                 label="Display Homes"
-                s1={premium.contractWorksDisplayHomesPremium ?? 0}
+                s1={premium.contractWorksDisplayHomesPremium}
                 s1Key="contractWorksDisplayHomesPremium"
                 editable={canEdit}
                 onChange={patchPremium}
@@ -328,7 +328,7 @@ export function PremiumDeclaration({
               />
               <PremiumRow
                 label="Existing Structure"
-                s1={premium.contractWorksExistingStructurePremium ?? 0}
+                s1={premium.contractWorksExistingStructurePremium}
                 s1Key="contractWorksExistingStructurePremium"
                 editable={canEdit}
                 onChange={patchPremium}

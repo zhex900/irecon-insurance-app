@@ -280,3 +280,74 @@ We have established a proactive monitoring system for hook file organization. Se
 **Last Updated:** August 16, 2026  
 **Based On:** Successful hook refactoring implementation  
 **Next Review:** Quarterly or as patterns evolve
+
+## Automated Enforcement (Added August 2026)
+
+### ESLint Configuration
+
+The project now includes ESLint rules for enforcing directory and naming standards:
+
+```javascript
+// In eslint.config.js
+{
+  // ... other rules
+  rules: {
+    // Enforces kebab-case file names with min 2, max 3 words
+    "filenames/match-regex": ["error", "^[a-z]+(-[a-z]+){1,2}$", true],
+    // Note: import/no-duplicates disabled due to compatibility issues
+  }
+}
+```
+
+### Organization Check Script
+
+A comprehensive checking script has been added at `scripts/check-organization.sh`:
+
+```bash
+# Run organization checks
+npm run check:organization
+
+# Checks performed:
+# 1. Single-word component files (excluding ui/ directory)
+# 2. Files with 4+ words (warning only)
+# 3. Domain redundancy in file names
+# 4. Hook organization patterns
+# 5. ESLint compliance
+```
+
+### CI/CD Integration
+
+The organization check is integrated into the development workflow:
+
+1. **Development**: `npm run check:organization` available as npm script
+2. **Pre-commit**: Can be added as git hook for organization checking
+3. **CI/CD**: Can be added to pipeline for enforcement
+4. **Code Review**: Checklist item for reviewers
+
+### Implementation Results
+
+Key changes implemented:
+
+1. **Hook standardization**: Grouped related hooks into directories (search, network, utilities)
+2. **ESLint configuration**: Added naming rules for file patterns
+3. **Automated checking**: Script for continuous compliance monitoring
+4. **Documentation updates**: Standards with enforcement mechanisms
+5. **Example fixes**: Renamed single-word files in clients directory
+
+### Usage Examples
+
+```bash
+# Check current organization status
+npm run check:organization
+
+# Fix ESLint issues
+npm run lint:fix
+
+# Full verification (includes organization check)
+npm run verify
+```
+
+---
+**Last Updated:** August 16, 2026  
+**Based On:** Successful hook refactoring implementation & directory standardization  
+**Next Review:** Quarterly or as patterns evolve

@@ -5,7 +5,7 @@ import { enAU } from "date-fns/locale";
 import { ScrollTextIcon } from "lucide-react";
 import { ListSearchField } from "~/components/forms/list-search-field";
 import { PageHeader } from "~/components/layout/app-layout";
-import { useDebouncedSearchQuery } from "~/hooks/use-debounced-search-query";
+import { useDebouncedSearchQuery } from "~/hooks/search";
 import { requireAuth } from "~/lib/auth/session/server.server";
 import { requireFeatureOrSuperAdminPage } from "~/lib/auth/authorize.server";
 import { optionalIsoDateSchema, queryTextSchema } from "~/lib/http/route-input";

@@ -65,13 +65,18 @@ export function useWizardFocusManagement({
     if (!sectionId) return;
     const frame = requestAnimationFrame(() => {
       navigateToSection(sectionId);
-      document.getElementById(sectionId)?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-      clearFocusSection(policyId);
+      // Wait for React state updates and collapsible animation
+      setTimeout(() => {
+        document.getElementById(sectionId)?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+        clearFocusSection(policyId);
+      }, 250);
     });
-    return () => cancelAnimationFrame(frame);
+    return () => {
+      cancelAnimationFrame(frame);
+    };
     // Re-run when draft clears after submit (same URL revalidation) or remount.
   }, [policyId, isDraft, navigateToSection]);
 

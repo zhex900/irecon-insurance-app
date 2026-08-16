@@ -3,7 +3,7 @@ import { ListSearchField } from "~/components/forms/list-search-field";
 import { PageHeader } from "~/components/layout/app-layout";
 import { NewPolicyClientDialog } from "~/components/policies/new-policy-client-dialog";
 import { PolicyListTable } from "~/components/policies/policy-list-table";
-import { useActionSuccessToast } from "~/hooks/use-success-toast";
+import { useActionSuccessToast } from "~/hooks/utilities";
 import { usePolicyListPage } from "~/hooks/policy-list/use-page";
 import { requireAuth } from "~/lib/auth/session/server.server";
 import { publicErrorMessage } from "~/lib/http/public-error.server";

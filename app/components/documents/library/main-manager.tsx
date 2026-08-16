@@ -10,14 +10,17 @@ import {
   MAX_FILES,
   MAX_SIZE,
   type UploadItem,
-  toMetadata,
   toUploadItems,
 } from "~/components/documents/shared";
 import { CoverTypesDialog } from "~/components/documents/library/dialogs";
 import { MainTable } from "~/components/documents/library";
 
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
-import { formatBytes, useFileUpload } from "~/hooks/use-file-upload";
+import { formatBytes } from "~/hooks/utilities";
+import {
+  useFileUploadFixed,
+  type FileWithPreview,
+} from "~/hooks/utilities/use-file-upload-fixed";
 import { normalizeDocumentLabel } from "~/lib/documents/document-label";
 import {
   libraryDocumentPublicPath,
@@ -69,7 +72,6 @@ export function MainManager({
   const lastCoverKeyRef = useRef<string | null>(null);
   const handledUploadDataRef = useRef<ActionData | undefined>(undefined);
   const handledDeleteDataRef = useRef<ActionData | undefined>(undefined);
-  const lastDocumentsRef = useRef(documents);
 
   function kickUpload() {
     if (uploadBusyRef.current) return;
@@ -88,25 +90,6 @@ export function MainManager({
       encType: "multipart/form-data",
     });
   }
-
-  // Sync server documents into the table; keep local uploading/error rows.
-  useEffect(() => {
-    if (lastDocumentsRef.current === documents) return;
-    lastDocumentsRef.current = documents;
-    setDocsById(
-      new Map(documents.map((d) => [String(d.libraryDocumentId), d])),
-    );
-    setUploadFiles((prev) => {
-      const serverItems = toUploadItems(documents);
-      const serverNames = new Set(serverItems.map((f) => f.file.name));
-      const local = prev.filter(
-        (f) =>
-          (f.status === "uploading" || f.status === "error") &&
-          !serverNames.has(f.file.name),
-      );
-      return [...serverItems, ...local];
-    });
-  }, [documents]);
 
   // Handle upload result.
   useEffect(() => {
@@ -219,42 +202,29 @@ export function MainManager({
     }
   }, [coverFetcher.state, coverFetcher.data, revalidator]);
 
-  const [
-    { isDragging, errors },
-    {
-      handleDragEnter,
-      handleDragLeave,
-      handleDragOver,
-      handleDrop,
-      openFileDialog,
-      getInputProps,
-    },
-  ] = useFileUpload({
+  const {
+    isDragging,
+    errors,
+    openFileDialog,
+    getInputProps,
+    handleDragEnter,
+    handleDragLeave,
+    handleDragOver,
+    handleDrop,
+  } = useFileUploadFixed({
     maxFiles: MAX_FILES,
     maxSize: MAX_SIZE,
     accept: "application/pdf,.pdf",
     multiple: true,
-    initialFiles: toMetadata(documents),
-    onFilesAdded: (added) => {
+    onFilesAdded: (added: FileWithPreview[]) => {
       if (!canEdit) return;
 
       const jobs: Array<{ clientId: string; file: File }> = [];
       for (const item of added) {
-        if (!(item.file instanceof File)) continue;
         jobs.push({ clientId: item.id, file: item.file });
       }
       if (jobs.length === 0) return;
 
-      // Show rows immediately, then enqueue for upload.
-      setUploadFiles((prev) => {
-        const next = [...prev];
-        for (const item of added) {
-          if (!(item.file instanceof File)) continue;
-          if (next.some((f) => f.id === item.id)) continue;
-          next.unshift({ ...item, status: "uploading" });
-        }
-        return next;
-      });
       queueRef.current.push(...jobs);
       kickUpload();
     },

@@ -19,7 +19,7 @@ import {
   DialogTitle,
 } from "~/components/ui/dialog";
 import { PageHeader } from "~/components/layout/app-layout";
-import { withSuccessToast } from "~/hooks/use-success-toast";
+import { withSuccessToast } from "~/hooks/utilities";
 import { requireAuth } from "~/lib/auth/session/server.server";
 import { parseFormIntent, parseUuid } from "~/lib/http/route-input";
 import { clientNotFoundResponse } from "~/lib/http/resource-not-found";

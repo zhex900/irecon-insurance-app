@@ -152,8 +152,8 @@ const baseFields = {
   contractWorksSumInsured: moneyNumber,
   displayHomes: moneyNumber,
   existingStructure: moneyNumber,
-  section1DisplayHomes: z.coerce.number().min(0).default(0),
-  section1ExistingStructure: z.coerce.number().min(0).default(0),
+  section1DisplayHomes: z.coerce.number().min(0),
+  section1ExistingStructure: z.coerce.number().min(0),
   plantEquipment: moneyNumber,
   liabilityLimitBand: z.preprocess((val) => {
     if (val === "" || val === null || val === undefined) return undefined;
@@ -321,7 +321,6 @@ export function getPolicyRuleIssues(
       }
     }
   }
-
   return issues;
 }
 

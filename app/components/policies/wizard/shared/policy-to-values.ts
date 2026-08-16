@@ -41,8 +41,8 @@ export function policyToFormValues(
     contractWorksSumInsured: moneyOrEmpty(policy.car.contractWorksSumInsured),
     displayHomes: moneyKeepZero(policy.car.displayHomes),
     existingStructure: moneyKeepZero(policy.car.existingStructure),
-    section1DisplayHomes: undefined,
-    section1ExistingStructure: undefined,
+    section1DisplayHomes: "" as never,
+    section1ExistingStructure: "" as never,
     plantEquipment: moneyKeepZero(policy.car.plantEquipment),
     liabilityLimitBand: policy.car.liabilityLimitBand,
     // 0 is a real answer ("no claims") — never treat as an empty placeholder.
