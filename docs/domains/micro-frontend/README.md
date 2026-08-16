@@ -8,17 +8,20 @@ Complete architecture and implementation guide for refactoring from monolith to 
 ## Current Implementation Status
 
 ### ✅ Foundation Established
+
 - Worker architecture pattern defined and documented
 - Configuration templates created (`workers/_template/`)
 - Standard patterns documented (`IMPLEMENTED_PATTERNS.md`)
 
 ### 🚧 Documents Domain in Progress
+
 - Worker structure: `workers/documents/` (READY)
 - Configuration: `wrangler.documents.jsonc` (READY)
 - Heavy dependencies isolated: PDFME (24MB), TiTap (3MB)
 - Implementation: READY for component migration
 
 ### 📋 Ready for Implementation
+
 - Standard template for new domains (`workers/_template/`)
 - RPC communication pattern (`USAGE_EXAMPLES.md`)
 - Module Federation setup (`IMPLEMENTED_PATTERNS.md`)
@@ -118,24 +121,28 @@ workers/
 ### **Current Domain Status**
 
 **✅ Excel Domain** (`workers/excel/`)
+
 - Status: Fully implemented
 - Purpose: Excel report generation
 - Heavy dependency: `exceljs`
 - Pattern: RPC API endpoints
 
 **✅ PDF Generation Domain** (`workers/pdf/`)
-- Status: Fully implemented  
+
+- Status: Fully implemented
 - Purpose: PDF document generation
 - Heavy dependency: `@pdfme/generator`
 - Pattern: RPC service worker
 
 **🚧 Documents Domain** (`workers/documents/`)
+
 - Status: Implementation in progress
 - Purpose: PDF template editing UI
 - Heavy dependencies: `@pdfme/ui`, `@tiptap/*`
 - Pattern: Module Federation + RPC APIs
 
 **📋 Future Domains Pattern**
+
 - `workers/reports/`: Excel-heavy reporting UI
 - `workers/admin/`: System configuration UI
 - `workers/analytics/`: Data visualization dashboards
@@ -145,23 +152,24 @@ workers/
 ### Architecture Decision: Domain Worker Isolation ✅ (ACTIVE)
 
 **Current Implementation**:
+
 ```yaml
 domains:
-  portal: 
+  portal:
     path: "app/" (Core shell, auth, routing)
     status: "MONOLITH → MICRO-FRONTEND TRANSITION"
-    
+
   documents:
     path: "workers/documents/" (PDF template editing)
     status: "IMPLEMENTATION IN PROGRESS"
     heavy_deps: "@pdfme/ui (24MB), @tiptap/* (3MB)"
-    
+
   excel:
-    path: "workers/excel/" (Excel report generation)  
+    path: "workers/excel/" (Excel report generation)
     status: "FULLY IMPLEMENTED"
     heavy_deps: "exceljs (1MB)"
     pattern: "RPC API ENDPOINTS"
-    
+
   pdf-generation:
     path: "workers/pdf/" (PDF document generation)
     status: "FULLY IMPLEMENTED"
@@ -172,23 +180,24 @@ domains:
 ### Implementation Pattern: Hybrid Approach
 
 **Module Federation** ✅ (For UI components)
+
 ```typescript
 // Portal loads federated UI components
-const DocumentDesigner = lazy(() => 
-  import('documents/DocumentDesigner')
-);
+const DocumentDesigner = lazy(() => import("documents/DocumentDesigner"));
 ```
 
 **RPC APIs** ✅ (For data operations)
+
 ```typescript
 // Portal calls domain-specific APIs
-await fetch('https://documents-worker/api/templates/save', {
-  method: 'POST',
-  body: JSON.stringify(templateData)
+await fetch("https://documents-worker/api/templates/save", {
+  method: "POST",
+  body: JSON.stringify(templateData),
 });
 ```
 
 **Benefits of Current Approach**:
+
 1. **Clear separation**: Heavy dependencies isolated per domain
 2. **Team autonomy**: Each domain can deploy independently
 3. **Performance**: Bundle size reduction from Day 1
@@ -386,6 +395,7 @@ training:
 ### Immediate Next Steps
 
 **1. Review Implementation Approach**:
+
 ```bash
 # Understand the worker-based architecture
 open docs/domains/micro-frontend/IMPLEMENTED_PATTERNS.md
@@ -398,6 +408,7 @@ open docs/domains/micro-frontend/USAGE_EXAMPLES.md
 ```
 
 **2. Prepare Documents Worker**:
+
 ```bash
 # Install dependencies for documents domain
 cd workers/documents && npm install
@@ -410,10 +421,11 @@ cd ../.. && npm run dev  # Port 5173
 ```
 
 **3. Begin Migration**:
+
 ```bash
 # Follow migration checklist step-by-step
 # Phase 1: Move PDFME components
-# Phase 2: Update portal integration  
+# Phase 2: Update portal integration
 # Phase 3: Test thoroughly
 # Phase 4: Deploy gradually
 

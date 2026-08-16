@@ -80,7 +80,12 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     if (!excelService) {
       throw new Error("Excel service not available");
     }
-    return exportCarPolicyDetailExcel(page.rows, status, filename, excelService);
+    return exportCarPolicyDetailExcel(
+      page.rows,
+      status,
+      filename,
+      excelService,
+    );
   }
 
   const summary = await getCarPolicyReportSummary(dateFrom, dateTo);

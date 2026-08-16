@@ -79,7 +79,7 @@ export function SectionStack({
       }
       className={shellCardClassName}
     >
-        <PremiumDeclaration
+      <PremiumDeclaration
         premium={premium}
         referralReasons={referralReasons}
         reference={reference}

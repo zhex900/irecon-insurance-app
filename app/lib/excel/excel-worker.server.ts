@@ -3,7 +3,7 @@ import type {
   GenerateGenericExcelFunction,
 } from "../../../workers/excel/types/generate-types";
 
-export type ExcelServiceBinding = {
+export type ExcelWorkerBinding = {
   generatePremiumExcel: GeneratePremiumExcelFunction;
   generateGenericExcel: GenerateGenericExcelFunction;
 };

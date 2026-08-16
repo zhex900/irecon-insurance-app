@@ -1,7 +1,7 @@
 import { Links, Meta, Outlet, Scripts, ScrollRestoration } from "react-router";
 
 import type { Route } from "./+types/root";
-import { AppErrorPage } from "~/components/app-error-page";
+import { RootErrorBoundary } from "~/components/root-error-boundary";
 import { ThemeProvider } from "~/components/theme-provider";
 import { geistFontFaceCss, geistFontFaces, themeInitScript } from "~/lib/fonts";
 import "./app.css";
@@ -52,5 +52,5 @@ export default function App() {
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-  return <AppErrorPage error={error} />;
+  return <RootErrorBoundary error={error} />;
 }

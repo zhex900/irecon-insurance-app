@@ -35,11 +35,7 @@ export default function DocumentTemplateEditorRoute({
 }: Route.ComponentProps) {
   return (
     <Suspense
-      fallback={
-        <EditorShell
-          templateTitle={loaderData.template.title}
-        />
-      }
+      fallback={<EditorShell templateTitle={loaderData.template.title} />}
     >
       <DocumentTemplateEditor
         key={loaderData.template.key}

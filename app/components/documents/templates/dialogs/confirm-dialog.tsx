@@ -65,7 +65,8 @@ export function TemplateConfirmDialog({
 }) {
   if (!action) return null;
 
-  const copy = confirmCopy(action);
+  const { title, description, confirmLabel, confirmVariant } =
+    confirmCopy(action);
   const loading =
     busy &&
     ((action.kind === "publish" && intent === "publish-version") ||
@@ -73,12 +74,15 @@ export function TemplateConfirmDialog({
       (action.kind === "delete-draft" && intent === "delete-draft"));
 
   return (
-    <TemplateConfirmDialog
-      action={action}
-      busy={busy}
-      intent={intent}
+    <ConfirmDialog
+      title={title}
+      description={description}
+      confirmLabel={confirmLabel}
+      confirmVariant={confirmVariant}
+      open={!!action}
       onOpenChange={onOpenChange}
       onConfirm={onConfirm}
+      loading={loading}
     />
   );
 }

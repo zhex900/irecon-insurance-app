@@ -1,7 +1,4 @@
-import {
-  PDF_RENDER_PATH,
-  MAX_PDF_RENDER_REQUEST_BYTES,
-} from "../../app/lib/pdf/document-worker-contract";
+import { PDF_RENDER_PATH } from "../../app/lib/pdf/document-worker-contract";
 import { generatePdf } from "./generate-pdf";
 
 type PdfWorkerHandler = {

@@ -6,7 +6,7 @@ import {
 } from "~/lib/observability/metrics.client";
 import { buildPdfBlobFromDocument } from "~/lib/pdf/generate";
 import { reviewDocumentsFingerprint } from "~/lib/services/policy/documents/fingerprints";
-import { isPremiumExcelDocument } from "~/lib/excel/excel-client";
+import { isPremiumExcelDocument } from "~/lib/excel/client";
 
 export function usePolicyDocumentPreview({
   previewDoc,

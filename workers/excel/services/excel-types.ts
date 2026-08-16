@@ -8,7 +8,7 @@ import type {
   PremiumBreakdown,
   RatingSnapshot,
   AdjustmentBreakdown,
-} from "../../../app/lib/types/excel-worker-types";
+} from "../../../app/lib/excel/types";
 
 /** Bump when Premium / Policy / Rates / Adjustment sheet layout or formulas change. */
 export const PREMIUM_EXCEL_SPREADSHEET_VERSION = "1.4";

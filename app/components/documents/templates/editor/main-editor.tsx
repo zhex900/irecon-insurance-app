@@ -5,8 +5,15 @@ import {
   TemplateVersionBadges,
   EditorToolbar,
 } from "~/components/documents/templates/editor";
-import { MainDesigner, type PdfmeDesignerHandle } from "~/components/documents/pdf/designer";
-import { DeleteDialog, TemplateConfirmDialog, LeaveDialog } from "~/components/documents/templates/dialogs";
+import {
+  MainDesigner,
+  type PdfmeDesignerHandle,
+} from "~/components/documents/pdf/designer";
+import {
+  DeleteDialog,
+  TemplateConfirmDialog,
+  LeaveDialog,
+} from "~/components/documents/templates/dialogs";
 import { HistorySheet } from "~/components/documents/templates/history";
 import { PreviewDialog } from "~/components/documents/pdf/preview";
 import { PageHeader } from "~/components/layout/app-layout";
@@ -153,7 +160,9 @@ export function MainEditor({
         unsavedChanges={editor.unsavedChanges}
         editorName={loaderData.viewerName}
         basedOnVersion={loaderData.editingVersionNumber}
-        onPreviewVersion={(entry: import("~/lib/services/documents/document-template-history").DocumentTemplateHistoryEntry) => void editor.handlePreviewVersion(entry)}
+        onPreviewVersion={(
+          entry: import("~/lib/services/documents/document-template-history").DocumentTemplateHistoryEntry,
+        ) => void editor.handlePreviewVersion(entry)}
         onPublishVersion={editor.publishVersion}
         onDeleteDraft={editor.deleteDraft}
         onOpenInEditor={editor.handleOpenVersionInEditor}

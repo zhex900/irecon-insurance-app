@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import type { ReactNode } from "react";
 import { createContext, useContext, useMemo } from "react";
 import { useWizardState } from "../components/use-wizard-state";
@@ -12,14 +13,6 @@ interface WizardInnerContextValue {
 }
 
 const WizardInnerContext = createContext<WizardInnerContextValue | null>(null);
-
-function useWizardInner() {
-  const context = useContext(WizardInnerContext);
-  if (!context) {
-    throw new Error("useWizardInner must be used within a WizardInnerProvider");
-  }
-  return context;
-}
 
 // Provider component
 interface WizardInnerProviderProps extends Omit<
@@ -105,5 +98,12 @@ export function WizardInnerProvider({
   );
 }
 
-// Export the hook for internal use
+function useWizardInner() {
+  const context = useContext(WizardInnerContext);
+  if (!context) {
+    throw new Error("useWizardInner must be used within a WizardInnerProvider");
+  }
+  return context;
+}
+
 export { useWizardInner };

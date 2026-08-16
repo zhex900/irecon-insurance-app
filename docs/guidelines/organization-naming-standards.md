@@ -68,7 +68,7 @@ Components with business logic stay in their respective domains, regardless of c
 
 - **Pattern**: `[noun]-[type].tsx` (minimum 2 words)
 - **Examples**: `policy-form.tsx`, `form-fields.tsx`, `summary-popover.tsx`, `nav-dialog.tsx`
-- **Component Name Rule**: Component name must match file name (kebab-case → PascalCase)  
+- **Component Name Rule**: Component name must match file name (kebab-case → PascalCase)
   - `table-filters.tsx` → Component: `TableFilters`
   - `client-popover.tsx` → Component: `ClientPopover`
   - `main-form.tsx` → Component: `MainForm`
@@ -89,6 +89,27 @@ Components with business logic stay in their respective domains, regardless of c
 - Export only, no implementation code
 - Every feature directory must have one
 - Purpose: Clean entry points, build optimization
+
+#### Service & Worker Files (.server.ts, -worker.server.ts, .client.ts)
+
+- **Worker services**: `[domain]-worker.server.ts` (e.g., `pdf-worker.server.ts`, `excel-worker.server.ts`)
+- **Service bindings**: Use `WorkerBinding` suffix (e.g., `PdfWorkerBinding`, `ExcelWorkerBinding`)
+- **Server files**: `[domain].server.ts` when clear from context (e.g., `auth.server.ts`)
+- **Client files**: `client.ts` in domain directory, use barrel exports for naming
+- **Avoid generic names**: Don't use `service.server.ts`, `server.server.ts` (too vague)
+- **Constants**: Use `constants.ts` in domain directory for shared constants
+- **Types**: Use `types.ts` in domain directory for domain-specific types
+
+**Examples:**
+
+- ✅ `pdf-worker.server.ts` with `PdfWorkerBinding` type
+- ✅ `excel-worker.server.ts` with `ExcelWorkerBinding` type
+- ✅ `client.ts` in `excel/` directory (import via `ExcelClient` from barrel)
+- ✅ `constants.ts` for shared Excel constants
+- ✅ `types.ts` for Excel-specific types
+- ❌ `service.server.ts` (too generic)
+- ❌ `server.server.ts` (double server redundant)
+- ❌ `excel-service.server.ts` (redundant naming)
 
 #### Directory Names (kebab-case)
 
@@ -653,12 +674,14 @@ echo 'export { Form } from "./form"' > app/components/clients/form/index.ts
 #### Example 1: Single-Word File Fixes
 
 **Before (Violation):**
+
 - `new.tsx` → Too generic, 1 word
-- `container.tsx` → Too generic, 1 word  
+- `container.tsx` → Too generic, 1 word
 - `content.tsx` → Too generic, 1 word
 - `main.tsx` → Too generic, 1 word
 
 **After (Compliant):**
+
 - `new-wizard.tsx` → Descriptive, 2 words (component: `NewWizard`)
 - `wizard-container.tsx` → Descriptive, 2 words (component: `WizardContainer`)
 - `wizard-content.tsx` → Descriptive, 2 words (component: `WizardContent`)
@@ -667,23 +690,27 @@ echo 'export { Form } from "./form"' > app/components/clients/form/index.ts
 #### Example 2: 4+ Word File Fixes
 
 **Before (Violation):**
+
 - `use-wizard-focus-management.ts` → 4 words
 - `policy-to-form-values.ts` → 4 words
 - `use-draft-keyboard-save.ts` → 4 words
 
 **After (Compliant):**
+
 - `use-wizard-focus.ts` → 3 words
-- `policy-to-values.ts` → 3 words  
+- `policy-to-values.ts` → 3 words
 - `use-draft-keyboard.ts` → 3 words
 
 #### Example 3: Domain Redundancy Removal
 
 **Before (Redundant):**
+
 - `clients/list/clients-table.tsx` → "clients-" prefix redundant in `clients/list/`
 - `clients/summary/client-policies.tsx` → "client-" prefix redundant in `clients/summary/`
 - `clients/summary/client-popover.tsx` → "client-" prefix redundant in `clients/summary/`
 
 **After (Clean):**
+
 - `clients/list/table.tsx` → Component: `ClientsTable` → `Table`
 - `clients/summary/policies.tsx` → Component: `ClientPolicies` → `Policies`
 - `clients/summary/popover.tsx` → Component: `ClientPopover` → `Popover`
@@ -691,27 +718,32 @@ echo 'export { Form } from "./form"' > app/components/clients/form/index.ts
 #### Example 4: Component Name Mismatch Fixes
 
 **Before (Mismatch):**
+
 - File: `editor-header.tsx`
 - Exports: `TemplateVersionBadges`, `EditableTitle`
 - Problem: Component names don't match file name
 
 **Solution (Split into single-responsibility files):**
+
 - `template-version-badges.tsx` → Component: `TemplateVersionBadges`
 - `editable-title.tsx` → Component: `EditableTitle`
 
 **Before (Multi-component file):**
+
 - File: `loading-states.tsx`
 - Exports: `EditorSkeleton`, `EditorShell`, `ListShell`
 - Problem: File name doesn't match any component
 
 **Solution (Split into single-responsibility files):**
+
 - `editor-skeleton.tsx` → Component: `EditorSkeleton`
-- `editor-shell.tsx` → Component: `EditorShell`  
+- `editor-shell.tsx` → Component: `EditorShell`
 - `list-shell.tsx` → Component: `ListShell`
 
 ### Key Learnings from Implementation
 
 1. **Use barrel exports intelligently**: Even when renaming components, maintain backward compatibility via barrel exports:
+
    ```typescript
    // Barrel export maintains backward compatibility
    export { WizardContainer as Container } from "./wizard-container";

@@ -3,57 +3,6 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { formatDocumentTemplateTitle } from "~/lib/documents/template-title";
 import { cn } from "~/lib/utils";
 
-/** Skeleton for the document templates list (table on desktop, cards on mobile). */
-function DocumentTemplatesListSkeleton({ className }: { className?: string }) {
-  return (
-    <div
-      className={cn(className)}
-      role="status"
-      aria-label="Loading document templates"
-    >
-      <div className="hidden overflow-hidden rounded-xl border bg-card md:block">
-        <div className="flex flex-col gap-0">
-          <div className="flex gap-4 border-b px-4 py-3">
-            <Skeleton className="h-4 w-8" />
-            <Skeleton className="h-4 w-32" />
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-4 w-20" />
-            <Skeleton className="h-4 w-28" />
-          </div>
-          {Array.from({ length: 6 }, (_, index) => (
-            <div
-              key={index}
-              className="flex items-center gap-4 border-b px-4 py-3 last:border-b-0"
-            >
-              <Skeleton className="size-8 rounded-lg" />
-              <Skeleton className="h-4 w-40" />
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-4 w-20" />
-              <Skeleton className="h-4 w-28" />
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="flex flex-col gap-4 md:hidden">
-        {Array.from({ length: 6 }, (_, index) => (
-          <div
-            key={index}
-            className="overflow-hidden rounded-xl border bg-card p-4"
-          >
-            <div className="flex items-center gap-3">
-              <Skeleton className="size-10 rounded-lg" />
-              <div className="flex-1 space-y-2">
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-3 w-1/2" />
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 export function EditorSkeleton({
   templateTitle = "Document Template",
   pageBreadcrumbs = [],
@@ -64,7 +13,12 @@ export function EditorSkeleton({
   className?: string;
 }) {
   return (
-    <div className={cn("relative h-full w-full overflow-hidden rounded-xl", className)}>
+    <div
+      className={cn(
+        "relative h-full w-full overflow-hidden rounded-xl",
+        className,
+      )}
+    >
       {/* Page header area */}
       <PageHeader
         title={formatDocumentTemplateTitle(templateTitle)}

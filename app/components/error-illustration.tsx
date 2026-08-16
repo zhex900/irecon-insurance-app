@@ -1,5 +1,5 @@
-/** Inline error-page illustration (404 / unexpected). */
-export function ErrorPageIllustration({
+/** Inline error illustration (404 / unexpected). */
+export function ErrorIllustration({
   className,
   title = "Something went wrong",
 }: {

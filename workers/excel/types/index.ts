@@ -6,7 +6,7 @@ export type {
   AdjustmentBreakdown,
   AdjustmentSectionRow,
   CarInfo,
-} from "~/lib/types/excel-worker-types";
+} from "~/lib/excel/types";
 
 // Export generate types
 export type {

@@ -6,7 +6,7 @@ export const UNAUTHORIZED_PAGE_MESSAGE =
   "You are not authorised for this page.";
 
 /**
- * Abort the loader/action with HTTP 403 so ErrorBoundary / AppErrorPage can
+ * Abort the loader/action with HTTP 403 so ErrorBoundary / RootErrorBoundary can
  * explain the denial (instead of a silent redirect or fake 404).
  */
 export function throwUnauthorizedPage(

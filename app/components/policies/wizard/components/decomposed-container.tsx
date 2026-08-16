@@ -1,6 +1,9 @@
 import type { ReactNode } from "react";
 import { cn } from "~/lib/utils";
-import { wizardModeCardBorderClass, type WizardMode } from "../shared/wizard-shared";
+import {
+  wizardModeCardBorderClass,
+  type WizardMode,
+} from "../shared/wizard-shared";
 import { POLICY_STICKY_RAIL_CLASS } from "~/components/policies/policy-form-layout";
 
 export type DecomposedContainerProps = {
@@ -9,7 +12,11 @@ export type DecomposedContainerProps = {
   className?: string;
 };
 
-export function DecomposedContainer({ children, wizardMode, className }: DecomposedContainerProps) {
+export function DecomposedContainer({
+  children,
+  wizardMode,
+  className,
+}: DecomposedContainerProps) {
   const borderClassName = wizardModeCardBorderClass(wizardMode);
 
   return (

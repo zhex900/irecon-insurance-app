@@ -9,7 +9,7 @@ import type {
   PremiumBreakdown,
   RatingSnapshot,
   AdjustmentBreakdown,
-} from "~/lib/types/excel-worker-types";
+} from "~/lib/excel/types";
 
 // Base request schema matching ExcelWorkerRequest interface
 export const excelWorkerRequestSchema = z.object({

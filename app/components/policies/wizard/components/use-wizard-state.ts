@@ -19,7 +19,10 @@ import {
 } from "../hooks";
 import { useCarPolicyWizardSubmitGate } from "../hooks/utils/use-submit-gate";
 import { usePolicyDraftKeyboardSave } from "../hooks/draft/use-draft-keyboard";
-import { wizardModeCardBorderClass, type WizardProps } from "../shared/wizard-shared";
+import {
+  wizardModeCardBorderClass,
+  type WizardProps,
+} from "../shared/wizard-shared";
 import { useMode } from "../hooks/utils/use-mode";
 
 /**

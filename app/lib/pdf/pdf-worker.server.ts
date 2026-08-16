@@ -10,7 +10,7 @@ import {
   trackUsage,
 } from "~/lib/observability/metrics.server";
 
-export type PdfServiceBinding = {
+export type PdfWorkerBinding = {
   generatePdf(input: PdfRenderRequest): Promise<Response>;
 };
 
@@ -30,7 +30,7 @@ function byteLength(value: string): number {
 
 /** Render a bounded PDF through the private Cloudflare service binding. */
 export async function renderPolicyPdf(
-  pdfService: PdfServiceBinding,
+  pdfService: PdfWorkerBinding,
   input: PdfRenderRequest,
 ): Promise<Uint8Array> {
   const payload = pdfRenderRequestSchema.parse(input);

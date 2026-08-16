@@ -131,8 +131,8 @@ async function main() {
   console.log("\n✅ All Workers started!");
   console.log("\n📊 Status:");
   console.log("---------");
-console.log("• PDF Worker: http://localhost:8787");
-console.log("• Excel Worker: http://localhost:8788");
+  console.log("• PDF Worker: http://localhost:8787");
+  console.log("• Excel Worker: http://localhost:8788");
   console.log("• Main App: npm run dev (in another terminal)");
 
   console.log("\n🩺 Health Check URLs:");

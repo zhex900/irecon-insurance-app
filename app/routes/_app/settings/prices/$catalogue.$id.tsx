@@ -1,5 +1,9 @@
 import { redirect, useActionData } from "react-router";
-import { parseScheduleFormData, Schedule, DeleteDialog } from "~/components/prices";
+import {
+  parseScheduleFormData,
+  Schedule,
+  DeleteDialog,
+} from "~/components/prices";
 import { requireAuth } from "~/lib/auth/session/server.server";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
 import {

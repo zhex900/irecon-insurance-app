@@ -27,7 +27,7 @@ function buildEmailDocumentSrcDoc(bodyHtml: string): string {
   // Basic security sanitization - remove script tags and dangerous attributes
   const sanitizedBody = body
     .replace(/<\/?(script|iframe|object|embed)[^>]*>/gi, "")
-    .replace(/\bon\w+\s*=\s*["'][^"']*["']/gi, '');
+    .replace(/\bon\w+\s*=\s*["'][^"']*["']/gi, "");
   return `<!DOCTYPE html>
 <html>
 <head>

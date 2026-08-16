@@ -3,7 +3,7 @@ import type { CarWording, Policy, PolicyDocument } from "~/lib/db/types";
 import type { EmailSendRecipient } from "~/lib/email/templates";
 import {
   renderPolicyPdf,
-  type PdfServiceBinding,
+  type PdfWorkerBinding,
 } from "~/lib/pdf/pdf-worker.server";
 import { buildLegacyTextPdfBlob } from "~/lib/pdf/legacy-text-pdf";
 import type { BrokerFeeLineInput } from "~/lib/pdf/merge-fields";
@@ -49,7 +49,7 @@ export type SendPolicyDocumentsInput = {
   html?: string;
   recipientType: EmailSendRecipient;
   libraryBucket?: R2BucketLike | null;
-  pdfService: PdfServiceBinding;
+  pdfService: PdfWorkerBinding;
 };
 
 export type SendPolicyDocumentsResult = {
@@ -98,7 +98,7 @@ type ResolveDocumentPdfInput = {
   libraryBucket?: R2BucketLike | null;
   wordingCatalogue?: CarWording[];
   brokerFeeLines?: BrokerFeeLineInput[];
-  pdfService: PdfServiceBinding;
+  pdfService: PdfWorkerBinding;
   requestId: string;
 };
 

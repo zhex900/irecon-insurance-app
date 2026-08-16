@@ -8,7 +8,7 @@ import type {
   PremiumBreakdown,
   RatingSnapshot,
   AdjustmentBreakdown,
-} from "../../../app/lib/types/excel-worker-types";
+} from "../../../app/lib/excel/types";
 import type { ExcelWorkerRequest } from "./schemas";
 
 /**

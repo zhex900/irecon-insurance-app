@@ -3,8 +3,9 @@
 ## Current State Analysis
 
 ### Heavy Dependencies Analysis
+
 - **@pdfme/ui**: 24MB (main UI library)
-- **@pdfme/converter**: 12MB 
+- **@pdfme/converter**: 12MB
 - **@pdfme/pdf-lib**: 2.5MB
 - **@pdfme/schemas**: 1.2MB
 - **@pdfme/common**: 724KB
@@ -13,6 +14,7 @@
 ### PDFME Import Analysis (35 files total)
 
 #### 1. Type Only Imports (Safe to keep in Portal)
+
 ```typescript
 // These only import types and can stay in Portal
 import type { Template } from "@pdfme/common";
@@ -21,6 +23,7 @@ import type { Plugin, PropPanelWidgetProps, Schema } from "@pdfme/common";
 ```
 
 **Files with type-only imports (15 files)**:
+
 - `app/lib/services/documents/document-templates.ts`
 - `app/lib/pdf/html-rich-text-draw.ts`
 - `app/hooks/use-pdfme-designer-actions.ts`
@@ -38,6 +41,7 @@ import type { Plugin, PropPanelWidgetProps, Schema } from "@pdfme/common";
 - `app/components/documents/pdfme-designer.tsx`
 
 #### 2. Runtime Imports (Need to migrate to Documents Worker)
+
 ```typescript
 // These import runtime modules and need to move
 import { multiVariableText, text } from "@pdfme/schemas";
@@ -47,6 +51,7 @@ import { isBlankPdf } from "@pdfme/common";
 ```
 
 **Files with runtime imports (20 files)**:
+
 1. **@pdfme/schemas imports (7 files)**:
    - `app/lib/pdf/text-plugins.ts`
    - `app/lib/pdf/pdf-plugins.ts`
@@ -70,6 +75,7 @@ import { isBlankPdf } from "@pdfme/common";
 ### Component Dependency Analysis
 
 #### 1. PDFME Core Components
+
 ```
 📦 PDF Template Editor Component Tree:
 ├── PdfmeDesigner.tsx (main component)
@@ -81,6 +87,7 @@ import { isBlankPdf } from "@pdfme/common";
 ```
 
 #### 2. PDF Generation Components
+
 ```
 📦 PDF Generation Component Tree:
 ├── generate.ts (PDF generation with @pdfme/generator)
@@ -93,6 +100,7 @@ import { isBlankPdf } from "@pdfme/common";
 ## Migration Strategy
 
 ### Phase 1: Create Documents Worker Template
+
 1. **Copy template**: `cp -r workers/_template workers/documents`
 2. **Update domain name**: Replace `_template` with `documents`
 3. **Add PDFME dependencies**: Install `@pdfme/ui`, `@pdfme/generator`, `@pdfme/schemas`, `@pdfme/common`
@@ -100,11 +108,13 @@ import { isBlankPdf } from "@pdfme/common";
 ### Phase 2: Migrate Components by Category
 
 #### Category A: Keep in Portal (Type-only imports)
+
 - These files only need type definitions
 - Solution: Keep type imports, extract runtime logic to Documents worker
 - Create shared type definitions in `federation/shared-types/`
 
 #### Category B: Move to Documents Worker (Runtime imports)
+
 1. **Primary components**:
    - `PdfmeDesigner.tsx` → `workers/documents/src/components/`
    - PDFME hooks → `workers/documents/src/hooks/`
@@ -115,6 +125,7 @@ import { isBlankPdf } from "@pdfme/common";
    - Font utilities → `workers/documents/services/font-management.ts`
 
 #### Category C: Split Implementation
+
 1. **Keep types and contracts in Portal**:
    - `app/lib/documents/template-editor-types.ts`
    - `app/lib/documents/template-editor-form.ts`
@@ -128,16 +139,19 @@ import { isBlankPdf } from "@pdfme/common";
 ### Phase 3: Create Integration Layer
 
 #### 1. Cross-Domain Communication
+
 - Create `DocumentDesigner` export in `workers/documents/src/exports.ts`
 - Implement `FederatedDocumentDesigner` wrapper in Portal
 - Set up Module Federation configuration
 
 #### 2. Shared State Management
+
 - Define shared types for templates
 - Create event-based sync for template changes
 - Implement fallback mechanisms
 
 #### 3. Type Sharing Strategy
+
 ```typescript
 // In Portal: Shared types only
 export type { Template, Font, Schema } from "@pdfme/common";
@@ -151,16 +165,19 @@ import { Designer } from "@pdfme/ui";
 ## Technical Considerations
 
 ### 1. Bundle Size Impact
+
 - **Current Portal bundle**: ~24MB PDFME dependencies
 - **Target Portal bundle**: ~0.5MB (type definitions only)
 - **Documents Worker bundle**: ~0.8MB (PDFME + domain logic)
 
 ### 2. Type Compatibility
+
 - Keep `@pdfme/common` type definitions in both
 - Use minimal type imports in Portal
 - Ensure type compatibility across domains
 
 ### 3. Module Federation Configuration
+
 ```typescript
 // Portal Vite config
 federation({
@@ -173,7 +190,7 @@ federation({
   },
 });
 
-// Documents Vite config  
+// Documents Vite config
 federation({
   name: "documents",
   exposes: {
@@ -183,6 +200,7 @@ federation({
 ```
 
 ### 4. Development Experience
+
 - Concurrent development servers
 - Hot module replacement across domains
 - Shared TypeScript configuration
@@ -190,21 +208,25 @@ federation({
 ## Migration Priority Order
 
 ### Priority 1: Core PDF Editor (Week 1)
+
 1. `PdfmeDesigner.tsx` and related hooks
 2. PDFME UI lifecycle management
 3. Basic template editing functionality
 
 ### Priority 2: PDF Generation (Week 2)
+
 1. PDF generation utilities
 2. Font management
 3. Schema plugins
 
 ### Priority 3: Integration & Optimization (Week 3)
+
 1. Cross-domain state sync
 2. Performance optimization
 3. Error handling and fallbacks
 
 ### Priority 4: Advanced Features (Week 4)
+
 1. Advanced schema plugins
 2. Template versioning
 3. Bulk operations
@@ -212,17 +234,18 @@ federation({
 ## Risk Assessment
 
 ### Low Risk (Type-only imports)
+
 - Keep type definitions in Portal
 - No runtime dependencies
 - Easy to migrate incrementally
 
 ### Medium Risk (Light runtime utilities)
+
 - Minor dependencies like `isBlankPdf`
 - Can be replaced with custom implementations
 - Limited impact if migration fails
 
 ### High Risk (Heavy UI/GUI)
-
 
 - `@pdfme/ui` (24MB)
 - `@pdfme/generator` (dynamic but heavy)
@@ -232,16 +255,19 @@ federation({
 ## Testing Strategy
 
 ### 1. Unit Tests
+
 - Test type compatibility
 - Test individual component migration
 - Verify no broken imports
 
 ### 2. Integration Tests
+
 - Test cross-domain communication
 - Verify Module Federation loading
 - Test error recovery
 
 ### 3. Performance Tests
+
 - Measure bundle size reduction
 - Test cold start improvements
 - Monitor memory usage
@@ -249,6 +275,7 @@ federation({
 ## Fallback Strategies
 
 ### 1. If Module Federation Fails
+
 ```typescript
 // Fallback to iframe
 function FallbackDocumentDesigner() {
@@ -262,11 +289,12 @@ function FallbackDocumentDesigner() {
 ```
 
 ### 2. If State Sync Fails
+
 ```typescript
 // Manual sync option
 function ManualTemplateSync({ templateId }) {
   const [needsSync, setNeedsSync] = useState(false);
-  
+
   return (
     <Alert>
       Template changes need manual synchronization
@@ -277,13 +305,14 @@ function ManualTemplateSync({ templateId }) {
 ```
 
 ### 3. If Performance Degrades
+
 ```typescript
 // Progressive enhancement
 if (performance.memory < MINIMUM_MEMORY) {
   // Load lighter version
   import("./DocumentDesignerLite");
 } else {
-  // Load full version  
+  // Load full version
   import("./DocumentDesigner");
 }
 ```
@@ -291,11 +320,13 @@ if (performance.memory < MINIMUM_MEMORY) {
 ## Success Metrics
 
 ### Quantitative
+
 - Portal bundle reduction: 50%+ target
 - Cross-domain latency: < 300ms
 - Error rate: < 0.5%
 
 ### Qualitative
+
 - User experience unchanged or improved
 - Development team productivity maintained
 - Deployment independence achieved

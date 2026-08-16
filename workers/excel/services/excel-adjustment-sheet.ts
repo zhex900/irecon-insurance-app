@@ -19,7 +19,7 @@ type AdjRow = {
   esl: string;
   gst: string;
   sd: string;
-  result: import("../../../app/lib/types/excel-worker-types.ts").AdjustmentSectionRow;
+  result: import("../../../app/lib/excel/types").AdjustmentSectionRow;
   strong?: boolean;
 };
 
@@ -72,9 +72,9 @@ export function calculateCarAdjustment({
   originalTurnover: number;
   adjustmentTurnover: number;
   stampDutyExempt: boolean;
-  premium: import("../../../app/lib/types/excel-worker-types.ts").PremiumBreakdown;
-  rating?: import("../../../app/lib/types/excel-worker-types.ts").RatingSnapshot;
-}): import("../../../app/lib/types/excel-worker-types.ts").AdjustmentBreakdown {
+  premium: import("../../../app/lib/excel/types").PremiumBreakdown;
+  rating?: import("../../../app/lib/excel/types").RatingSnapshot;
+}): import("../../../app/lib/excel/types").AdjustmentBreakdown {
   const rates = resolveAdjustmentRates(premium, rating, originalTurnover);
 
   const originalSection1 = buildSectionRow({
@@ -223,10 +223,8 @@ export function calculateCarAdjustment({
 
 // Worker-compatible implementation matching app's resolveAdjustmentRates exactly
 function resolveAdjustmentRates(
-  premium: import("../../../app/lib/types/excel-worker-types").PremiumBreakdown,
-  rating:
-    | import("../../../app/lib/types/excel-worker-types").RatingSnapshot
-    | undefined,
+  premium: import("../../../app/lib/excel/types").PremiumBreakdown,
+  rating: import("../../../app/lib/excel/types").RatingSnapshot | undefined,
   originalTurnover: number,
 ) {
   if (!rating) {

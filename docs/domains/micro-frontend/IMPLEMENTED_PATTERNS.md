@@ -36,12 +36,14 @@ workers/{domain}/
 #### Key Implementation Details
 
 **Worker Responsibilities**:
+
 - Host domain-specific heavy dependencies (PDFME, TiTap, etc.)
 - Serve federated components via Module Federation
 - Provide domain-specific APIs
 - Handle domain-specific business logic
 
 **Portal Responsibilities**:
+
 - Core navigation and routing
 - Authentication and user management
 - Lightweight UI components
@@ -50,6 +52,7 @@ workers/{domain}/
 #### Dependency Strategy
 
 **Isolated in Worker**:
+
 ```typescript
 // workers/documents/package.json
 {
@@ -63,6 +66,7 @@ workers/{domain}/
 ```
 
 **Shared Singletons** (loaded once across all domains):
+
 ```typescript
 // Portal Vite configuration
 shared: {
@@ -78,15 +82,19 @@ shared: {
 **Used For**: Cross-worker communication between portal and domain workers.
 
 **Implementation**:
+
 ```typescript
 // Portal client calls domain worker
-const response = await fetch('https://documents-worker.irecon.com/api/templates/validate', {
-  method: 'POST',
-  body: JSON.stringify(templateData),
-});
+const response = await fetch(
+  "https://documents-worker.irecon.com/api/templates/validate",
+  {
+    method: "POST",
+    body: JSON.stringify(templateData),
+  },
+);
 
 // Documents worker processes request
-app.post('/api/templates/validate', async (c) => {
+app.post("/api/templates/validate", async (c) => {
   const body = await c.req.json();
   // Validate using PDFME libraries isolated to this worker
   return c.json({ valid: true, errors: [] });
@@ -98,19 +106,18 @@ app.post('/api/templates/validate', async (c) => {
 **Used For**: Component-level integration between portal and domain workers.
 
 **Implementation**:
+
 ```typescript
 // Portal Vite configuration
 federation({
-  name: 'portal',
+  name: "portal",
   remotes: {
-    documents: 'documents@https://documents-worker.irecon.com/remoteEntry.js',
+    documents: "documents@https://documents-worker.irecon.com/remoteEntry.js",
   },
 });
 
 // Portal component usage
-const DocumentDesigner = lazy(() => 
-  import('documents/DocumentDesigner')
-);
+const DocumentDesigner = lazy(() => import("documents/DocumentDesigner"));
 ```
 
 ## Standard Worker Template
@@ -118,6 +125,7 @@ const DocumentDesigner = lazy(() =>
 ### Configuration Files
 
 **1. `wrangler.{domain}.jsonc`**:
+
 ```json
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
@@ -134,6 +142,7 @@ const DocumentDesigner = lazy(() =>
 ```
 
 **2. `workers/{domain}/package.json`**:
+
 ```json
 {
   "name": "irecon-{domain}-worker",
@@ -156,6 +165,7 @@ const DocumentDesigner = lazy(() =>
 ```
 
 **3. `workers/{domain}/vite.config.ts`**:
+
 ```typescript
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
@@ -180,6 +190,7 @@ export default defineConfig({
 ```
 
 **4. `workers/{domain}/index.ts`**:
+
 ```typescript
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -192,7 +203,7 @@ export interface {Domain}WorkerEnv {
 
 const app = new Hono<{ Bindings: {Domain}WorkerEnv }>();
 
-app.use("*", 
+app.use("*",
   cors({
     origin: (origin) => {
       const allowedOrigins = (c.env.ALLOWED_ORIGINS || "").split(",");
@@ -220,12 +231,14 @@ export default { fetch: app.fetch };
 ## Success Metrics & Verification
 
 ### Technical Metrics
+
 - **Bundle Size**: Portal bundle < 500KB (from ~1.8MB)
 - **Load Time**: Cross-domain navigation < 300ms
 - **Error Rate**: < 0.5% for cross-domain operations
 - **Memory**: Isolated per domain, preventing cascading failures
 
 ### Business Metrics
+
 - **Team Velocity**: Independent deployment per domain
 - **User Experience**: No degradation in editor performance
 - **Scalability**: Per-domain autoscaling
@@ -234,24 +247,28 @@ export default { fetch: app.fetch };
 ## Migration Checklist for New Domains
 
 ### Phase 1: Foundation
+
 - [ ] Create domain worker directory structure
 - [ ] Configure wrangler.jsonc with domain-specific settings
 - [ ] Set up package.json with isolated dependencies
 - [ ] Create basic Hono API server
 
 ### Phase 2: Component Extraction
+
 - [ ] Identify components with heavy dependencies
 - [ ] Move components to domain worker
 - [ ] Create federated exports
 - [ ] Update portal imports to use federated components
 
 ### Phase 3: API Integration
+
 - [ ] Identify domain-specific APIs
 - [ ] Move API endpoints to domain worker
 - [ ] Update portal to call domain APIs
 - [ ] Implement RPC patterns
 
 ### Phase 4: Testing & Deployment
+
 - [ ] Test cross-domain communication
 - [ ] Verify bundle size reduction
 - [ ] Set up CI/CD for domain worker
@@ -260,16 +277,19 @@ export default { fetch: app.fetch };
 ## Current Status: Documents Domain Implementation
 
 ### ✅ Completed
+
 - Domain worker structure created (`workers/documents/`)
 - Configuration files standardized
 - Documentation for standard patterns
 
 ### 🚧 In Progress
+
 - Component migration from portal to documents worker
 - Module Federation configuration
 - RPC API endpoints
 
 ### 📋 Pending
+
 - Portal integration updates
 - Testing full workflow
 - Performance optimization
@@ -293,18 +313,21 @@ export default { fetch: app.fetch };
 ## Troubleshooting Common Issues
 
 ### Module Federation Fails to Load
+
 1. Check domain worker is running: `curl http://localhost:${PORT}/health`
 2. Verify remoteEntry.js is accessible
 3. Check CORS configuration in both portal and domain worker
 4. Verify shared dependencies versions match
 
 ### Cross-Domain API Calls Fail
+
 1. Check `ALLOWED_ORIGINS` includes portal URL
 2. Verify `WORKER_SHARED_SECRET` matches
 3. Check API endpoint paths are correct
 4. Validate request/response formats
 
 ### Performance Degradation
+
 1. Measure bundle sizes before/after migration
 2. Check network waterfall for module loading
 3. Verify preloading strategies are working

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { isRouteErrorResponse, Link } from "react-router";
-import { ErrorPageIllustration } from "~/components/error-page-illustration";
+import { ErrorIllustration } from "~/components/error-illustration";
 import { Button, buttonVariants } from "~/components/ui/button";
 import { getResourceNotFoundCopy } from "~/lib/http/resource-not-found";
 import { reportClientRouteError } from "~/lib/observability/report-error";
@@ -110,7 +110,7 @@ function formatErrorDetails(error: unknown): {
 }
 
 /** Catch-all error / 404 UI used by the root ErrorBoundary. */
-export function AppErrorPage({ error }: { error: unknown }) {
+export function RootErrorBoundary({ error }: { error: unknown }) {
   const { heading, subheading, details, status, stack } =
     formatErrorDetails(error);
   const [showError, setShowError] = useState(false);
@@ -135,7 +135,7 @@ export function AppErrorPage({ error }: { error: unknown }) {
   return (
     <main className="flex min-h-svh flex-col items-center bg-background px-4 pt-[max(3rem,12vh)] pb-12 text-foreground">
       <div className="w-full max-w-lg shrink-0 text-center">
-        <ErrorPageIllustration
+        <ErrorIllustration
           className="mx-auto h-auto w-full max-w-xs"
           title={subheading}
         />

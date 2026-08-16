@@ -13,7 +13,7 @@ import {
   buildReportExcelBuffer,
   reportExcelResponse,
 } from "~/lib/reports/report-excel.server";
-import type { ExcelServiceBinding } from "../excel/excel-service.server";
+import type { ExcelWorkerBinding } from "../excel/excel-worker.server";
 
 export function resolveOptionalIsoDateParam(raw: string | null): string {
   if (raw == null || raw === "") return "";
@@ -61,7 +61,7 @@ export const CAR_POLICY_SUMMARY_COLUMNS: ReportExcelColumn[] = [
 export async function exportCarPolicySummaryExcel(
   summary: CarPolicySummaryRow[],
   filename: string,
-  excelService: ExcelServiceBinding,
+  excelService: ExcelWorkerBinding,
 ) {
   const buffer = await buildReportExcelBuffer(excelService, {
     sheetName: "Summary",
@@ -86,7 +86,7 @@ export async function exportCarPolicyDetailExcel(
   rows: ReportPolicyRow[],
   statusLabel: CarSearchStatus,
   filename: string,
-  excelService: ExcelServiceBinding,
+  excelService: ExcelWorkerBinding,
 ) {
   const buffer = await buildReportExcelBuffer(excelService, {
     sheetName: statusLabel.slice(0, 31),
@@ -114,7 +114,7 @@ export const CAR_RENEWAL_REPORT_COLUMNS: ReportExcelColumn[] = [
 export async function exportCarRenewalReportExcel(
   rows: RenewalReportRow[],
   filename: string,
-  excelService: ExcelServiceBinding,
+  excelService: ExcelWorkerBinding,
 ) {
   const buffer = await buildReportExcelBuffer(excelService, {
     sheetName: "Renewals",

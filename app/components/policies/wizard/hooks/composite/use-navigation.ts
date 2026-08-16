@@ -90,7 +90,10 @@ export function usePolicyWizardNavigation({
     const result = goToStepRaw(index, { unlock });
     if (!result) return;
     const { sectionId } = result;
-    setOpenMap((prev: Record<string, boolean>) => ({ ...prev, [sectionId]: true }));
+    setOpenMap((prev: Record<string, boolean>) => ({
+      ...prev,
+      [sectionId]: true,
+    }));
     setActiveSectionId(sectionId);
     queueMicrotask(() => {
       document.getElementById(sectionId)?.scrollIntoView({

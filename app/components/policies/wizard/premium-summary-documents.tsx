@@ -30,7 +30,7 @@ import {
   type EmailTemplateVars,
 } from "~/lib/email/templates";
 import type { EmailDirectoryEntry } from "~/lib/email/directory";
-import { isPremiumExcelDocument } from "~/lib/excel/excel-client";
+import { isPremiumExcelDocument } from "~/lib/excel/client";
 import { versionPolicyDocuments } from "~/lib/services/policy/documents/versions";
 
 export function PremiumSummaryDocuments({

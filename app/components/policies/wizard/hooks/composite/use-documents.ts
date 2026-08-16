@@ -15,7 +15,7 @@ import type {
   PremiumBreakdown,
 } from "~/lib/db/types";
 import type { BrokerFeeLineInput } from "~/lib/pdf/merge-fields";
-import { downloadPremiumExcelDocument } from "~/lib/excel/excel-client";
+import { downloadPremiumExcelDocument } from "~/lib/excel/client";
 import {
   ensureReviewDocumentsClient,
   savePolicyDocumentsClient,

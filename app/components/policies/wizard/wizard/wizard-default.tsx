@@ -1,4 +1,3 @@
-import { WizardContainer as Container } from "./wizard-container";
 import { WizardGrid as Grid } from "./wizard-grid";
 import { MainContent } from "./main-content";
 import { PremiumAside } from "./premium-aside";

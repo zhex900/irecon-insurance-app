@@ -10,16 +10,19 @@ This monitoring system ensures that new hook files follow established organizati
 ## Core Monitoring Principles
 
 ### 1. **Proactive Detection**
+
 - Monitor new hook file creation in real-time
 - Flag organizational opportunities before they become debt
 - Guide developers toward best practices
 
 ### 2. **Automated Validation**
+
 - Use scripts/tools to validate file organization
 - Integrate with development workflows
 - Provide immediate feedback
 
 ### 3. **Developer Education**
+
 - Clear guidelines for when to apply grouping
 - Examples of proper vs improper organization
 - Step-by-step refactoring guidance
@@ -27,23 +30,30 @@ This monitoring system ensures that new hook files follow established organizati
 ## Trigger Points for Monitoring
 
 ### 🎯 Code Review Stage
+
 **Checklist Item:** "Verify hook file organization follows patterns"
+
 ```markdown
 ### Hook File Organization
+
 - [ ] Single hook with unique prefix → Keep in root
 - [ ] 2+ hooks with same prefix → Group in `prefix/` directory
 - [ ] New hook matching existing prefix → Add to existing group
 ```
 
 ### 🎯 Pre-commit Hook (Optional)
+
 Run `scripts/check-hook-grouping.sh` to detect organization issues:
+
 ```bash
 # Add to pre-commit hook
 ./scripts/check-hook-grouping.sh || echo "Hook organization issues found"
 ```
 
 ### 🎯 CI/CD Pipeline
+
 Add script to CI pipeline:
+
 ```yaml
 # In CI config
 - name: Check hook file organization
@@ -51,6 +61,7 @@ Add script to CI pipeline:
 ```
 
 ### 🎯 Weekly Team Review
+
 ```bash
 # Run during team sync
 ./scripts/check-hook-grouping.sh --report
@@ -59,6 +70,7 @@ Add script to CI pipeline:
 ## Monitoring Scripts
 
 ### Primary Script: `scripts/check-hook-grouping.sh`
+
 ```bash
 # Basic usage
 ./scripts/check-hook-grouping.sh
@@ -74,6 +86,7 @@ Add script to CI pipeline:
 ```
 
 ### What the Script Detects:
+
 1. **Ungrouped prefixes** with 2+ files
 2. **Missing index.ts** files in grouped directories
 3. **Inconsistent naming** within groups
@@ -97,6 +110,7 @@ flowchart TD
 ## Implementation Examples
 
 ### Scenario 1: Adding First Hook
+
 ```typescript
 // Adding: use-email-notifications.ts (new prefix)
 // Current: No existing email-* hooks
@@ -104,6 +118,7 @@ flowchart TD
 ```
 
 ### Scenario 2: Adding Second Hook
+
 ```typescript
 // Current: app/hooks/use-email-notifications.ts
 // Adding: use-email-preview.ts (same email prefix)
@@ -111,6 +126,7 @@ flowchart TD
 ```
 
 ### Scenario 3: Adding to Existing Group
+
 ```typescript
 // Current: app/hooks/document-template-editor/use-controller.ts
 // Current: app/hooks/document-template-editor/use-fetcher.ts
@@ -123,12 +139,14 @@ flowchart TD
 When script detects issues, follow these steps:
 
 ### Step 1: Create Directory
+
 ```bash
 # For prefix "notification"
 mkdir -p app/hooks/notification
 ```
 
 ### Step 2: Move and Rename Files
+
 ```bash
 # From: app/hooks/use-notification-alerts.ts
 # From: app/hooks/use-notification-settings.ts
@@ -139,6 +157,7 @@ mv app/hooks/use-notification-settings.ts app/hooks/notification/use-settings.ts
 ```
 
 ### Step 3: Create Index File
+
 ```typescript
 // app/hooks/notification/index.ts
 export { useNotificationAlerts } from "./use-alerts";
@@ -148,6 +167,7 @@ export type { NotificationSettingsType } from "./use-settings";
 ```
 
 ### Step 4: Update Imports
+
 ```bash
 # Find and update imports
 grep -r "use-notification-alerts" --include="*.ts" --include="*.tsx" -l .
@@ -155,6 +175,7 @@ grep -r "use-notification-alerts" --include="*.ts" --include="*.tsx" -l .
 ```
 
 ### Step 5: Verify
+
 ```bash
 npm run typecheck
 ./scripts/check-hook-grouping.sh
@@ -163,6 +184,7 @@ npm run typecheck
 ## Integration with Development Workflows
 
 ### Option A: Git Hooks (Recommended for Teams)
+
 ```bash
 # .husky/pre-commit
 #!/bin/sh
@@ -175,6 +197,7 @@ echo "Checking hook file organization..."
 ```
 
 ### Option B: IDE Integration (Cursor/VS Code)
+
 ```json
 // .cursor/rules/hook-monitoring.mdc
 # Hook File Organization Monitor
@@ -185,8 +208,10 @@ Whenever a new hook file is created:
 ```
 
 ### Option C: Code Review Template
+
 ```markdown
 ## File Organization Review
+
 - [ ] New hook files follow naming conventions
 - [ ] Related hooks (2+ with same prefix) are grouped
 - [ ] Groups have index.ts files
@@ -196,11 +221,13 @@ Whenever a new hook file is created:
 ## Success Metrics
 
 ### Quantitative Metrics
+
 - **Detection Rate:** % of new hooks correctly organized
 - **Refactoring Time:** Time to fix organization issues
 - **Compliance Rate:** % of hooks following patterns
 
 ### Qualitative Metrics
+
 - **Developer Feedback:** Ease of following patterns
 - **Code Discovery:** Time to find related hooks
 - **Maintenance:** Ease of adding/modifying hook groups
@@ -210,18 +237,21 @@ Whenever a new hook file is created:
 ### Common Issues and Solutions
 
 **Issue:** Script flags files that shouldn't be grouped
+
 ```bash
 # Files share prefix but aren't functionally related
 # Solution: Adjust prefix extraction logic or manually exclude
 ```
 
 **Issue:** False positives for component-specific hooks
+
 ```bash
 # Component hooks in app/components/*/hooks/
 # Solution: Script handles these separately
 ```
 
 **Issue:** Import updates missed
+
 ```bash
 # Verify with TypeScript
 npm run typecheck -- --noEmit
@@ -229,6 +259,7 @@ npm run typecheck -- --noEmit
 ```
 
 **Issue:** Performance concerns with frequent checks
+
 ```bash
 # Only check changed files in pre-commit
 git diff --name-only --cached | grep -E "hooks/.*\.ts$"
@@ -237,19 +268,23 @@ git diff --name-only --cached | grep -E "hooks/.*\.ts$"
 ## Maintenance Schedule
 
 ### Daily
+
 - Developers run script when creating new hooks
 - Pre-commit hook validates changes
 
 ### Weekly
+
 - Team sync reviews organization status
 - Update documentation as needed
 
 ### Monthly
+
 - Full codebase scan with script
 - Identify opportunities for further organization
 - Update patterns based on usage
 
 ### Quarterly
+
 - Review monitoring effectiveness
 - Adjust thresholds/patterns as needed
 - Team training/retraining

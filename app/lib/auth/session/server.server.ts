@@ -5,7 +5,10 @@ import {
   getAuthUserWithSession,
   readSessionTiming,
 } from "~/lib/supabase/auth.server";
-import { evaluateSessionTimeout, readSessionTimeoutConfig } from "./timeout.server";
+import {
+  evaluateSessionTimeout,
+  readSessionTimeoutConfig,
+} from "./timeout.server";
 import { trackUsage } from "~/lib/observability/metrics.server";
 import { queueSetCookie } from "~/lib/observability/request-context.server";
 import { getUser } from "~/lib/services/users/service";

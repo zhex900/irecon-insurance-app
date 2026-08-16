@@ -21,7 +21,7 @@ const FederatedDocumentDesigner = lazy(() =>
     .catch((error) => {
       console.error("Failed to load DocumentDesigner:", error);
       // Return a fallback component
-      return { 
+      return {
         default: function FallbackDesigner() {
           return <div>Document editor unavailable. Please try again.</div>;
         }
@@ -57,7 +57,7 @@ export function DocumentEditorWrapper({
 import { env } from "~/lib/cloudflare.server";
 
 export async function validateTemplateInWorker(
-  template: Template
+  template: Template,
 ): Promise<ValidationResult> {
   try {
     const response = await fetch(
@@ -66,14 +66,14 @@ export async function validateTemplateInWorker(
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${env.WORKER_SHARED_SECRET}`,
+          Authorization: `Bearer ${env.WORKER_SHARED_SECRET}`,
         },
         body: JSON.stringify({
           templateId: template.id,
           schema: template.schema,
           basePdf: template.basePdf,
         }),
-      }
+      },
     );
 
     if (!response.ok) {
@@ -83,7 +83,7 @@ export async function validateTemplateInWorker(
     return await response.json();
   } catch (error) {
     console.error("Template validation RPC failed:", error);
-    
+
     // Fallback: validate locally (limited validation)
     return {
       valid: true,
@@ -95,7 +95,7 @@ export async function validateTemplateInWorker(
 
 export async function generateTemplatePreview(
   templateId: string,
-  mergeData: Record<string, any>
+  mergeData: Record<string, any>,
 ): Promise<PreviewResult> {
   const response = await fetch(
     `${env.DOCUMENTS_WORKER_URL}/api/templates/${templateId}/generate-preview`,
@@ -103,13 +103,13 @@ export async function generateTemplatePreview(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${env.WORKER_SHARED_SECRET}`,
+        Authorization: `Bearer ${env.WORKER_SHARED_SECRET}`,
       },
       body: JSON.stringify({
         mergeInputs: mergeData,
         requestId: crypto.randomUUID(),
       }),
-    }
+    },
   );
 
   if (!response.ok) {
@@ -129,7 +129,7 @@ export async function generateTemplatePreview(
 DOCUMENTS_WORKER_URL=http://localhost:8787
 DOCUMENTS_FEDERATION_URL=http://localhost:5174
 
-# Excel Worker URL  
+# Excel Worker URL
 EXCEL_WORKER_URL=http://localhost:8788
 
 # PDF Generation Worker URL
@@ -224,7 +224,7 @@ export class FederationMetrics {
   recordModuleLoad(domain: string, moduleName: string, loadTime: number) {
     const key = `${domain}:${moduleName}`;
     this.moduleLoadTimes.set(key, loadTime);
-    
+
     logger.info("federation.module.loaded", {
       domain,
       module: moduleName,
@@ -236,14 +236,14 @@ export class FederationMetrics {
   recordApiCall(domain: string, endpoint: string, success: boolean) {
     const key = `${domain}:${endpoint}`;
     const metrics = this.apiCallMetrics.get(key) || { calls: 0, errors: 0 };
-    
+
     metrics.calls++;
     if (!success) {
       metrics.errors++;
     }
-    
+
     this.apiCallMetrics.set(key, metrics);
-    
+
     logger.info("federation.api.call", {
       domain,
       endpoint,
@@ -269,6 +269,7 @@ export const federationMetrics = new FederationMetrics();
 ### 1. Production Worker URLs
 
 **Staging Environment**:
+
 ```bash
 DOCUMENTS_WORKER_URL=https://documents-worker-staging.irecon.com
 EXCEL_WORKER_URL=https://excel-worker-staging.irecon.com
@@ -276,6 +277,7 @@ PDF_WORKER_URL=https://pdf-worker-staging.irecon.com
 ```
 
 **Production Environment**:
+
 ```bash
 DOCUMENTS_WORKER_URL=https://documents-worker.irecon.com
 EXCEL_WORKER_URL=https://excel-worker.irecon.com
@@ -295,7 +297,7 @@ export class WorkerServiceRegistry {
       { url: "https://documents-worker-1.irecon.com", healthy: true },
       { url: "https://documents-worker-2.irecon.com", healthy: true },
     ]);
-    
+
     this.workers.set("excel", [
       { url: "https://excel-worker-1.irecon.com", healthy: true },
     ]);
@@ -304,23 +306,23 @@ export class WorkerServiceRegistry {
   async callWorker(
     domain: string,
     endpoint: string,
-    request: RequestInit
+    request: RequestInit,
   ): Promise<Response> {
     const endpoints = this.workers.get(domain) || [];
-    
+
     for (const worker of endpoints) {
       if (!worker.healthy) continue;
-      
+
       try {
         const response = await fetch(`${worker.url}${endpoint}`, request);
-        
+
         if (response.ok) {
           return response;
         }
-        
+
         // Mark unhealthy on failure
         worker.healthy = false;
-        
+
         // Schedule health check
         setTimeout(() => this.checkWorkerHealth(domain, worker), 30000);
       } catch (error) {
@@ -328,7 +330,7 @@ export class WorkerServiceRegistry {
         worker.healthy = false;
       }
     }
-    
+
     throw new Error(`All ${domain} workers unavailable`);
   }
 }
@@ -337,39 +339,43 @@ export class WorkerServiceRegistry {
 ### 3. CORS Configuration
 
 **Documents Worker CORS**:
+
 ```typescript
 // workers/documents/index.ts
-app.use("*", cors({
-  origin: (origin, c) => {
-    const allowedOrigins = [
-      "https://portal.irecon.com",
-      "https://staging.irecon.com",
-      "http://localhost:5173", // Development
-    ];
-    
-    if (!origin || allowedOrigins.includes(origin)) {
+app.use(
+  "*",
+  cors({
+    origin: (origin, c) => {
+      const allowedOrigins = [
+        "https://portal.irecon.com",
+        "https://staging.irecon.com",
+        "http://localhost:5173", // Development
+      ];
+
+      if (!origin || allowedOrigins.includes(origin)) {
+        return origin;
+      }
+
+      // For production, be strict
+      if (c.env.NODE_ENV === "production") {
+        return null; // Reject
+      }
+
+      // For non-production, allow with warning
+      console.warn(`CORS warning: Allowing origin ${origin} in non-production`);
       return origin;
-    }
-    
-    // For production, be strict
-    if (c.env.NODE_ENV === "production") {
-      return null; // Reject
-    }
-    
-    // For non-production, allow with warning
-    console.warn(`CORS warning: Allowing origin ${origin} in non-production`);
-    return origin;
-  },
-  allowHeaders: [
-    "Content-Type",
-    "Authorization",
-    "x-request-id",
-    "x-worker-version",
-  ],
-  allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  maxAge: 86400,
-  credentials: true,
-}));
+    },
+    allowHeaders: [
+      "Content-Type",
+      "Authorization",
+      "x-request-id",
+      "x-worker-version",
+    ],
+    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    maxAge: 86400,
+    credentials: true,
+  }),
+);
 ```
 
 ## Performance Optimization Examples
@@ -381,7 +387,7 @@ app.use("*", cors({
 export function setupFederationPreloading() {
   // Preload documents domain on hover over documents menu
   const documentsLinks = document.querySelectorAll('a[href*="documents"]');
-  
+
   documentsLinks.forEach((link) => {
     link.addEventListener("mouseenter", () => {
       // Preload the federated entry
@@ -389,13 +395,17 @@ export function setupFederationPreloading() {
         // Silent fail - will load on demand
       });
     });
-    
-    link.addEventListener("touchstart", () => {
-      // Preload on mobile touch
-      import("documents/remoteEntry.js").catch(() => {});
-    }, { passive: true });
+
+    link.addEventListener(
+      "touchstart",
+      () => {
+        // Preload on mobile touch
+        import("documents/remoteEntry.js").catch(() => {});
+      },
+      { passive: true },
+    );
   });
-  
+
   // Preload when user is likely to need it
   if (window.location.pathname.includes("/templates")) {
     setTimeout(() => {
@@ -410,31 +420,34 @@ export function setupFederationPreloading() {
 ```typescript
 // workers/documents/services/request-batcher.ts
 export class DocumentRequestBatcher {
-  private batchQueue = new Map<string, Array<{ request: any; resolve: Function; reject: Function }>>();
-  
+  private batchQueue = new Map<
+    string,
+    Array<{ request: any; resolve: Function; reject: Function }>
+  >();
+
   async batchedRequest(endpoint: string, request: any): Promise<any> {
     const batchKey = `${endpoint}:${JSON.stringify(request)}`;
-    
+
     if (this.batchQueue.has(batchKey)) {
       // Already batched - wait for result
       return new Promise((resolve, reject) => {
         this.batchQueue.get(batchKey)!.push({ request, resolve, reject });
       });
     }
-    
+
     // Create new batch
     const batch = [{ request, resolve: () => {}, reject: () => {} }];
     this.batchQueue.set(batchKey, batch);
-    
+
     // Execute batch after 50ms
     setTimeout(async () => {
       try {
         const requests = this.batchQueue.get(batchKey) || [];
         const combinedRequest = this.combineRequests(requests);
-        
+
         // Execute single batched request
         const result = await this.executeBatch(endpoint, combinedRequest);
-        
+
         // Resolve all promises
         requests.forEach((item) => item.resolve(result));
       } catch (error) {
@@ -462,7 +475,7 @@ export function DocumentEditorFallback({
   onSave: (template: Template) => void;
 }) {
   const [localTemplate, setLocalTemplate] = useState(template);
-  
+
   return (
     <div className="p-4 border rounded-lg bg-yellow-50">
       <div className="mb-4">
@@ -471,7 +484,7 @@ export function DocumentEditorFallback({
           Document editor is unavailable. Using basic editor.
         </p>
       </div>
-      
+
       <div className="space-y-4">
         <div>
           <label className="block text-sm font-medium mb-2">
@@ -486,7 +499,7 @@ export function DocumentEditorFallback({
             className="w-full p-2 border rounded"
           />
         </div>
-        
+
         <div>
           <label className="block text-sm font-medium mb-2">
             Template Description
@@ -503,7 +516,7 @@ export function DocumentEditorFallback({
             rows={3}
           />
         </div>
-        
+
         <button
           onClick={() => onSave(localTemplate)}
           className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
@@ -526,10 +539,10 @@ export class CircuitBreaker {
   private lastFailureTime = 0;
   private readonly failureThreshold = 5;
   private readonly resetTimeout = 30000; // 30 seconds
-  
+
   async execute<T>(
     operation: () => Promise<T>,
-    fallback: () => Promise<T>
+    fallback: () => Promise<T>,
   ): Promise<T> {
     if (this.state === "OPEN") {
       // Check if timeout has passed
@@ -540,27 +553,27 @@ export class CircuitBreaker {
         return await fallback();
       }
     }
-    
+
     try {
       const result = await operation();
-      
+
       // Success - reset state
       if (this.state === "HALF_OPEN") {
         this.state = "CLOSED";
         this.failures = 0;
       }
-      
+
       return result;
     } catch (error) {
       this.recordFailure();
       return await fallback();
     }
   }
-  
+
   private recordFailure() {
     this.failures++;
     this.lastFailureTime = Date.now();
-    
+
     if (this.failures >= this.failureThreshold) {
       this.state = "OPEN";
     }

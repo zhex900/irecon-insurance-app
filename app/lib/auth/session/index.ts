@@ -1,6 +1,6 @@
 /**
  * Session management module
- * 
+ *
  * This module provides a unified interface for session-related functionality,
  * including authentication, session timeout management, and utility functions.
  */
@@ -14,7 +14,7 @@ export type {
 } from "./timeout";
 export { evaluateSessionTimeout } from "./timeout";
 
-// Export utility functions  
+// Export utility functions
 export { toBrokerSession } from "./utils";
 
 // Client-side session hook (placeholder - currently unused)

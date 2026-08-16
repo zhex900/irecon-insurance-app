@@ -116,7 +116,7 @@ Prefer typed domain errors over `throw new Error("…")`:
 | `ConflictError`        | Version / unique / state conflict     |
 | `ExternalServiceError` | Supabase, R2, email, etc.             |
 
-Routes map these to `formError`, field errors, toast, or HTTP status. API shape: `{ ok, errors?, formError? }`. Unexpected → route `ErrorBoundary` / `AppErrorPage`.
+Routes map these to `formError`, field errors, toast, or HTTP status. API shape: `{ ok, errors?, formError? }`. Unexpected → route `ErrorBoundary` / `RootErrorBoundary`.
 
 Use the shared domain error classes in `app/lib/errors.ts` for expected failures; do not proliferate raw `Error` throw sites.
 
@@ -169,6 +169,7 @@ After:  app/[type]/prefix/
 ```
 
 **Examples:**
+
 - Hooks: `use-document-template-editor-*.ts` → `document-template-editor/use-*.ts`
 - Components: Group related components by domain/functionality
 - Utilities: Organize by domain (auth, pdf, validation, etc.)

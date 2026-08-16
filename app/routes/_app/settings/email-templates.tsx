@@ -10,7 +10,7 @@ import {
   type LucideProps,
 } from "lucide-react";
 import { toast } from "sonner";
-import { AppErrorPage } from "~/components/app-error-page";
+import { RootErrorBoundary } from "~/components/root-error-boundary";
 import { PageHeader } from "~/components/layout/app-layout";
 import { Button } from "~/components/ui/button";
 import { ButtonGroup } from "~/components/ui/button-group";
@@ -361,7 +361,7 @@ function EmailFooterCard({
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   // Keep the app shell / side nav; only replace this page’s content.
-  return <AppErrorPage error={error} />;
+  return <RootErrorBoundary error={error} />;
 }
 
 export default function SettingsEmailTemplatesRoute({

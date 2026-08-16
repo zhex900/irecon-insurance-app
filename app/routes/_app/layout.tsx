@@ -2,7 +2,7 @@ import {
   type ShouldRevalidateFunctionArgs,
   useRouteLoaderData,
 } from "react-router";
-import { AppErrorPage } from "~/components/app-error-page";
+import { RootErrorBoundary } from "~/components/root-error-boundary";
 import { AppLayout } from "~/components/layout/app-layout";
 import { requireAuth } from "~/lib/auth/session/server.server";
 import { getSessionTimeoutClientState } from "~/lib/auth/session/timeout.server";
@@ -93,9 +93,9 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
         recentsOpen={data.recentsOpen}
         navSectionsExpanded={data.navSectionsExpanded}
         sessionTimeout={data.sessionTimeout}
-        content={<AppErrorPage error={error} />}
+        content={<RootErrorBoundary error={error} />}
       />
     );
   }
-  return <AppErrorPage error={error} />;
+  return <RootErrorBoundary error={error} />;
 }

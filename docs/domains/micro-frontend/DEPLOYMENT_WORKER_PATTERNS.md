@@ -23,26 +23,27 @@ npm run deploy:staging             # Portal with federated imports
 ### Environment-Specific Configurations
 
 #### Development Environment (Local)
+
 ```yaml
 development:
   workers:
     documents:
       url: "http://localhost:8787"
-      federation_url: "http://localhost:5174"  # Vite dev server
+      federation_url: "http://localhost:5174" # Vite dev server
       ports:
         worker: 8787
         dev_server: 5174
         inspector: 9230
-    
+
     excel:
       url: "http://localhost:8788"
       ports:
         worker: 8788
         inspector: 9231
-        
+
     pdf:
-      url: "http://localhost:8789"  # Optional separate port
-  
+      url: "http://localhost:8789" # Optional separate port
+
   portal:
     url: "http://localhost:5173"
     federation_remotes:
@@ -54,27 +55,28 @@ development:
 ```
 
 #### Staging Environment (Cloudflare)
+
 ```yaml
 staging:
   workers:
     documents:
       url: "https://documents-worker-staging.irecon.com"
-      federation_url: "https://documents-staging.irecon.com"  # Static assets
+      federation_url: "https://documents-staging.irecon.com" # Static assets
       d1_database: "documents-staging"
-    
+
     excel:
       url: "https://excel-worker-staging.irecon.com"
       d1_database: "excel-staging"
-      
+
     pdf:
       url: "https://pdf-worker-staging.irecon.com"
       assets_binding: "fonts-staging"
-  
+
   portal:
     url: "https://portal-staging.irecon.com"
     federation_remotes:
       documents: "documents@https://documents-staging.irecon.com/remoteEntry.js"
-      
+
   monitoring:
     cloudflare_analytics: true
     sentry_traces: true
@@ -82,34 +84,35 @@ staging:
 ```
 
 #### Production Environment (Cloudflare)
+
 ```yaml
 production:
   workers:
     documents:
       url: "https://documents-worker.irecon.com"
-      federation_url: "https://documents.irecon.com"  # CDN
+      federation_url: "https://documents.irecon.com" # CDN
       d1_database: "documents-production"
       scale:
         min_instances: 3
         max_instances: 50
-    
+
     excel:
       url: "https://excel-worker.irecon.com"
       d1_database: "excel-production"
       scale:
         min_instances: 2
         max_instances: 20
-      
+
     pdf:
       url: "https://pdf-worker.irecon.com"
       assets_binding: "fonts-production"
       memory_limit: "256MB"
-  
+
   portal:
     url: "https://portal.irecon.com"
     federation_remotes:
       documents: "documents@https://documents.irecon.com/remoteEntry.js"
-      
+
   monitoring:
     cloudflare_analytics: true
     sentry_traces: true
@@ -154,7 +157,7 @@ cd workers/documents
 npm run deploy
 DOCUMENTS_DEPLOY=$?
 
-# Deploy Excel Worker  
+# Deploy Excel Worker
 echo "📊 Deploying Excel Worker..."
 cd ../excel
 npm run deploy
@@ -204,7 +207,7 @@ fi
 curl -s https://documents-worker.irecon.com/health
 # Expected: {"status":"healthy","domain":"documents","timestamp":"..."}
 
-# Excel Worker Health  
+# Excel Worker Health
 curl -s https://excel-worker.irecon.com/health
 # Expected: {"status":"healthy","domain":"excel","timestamp":"..."}
 
@@ -236,14 +239,14 @@ const workerMetrics = {
     memory_average: 65, // MB
     cpu_time: 12.5, // milliseconds
   },
-  
+
   excel_worker: {
     requests_per_second: 85,
     average_response_time: 120, // ms (Excel generation is heavier)
     error_rate: 0.001, // 0.1%
     memory_average: 42, // MB
   },
-  
+
   portal: {
     bundle_size: 420, // KB gzipped
     federation_load_time: 180, // ms
@@ -262,12 +265,12 @@ documents_worker_triggers:
   load_time_over_1000ms: true
   error_rate_over_5_percent: true
   memory_usage_over_80_percent: true
-  
-  # Operational triggers  
+
+  # Operational triggers
   federation_fails_to_load: true
   template_generation_fails: true
   font_assets_unavailable: true
-  
+
   # User experience triggers
   editor_unusable_reports: 3
   customer_support_tickets: 5
@@ -277,7 +280,7 @@ excel_worker_triggers:
   generation_time_over_5000ms: true
   memory_usage_over_256mb: true
   rate_limit_exceeded: true
-  
+
   # Data triggers
   excel_generation_fails: true
   formula_calculation_errors: true
@@ -286,7 +289,7 @@ pdf_worker_triggers:
   # Performance triggers
   generation_time_over_3000ms: true
   memory_usage_over_128mb: true
-  
+
   # Quality triggers
   pdf_rendering_errors: true
   font_substitution_issues: true
@@ -308,7 +311,7 @@ pdf_worker_triggers:
 wrangler rollback --config wrangler.documents.jsonc \
   --message "Critical performance issue" \
   --keep-logs 100
-  
+
 # Rollback with DNS change (immediate)
 ./scripts/rollback-dns.sh \
   --worker documents \
@@ -342,12 +345,12 @@ interface WorkerVersionCompatibility {
     max_portal_version: "2.0.0";
     compatible_with: ["excel@>=1.0.0", "pdf@>=1.0.0"];
   };
-  
+
   excel: {
     min_portal_version: "1.0.0";
     requires_documents_version: ">=1.2.0"; // Needs template features
   };
-  
+
   portal: {
     requires_workers: {
       documents: ">=1.0.0";
@@ -370,43 +373,43 @@ on:
   push:
     branches: [main]
     paths:
-      - 'workers/**'
-      - 'wrangler.**.jsonc'
+      - "workers/**"
+      - "wrangler.**.jsonc"
 
 jobs:
   deploy-workers:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          
+          node-version: "20"
+
       - name: Install dependencies
         run: npm ci
-        
+
       - name: Build Workers
         run: |
           cd workers/documents && npm run build
           cd ../excel && npm run build
-          
+
       - name: Run Tests
         run: |
           npm run test:unit
           npm run test:integration:workers
-          
+
       - name: Deploy to Staging
         if: github.ref == 'refs/heads/main'
         run: |
           ./scripts/deploy-workers.sh --env staging
-          
+
       - name: Run Integration Tests
         if: github.ref == 'refs/heads/main'
         run: |
           ./scripts/test-worker-integration.sh --env staging
-          
+
       - name: Deploy to Production (Canary)
         if: github.ref == 'refs/heads/main'
         run: |
@@ -425,14 +428,14 @@ wrangler analytics enable --config wrangler.excel.jsonc
 # Configure Log Retention
 wrangler config set --config wrangler.documents.jsonc \
   observability.logs.retention_days 30
-  
+
 # Set up Alert Policies
 wrangler alerts create \
   --config wrangler.documents.jsonc \
   --name "High Error Rate" \
   --condition "error_rate > 5%" \
   --channel slack
-  
+
 wrangler alerts create \
   --config wrangler.excel.jsonc \
   --name "Slow Generation" \
@@ -458,7 +461,7 @@ app.onError((err, c) => {
       method: c.req.method,
     },
   });
-  
+
   console.error("Worker error:", err);
   return c.json({ error: "Internal server error" }, 500);
 });
@@ -469,7 +472,7 @@ app.use("*", async (c, next) => {
     op: "http.server",
     name: `${c.req.method} ${c.req.path}`,
   });
-  
+
   try {
     await next();
   } finally {
@@ -585,22 +588,22 @@ scaling:
 class TemplateCache {
   private cache = new Map<string, { data: any; timestamp: number }>();
   private readonly TTL = 5 * 60 * 1000; // 5 minutes
-  
+
   async getOrGenerate(templateId: string, generator: () => Promise<any>) {
     const cached = this.cache.get(templateId);
-    
+
     if (cached && Date.now() - cached.timestamp < this.TTL) {
       return cached.data;
     }
-    
+
     const data = await generator();
     this.cache.set(templateId, { data, timestamp: Date.now() });
-    
+
     // Clean old entries periodically
     if (this.cache.size > 1000) {
       this.cleanup();
     }
-    
+
     return data;
   }
 }
@@ -614,7 +617,7 @@ class TemplateCache {
 # Enable security features
 wrangler config set --config wrangler.documents.jsonc \
   security.csp_enabled true
-  
+
 # Configure CORS strictly
 wrangler config set --config wrangler.documents.jsonc \
   cors.allowed_origins "https://portal.irecon.com,https://staging.irecon.com"
@@ -642,7 +645,7 @@ wrangler alerts create \
   --name "Cost Alert" \
   --condition "estimated_monthly_cost > 100" \
   --channel email
-  
+
 # Optimize costs
 # 1. Use appropriate instance sizes
 # 2. Implement caching to reduce compute

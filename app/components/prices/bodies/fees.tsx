@@ -8,10 +8,7 @@ import {
   TableRow,
 } from "~/components/ui/table";
 import { formatCurrency } from "~/lib/utils";
-import {
-  NumInput,
-  type FeesScheduleView,
-} from "~/components/prices/shared";
+import { NumInput, type FeesScheduleView } from "~/components/prices/shared";
 export function FeesBody({
   schedule,
   editing,

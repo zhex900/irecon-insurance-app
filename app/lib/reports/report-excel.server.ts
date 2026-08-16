@@ -1,4 +1,4 @@
-import type { ExcelServiceBinding } from "../excel/excel-service.server";
+import type { ExcelWorkerBinding } from "../excel/excel-worker.server";
 
 export type ReportExcelColumnType = "text" | "currency" | "integer" | "date";
 
@@ -11,7 +11,7 @@ export type ReportExcelColumn = {
 
 /** Build a single-sheet .xlsx workbook using Excel Worker. */
 export async function buildReportExcelBuffer(
-  excelService: ExcelServiceBinding,
+  excelService: ExcelWorkerBinding,
   options: {
     sheetName?: string;
     /** Merged title row above column headers (e.g. report period). */
