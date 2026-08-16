@@ -1,6 +1,6 @@
 import { MainForm as ClientForm } from "~/components/clients/form";
 import { PageHeader } from "~/components/layout/app-layout";
-import { requireAuth } from "~/lib/auth/session.server";
+import { requireAuth } from "~/lib/auth/session/server.server";
 import { booleanFlagSchema, parseUuid } from "~/lib/http/route-input";
 import { clientNotFoundResponse } from "~/lib/http/resource-not-found";
 import { pageTitle } from "~/lib/brand";

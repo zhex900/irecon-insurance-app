@@ -154,6 +154,27 @@ No `console.log` in committed app code; use [`app/lib/observability/logger.serve
 
 Product copy: **Irecon Insurance** (`APP_NAME` / `pageTitle()` in `app/lib/brand.ts`).
 
+## File organization
+
+For files with common prefixes (2+ files), group them into directories following the pattern:
+
+```
+Before: app/[type]/prefix-feature-a.ts
+        app/[type]/prefix-feature-b.ts
+
+After:  app/[type]/prefix/
+          ├── feature-a.ts    # Remove redundant prefix
+          ├── feature-b.ts
+          └── index.ts        # Clean exports
+```
+
+**Examples:**
+- Hooks: `use-document-template-editor-*.ts` → `document-template-editor/use-*.ts`
+- Components: Group related components by domain/functionality
+- Utilities: Organize by domain (auth, pdf, validation, etc.)
+
+See [file-organization-standards.md](file-organization-standards.md) for detailed guidelines.
+
 ## Documentation
 
 Document non-obvious public APIs (idempotency, audit side effects, auth assumptions):

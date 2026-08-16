@@ -18,8 +18,8 @@ import { AppSideNav } from "~/components/layout/app-side-nav";
 import { GlobalSearch } from "~/components/layout/global-search";
 import { NavigationProgress } from "~/components/layout/navigation-progress";
 import { OfflineDialog } from "~/components/layout/offline-dialog";
-import { SessionTimeoutDialog } from "~/components/layout/session-timeout-dialog";
-import type { SessionTimeoutClientState } from "~/lib/auth/session-timeout";
+import { SessionTimeoutDialog } from "~/components/auth/session-timeout-dialog";
+import type { SessionTimeoutClientState } from "~/lib/auth/session";
 import {
   DropdownMenu,
   DropdownMenuContent,

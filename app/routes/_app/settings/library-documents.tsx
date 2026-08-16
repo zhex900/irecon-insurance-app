@@ -3,7 +3,7 @@ import { PageHeader } from "~/components/layout/app-layout";
 import { MainManager } from "~/components/documents/library";
 import { isAdminRole, isSuperAdmin } from "~/lib/auth/roles";
 import { requireFeatureOrSuperAdminPage } from "~/lib/auth/authorize.server";
-import { requireAuth } from "~/lib/auth/session.server";
+import { requireAuth } from "~/lib/auth/session/server.server";
 import { getLibraryDocumentsBucket } from "~/lib/cloudflare.server";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
 import { parseFormIntent, parsePositiveInteger } from "~/lib/http/route-input";

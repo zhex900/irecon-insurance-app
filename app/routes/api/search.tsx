@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { requireAuth } from "~/lib/auth/session.server";
+import { requireAuth } from "~/lib/auth/session/server.server";
 import {
   invalidInputResponse,
   searchParamsObject,

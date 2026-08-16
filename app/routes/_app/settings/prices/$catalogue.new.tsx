@@ -2,7 +2,7 @@ import { redirect, useActionData } from "react-router";
 import { Editor } from "~/components/prices";
 import { requireSuperAdminPage } from "~/lib/auth/authorize.server";
 import { isSuperAdmin } from "~/lib/auth/roles";
-import { requireAuth } from "~/lib/auth/session.server";
+import { requireAuth } from "~/lib/auth/session/server.server";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
 import {
   createTemplate,

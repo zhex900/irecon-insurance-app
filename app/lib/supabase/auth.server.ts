@@ -3,7 +3,7 @@ import {
   getSupabaseAnonKey,
   getSupabaseUrl,
 } from "~/lib/supabase/env.server";
-import type { SessionTiming } from "~/lib/auth/session-timeout.server";
+import type { SessionTiming } from "~/lib/auth/session";
 
 const ACCESS_COOKIE = "sb-access-token";
 const REFRESH_COOKIE = "sb-refresh-token";

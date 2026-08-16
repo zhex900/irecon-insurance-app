@@ -1,4 +1,4 @@
-import { requireAuth } from "~/lib/auth/session.server";
+import { requireAuth } from "~/lib/auth/session/server.server";
 import { getLibraryDocumentsBucket } from "~/lib/cloudflare.server";
 import { getLibraryDocumentByFilename } from "~/lib/services/documents/library-documents";
 import {

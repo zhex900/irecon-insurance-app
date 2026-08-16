@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { requireAuth } from "~/lib/auth/session.server";
+import { requireAuth } from "~/lib/auth/session/server.server";
 import { AUDIT_ACTIONS, type AuditAction } from "~/constants";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import type { Route } from "./+types/audit";

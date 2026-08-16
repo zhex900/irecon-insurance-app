@@ -12,7 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
-import { requireAuth } from "~/lib/auth/session.server";
+import { requireAuth } from "~/lib/auth/session/server.server";
 import { requireSuperAdminPage } from "~/lib/auth/authorize.server";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import {

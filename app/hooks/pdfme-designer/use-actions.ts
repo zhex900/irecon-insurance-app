@@ -22,7 +22,7 @@ import {
   applyTransparentBackground,
   moveSchemasZOrder,
   spaceSchemasVertically,
-} from "~/lib/pdf/bulk-format";
+} from "~/lib/pdf/pdf-bulk-format";
 import {
   ENDORSEMENT_CONTENT_FIELD,
   ENDORSEMENT_SUBJECT_FIELD,

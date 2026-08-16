@@ -1,4 +1,4 @@
-import { requireAuth } from "~/lib/auth/session.server";
+import { requireAuth } from "~/lib/auth/session/server.server";
 import {
   getDocumentTemplateOverride,
   getDocumentTemplateVersion,

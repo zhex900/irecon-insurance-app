@@ -35,7 +35,7 @@ import { formatDate } from "~/lib/utils";
 import { POLICY_STATUS } from "~/lib/zod/policy-car";
 import type { Route } from "./+types/car-renewals";
 import { pageTitle } from "~/lib/brand";
-import { requireAuth } from "~/lib/auth/session.server";
+import { requireAuth } from "~/lib/auth/session/server.server";
 import { optionalIsoDateSchema, queryTextSchema } from "~/lib/http/route-input";
 import { parseIdListParam } from "~/lib/search/id-list-param";
 

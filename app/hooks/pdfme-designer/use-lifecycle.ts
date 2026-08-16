@@ -14,8 +14,8 @@ import {
   ENDORSEMENT_SUBJECT_FIELD,
   readEndorsementBlockGapMm,
 } from "~/lib/pdf/endorsement-expand";
-import { getPdfmeFonts } from "~/lib/pdf/fonts";
-import { pdfmePlugins } from "~/lib/pdf/plugins";
+import { getPdfmeFonts } from "~/lib/pdf/pdf-fonts";
+import { pdfmePlugins } from "~/lib/pdf/pdf-plugins";
 
 export function usePdfmeDesignerLifecycle({
   template,

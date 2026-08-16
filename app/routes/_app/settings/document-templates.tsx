@@ -34,7 +34,7 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table";
-import { requireAuth } from "~/lib/auth/session.server";
+import { requireAuth } from "~/lib/auth/session/server.server";
 import { requireFeatureOrSuperAdminPage } from "~/lib/auth/authorize.server";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
 import { parseFormIntent } from "~/lib/http/route-input";

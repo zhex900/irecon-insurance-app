@@ -1,5 +1,5 @@
 import { redirect } from "react-router";
-import { requireAuth } from "~/lib/auth/session.server";
+import { requireAuth } from "~/lib/auth/session/server.server";
 import { searchParamsObject, uuidParamSchema } from "~/lib/http/route-input";
 import { clientNotFoundResponse } from "~/lib/http/resource-not-found";
 import { writeAuditLog } from "~/lib/services/audit/service";

@@ -1,6 +1,6 @@
 import type { Template } from "@pdfme/common";
 import type { DesignerSelectedSchema, DesignerSelection } from "@pdfme/ui";
-import type { BulkSchemaRef } from "~/lib/pdf/bulk-format";
+import type { BulkSchemaRef } from "~/lib/pdf/pdf-bulk-format";
 import {
   DEFAULT_ENDORSEMENT_BLOCK_GAP_MM,
   ENDORSEMENT_BLOCK_GAP_KEY,

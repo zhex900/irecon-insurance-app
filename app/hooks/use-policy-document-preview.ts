@@ -68,7 +68,7 @@ export function usePolicyDocumentPreview({
     setPreviewSrc(null);
 
     const started = performance.now();
-    void import("~/lib/pdf/fonts")
+    void import("~/lib/pdf/pdf-fonts")
       .then(({ getPdfmeFonts }) => getPdfmeFonts())
       .then((font) =>
         buildPdfBlobFromDocument(previewDoc, previewPolicy ?? undefined, {

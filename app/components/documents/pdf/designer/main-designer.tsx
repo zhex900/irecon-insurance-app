@@ -11,7 +11,7 @@ import {
   ENDORSEMENT_CONTENT_FIELD,
   ENDORSEMENT_SUBJECT_FIELD,
 } from "~/lib/pdf/endorsement-expand";
-import { PALETTE_MERGE_FIELD_NAMES } from "~/lib/pdf/sample-merge-inputs";
+import { PALETTE_MERGE_FIELD_NAMES } from "~/lib/pdf/pdf-sample-merge-inputs";
 import { cn } from "~/lib/utils";
 
 export type PdfmeDesignerHandle = {

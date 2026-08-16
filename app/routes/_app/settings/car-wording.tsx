@@ -43,7 +43,7 @@ import { WordingRichEditor } from "~/components/policies/wording-rich-editor";
 import { FieldInput } from "~/components/ui/form-controls";
 import { isAdminRole, isSuperAdmin } from "~/lib/auth/roles";
 import { requireFeatureOrSuperAdminPage } from "~/lib/auth/authorize.server";
-import { requireAuth } from "~/lib/auth/session.server";
+import { requireAuth } from "~/lib/auth/session/server.server";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
 import {
   parseFormIntent,

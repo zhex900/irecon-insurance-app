@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { requireFeatureOrSuperAdminPage } from "~/lib/auth/authorize.server";
-import { requireAuth } from "~/lib/auth/session.server";
+import { requireAuth } from "~/lib/auth/session/server.server";
 import { isSuperAdmin } from "~/lib/auth/roles";
 import {
   EMAIL_TEMPLATE_KEYS,

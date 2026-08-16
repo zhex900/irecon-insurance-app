@@ -32,7 +32,7 @@ import {
 import { formatCurrency, formatDate } from "~/lib/utils";
 import type { Route } from "./+types/car-policies";
 import { pageTitle } from "~/lib/brand";
-import { requireAuth } from "~/lib/auth/session.server";
+import { requireAuth } from "~/lib/auth/session/server.server";
 import { optionalIsoDateSchema } from "~/lib/http/route-input";
 import { z } from "zod";
 

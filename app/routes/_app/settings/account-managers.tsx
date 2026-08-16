@@ -40,7 +40,7 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table";
-import { requireAuth } from "~/lib/auth/session.server";
+import { requireAuth } from "~/lib/auth/session/server.server";
 import { isSuperAdmin } from "~/lib/auth/roles";
 import {
   requireAdminPage,

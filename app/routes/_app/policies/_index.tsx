@@ -5,7 +5,7 @@ import { NewPolicyClientDialog } from "~/components/policies/new-policy-client-d
 import { PolicyListTable } from "~/components/policies/policy-list-table";
 import { useActionSuccessToast } from "~/hooks/use-success-toast";
 import { usePolicyListPage } from "~/hooks/policy-list/use-page";
-import { requireAuth } from "~/lib/auth/session.server";
+import { requireAuth } from "~/lib/auth/session/server.server";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
 import { parseFormIntent, parseUuid } from "~/lib/http/route-input";
 import { parsePagination } from "~/lib/pagination";

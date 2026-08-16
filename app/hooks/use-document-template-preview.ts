@@ -7,7 +7,7 @@ import {
   normalizePdfmeTemplateSchemas,
   syncTableSchemasToInputs,
 } from "~/lib/pdf/merge-fields";
-import { buildSampleMergeInputs } from "~/lib/pdf/sample-merge-inputs";
+import { buildSampleMergeInputs } from "~/lib/pdf/pdf-sample-merge-inputs";
 import type { FlowPushDown } from "~/lib/pdf/flow-push-down";
 import type { DocumentTemplateHistoryEntry } from "~/lib/services/documents/document-template-history";
 
@@ -92,8 +92,8 @@ export function useDocumentTemplatePreview(docTemplate: PreviewDocTemplate) {
           { applyEndorsementRichDrawOps },
         ] = await Promise.all([
           import("@pdfme/generator"),
-          import("~/lib/pdf/fonts"),
-          import("~/lib/pdf/plugins"),
+          import("~/lib/pdf/pdf-fonts"),
+          import("~/lib/pdf/pdf-plugins"),
           import("~/lib/pdf/html-rich-text-draw"),
         ]);
         const font = await getPdfmeFonts();

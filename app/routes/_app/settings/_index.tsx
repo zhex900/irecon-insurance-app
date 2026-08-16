@@ -25,7 +25,7 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
-import { requireAuth } from "~/lib/auth/session.server";
+import { requireAuth } from "~/lib/auth/session/server.server";
 import { isAdminRole, isSuperAdmin } from "~/lib/auth/roles";
 import { throwUnauthorizedPage } from "~/lib/auth/authorize.server";
 import { isFeatureEnabled } from "~/lib/services/feature-flags";

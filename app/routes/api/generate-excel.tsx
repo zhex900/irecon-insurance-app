@@ -1,5 +1,5 @@
 import type { ActionFunctionArgs } from "react-router";
-import { requireAuth } from "~/lib/auth/session.server";
+import { requireAuth } from "~/lib/auth/session/server.server";
 import {
   PREMIUM_EXCEL_TEMPLATE_KEY,
   PREMIUM_EXCEL_FILENAME_PREFIX,

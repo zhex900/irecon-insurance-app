@@ -13,7 +13,7 @@ import { Spinner } from "~/components/ui/spinner";
 import {
   evaluateSessionTimeout,
   type SessionTimeoutClientState,
-} from "~/lib/auth/session-timeout";
+} from "~/lib/auth/session";
 import { cn } from "~/lib/utils";
 
 const CHECK_INTERVAL_MS = 5_000;

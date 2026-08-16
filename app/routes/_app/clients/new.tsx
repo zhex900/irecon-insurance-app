@@ -1,5 +1,5 @@
 import { redirect } from "react-router";
-import { requireAuth } from "~/lib/auth/session.server";
+import { requireAuth } from "~/lib/auth/session/server.server";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import { createClientDraft } from "~/lib/services/clients/service";
 import type { Route } from "./+types/new";

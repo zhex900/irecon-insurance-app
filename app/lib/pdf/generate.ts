@@ -15,7 +15,7 @@ import {
   type BrokerFeeLineInput,
 } from "~/lib/pdf/merge-fields";
 import { parseEndorsementPairsFromInputs } from "~/lib/pdf/endorsement-expand";
-import { pdfmePlugins } from "~/lib/pdf/plugins";
+import { pdfmePlugins } from "~/lib/pdf/pdf-plugins";
 import type { DocumentTemplate } from "~/lib/pdf/templates";
 import {
   getCachedPublishedTemplate,

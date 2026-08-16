@@ -26,10 +26,10 @@ import type { Plugin, PropPanelWidgetProps, Schema } from "@pdfme/common";
 - `app/hooks/use-pdfme-designer-actions.ts`
 - `app/lib/pdf/template-changelog.ts`
 - `workers/pdf/fonts.ts`
-- `app/lib/pdf/sample-merge-inputs.ts`
+- `app/lib/pdf/pdf-sample-merge-inputs.ts`
 - `app/lib/pdf/flow-push-down.ts`
 - `app/lib/pdf/extract-base-pdf-rectangles.ts`
-- `app/lib/pdf/bulk-format.ts`
+- `app/lib/pdf/pdf-bulk-format.ts`
 - `app/lib/documents/template-editor-types.ts`
 - `app/lib/documents/template-editor-form.ts`
 - `app/lib/documents/template-editor-autosave.ts`
@@ -49,7 +49,7 @@ import { isBlankPdf } from "@pdfme/common";
 **Files with runtime imports (20 files)**:
 1. **@pdfme/schemas imports (7 files)**:
    - `app/lib/pdf/text-plugins.ts`
-   - `app/lib/pdf/plugins.ts`
+   - `app/lib/pdf/pdf-plugins.ts`
 
 2. **@pdfme/ui imports (2 files)**:
    - `app/hooks/use-pdfme-designer-lifecycle.ts`
@@ -64,7 +64,7 @@ import { isBlankPdf } from "@pdfme/common";
    - `app/lib/services/documents/document-templates.ts` (isBlankPdf)
    - `app/lib/pdf/endorsement-expand.ts` (isBlankPdf)
    - `workers/pdf/fonts.ts` (getDefaultFont)
-   - `app/lib/pdf/fonts.ts` (getDefaultFont)
+   - `app/lib/pdf/pdf-fonts.ts` (getDefaultFont)
    - Other misc runtime imports
 
 ### Component Dependency Analysis

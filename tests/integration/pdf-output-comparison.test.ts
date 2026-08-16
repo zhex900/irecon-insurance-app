@@ -79,7 +79,7 @@ vi.mock("@pdfme/generator", async () => {
 });
 
 // Mock other PDF dependencies
-vi.mock("~/lib/pdf/plugins", () => ({
+vi.mock("~/lib/pdf/pdf-plugins", () => ({
   pdfmePlugins: {
     Text: {
       ui: vi.fn(),

@@ -6,7 +6,7 @@ import { ScrollTextIcon } from "lucide-react";
 import { ListSearchField } from "~/components/forms/list-search-field";
 import { PageHeader } from "~/components/layout/app-layout";
 import { useDebouncedSearchQuery } from "~/hooks/use-debounced-search-query";
-import { requireAuth } from "~/lib/auth/session.server";
+import { requireAuth } from "~/lib/auth/session/server.server";
 import { requireFeatureOrSuperAdminPage } from "~/lib/auth/authorize.server";
 import { optionalIsoDateSchema, queryTextSchema } from "~/lib/http/route-input";
 import { isAdminRole } from "~/lib/auth/roles";

@@ -33,7 +33,7 @@ import {
   POLICY_STATUS,
   type CarPolicyFormValues,
 } from "~/lib/zod/policy-car";
-import { requireAuth } from "~/lib/auth/session.server";
+import { requireAuth } from "~/lib/auth/session/server.server";
 import {
   parseFormIntent,
   parsePositiveInteger,

@@ -4,11 +4,11 @@ import {
 } from "react-router";
 import { AppErrorPage } from "~/components/app-error-page";
 import { AppLayout } from "~/components/layout/app-layout";
-import { requireAuth } from "~/lib/auth/session.server";
-import { getSessionTimeoutClientState } from "~/lib/auth/session-timeout.server";
+import { requireAuth } from "~/lib/auth/session/server.server";
+import { getSessionTimeoutClientState } from "~/lib/auth/session/timeout.server";
 import { updateRequestContext } from "~/lib/observability/request-context.server";
 import { setSentryUser } from "~/lib/observability/sentry.server";
-import { toBrokerSession } from "~/lib/services/broker-session";
+import { toBrokerSession } from "~/lib/auth/session";
 import { getSideNavData } from "~/lib/services/navigation/side-nav.service";
 import {
   resolveShellNavState,

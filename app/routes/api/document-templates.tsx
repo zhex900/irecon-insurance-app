@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { requireAuth } from "~/lib/auth/session.server";
+import { requireAuth } from "~/lib/auth/session/server.server";
 import { searchParamsObject } from "~/lib/http/route-input";
 import { listPublishedForCover } from "~/lib/services/documents/document-templates";
 import type { Route } from "./+types/document-templates";

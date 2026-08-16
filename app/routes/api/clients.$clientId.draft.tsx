@@ -1,5 +1,5 @@
 import { clientDraftSchema, formValuesToClientInput } from "~/lib/zod/client";
-import { requireAuth } from "~/lib/auth/session.server";
+import { requireAuth } from "~/lib/auth/session/server.server";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
 import { parseUuid } from "~/lib/http/route-input";
 import {

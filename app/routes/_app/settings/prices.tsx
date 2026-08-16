@@ -1,5 +1,5 @@
 import { Outlet } from "react-router";
-import { requireAuth } from "~/lib/auth/session.server";
+import { requireAuth } from "~/lib/auth/session/server.server";
 import { requireFeatureOrSuperAdminPage } from "~/lib/auth/authorize.server";
 import { isFeatureEnabled } from "~/lib/services/feature-flags";
 import type { Route } from "./+types/prices";

@@ -11,7 +11,7 @@ import {
   type SessionTimeoutClientState,
   type SessionTiming,
   type SessionTimeoutVerdict,
-} from "~/lib/auth/session-timeout";
+} from "./timeout";
 import { readSessionTiming } from "~/lib/supabase/auth.server";
 
 export type {

@@ -95,7 +95,7 @@ vi.mock("~/lib/policies/wording/html", () => ({
 }));
 
 // Mock other PDF dependencies
-vi.mock("~/lib/pdf/plugins", () => ({
+vi.mock("~/lib/pdf/pdf-plugins", () => ({
   pdfmePlugins: {
     Text: {
       ui: vi.fn(),

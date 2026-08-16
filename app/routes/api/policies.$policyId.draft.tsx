@@ -1,6 +1,6 @@
 import { carPolicyDraftSchema } from "~/lib/zod/policy-car";
 import { POLICY_STATUS } from "~/lib/zod/policy-car";
-import { requireAuth } from "~/lib/auth/session.server";
+import { requireAuth } from "~/lib/auth/session/server.server";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
 import { parseUuid } from "~/lib/http/route-input";
 import {

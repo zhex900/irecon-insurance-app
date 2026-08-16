@@ -1,4 +1,4 @@
-import { requireAuth } from "~/lib/auth/session.server";
+import { requireAuth } from "~/lib/auth/session/server.server";
 import { getExcelService } from "~/lib/cloudflare.server";
 import { queryTextSchema } from "~/lib/http/route-input";
 import { trackUsage } from "~/lib/observability/metrics.server";

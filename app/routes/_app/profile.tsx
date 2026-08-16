@@ -1,7 +1,7 @@
 import { useActionData } from "react-router";
 import { PageHeader } from "~/components/layout/app-layout";
 import { ProfileForm } from "~/components/profile/profile-form";
-import { requireAuth } from "~/lib/auth/session.server";
+import { requireAuth } from "~/lib/auth/session/server.server";
 import { isAdminRole } from "~/lib/auth/roles";
 import { pageTitle } from "~/lib/brand";
 import { getAvatarsBucket } from "~/lib/cloudflare.server";

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { requireFeatureOrSuperAdminPage } from "~/lib/auth/authorize.server";
-import { requireAuth } from "~/lib/auth/session.server";
+import { requireAuth } from "~/lib/auth/session/server.server";
 import { isAdminRole, isSuperAdmin } from "~/lib/auth/roles";
 import { parseTemplateForm } from "~/lib/documents/template-editor-form";
 import { redirectResponse } from "~/lib/http/redirect-response";
