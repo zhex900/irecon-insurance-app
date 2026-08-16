@@ -1,4 +1,4 @@
 // Barrel exports for client summary components
-export { Popover as ClientPopover } from "./popover";
-export { Policies as ClientPolicies } from "./client-policies";
-export type { ClientSummaryPopoverClient } from "./popover";
+export { ClientPopover } from "./client-popover";
+export { ClientPolicies } from "./client-policies";
+export type { ClientSummaryPopoverClient } from "./client-popover";

@@ -44,7 +44,7 @@ function clientInitials(name: string) {
     .toUpperCase();
 }
 
-export function Popover({
+export function ClientPopover({
   client,
   side = "bottom",
   className,

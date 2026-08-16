@@ -16,7 +16,7 @@ import type { PolicyListItem } from "~/lib/services/policies/list.service";
 
 const DEFAULT_PAGE_SIZE = 25;
 
-export function Policies({
+export function ClientPolicies({
   policies,
   total,
   page,
