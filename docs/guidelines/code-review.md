@@ -56,7 +56,7 @@ Authz, secrets, or data-loss fails **block** merge.
 - [ ] Light helpers not pulled from heavy modules (e.g. cache invalidate ≠ `generate.ts`)
 - [ ] Loaders don’t embed full multi-version template JSON; large payloads on demand
 - [ ] New browser-only packages listed in `vite.stub-client-only.ts` when needed
-- [ ] **DB loaders:** ≤3 parallel `getDb()` queries per loader/action (waves or combined SQL); list pages with facet counts use one scan per dimension where possible
+- [ ] **DB loaders:** ≤3 parallel `getDb()` queries per loader/action (waves or combined SQL); list pages with facet counts use async secondary (`api/*` + `useFetcher`) when > ~4 total queries — see [performance.md](../architecture/performance.md) § Async list loading
 
 ## Reviewer output (AI)
 

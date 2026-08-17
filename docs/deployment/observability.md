@@ -94,6 +94,8 @@ Every Worker request gets an `x-request-id` response header and structured JSON 
 }
 ```
 
+Slow requests also emit `request.slow` (warn ≥ 2 s, error ≥ 8 s) — see [performance.md](../architecture/performance.md) § Early warning before Worker CPU limits. Use these to refactor list loaders **before** Error 1102.
+
 Sentry events are tagged with the same `requestId`. Incident flow:
 
 1. Alert → Sentry issue
@@ -119,6 +121,15 @@ Super-admin only: `/settings/sentry-test`
 | Workers Logs head sample             | 100%    | tune in wrangler when promoting |
 
 Temporarily raise rates in Sentry project settings or env-specific init when investigating an incident.
+
+### List-route performance alerts
+
+| Alert | Source | Suggested action |
+| ----- | ------ | ---------------- |
+| `exceededCpu` > 0 | Cloudflare Metrics | Urgent — slim loader / async secondary ([performance.md](../architecture/performance.md)) |
+| `message:request.slow` | Workers Logs | Investigate query count on that route |
+| `message:SLOW_OPERATION:listPageLoad` | Sentry | Same; threshold 1.5 s |
+| `message:db.query_gate_slow` | Workers Logs | Reduce parallel queries or combine SQL |
 
 ## Key files
 

@@ -28,6 +28,123 @@ Measure before optimizing. Readability wins over micro-optimizations without evi
 - Keep `shouldRevalidate` tight so draft saves don’t refetch the whole shell.
 - `useFetcher` for partial updates instead of full navigation when appropriate.
 
+## Async list loading (critical + secondary)
+
+Heavy list routes (`/policies`, `/clients`) used to block the Worker until **all** DB work finished — row fetch, facet badge counts, premium sums, and full `getReferenceDataAsync()` (4 queries). On Workers that stacks query-gate waves, JSON serialization, and SSR into a single request with **Error 1102** risk.
+
+**Workers constraint:** there is no “finish the HTTP response, keep querying in the background” in the same request. “Return quickly, load when ready” means either a **smaller synchronous loader** and/or a **second request after paint** via `useFetcher` + `api/*` (same pattern as `/api/search` in `app/hooks/search/use-api.ts`). This app does **not** use React Router `defer()` / `<Await>`.
+
+### Split critical vs secondary
+
+| Tier | What | When | Example |
+| ---- | ---- | ---- | ------- |
+| **Critical** | Table rows + pagination + filter echo | SSR loader (first paint) | `listPoliciesPageCore()`, `listClientsPage()` |
+| **Secondary** | Filter badge counts, live AM/AR lookups | `useFetcher` after mount | `/api/policies/list-meta`, `/api/reference/list` |
+
+Static catalogue fields (`policyStatuses`, `coverTypes`, …) come from `app/lib/reference-data.ts` on the client. Only **live** account managers and ARs need a DB round-trip.
+
+### Reference implementation
+
+```
+GET /policies (loader)     → count + page rows (~2 queries)
+GET /api/policies/list-meta → facet counts (separate request, after paint)
+GET /api/reference/list    → AM + AR (once per session, sessionStorage cache)
+```
+
+Key files:
+
+| Piece | Location |
+| ----- | -------- |
+| Core row fetch | `listPoliciesPageCore()` in `app/lib/services/policies/list.service.ts` |
+| Meta counts | `getPolicyListMeta()` + `app/routes/api/policies.list-meta.tsx` |
+| Live reference | `getListReferenceAsync()` + `app/routes/api/reference.list.tsx` |
+| Client hooks | `usePolicyListMeta`, `useListReference` in `app/hooks/` |
+| Badge UX while pending | `countsPending` → em dash in column filter headers |
+
+### When to apply
+
+Use this pattern when a list loader has **any** of:
+
+- More than **~4** DB queries per request
+- Multiple **waves** through the query gate (see below)
+- Aggregate scans for filter badges the user may never open
+- Full `getReferenceDataAsync()` when the UI only needs AM/AR
+
+Keep synchronous loaders for detail pages that need premium totals and meta on first paint (e.g. `/clients/:id` policies tab).
+
+### Adding a new async list route
+
+1. Split service into **core** (rows) and **meta** (counts/options).
+2. Slim the route loader to core + pagination only.
+3. Add `GET /api/<domain>/list-meta` with `requireAuth` + Zod (mirror list URL params).
+4. Add a `useFetcher` hook; reload when filter search params change (omit `page` / `pageSize` for meta).
+5. Show rows immediately; badges/options fill in with `—` or skeleton while pending.
+6. Tighten `shouldRevalidate` — revalidate on mutations, not `return true` always.
+
+## Early warning before Worker CPU limits
+
+Error **1102** (`Worker exceeded resource limits`) means CPU time and/or memory blew past the plan limit. By the time users see 1102, the route is already broken — the goal is to **warn while still fast** so you can refactor (loader diet → async secondary) before production data triggers timeouts.
+
+### Signals already in the app
+
+| Signal | Where | Meaning |
+| ------ | ----- | ------- |
+| `request.complete` | `workers/app.ts` | Wall-clock `durationMs` per request (includes I/O wait, not pure CPU) |
+| `request.slow` | `workers/app.ts` | **Warn** ≥ 2 s, **error** ≥ 8 s — refactor before 1102 |
+| `db.query_gate_slow` | `app/lib/db/query-gate.ts` | Query waited ≥ 500 ms for a gate slot — too many parallel queries or slow DB |
+| `SLOW_OPERATION:*` | `app/lib/performance/internal-monitoring.server.ts` | Wrapped operation exceeded its threshold (Sentry message) |
+
+Cloudflare dashboard: **Metrics → Errors → Exceeded CPU Time Limits** (`exceededCpu`). CPU time ≠ wall clock, but list routes with many queries + large JSON usually climb both.
+
+### Refactor triggers (code review)
+
+Treat these as **yellow flags** — fix before preview/staging shows 1102:
+
+| Trigger | Action |
+| ------- | ------ |
+| Loader runs **> 3** parallel `getDb()` calls in one wave | Split into waves or combine SQL |
+| Loader runs **> 6** total queries | Move badge counts / reference to `api/*` + `useFetcher` |
+| `getReferenceDataAsync()` on a list page | Static catalogue + `getListReferenceAsync()` or `/api/reference/list` |
+| Unused aggregates (e.g. premium sum on index) | Drop or gate behind `includePremium` |
+| `request.slow` or `durationMs` **> 2 s** on a list route | Profile queries; apply async list pattern |
+| `request.slow` **error** (≥ 8 s) or `exceededCpu` in CF | Urgent — slim loader immediately |
+
+### Query budget worksheet
+
+Before merging a list loader, count queries:
+
+```
+Wave 1 (≤3 parallel): count + rows + ?
+Wave 2 (≤3 parallel): meta group counts + ?
+Wave 3: ...
+```
+
+Target for index loaders: **one wave of ≤3** (e.g. count + rows + optional small lookup). Push everything else to secondary `api/*` fetchers.
+
+### Optional: wrap hot loaders
+
+For routes you are actively tuning, wrap the loader body:
+
+```typescript
+import { monitorCriticalOperation } from "~/lib/performance/internal-monitoring.server";
+
+export async function loader({ request }: Route.LoaderArgs) {
+  return monitorCriticalOperation("policiesListLoad", async () => {
+    // loader logic
+  }, 1500);
+}
+```
+
+Thresholds live in `OPERATION_TIMEOUTS` (`listPageLoad: 1500`). Exceeding threshold emits `SLOW_OPERATION:…` to Sentry (warning) or error at 2× threshold.
+
+### Alerting (staging / prod)
+
+1. **Cloudflare Workers Observability** — chart p95 CPU time; alert on `exceededCpu` > 0.
+2. **Log filter** — `request.slow` or `request.complete` where `durationMs > 2000` on `/policies`, `/clients`.
+3. **Sentry** — issue alert on `SLOW_OPERATION:listPageLoad` or `SLOW_OPERATION:policiesListLoad`.
+
+Incident flow: `requestId` from response header → Workers Logs → identify query fan-out → split loader per async list pattern above.
+
 ## Bundle & Workers
 
 This app SSR-renders on **Cloudflare Workers** (≈128 MB isolate, CPU limits). Bundle bloat causes **Error 1102** (`Worker exceeded resource limits`), deploy size failures, and slow cold starts. Prefer **smaller builds** over convenience imports.

@@ -79,11 +79,29 @@ const handler = {
           headers.append("Set-Cookie", setCookie);
         }
 
+        const durationMs = Date.now() - started;
+
         logger.info("request.complete", {
           status: response.status,
-          durationMs: Date.now() - started,
+          durationMs,
           method: request.method,
         });
+
+        if (durationMs >= 8_000) {
+          logger.error("request.slow", {
+            durationMs,
+            method: request.method,
+            status: response.status,
+            level: "error",
+          });
+        } else if (durationMs >= 2_000) {
+          logger.warn("request.slow", {
+            durationMs,
+            method: request.method,
+            status: response.status,
+            level: "warn",
+          });
+        }
 
         return new Response(response.body, {
           status: response.status,

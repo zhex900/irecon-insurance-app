@@ -23,6 +23,7 @@ const OPERATION_TIMEOUTS = {
 
   // Data operations
   clientSearch: 1500, // 1.5 seconds for client search
+  listPageLoad: 1500, // 1.5 seconds for SSR list loaders (/policies, /clients)
   reportGeneration: 3000, // 3 seconds for reports
   dataExport: 4000, // 4 seconds for exports
 
