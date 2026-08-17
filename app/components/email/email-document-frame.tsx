@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   EMAIL_DOCUMENT_ELEMENT_CSS,
@@ -78,6 +78,7 @@ export function EmailDocumentFrame({
   const editingRef = useRef(false);
   const loadedHtmlRef = useRef<string | null>(null);
   const reloadKeyRef = useRef(reloadKey);
+  const [frameReady, setFrameReady] = useState(false);
 
   useEffect(() => {
     onHtmlChangeRef.current = onHtmlChange;
@@ -92,6 +93,7 @@ export function EmailDocumentFrame({
 
     if (forced) {
       editingRef.current = false;
+      setFrameReady(false);
     } else if (editingRef.current) {
       // Parent echoed our onHtmlChange — keep caret, don't rewrite srcdoc.
       loadedHtmlRef.current = html;
@@ -101,6 +103,7 @@ export function EmailDocumentFrame({
     }
 
     loadedHtmlRef.current = html;
+    setFrameReady(false);
     iframe.srcdoc = buildEmailDocumentSrcDoc(html);
   }, [html, reloadKey]);
 
@@ -112,6 +115,7 @@ export function EmailDocumentFrame({
       const body = iframe.contentDocument?.body;
       if (!body) return;
 
+      setFrameReady(true);
       body.contentEditable = editable ? "true" : "false";
       body.spellcheck = false;
 
@@ -147,12 +151,24 @@ export function EmailDocumentFrame({
     };
   }, [editable, reloadKey]);
 
-    return (
-    <iframe
-      ref={iframeRef}
-      title={title}
-      sandbox="allow-same-origin allow-scripts"
-      className={cn("block w-full border-0 bg-white", className)}
-    />
+  return (
+    <div className={cn("relative bg-white", className)}>
+      {!frameReady ? (
+        <div
+          className="absolute inset-0 animate-pulse bg-muted"
+          role="status"
+          aria-label="Loading email preview"
+        />
+      ) : null}
+      <iframe
+        ref={iframeRef}
+        title={title}
+        sandbox="allow-same-origin allow-scripts"
+        className={cn(
+          "block h-full w-full border-0 bg-white",
+          !frameReady && "invisible",
+        )}
+      />
+    </div>
   );
 }

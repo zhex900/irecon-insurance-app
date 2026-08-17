@@ -10,6 +10,7 @@ Measure before optimizing. Readability wins over micro-optimizations without evi
 - **Index** filters you actually use; verify slow paths with `EXPLAIN`.
 - **Transactions** for multi-table writes — correct first, then fast.
 - Prefer request-scoped `getDb()` / Hyperdrive pooling — don’t open ad-hoc pools per call.
+- **Workers query concurrency:** cap at **≤3 parallel** `getDb()` queries per loader/action. Each Worker request gets its **own postgres pool** (`max: 5`, closed after the request) plus a **per-request query gate** in `app/lib/db/client.ts` — pools must not be shared across requests (Workers I/O isolation). Use **waves** of `Promise.all`, **combined SQL** (`count(*) FILTER (WHERE …)` for badge counts), and **one query for feature flags** (`getFeatureFlagStates()`). See `app/lib/services/price/snapshot.ts` and `app/lib/services/policies/list.service.ts`.
 
 ## HTTP & payloads
 

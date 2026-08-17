@@ -124,6 +124,28 @@ type FilterOmit = {
   omitExpiry?: boolean;
 };
 
+type DatePreset = { id: string };
+
+function startOfDay(isoDate: string) {
+  return new Date(`${isoDate}T00:00:00`);
+}
+
+function endOfDay(isoDate: string) {
+  return new Date(`${isoDate}T23:59:59.999`);
+}
+
+/** ISO strings for raw `sql` fragments — postgres.js on Workers rejects Date params. */
+function dateRangeSqlBounds(from: string, to: string) {
+  return {
+    from: startOfDay(from).toISOString(),
+    to: endOfDay(to).toISOString(),
+  };
+}
+
+function presetResultKey(id: string) {
+  return id.replace(/-/g, "_");
+}
+
 function buildPolicyListFilters(
   input: ListPoliciesPageInput,
   options?: FilterOmit,
@@ -276,6 +298,46 @@ async function countWithFilters(
   return Number(row?.count ?? 0);
 }
 
+/** One scan for all inception/expiry preset badge counts (replaces N separate counts). */
+async function countDatePresets(
+  input: ListPoliciesPageInput,
+  presets: readonly DatePreset[],
+  rangeForPreset: (id: string) => { from: string; to: string },
+  dateColumn: typeof policy.dateStart | typeof policy.dateEnd,
+  omit: Pick<FilterOmit, "omitInception" | "omitExpiry">,
+): Promise<Record<string, number>> {
+  const db = getDb();
+  const filters = buildPolicyListFilters(input, omit);
+  const where = filters.length > 0 ? and(...filters) : undefined;
+
+  const selectShape: Record<string, SQL.Aliased<number>> = {};
+  for (const preset of presets) {
+    const range = rangeForPreset(preset.id);
+    const key = presetResultKey(preset.id);
+    const bounds = dateRangeSqlBounds(range.from, range.to);
+    selectShape[key] = sql<number>`count(*) filter (where ${dateColumn} >= ${bounds.from} and ${dateColumn} <= ${bounds.to})::int`.as(
+      key,
+    );
+  }
+
+  const [row] = await db
+    .select(selectShape)
+    .from(policy)
+    .innerJoin(policyCar, eq(policy.policyId, policyCar.policyId))
+    .leftJoin(client, eq(policy.clientId, client.clientId))
+    .leftJoin(
+      policyCarAdjustment,
+      eq(policy.policyId, policyCarAdjustment.policyId),
+    )
+    .where(where);
+  const counts: Record<string, number> = {};
+  for (const preset of presets) {
+    const key = presetResultKey(preset.id);
+    counts[preset.id] = Number(row?.[key as keyof typeof row] ?? 0);
+  }
+  return counts;
+}
+
 /** Policy counts for specific clients under current filters (client filter omitted). */
 export async function countPoliciesForClientIds(
   input: ListPoliciesPageInput,
@@ -316,68 +378,11 @@ export async function listPoliciesPage(
   const filters = buildPolicyListFilters(input);
   const where = filters.length > 0 ? and(...filters) : undefined;
 
-  const [
-    total,
-    premiumTotals,
-    statusCounts,
-    coverCounts,
-    categoryCounts,
-    inceptionPresetCounts,
-    expiryPresetCounts,
-    rows,
-  ] = await Promise.all([
+  // Workers postgres pools are small (max ~5). Batch loader queries in waves of ≤3
+  // instead of one Promise.all fan-out — see docs/architecture/performance.md.
+  const [total, premiumTotals, rows] = await Promise.all([
     countWithFilters(input),
     sumPolicyListPremiums(input),
-    countByGroup(
-      input,
-      { omitStatus: true },
-      {
-        column: policy.policyStatusId,
-      },
-    ),
-    countByGroup(
-      input,
-      { omitCover: true },
-      {
-        column: policyCar.coverTypeId,
-      },
-    ),
-    countByGroup(
-      input,
-      { omitCategory: true },
-      {
-        column: policy.policyCategoryId,
-      },
-    ),
-    (async () => {
-      const counts: Record<string, number> = {};
-      await Promise.all(
-        INCEPTION_PRESETS.map(async (preset) => {
-          const range = rangeForInceptionPreset(preset.id as InceptionPresetId);
-          // Replace any active inception filter with this preset’s range.
-          counts[preset.id] = await countWithFilters({
-            ...input,
-            inceptionFrom: range.from,
-            inceptionTo: range.to,
-          });
-        }),
-      );
-      return counts;
-    })(),
-    (async () => {
-      const counts: Record<string, number> = {};
-      await Promise.all(
-        EXPIRY_PRESETS.map(async (preset) => {
-          const range = rangeForExpiryPreset(preset.id as ExpiryPresetId);
-          counts[preset.id] = await countWithFilters({
-            ...input,
-            expiryFrom: range.from,
-            expiryTo: range.to,
-          });
-        }),
-      );
-      return counts;
-    })(),
     db
       .select({
         policyId: policy.policyId,
@@ -411,6 +416,31 @@ export async function listPoliciesPage(
       .orderBy(desc(policy.createdWhen), desc(policy.policyId))
       .limit(pagination.limit)
       .offset(pagination.offset),
+  ]);
+
+  const [statusCounts, coverCounts, categoryCounts] = await Promise.all([
+    countByGroup(input, { omitStatus: true }, { column: policy.policyStatusId }),
+    countByGroup(input, { omitCover: true }, { column: policyCar.coverTypeId }),
+    countByGroup(input, { omitCategory: true }, {
+      column: policy.policyCategoryId,
+    }),
+  ]);
+
+  const [inceptionPresetCounts, expiryPresetCounts] = await Promise.all([
+    countDatePresets(
+      input,
+      INCEPTION_PRESETS,
+      (id) => rangeForInceptionPreset(id as InceptionPresetId),
+      policy.dateStart,
+      { omitInception: true },
+    ),
+    countDatePresets(
+      input,
+      EXPIRY_PRESETS,
+      (id) => rangeForExpiryPreset(id as ExpiryPresetId),
+      policy.dateEnd,
+      { omitExpiry: true },
+    ),
   ]);
 
   const items: PolicyListItem[] = rows.map((row) => {

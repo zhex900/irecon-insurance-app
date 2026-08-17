@@ -24,6 +24,7 @@ docs/
 │   └── testing/pdf-output-comparison-test-design.md # PDF testing design
 ├── deployment/                        # Deployment and monitoring
 │   ├── observability.md              # Monitoring, Sentry, and error tracking
+│   ├── preview-environments.md       # Per-PR Cloudflare + Supabase preview
 │   └── monitoring-setup.md          # Monitoring system setup
 ├── domains/                           # Domain-specific documentation
 │   ├── micro-frontend/               # Micro-frontend architecture
@@ -73,15 +74,15 @@ All documentation files now follow **kebab-case** naming (lowercase with hyphens
 
 ### Quick Access
 
-| Documentation Type | Primary Location                              |
-| ------------------ | --------------------------------------------- |
-| Coding Standards   | `docs/guidelines/coding-standards.md`         |
-| UI Guidelines      | `docs/guidelines/ui-guidelines.md`            |
-| Performance        | `docs/architecture/performance.md`            |
-| Testing            | `docs/development/testing.md`                 |
-| Deployment         | `docs/deployment/observability.md`            |
-| Architecture       | `docs/domains/micro-frontend/architecture.md` |
-| Plans              | `docs/plans/`                                 |
+| Documentation Type | Primary Location                                                              |
+| ------------------ | ----------------------------------------------------------------------------- |
+| Coding Standards   | `docs/guidelines/coding-standards.md`                                         |
+| UI Guidelines      | `docs/guidelines/ui-guidelines.md`                                            |
+| Performance        | `docs/architecture/performance.md`                                            |
+| Testing            | `docs/development/testing.md`                                                 |
+| Deployment         | `docs/deployment/observability.md`, `docs/deployment/preview-environments.md` |
+| Architecture       | `docs/domains/micro-frontend/architecture.md`                                 |
+| Plans              | `docs/plans/`                                                                 |
 
 ### Reference Documentation
 

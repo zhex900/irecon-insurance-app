@@ -1,5 +1,3 @@
-import { eq } from "drizzle-orm";
-
 import { getDb } from "~/lib/db/client";
 import { appFeatureFlag } from "~/lib/db/schema";
 
@@ -69,32 +67,67 @@ const FEATURE_CATALOGUE: Record<
   },
 };
 
-export async function listFeatureFlags(): Promise<FeatureFlag[]> {
+const FEATURE_FLAG_CACHE_TTL_MS = 60_000;
+
+type FeatureFlagCache = {
+  expiresAt: number;
+  byKey: Map<FeatureKey, boolean>;
+};
+
+let featureFlagCache: FeatureFlagCache | null = null;
+
+function invalidateFeatureFlagCache() {
+  featureFlagCache = null;
+}
+
+async function loadFeatureFlagByKey(): Promise<Map<FeatureKey, boolean>> {
+  const now = Date.now();
+  if (featureFlagCache && now < featureFlagCache.expiresAt) {
+    return featureFlagCache.byKey;
+  }
+
   const db = getDb();
   const rows = await db.select().from(appFeatureFlag);
-  const byKey = new Map(rows.map((row) => [row.featureKey, row]));
+  const fromDb = new Map(
+    rows.map((row) => [row.featureKey as FeatureKey, Boolean(row.enabled)]),
+  );
 
+  const byKey = new Map<FeatureKey, boolean>();
+  for (const key of FEATURE_KEYS) {
+    byKey.set(key, fromDb.get(key) ?? FEATURE_CATALOGUE[key].defaultEnabled);
+  }
+
+  featureFlagCache = {
+    expiresAt: now + FEATURE_FLAG_CACHE_TTL_MS,
+    byKey,
+  };
+  return byKey;
+}
+
+/** All feature on/off states in one cached read (one DB query per TTL window). */
+export async function getFeatureFlagStates(): Promise<Record<FeatureKey, boolean>> {
+  const byKey = await loadFeatureFlagByKey();
+  return Object.fromEntries(
+    FEATURE_KEYS.map((key) => [key, byKey.get(key)!]),
+  ) as Record<FeatureKey, boolean>;
+}
+
+export async function listFeatureFlags(): Promise<FeatureFlag[]> {
+  const byKey = await loadFeatureFlagByKey();
   return FEATURE_KEYS.map((key) => {
     const meta = FEATURE_CATALOGUE[key];
-    const row = byKey.get(key);
     return {
       key,
       label: meta.label,
       description: meta.description,
-      enabled: row ? Boolean(row.enabled) : meta.defaultEnabled,
+      enabled: byKey.get(key) ?? meta.defaultEnabled,
     };
   });
 }
 
 export async function isFeatureEnabled(key: FeatureKey): Promise<boolean> {
-  const db = getDb();
-  const [row] = await db
-    .select()
-    .from(appFeatureFlag)
-    .where(eq(appFeatureFlag.featureKey, key))
-    .limit(1);
-  if (!row) return FEATURE_CATALOGUE[key].defaultEnabled;
-  return Boolean(row.enabled);
+  const byKey = await loadFeatureFlagByKey();
+  return byKey.get(key) ?? FEATURE_CATALOGUE[key].defaultEnabled;
 }
 
 export async function setFeatureEnabled(
@@ -120,6 +153,8 @@ export async function setFeatureEnabled(
         updatedBy,
       },
     });
+
+  invalidateFeatureFlagCache();
 
   return {
     key,

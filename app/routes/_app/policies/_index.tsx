@@ -37,20 +37,21 @@ export async function loader({ request }: Route.LoaderArgs) {
   const filters = parsePolicyListFiltersFromUrl(url);
   const pagination = parsePagination(url, { defaultSize: PAGE_SIZE });
 
-  const [page, reference, selectedClients] = await Promise.all([
-    listPoliciesPage({
-      search: filters.q,
-      policyStatusIds: filters.statusIds,
-      coverTypeIds: filters.coverTypeIds,
-      policyCategoryIds: filters.policyCategoryIds,
-      clientIds: filters.clientIds,
-      inceptionFrom: filters.inception.from,
-      inceptionTo: filters.inception.to,
-      expiryFrom: filters.expiry.from,
-      expiryTo: filters.expiry.to,
-      limit: pagination.limit,
-      offset: pagination.offset,
-    }),
+  const page = await listPoliciesPage({
+    search: filters.q,
+    policyStatusIds: filters.statusIds,
+    coverTypeIds: filters.coverTypeIds,
+    policyCategoryIds: filters.policyCategoryIds,
+    clientIds: filters.clientIds,
+    inceptionFrom: filters.inception.from,
+    inceptionTo: filters.inception.to,
+    expiryFrom: filters.expiry.from,
+    expiryTo: filters.expiry.to,
+    limit: pagination.limit,
+    offset: pagination.offset,
+  });
+
+  const [reference, selectedClients] = await Promise.all([
     getReferenceDataAsync(),
     getClientsByIds(filters.clientIds),
   ]);

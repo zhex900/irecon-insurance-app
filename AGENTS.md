@@ -20,6 +20,7 @@ This file is **behavior only**. Engineering rules live in `docs/`.
 | CAR premium / terrorism formulas            | [docs/domains/pricing/car-premium-formulas.md](docs/domains/pricing/car-premium-formulas.md)                         |
 | Legacy vs rebuild manual premium quirks     | [docs/domains/pricing/legacy-vs-rebuild-premium-manual.md](docs/domains/pricing/legacy-vs-rebuild-premium-manual.md) |
 | Observability (CF + Sentry)                 | [docs/deployment/observability.md](docs/deployment/observability.md)                                                 |
+| Per-PR preview environments                 | [docs/deployment/preview-environments.md](docs/deployment/preview-environments.md)                                   |
 | How to run                                  | [README.md](README.md)                                                                                               |
 
 ## AI coding rules

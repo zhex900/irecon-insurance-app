@@ -17,6 +17,7 @@ desktop.ini
 logs/
 .tmp/
 .wrangler/
+.preview-envs/
 .react-router/
 /build/
 .vscode/

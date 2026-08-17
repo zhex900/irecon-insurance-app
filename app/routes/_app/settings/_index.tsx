@@ -30,7 +30,7 @@ import { throwUnauthorizedPage } from "~/lib/auth/authorize.server";
 import { isAdminRole, isSuperAdmin } from "~/lib/auth/roles";
 import { requireAuth } from "~/lib/auth/session/server.server";
 import { pageTitle } from "~/lib/brand";
-import { isFeatureEnabled } from "~/lib/services/feature-flags";
+import { getFeatureFlagStates } from "~/lib/services/feature-flags";
 import { viewerCanAccessSettings } from "~/lib/services/navigation/side-nav.service";
 
 import type { Route } from "./+types/_index";
@@ -44,23 +44,14 @@ export async function loader({ request }: Route.LoaderArgs) {
   if (!(await viewerCanAccessSettings(viewer))) {
     throwUnauthorizedPage();
   }
-  const [
-    auditLogEnabled,
-    pricesEnabled,
-    emailTemplatesEnabled,
-    libraryDocumentsEnabled,
-    documentTemplatesEnabled,
-    additionalWordingEnabled,
-    accountManagersEnabled,
-  ] = await Promise.all([
-    isFeatureEnabled("audit_log"),
-    isFeatureEnabled("prices"),
-    isFeatureEnabled("email_templates"),
-    isFeatureEnabled("library_documents"),
-    isFeatureEnabled("document_templates"),
-    isFeatureEnabled("additional_wording"),
-    isFeatureEnabled("account_managers"),
-  ]);
+  const flags = await getFeatureFlagStates();
+  const auditLogEnabled = flags.audit_log;
+  const pricesEnabled = flags.prices;
+  const emailTemplatesEnabled = flags.email_templates;
+  const libraryDocumentsEnabled = flags.library_documents;
+  const documentTemplatesEnabled = flags.document_templates;
+  const additionalWordingEnabled = flags.additional_wording;
+  const accountManagersEnabled = flags.account_managers;
   const superAdmin = isSuperAdmin(viewer);
   return {
     showUsers: isAdminRole(viewer),

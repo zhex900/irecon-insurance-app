@@ -38,7 +38,7 @@ export function getAppEnvironmentBadgeClass(env: AppEnvironment): string {
     case "local":
       return "border-sidebar-border bg-sidebar-accent text-sidebar-foreground";
     case "pr":
-      return "border-destructive/50 bg-destructive/25 text-destructive";
+      return "border-focus/50 bg-focus/25 text-focus";
     case "staging":
       return "border-warning/50 bg-warning/25 text-warning";
     case "prod":
