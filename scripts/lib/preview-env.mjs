@@ -201,6 +201,13 @@ export function supabaseUrls({ projectRef, password, region }) {
   };
 }
 
+/** Swap the database name in a Postgres URL (e.g. postgres → template1). */
+export function withDatabaseName(dbUrl, database) {
+  const parsed = new URL(dbUrl);
+  parsed.pathname = `/${database}`;
+  return parsed.toString();
+}
+
 export function run(command, args, { input, cwd, env } = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, {

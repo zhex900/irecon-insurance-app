@@ -193,15 +193,14 @@ export async function configureAuthUrls({ projectRef, appUrl }) {
   console.log("✓ Auth Site URL + redirect allow list →", origin);
 }
 
-async function runPsql(destUrl, files) {
-  const psqlFiles = files.flatMap((file) => ["--file", file]);
+async function runPsqlScript(dbUrl, file) {
   const args = [
-    "--single-transaction",
     "--variable",
     "ON_ERROR_STOP=1",
-    ...psqlFiles,
+    "--file",
+    file,
     "--dbname",
-    destUrl,
+    dbUrl,
   ];
   try {
     await run("psql", args);
@@ -211,11 +210,8 @@ async function runPsql(destUrl, files) {
     console.log("psql not on PATH — running via Docker postgres:17-alpine…");
   }
 
-  const mountDir = files[0] ? dirname(files[0]) : previewRoot;
-  const dockerFiles = files.map((file) => [
-    "--file",
-    `/sql/${file.slice(mountDir.length + 1)}`,
-  ]);
+  const mountDir = dirname(file);
+  const dockerFile = `/sql/${file.slice(mountDir.length + 1)}`;
   await run("docker", [
     "run",
     "--rm",
@@ -223,33 +219,53 @@ async function runPsql(destUrl, files) {
     `${mountDir}:/sql:ro`,
     "postgres:17-alpine",
     "psql",
-    "--single-transaction",
     "--variable",
     "ON_ERROR_STOP=1",
-    ...dockerFiles.flat(),
+    "--file",
+    dockerFile,
     "--dbname",
-    destUrl,
+    dbUrl,
   ]);
 }
 
-const CLEAR_PREVIEW_DB_SQL = `
+async function runPsqlScriptWithRetry(dbUrl, file, { attempts = 6 } = {}) {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      await runPsqlScript(dbUrl, file);
+      return;
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      if (!/EMAXCONNSESSION|max clients reached/i.test(msg) || i === attempts - 1) {
+        throw error;
+      }
+      const waitMs = 10_000 * (i + 1);
+      console.log(`  … session pooler full, retrying in ${waitMs / 1000}s…`);
+      await sleep(waitMs);
+    }
+  }
+}
+
+const RESET_PREVIEW_DB_SQL = `
+SET statement_timeout = 0;
+SET lock_timeout = 0;
 DROP SCHEMA IF EXISTS public CASCADE;
 CREATE SCHEMA public;
 GRANT ALL ON SCHEMA public TO postgres;
 GRANT ALL ON SCHEMA public TO public;
 GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
 GRANT ALL ON SCHEMA public TO service_role;
-
-TRUNCATE TABLE auth.users CASCADE;
-
-TRUNCATE TABLE storage.objects CASCADE;
+TRUNCATE auth.users CASCADE;
+TRUNCATE storage.objects CASCADE;
 `.trim();
 
-async function clearPreviewDatabase(destUrl, workDir) {
+async function resetPreviewDatabase(dbUrl, workDir) {
   await mkdir(workDir, { recursive: true });
-  const clearPath = join(workDir, "clear.sql");
-  await writeFile(clearPath, `${CLEAR_PREVIEW_DB_SQL}\n`, "utf8");
-  await runPsql(destUrl, [clearPath]);
+  const sqlPath = join(workDir, "reset.sql");
+  await writeFile(sqlPath, `${RESET_PREVIEW_DB_SQL}\n`, "utf8");
+  console.log(
+    "→ Resetting preview database (drop public schema, truncate auth/storage)…",
+  );
+  await runPsqlScriptWithRetry(dbUrl, sqlPath);
 }
 
 async function restoreWithPsql(destUrl, dumpDir, { skipRoles = false } = {}) {
@@ -363,6 +379,40 @@ async function savePassword(slug, password) {
   );
 }
 
+async function createSupabaseProject({ names, password, region }) {
+  const orgId = await resolveOrgId();
+  const size = process.env.PREVIEW_DB_SIZE?.trim();
+  console.log(
+    `→ Creating Supabase project ${names.supabaseName} (${region}${size ? `, ${size}` : ", default compute"})…`,
+  );
+  const createArgs = [
+    "supabase",
+    "projects",
+    "create",
+    names.supabaseName,
+    "--org-id",
+    orgId,
+    "--db-password",
+    password,
+    "--region",
+    region,
+    "--output",
+    "json",
+  ];
+  if (size) {
+    createArgs.push("--size", size);
+  }
+  const createdProject = await captureJson("npx", createArgs);
+  const projectRef = createdProject.id ?? createdProject.ref;
+  if (!projectRef) {
+    throw new Error(
+      `Could not read project ref from create response: ${JSON.stringify(createdProject)}`,
+    );
+  }
+  console.log(`✓ Created Supabase project ${projectRef}`);
+  return projectRef;
+}
+
 export async function provisionSupabase({ names }) {
   const region = previewRegion();
   const existing = await findProjectByName(names.supabaseName);
@@ -384,37 +434,8 @@ export async function provisionSupabase({ names }) {
     );
   } else {
     password = process.env.PREVIEW_DB_PASSWORD?.trim() || randomSecret(24);
-    const orgId = await resolveOrgId();
-    const size = process.env.PREVIEW_DB_SIZE?.trim();
-    console.log(
-      `→ Creating Supabase project ${names.supabaseName} (${region}${size ? `, ${size}` : ", default compute"})…`,
-    );
-    const createArgs = [
-      "supabase",
-      "projects",
-      "create",
-      names.supabaseName,
-      "--org-id",
-      orgId,
-      "--db-password",
-      password,
-      "--region",
-      region,
-      "--output",
-      "json",
-    ];
-    if (size) {
-      createArgs.push("--size", size);
-    }
-    const createdProject = await captureJson("npx", createArgs);
-    projectRef = createdProject.id ?? createdProject.ref;
-    if (!projectRef) {
-      throw new Error(
-        `Could not read project ref from create response: ${JSON.stringify(createdProject)}`,
-      );
-    }
+    projectRef = await createSupabaseProject({ names, password, region });
     created = true;
-    console.log(`✓ Created Supabase project ${projectRef}`);
   }
 
   await savePassword(names.label, password);
@@ -434,14 +455,12 @@ export async function provisionSupabase({ names }) {
       : "→ Refreshing preview database from staging…",
   );
   await dumpStaging(dumpDir, stagingDbUrl);
-  // Clear/restore use the transaction pooler (6543): session pooler (5432) is capped at
-  // ~15 conns and Hyperdrive already holds those; direct (db.*.supabase.co) is IPv6-only
-  // and fails DNS from Docker on macOS ("Name has no usable address").
-  const adminDbUrl = urls.transactionUrl;
   if (!created) {
-    console.log("→ Clearing existing preview database…");
-    await clearPreviewDatabase(adminDbUrl, dumpDir);
+    await resetPreviewDatabase(urls.sessionUrl, dumpDir);
   }
+  // Restore via transaction pooler (6543): session pooler is capped (~15) and Hyperdrive
+  // holds those slots; direct (db.*.supabase.co) is IPv6-only and fails from Docker on macOS.
+  const adminDbUrl = urls.transactionUrl;
   console.log("→ Restoring dump into preview project…");
   await restoreWithPsql(adminDbUrl, dumpDir, { skipRoles: !created });
   console.log("✓ Database copied from staging");

@@ -56,18 +56,17 @@ export async function loader({ request }: Route.LoaderArgs) {
       : "all";
   const pagination = parsePagination(url, { defaultSize: PAGE_SIZE });
 
-  const [page, reference] = await Promise.all([
-    listClientsPage({
-      search,
-      accountManagerId,
-      authorisedRepresentativeId,
-      arCompanyName: arCompanyName || null,
-      policyFilter,
-      limit: pagination.limit,
-      offset: pagination.offset,
-    }),
-    getReferenceDataAsync(),
-  ]);
+  const page = await listClientsPage({
+    search,
+    accountManagerId,
+    authorisedRepresentativeId,
+    arCompanyName: arCompanyName || null,
+    policyFilter,
+    limit: pagination.limit,
+    offset: pagination.offset,
+  });
+
+  const reference = await getReferenceDataAsync();
 
   return {
     clients: page.rows,
