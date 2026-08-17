@@ -3,8 +3,8 @@ import type postgres from "postgres";
 import { logger } from "~/lib/observability/logger.server";
 
 /** In-flight query cap per request (Workers postgres pool max is 2). */
-export const WORKER_QUERY_GATE_MAX = 1; // 3 - testing only
-export const DEV_QUERY_GATE_MAX = 1; // 8 - testing only
+export const WORKER_QUERY_GATE_MAX = 4;
+export const DEV_QUERY_GATE_MAX = 3;
 
 const TRANSIENT_RETRY_ATTEMPTS = 1;
 const TRANSIENT_RETRY_BASE_MS = 50;
