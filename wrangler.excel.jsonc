@@ -19,8 +19,6 @@
   },
   "vars": {
     "WORKER_VERSION": "2.0.0",
-    "EXCEL_WORKER_SHARED_SECRET": "{{ secrets.EXCEL_WORKER_SHARED_SECRET }}",
-    "EXCEL_WORKER_SERVICE_TOKEN": "{{ secrets.EXCEL_WORKER_SERVICE_TOKEN }}",
     "APP_URL": "{{ secrets.APP_URL }}",
   },
   "placement": {

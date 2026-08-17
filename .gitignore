@@ -5,6 +5,8 @@ node_modules/
 !.env.example
 !.env.staging.example
 .dev.vars
+workers/excel-local.env
+*.backup
 
 # Build / tooling
 .DS_Store
@@ -30,6 +32,7 @@ test-results/
 playwright-report/
 blob-report/
 playwright/.cache/
+workers/excel/test-output/
 
 # Local MSSQL credentials (live under _archive/mssql/)
 _archive/mssql/.env.mssql

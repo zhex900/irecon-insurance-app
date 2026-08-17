@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef } from "react";
 import { useFormContext } from "react-hook-form";
 import { useFetcher, useNavigate } from "react-router";
 
@@ -79,16 +79,15 @@ export function useWizardState({
       (item: { code: string }) => item.code === insurerCode,
     )?.name ?? insurerCode;
 
-  const { fieldsLocked, isNew, wizardMode, premiumPinned } = useMode();
+  const {
+    fieldsLocked,
+    isNew,
+    wizardMode,
+    premiumPinned,
+    hasSubmittedOnce,
+    setSubmittedInSession,
+  } = useMode();
 
-  /**
-   * After the first successful Submit, keep Submit off until values change again.
-   * Draft autosave must NOT clear this — only a successful Submit resets it.
-   * Also keeps Premium pinned under Policy Information (do not move it back).
-   */
-  /** Session submit, or already non-draft — pins Premium and gates re-submit. */
-  const [submittedInSession, setSubmittedInSession] = useState(false);
-  const hasSubmittedOnce = submittedInSession || !policy.isDraft;
   const navItems = useMemo(
     () => getPolicyFormNavItems(premiumPinned),
     [premiumPinned],
@@ -339,7 +338,6 @@ export function useWizardState({
     wizardMode,
     premiumPinned,
     hasSubmittedOnce,
-    submittedInSession,
     setSubmittedInSession,
 
     // Navigation

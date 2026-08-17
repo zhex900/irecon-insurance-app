@@ -1,4 +1,4 @@
-import { createContext, type ReactNode,useMemo } from "react";
+import { createContext, type ReactNode, useMemo, useState } from "react";
 
 import type { WizardMode } from "../shared/wizard-shared";
 
@@ -29,8 +29,12 @@ type PolicyWizardModeValue = {
   /** Policy number is editable until Taken/Not taken is *saved* — independent
    * of the live (unsaved) form status used by `fieldsLocked`. */
   policyNumberEditable: boolean;
+  /** Session submit or persisted non-draft — pins Premium and gates re-submit. */
+  hasSubmittedOnce: boolean;
   /** Pin Premium under Policy Information after the first submit. */
   premiumPinned: boolean;
+  /** Mark the first successful Submit in this session (do not wait for loader). */
+  setSubmittedInSession: (submitted: boolean) => void;
 };
 
 const defaultValue: PolicyWizardModeValue = {
@@ -42,7 +46,9 @@ const defaultValue: PolicyWizardModeValue = {
   wizardMode: "edit",
   canShowSubmitButton: true,
   policyNumberEditable: true,
+  hasSubmittedOnce: false,
   premiumPinned: false,
+  setSubmittedInSession: () => {},
 };
 
 const ModeContext = createContext<PolicyWizardModeValue>(defaultValue);
@@ -79,7 +85,7 @@ export function ModeProvider({
   freshSteps,
   isFormTerminal,
   policyAlreadyTerminal,
-  hasSubmittedOnce,
+  hasSubmittedOnce: persistedHasSubmittedOnce,
   children,
 }: {
   readOnly: boolean;
@@ -89,9 +95,13 @@ export function ModeProvider({
   isFormTerminal: boolean;
   /** Saved/persisted status is terminal (drives `policyNumberEditable`). */
   policyAlreadyTerminal: boolean;
+  /** Persisted non-draft. Combined with in-session submit for `premiumPinned`. */
   hasSubmittedOnce: boolean;
   children: ReactNode;
 }) {
+  const [submittedInSession, setSubmittedInSession] = useState(false);
+  const hasSubmittedOnce = submittedInSession || persistedHasSubmittedOnce;
+
   const value = useMemo<PolicyWizardModeValue>(() => {
     const fieldsLocked = computeFieldsLocked(readOnly, isFormTerminal);
     const wizardMode = computeWizardMode(isNew, fieldsLocked);
@@ -113,7 +123,9 @@ export function ModeProvider({
       wizardMode,
       canShowSubmitButton,
       policyNumberEditable,
+      hasSubmittedOnce,
       premiumPinned: hasSubmittedOnce,
+      setSubmittedInSession,
     };
   }, [
     readOnly,

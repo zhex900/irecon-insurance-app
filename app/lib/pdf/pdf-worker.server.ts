@@ -24,11 +24,32 @@ export class PdfRenderServiceError extends Error {
   }
 }
 
+const PDF_RPC_TIMEOUT_MS = 30_000;
+
 function byteLength(value: string): number {
   return new TextEncoder().encode(value).byteLength;
 }
 
-/** Render a bounded PDF through the private Cloudflare service binding. */
+async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      reject(
+        new PdfRenderServiceError(
+          "Document generation is temporarily unavailable.",
+          503,
+        ),
+      );
+    }, ms);
+  });
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+/** Render a bounded PDF through the private Cloudflare RPC service binding. */
 export async function renderPolicyPdf(
   pdfService: PdfWorkerBinding,
   input: PdfRenderRequest,
@@ -49,7 +70,10 @@ export async function renderPolicyPdf(
   const started = Date.now();
   let response: Response;
   try {
-    response = await pdfService.generatePdf(payload);
+    response = await withTimeout(
+      pdfService.generatePdf(payload),
+      PDF_RPC_TIMEOUT_MS,
+    );
   } catch {
     trackUsage("document.render", {
       result: "failure",

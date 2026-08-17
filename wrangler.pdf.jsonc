@@ -11,9 +11,6 @@
     "binding": "ASSETS",
     "run_worker_first": true,
   },
-  "vars": {
-    "WORKER_SHARED_SECRET": "{{ secrets.WORKER_SHARED_SECRET }}",
-  },
   "observability": {
     "enabled": true,
     "logs": {

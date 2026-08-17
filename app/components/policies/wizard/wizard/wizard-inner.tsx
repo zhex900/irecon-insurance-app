@@ -31,6 +31,7 @@ export function WizardInner({
   const selectedStatusId = Number(form.watch("policyStatusId"));
   const isFormTerminal = isTerminalStatus(selectedStatusId);
   const policyAlreadyTerminal = isTerminalStatus(policy.policyStatusId);
+  // Persisted only — ModeProvider ORs this with in-session submit.
   const hasSubmittedOnce = !policy.isDraft;
 
   return (

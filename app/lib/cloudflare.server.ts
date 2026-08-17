@@ -39,16 +39,11 @@ export type CloudflareEnv = {
   SESSION_INACTIVITY_TIMEOUT_MINUTES?: string;
   /** Max hours from login before forced re-login (0 disables). Default 12. */
   SESSION_ABSOLUTE_TIMEOUT_HOURS?: string;
-  /** Shared secret for internal service authentication */
-  WORKER_SHARED_SECRET?: string;
   HYPERDRIVE?: { connectionString: string };
   AVATARS?: R2BucketLike;
   LIBRARY_DOCUMENTS?: R2BucketLike;
   PDF_SERVICE?: PdfWorkerBinding;
   EXCEL_SERVICE?: ExcelWorkerBinding;
-  SESSIONS?: {
-    get: (key: string, type: "json") => Promise<unknown>;
-  };
 };
 
 export const cloudflareContext = createContext<{

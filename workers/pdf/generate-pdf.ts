@@ -7,41 +7,46 @@ import { getDocumentWorkerFonts } from "./fonts";
 
 function jsonError(
   error:
-    | "invalid_request"
-    | "payload_too_large"
-    | "render_failed"
-    | "method_not_allowed"
-    | "not_found",
+    "invalid_request" | "payload_too_large" | "render_failed" | "not_found",
   status: number,
   requestId?: string,
 ) {
   return Response.json({ error, requestId }, { status });
 }
 
-async function parseBoundedJson(request: Request): Promise<unknown> {
-  const declaredLength = Number(request.headers.get("content-length") ?? 0);
-  if (declaredLength > MAX_PDF_RENDER_REQUEST_BYTES) {
-    throw new RangeError("payload_too_large");
+function requestIdFromUnknown(value: unknown): string | undefined {
+  if (!value || typeof value !== "object" || !("requestId" in value)) {
+    return undefined;
   }
-  const body = await request.text();
-  if (
-    new TextEncoder().encode(body).byteLength > MAX_PDF_RENDER_REQUEST_BYTES
-  ) {
-    throw new RangeError("payload_too_large");
+  return typeof value.requestId === "string"
+    ? value.requestId.slice(0, 128)
+    : undefined;
+}
+
+function payloadTooLarge(value: unknown): boolean {
+  try {
+    const json = JSON.stringify(value);
+    if (typeof json !== "string") return false;
+    return (
+      new TextEncoder().encode(json).byteLength > MAX_PDF_RENDER_REQUEST_BYTES
+    );
+  } catch {
+    return false;
   }
-  return JSON.parse(body);
 }
 
 export async function generatePdf(
-  request: Request,
+  requestData: unknown,
   env: PdfWorkerEnv,
 ): Promise<Response> {
-  const requestId = request.headers.get("x-request-id") ?? undefined;
+  const requestId = requestIdFromUnknown(requestData);
 
   try {
-    const parsed = pdfRenderRequestSchema.safeParse(
-      await parseBoundedJson(request),
-    );
+    if (payloadTooLarge(requestData)) {
+      return jsonError("payload_too_large", 413, requestId);
+    }
+
+    const parsed = pdfRenderRequestSchema.safeParse(requestData);
     if (!parsed.success) return jsonError("invalid_request", 400, requestId);
 
     const input = parsed.data;
@@ -66,14 +71,11 @@ export async function generatePdf(
       },
     });
   } catch (error) {
-    if (error instanceof RangeError && error.message === "payload_too_large") {
-      return jsonError("payload_too_large", 413, requestId);
-    }
     console.error(
       JSON.stringify({
         event: "document.render_failed",
         requestId,
-        error: error instanceof Error ? error.message : "unknown_error",
+        error: error instanceof Error ? error.name : "unknown",
       }),
     );
     return jsonError("render_failed", 500, requestId);

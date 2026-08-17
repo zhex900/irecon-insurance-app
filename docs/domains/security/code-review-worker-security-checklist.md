@@ -37,24 +37,21 @@ If **YES** to any question, this checklist applies.
 - [ ] Service name follows pattern: `insurance-{domain}-worker-{env}`
 - [ ] Observability enabled
 - [ ] No public URLs referenced
-- [ ] Shared secret configuration via environment variables
+- [ ] Do not declare unused `WORKER_SHARED_SECRET` / `EXCEL_WORKER_SHARED_SECRET` vars (service bindings are the trust boundary; do not imply HTTP token auth that is not implemented)
 
 ### **2. Environment Configuration**
 
-- [ ] `.env.example` includes `WORKER_SHARED_SECRET`
-- [ ] `.env.local` never committed to version control
-- [ ] Secret rotation documented
+- [ ] `.env.local` and `workers/*-local.env` never committed to version control
+- [ ] Local worker env files have a committed `.example` without real secrets
 - [ ] Development vs production secrets separated
 
 ## ✅ Security Implementation Checklist
 
 ### **3. Authentication & Authorization**
 
-- [ ] All worker endpoints require `X-Service-Token` header
-- [ ] Token validation implemented in middleware
-- [ ] Invalid tokens result in 401 Unauthorized response
-- [ ] Authentication failures logged to security events
-- [ ] No bypass mechanisms for authentication
+- [ ] Excel/PDF workers are RPC-only (`WorkerEntrypoint`); `fetch` returns 404
+- [ ] Callers use service bindings, not public HTTP + `X-Service-Token`
+- [ ] Do not add unused shared-secret vars that are never checked
 
 ### **4. Request Signing & Validation**
 

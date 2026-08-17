@@ -7,7 +7,7 @@
  * Using Sentry Free Plan (no performance monitoring, only error tracking).
  */
 
-import * as Sentry from "@sentry/react";
+import { Sentry, setSentryRequestTags } from "~/lib/observability/sentry.server";
 
 /**
  * Operation timeout thresholds for internal apps
@@ -57,6 +57,7 @@ export function monitorCriticalOperation<T>(
     if (duration > timeoutMs) {
       const message = `SLOW_OPERATION: ${operationName} took ${duration}ms (threshold: ${timeoutMs}ms)`;
 
+      setSentryRequestTags();
       Sentry.captureMessage(message, {
         level: duration > timeoutMs * 2 ? "error" : "warning",
         extra: {
@@ -109,6 +110,7 @@ export async function monitorWorkflow<T>(
       operationDurations.push({ name: op.name, duration });
     } catch (error) {
       // Log workflow failure
+      setSentryRequestTags();
       Sentry.captureMessage(
         `WORKFLOW_FAILED: ${workflowName} failed at ${op.name}`,
         {
@@ -129,6 +131,7 @@ export async function monitorWorkflow<T>(
 
   // Log if entire workflow is too slow
   if (totalDuration > overallTimeoutMs) {
+    setSentryRequestTags();
     Sentry.captureMessage(
       `SLOW_WORKFLOW: ${workflowName} took ${totalDuration}ms`,
       {

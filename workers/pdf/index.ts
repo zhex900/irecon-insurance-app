@@ -1,30 +1,18 @@
-import { PDF_RENDER_PATH } from "../../app/lib/pdf/document-worker-contract";
+/**
+ * PDF Worker RPC entry. Service bindings call methods on this class;
+ * it is not a public HTTP worker.
+ */
+
+import { WorkerEntrypoint } from "cloudflare:workers";
+
 import { generatePdf } from "./generate-pdf";
 
-type PdfWorkerHandler = {
-  fetch(request: Request, env: PdfWorkerEnv): Promise<Response>;
-};
+export default class PdfWorker extends WorkerEntrypoint<PdfWorkerEnv> {
+  async fetch(): Promise<Response> {
+    return Response.json({ error: "not_found" }, { status: 404 });
+  }
 
-function jsonError(
-  error: "not_found" | "method_not_allowed",
-  status: number,
-  requestId?: string,
-) {
-  return Response.json({ error, requestId }, { status });
+  async generatePdf(requestData: unknown): Promise<Response> {
+    return generatePdf(requestData, this.env);
+  }
 }
-
-export default {
-  async fetch(request: Request, env: PdfWorkerEnv): Promise<Response> {
-    const url = new URL(request.url);
-    const requestId = request.headers.get("x-request-id") ?? undefined;
-
-    if (url.pathname !== PDF_RENDER_PATH) {
-      return jsonError("not_found", 404, requestId);
-    }
-    if (request.method !== "POST") {
-      return jsonError("method_not_allowed", 405, requestId);
-    }
-
-    return generatePdf(request, env);
-  },
-} satisfies PdfWorkerHandler;

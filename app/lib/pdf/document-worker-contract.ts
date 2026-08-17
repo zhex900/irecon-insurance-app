@@ -5,7 +5,6 @@ import type { BrokerFeeLineInput } from "~/lib/pdf/merge-fields";
 import type { DocumentTemplate } from "~/lib/pdf/templates";
 
 export const PDF_RENDER_CONTRACT_VERSION = 1 as const;
-export const PDF_RENDER_PATH = "/v1/render-policy-pdf";
 export const MAX_PDF_RENDER_REQUEST_BYTES = 12 * 1024 * 1024;
 export const MAX_PDF_RENDER_RESPONSE_BYTES = 16 * 1024 * 1024;
 
@@ -86,7 +85,6 @@ export const pdfRenderErrorSchema = z.object({
     "invalid_request",
     "payload_too_large",
     "render_failed",
-    "method_not_allowed",
     "not_found",
   ]),
   requestId: z.string().max(128).optional(),
