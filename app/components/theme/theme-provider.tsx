@@ -2,80 +2,73 @@
 
 import * as React from "react";
 
-import { setThemeCookie } from "~/lib/cookies";
+import {
+  applyThemeToDocument,
+  persistTheme,
+  readStoredTheme,
+  type Theme,
+} from "~/lib/theme";
 
-import { type Theme, ThemeContext } from "./context";
+import { ThemeContext } from "./context";
 
 interface ThemeProviderProps {
   children: React.ReactNode;
-  initialTheme?: Theme;
+  defaultTheme?: Theme;
   enableSystem?: boolean;
 }
 
-function resolveTheme(theme: Theme, enableSystem: boolean): "light" | "dark" {
-  if (theme === "dark") {
-    return "dark";
-  }
+const themeListeners = new Set<() => void>();
 
-  if (theme === "light") {
-    return "light";
-  }
-
-  if (enableSystem) {
-    return window.matchMedia("(prefers-color-scheme: dark)").matches
-      ? "dark"
-      : "light";
-  }
-
-  return "light";
+function subscribeTheme(listener: () => void) {
+  themeListeners.add(listener);
+  return () => themeListeners.delete(listener);
 }
 
-function applyTheme(theme: Theme, enableSystem: boolean) {
-  const resolvedTheme = resolveTheme(theme, enableSystem);
-
-  document.documentElement.classList.remove("light", "dark");
-  document.documentElement.classList.add(resolvedTheme);
+function notifyThemeListeners() {
+  for (const listener of themeListeners) {
+    listener();
+  }
 }
 
 export function ThemeProvider({
   children,
-  initialTheme = "system",
+  defaultTheme = "system",
   enableSystem = true,
 }: ThemeProviderProps) {
-  const [theme, setThemeState] = React.useState<Theme>(initialTheme);
+  const theme = React.useSyncExternalStore(
+    subscribeTheme,
+    () => readStoredTheme(defaultTheme),
+    () => defaultTheme,
+  );
+
+  React.useEffect(() => {
+    applyThemeToDocument(theme, { enableSystem });
+  }, [theme, enableSystem]);
+
+  React.useEffect(() => {
+    if (!enableSystem || theme !== "system") return;
+
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const handleChange = () => {
+      applyThemeToDocument("system", {
+        enableSystem: true,
+        disableTransitions: true,
+      });
+    };
+
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, [theme, enableSystem]);
 
   const setTheme = React.useCallback(
     (newTheme: Theme) => {
-      setThemeState(newTheme);
-
-      setThemeCookie(newTheme);
-
-      applyTheme(newTheme, enableSystem);
+      persistTheme(newTheme, { enableSystem, disableTransitions: true });
+      notifyThemeListeners();
     },
     [enableSystem],
   );
 
-  React.useEffect(() => {
-    if (!enableSystem || theme !== "system") {
-      return;
-    }
-
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-
-    const handleChange = () => {
-      applyTheme("system", true);
-    };
-
-    mediaQuery.addEventListener("change", handleChange);
-
-    return () => {
-      mediaQuery.removeEventListener("change", handleChange);
-    };
-  }, [theme, enableSystem]);
-
   return (
-    <ThemeContext.Provider value={{ theme, setTheme }}>
-      {children}
-    </ThemeContext.Provider>
+    <ThemeContext value={{ theme, setTheme }}>{children}</ThemeContext>
   );
 }

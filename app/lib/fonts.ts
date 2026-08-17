@@ -30,4 +30,3 @@ export function geistFontFaceCss() {
     )
     .join("\n");
 }
-

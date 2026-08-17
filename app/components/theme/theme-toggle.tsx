@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
 import { useHydrated } from "~/hooks/network";
+import type { Theme } from "~/lib/cookies";
 import { cn } from "~/lib/utils";
 
 const themes = [
@@ -63,7 +64,7 @@ export function ThemeToggle({
       <DropdownMenuContent align={align} className="min-w-36">
         <DropdownMenuRadioGroup
           value={theme ?? "system"}
-          onValueChange={setTheme}
+          onValueChange={(value) => setTheme(value as Theme)}
         >
           <DropdownMenuLabel>Theme</DropdownMenuLabel>
           {themes.map(({ value, label, icon: Icon }) => (
@@ -101,7 +102,7 @@ export function ThemeModePicker({ className }: { className?: string }) {
             type="button"
             role="radio"
             aria-checked={selected}
-            onClick={() => setTheme(value)}
+            onClick={() => setTheme(value as Theme)}
             className={cn(
               "flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
               selected

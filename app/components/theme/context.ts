@@ -1,13 +1,12 @@
 import * as React from "react";
 
-export type Theme = "light" | "dark" | "system";
+import type { Theme } from "~/lib/cookies";
+
+export type { Theme };
 
 export interface ThemeContextType {
   theme: Theme;
   setTheme: (theme: Theme) => void;
 }
 
-export const ThemeContext = React.createContext<ThemeContextType>({
-  theme: "system",
-  setTheme: () => {},
-});
+export const ThemeContext = React.createContext<ThemeContextType | null>(null);
