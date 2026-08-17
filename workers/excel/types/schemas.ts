@@ -44,17 +44,24 @@ export const excelWorkerRequestSchema = z.object({
     .optional(),
 });
 
+const MAX_CUSTOM_COLUMNS = 50;
+const MAX_CUSTOM_ROWS = 5_000;
+
 // Custom report data validation
 export const customReportDataSchema = z.object({
-  columns: z.array(
-    z.object({
-      key: z.string(),
-      header: z.string(),
-      width: z.number().optional(),
-      type: z.enum(["text", "currency", "integer", "date"]).optional(),
-    }),
-  ),
-  rows: z.array(z.record(z.string(), z.union([z.string(), z.number()]))),
+  columns: z
+    .array(
+      z.object({
+        key: z.string().max(100),
+        header: z.string().max(200),
+        width: z.number().optional(),
+        type: z.enum(["text", "currency", "integer", "date"]).optional(),
+      }),
+    )
+    .max(MAX_CUSTOM_COLUMNS),
+  rows: z
+    .array(z.record(z.string().max(100), z.union([z.string(), z.number()])))
+    .max(MAX_CUSTOM_ROWS),
 });
 
 // Premium workbook specific data validation
@@ -103,6 +110,24 @@ export const premiumWorkbookDataSchema = z.object({
     .optional(),
 });
 
+export const generatePremiumExcelRequestSchema = z.object({
+  reportType: z.literal("premiumWorkbook"),
+  data: premiumWorkbookDataSchema,
+  options: z
+    .object({
+      policyNumber: z.string().max(100).optional(),
+      generatedBy: z.string().max(500).optional(),
+      appVersion: z.string().max(50).optional(),
+    })
+    .optional(),
+});
+
+export const generateGenericExcelRequestSchema = z.object({
+  reportType: z.literal("custom"),
+  data: z.unknown(),
+  options: excelWorkerRequestSchema.shape.options,
+});
+
 // Response schema
 export const excelWorkerResponseSchema = z.object({
   success: z.boolean(),
@@ -137,6 +162,12 @@ export const infoResponseSchema = z.object({
 
 // Type exports derived from schemas (single source of truth)
 export type ExcelWorkerRequest = z.infer<typeof excelWorkerRequestSchema>;
+export type GeneratePremiumExcelRequestData = z.infer<
+  typeof generatePremiumExcelRequestSchema
+>;
+export type GenerateGenericExcelRequestData = z.infer<
+  typeof generateGenericExcelRequestSchema
+>;
 export type ExcelWorkerResponse = z.infer<typeof excelWorkerResponseSchema>;
 export type SignedWorkerRequest = z.infer<typeof signedWorkerRequestSchema>;
 export type HealthResponse = z.infer<typeof healthResponseSchema>;

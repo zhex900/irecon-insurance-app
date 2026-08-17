@@ -15,7 +15,10 @@ export function isPremiumExcelDocument(doc: PolicyDocument): boolean {
 }
 
 /** Trigger a browser download from a stored excel PolicyDocument. */
-export function downloadPremiumExcelDocument(doc: PolicyDocument) {
+export function downloadPremiumExcelDocument(doc: {
+  filename: string;
+  pdfBase64?: string;
+}) {
   if (!doc.pdfBase64) {
     throw new Error("Excel file is not available on this document");
   }

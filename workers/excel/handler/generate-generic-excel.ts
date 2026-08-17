@@ -1,45 +1,32 @@
+import { CONTENT_TYPES, CUSTOM_HEADERS } from "../constants/config";
 import {
   customReportDataSchema,
-  type ExcelWorkerRequest,
+  generateGenericExcelRequestSchema,
 } from "../types/schemas";
 
-/**
- * Generic Excel generation handler
- */
+function jsonError(error: string, status: number): Response {
+  return Response.json({ error }, { status });
+}
+
 export async function generateGenericExcel(
-  requestData: ExcelWorkerRequest,
+  requestData: unknown,
 ): Promise<Response> {
   const startTime = Date.now();
+  const parsed = generateGenericExcelRequestSchema.safeParse(requestData);
+  if (!parsed.success) {
+    return jsonError("Invalid custom report request", 400);
+  }
+
+  const customDataValidation = customReportDataSchema.safeParse(
+    parsed.data.data,
+  );
+  if (!customDataValidation.success) {
+    return jsonError("Invalid custom report data format", 400);
+  }
 
   try {
-    // Parse and validate request data
-
-    // Validate that we have custom report data
-    if (requestData.reportType !== "custom") {
-      return new Response(
-        JSON.stringify({ error: "Invalid report type, expected custom" }),
-        { status: 400, headers: { "Content-Type": "application/json" } },
-      );
-    }
-
-    // Extract and validate custom report data
-    const customDataValidation = customReportDataSchema.safeParse(
-      requestData.data,
-    );
-    if (!customDataValidation.success) {
-      return new Response(
-        JSON.stringify({
-          error: "Invalid custom report data format",
-          details: customDataValidation.error.issues,
-        }),
-        { status: 400, headers: { "Content-Type": "application/json" } },
-      );
-    }
-
     const customData = customDataValidation.data;
-    const options = requestData.options || {};
-
-    // Call generic Excel generation
+    const options = parsed.data.options || {};
     const { buildGenericExcelWorkbook } = await import("../services");
     const bytes = await buildGenericExcelWorkbook({
       columns: customData.columns,
@@ -50,12 +37,8 @@ export async function generateGenericExcel(
       includeTimestamp: options.includeTimestamp,
     });
 
-    // Create filename
-    const when = new Date();
-    const filename = `custom-report-${when.getTime()}.xlsx`;
+    const filename = `custom-report-${Date.now()}.xlsx`;
     const generationTime = Date.now() - startTime;
-
-    // Convert Uint8Array to ArrayBuffer for Response constructor
     const arrayBuffer = bytes.buffer.slice(
       bytes.byteOffset,
       bytes.byteOffset + bytes.byteLength,
@@ -64,25 +47,19 @@ export async function generateGenericExcel(
     return new Response(arrayBuffer as ArrayBuffer, {
       status: 200,
       headers: {
-        "Content-Type":
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Type": CONTENT_TYPES.EXCEL,
         "Content-Disposition": `attachment; filename="${filename}"`,
         "Content-Length": bytes.byteLength.toString(),
-        "X-Generation-Time": generationTime.toString(),
-        "X-Report-Type": "custom",
-        "X-Report-Size": bytes.byteLength.toString(),
+        [CUSTOM_HEADERS.GENERATION_TIME]: generationTime.toString(),
+        [CUSTOM_HEADERS.REPORT_TYPE]: "custom",
+        [CUSTOM_HEADERS.REPORT_SIZE]: bytes.byteLength.toString(),
       },
     });
   } catch (error) {
-    console.error("Generic Excel generation failed:", error);
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
-    return new Response(
-      JSON.stringify({
-        error: "Generic Excel generation failed",
-        message: errorMessage,
-      }),
-      { status: 500, headers: { "Content-Type": "application/json" } },
+    console.error(
+      "Generic Excel generation failed",
+      error instanceof Error ? error.name : "unknown",
     );
+    return jsonError("Generic Excel generation failed", 500);
   }
 }

@@ -1,71 +1,64 @@
+import { CONTENT_TYPES, CUSTOM_HEADERS } from "../constants/config";
 import type { BuildPremiumExcelInput } from "../services/excel-types";
-import type { GeneratePremiumExcelRequestData } from "../types/generate-types";
+import { generatePremiumExcelRequestSchema } from "../types/schemas";
+
+function jsonError(error: string, status: number): Response {
+  return Response.json({ error }, { status });
+}
+
+function workbookResponse(
+  bytes: Uint8Array,
+  filename: string,
+  generationTimeMs: number,
+): Response {
+  const arrayBuffer = bytes.buffer.slice(
+    bytes.byteOffset,
+    bytes.byteOffset + bytes.byteLength,
+  );
+  return new Response(arrayBuffer as ArrayBuffer, {
+    status: 200,
+    headers: {
+      "Content-Type": CONTENT_TYPES.EXCEL,
+      "Content-Disposition": `attachment; filename="${filename}"`,
+      "Content-Length": bytes.byteLength.toString(),
+      [CUSTOM_HEADERS.GENERATION_TIME]: generationTimeMs.toString(),
+      [CUSTOM_HEADERS.REPORT_TYPE]: "premiumWorkbook",
+      [CUSTOM_HEADERS.REPORT_SIZE]: bytes.byteLength.toString(),
+    },
+  });
+}
 
 export async function generatePremiumExcel(
-  requestData: GeneratePremiumExcelRequestData,
+  requestData: unknown,
 ): Promise<Response> {
+  const started = Date.now();
+  const parsed = generatePremiumExcelRequestSchema.safeParse(requestData);
+  if (!parsed.success) {
+    return jsonError("Invalid premium workbook request", 400);
+  }
+
   try {
-    // Import services dynamically to avoid initial load time
     const { buildPremiumExcelWorkbook } = await import("../services");
-
-    // Validate that we have premium workbook data
-    if (requestData.reportType !== "premiumWorkbook") {
-      return new Response(
-        JSON.stringify({
-          error:
-            "Invalid report type, expected premiumWorkbook, got " +
-            requestData.reportType +
-            " " +
-            JSON.stringify(requestData),
-        }),
-        { status: 400, headers: { "Content-Type": "application/json" } },
-      );
-    }
-
     const input: BuildPremiumExcelInput = {
-      policy: requestData.data.policy,
-      premium: requestData.data.premium,
-      rating: requestData.data.rating,
-      adjustment: requestData.data.adjustment,
-      generatedBy: requestData.options?.generatedBy || "Excel Worker Handler",
+      policy: parsed.data.data.policy,
+      premium: parsed.data.data.premium,
+      rating: parsed.data.data.rating,
+      adjustment: parsed.data.data.adjustment,
+      generatedBy: parsed.data.options?.generatedBy || "Excel Worker",
     };
 
     const bytes = await buildPremiumExcelWorkbook(input);
-
-    // Create filename
     const policyNumber =
-      requestData.options?.policyNumber ||
-      requestData.data.policy?.policyNumber ||
+      parsed.data.options?.policyNumber ||
+      parsed.data.data.policy.policyNumber ||
       "unknown";
-    const when = new Date();
-    const filename = `premium-breakdown-${policyNumber}-${when.getTime()}.xlsx`;
-
-    // Use ArrayBuffer for Response - ensure we get the right slice
-    // Convert Uint8Array to ArrayBuffer for Response constructor
-    const arrayBuffer = bytes.buffer.slice(
-      bytes.byteOffset,
-      bytes.byteOffset + bytes.byteLength,
-    );
-    return new Response(arrayBuffer as ArrayBuffer, {
-      status: 200,
-      headers: {
-        "Content-Type":
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "Content-Disposition": `attachment; filename="${filename}"`,
-        "Content-Length": bytes.byteLength.toString(),
-        "X-Generation-Time": "0", // Will be replaced with actual time
-        "X-Report-Type": "premiumWorkbook",
-        "X-Report-Size": bytes.byteLength.toString(),
-      },
-    });
+    const filename = `premium-breakdown-${policyNumber}-${Date.now()}.xlsx`;
+    return workbookResponse(bytes, filename, Date.now() - started);
   } catch (error) {
-    console.error("Premium workbook generation failed:", error);
-    return new Response(
-      JSON.stringify({
-        error: "Failed to generate premium workbook",
-        message: error instanceof Error ? error.message : "Unknown error",
-      }),
-      { status: 500, headers: { "Content-Type": "application/json" } },
+    console.error(
+      "Premium workbook generation failed",
+      error instanceof Error ? error.name : "unknown",
     );
+    return jsonError("Failed to generate premium workbook", 500);
   }
 }

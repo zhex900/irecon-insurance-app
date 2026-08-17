@@ -262,30 +262,44 @@ export function usePolicyDocuments({
 
     setIsExportingExcel(true);
     try {
-      // Call API endpoint for Excel generation
       const response = await fetch("/api/generate-excel", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          policy: snapshot,
-          premium: snapshot.car.premium,
-          rating: snapshot.car.rating,
-          generatedBy,
-          existing: documentsRef.current,
-        }),
+        body: JSON.stringify({ policyId: policyRef.current.policyId }),
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to generate Excel");
+      const result: unknown = await response.json().catch(() => null);
+      const errorMessage =
+        result &&
+        typeof result === "object" &&
+        "error" in result &&
+        typeof result.error === "string"
+          ? result.error
+          : "Failed to generate Excel";
+      const document =
+        result &&
+        typeof result === "object" &&
+        "document" in result &&
+        result.document &&
+        typeof result.document === "object"
+          ? result.document
+          : null;
+      if (!response.ok || !document) {
+        throw new Error(errorMessage);
+      }
+      if (!("filename" in document) || typeof document.filename !== "string") {
+        throw new Error("Failed to generate Excel");
       }
 
-      const result = await response.json();
-      const doc = result.document;
-      // Download immediately when generation succeeds
-      downloadPremiumExcelDocument(doc);
+      downloadPremiumExcelDocument({
+        filename: document.filename,
+        pdfBase64:
+          "pdfBase64" in document && typeof document.pdfBase64 === "string"
+            ? document.pdfBase64
+            : undefined,
+      });
 
       toast.success("Excel exported", {
         description: "Downloaded to your computer.",

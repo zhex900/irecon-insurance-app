@@ -1,10 +1,10 @@
-import { type ReactNode,useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { useFetcher, useNavigate } from "react-router";
 
 import { useJustSaved } from "~/components/forms/field-save-highlight";
 import { getPolicyFormNavItems } from "~/components/policies/policy-form-layout";
-import { type CarPolicyFormValues,POLICY_STATUS } from "~/lib/zod/policy-car";
+import { type CarPolicyFormValues, POLICY_STATUS } from "~/lib/zod/policy-car";
 
 import {
   type PolicyLeaveApi,
@@ -154,7 +154,7 @@ export function useWizardState({
     documents,
     isGeneratingDocuments,
     isExportingExcel,
-    exportPremiumExcel,
+    exportPremiumExcel: exportPremiumExcelFromDocuments,
     regenerateDocumentsIfNeeded,
     formDataChangedForDocuments,
     buildDocumentSnapshot,
@@ -315,6 +315,11 @@ export function useWizardState({
     brokerFeeLines: reference.feeNames,
     className: borderClassName,
   };
+
+  async function exportPremiumExcel() {
+    await saveDraftNow();
+    await exportPremiumExcelFromDocuments();
+  }
 
   return {
     // Form state
