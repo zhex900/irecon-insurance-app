@@ -1,4 +1,4 @@
-import { MainForm as ClientForm } from "~/components/clients/form";
+import { ClientForm } from "~/components/clients/form";
 import { PageHeader } from "~/components/layout/app-layout";
 import { requireAuth } from "~/lib/auth/session/server.server";
 import { pageTitle } from "~/lib/brand";

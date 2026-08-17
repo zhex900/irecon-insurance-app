@@ -1,4 +1,4 @@
 // Barrel exports for library components
 export * from "./dialogs";
-export { MainManager } from "./main-manager";
-export { MainTable } from "./table";
+export { LibraryManager } from "./library-manager";
+export { LibraryTable } from "./table";

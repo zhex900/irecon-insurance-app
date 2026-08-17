@@ -12,7 +12,7 @@ import type { Route } from "./+types/document-templates.$templateKey";
 
 const DocumentTemplateEditor = lazy(() =>
   import("~/components/documents/templates/editor").then((module) => ({
-    default: module.MainEditor,
+    default: module.DocumentTemplateEditor,
   })),
 );
 

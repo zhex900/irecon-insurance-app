@@ -4,7 +4,7 @@ import { Links, Meta, Outlet, Scripts, ScrollRestoration } from "react-router";
 
 import { RootErrorBoundary } from "~/components/root-error-boundary";
 import { ThemeProvider } from "~/components/theme/theme-provider";
-import { geistFontFaces } from "~/lib/fonts";
+import { geistFontFaces, themeInitScript } from "~/lib/fonts";
 
 import type { Route } from "./+types/root";
 
@@ -37,6 +37,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </ThemeProvider>
         <ScrollRestoration />
         <Scripts />
+        {/* Inline script to prevent theme flash - runs before hydration */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: themeInitScript,
+          }}
+        />
       </body>
     </html>
   );

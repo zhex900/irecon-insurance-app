@@ -306,7 +306,7 @@ function RecentsSection({
 }
 
 /** Plain React nav — same SSR/hydration model as RecentsSection (no headless-tree). */
-function MainNavSection({
+function AppNavSection({
   data,
   pathname,
   iconRail,
@@ -601,10 +601,10 @@ export const AppSideNav = React.memo(function AppSideNav({
         />
       </nav>
       <nav
-        aria-label="Main"
+        aria-label="App"
         className={cn("w-max", showExpandedNav ? "px-1" : undefined)}
       >
-        <MainNavSection
+        <AppNavSection
           data={data}
           pathname={location.pathname}
           iconRail={!showExpandedNav}

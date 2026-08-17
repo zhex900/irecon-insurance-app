@@ -53,7 +53,7 @@ type LibraryDocumentsTableProps = {
   onAddFiles: () => void;
 };
 
-export function MainTable({
+export function LibraryTable({
   files: uploadFiles,
   documentsById: docsById,
   coverTypes,

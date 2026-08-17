@@ -61,18 +61,25 @@ export function ThemeProvider({
 
     const root = window.document.documentElement;
 
-    // Remove existing theme classes
-    root.classList.remove("light", "dark");
-
-    // Apply theme
+    // Determine current theme class
+    const currentTheme = root.classList.contains("dark") ? "dark" : "light";
+    
+    // Determine target theme class
+    let targetTheme: "light" | "dark";
     if (theme === "system" && enableSystem) {
-      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
-        .matches
+      targetTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
         ? "dark"
         : "light";
-      root.classList.add(systemTheme);
     } else if (theme === "light" || theme === "dark") {
-      root.classList.add(theme);
+      targetTheme = theme;
+    } else {
+      return; // No theme to apply
+    }
+
+    // Only update if theme changed
+    if (currentTheme !== targetTheme) {
+      root.classList.remove("light", "dark");
+      root.classList.add(targetTheme);
     }
   }, [theme, enableSystem]);
 
@@ -84,9 +91,14 @@ export function ThemeProvider({
 
     const handleChange = () => {
       const root = window.document.documentElement;
-      root.classList.remove("light", "dark");
+      const currentTheme = root.classList.contains("dark") ? "dark" : "light";
       const systemTheme = mediaQuery.matches ? "dark" : "light";
-      root.classList.add(systemTheme);
+      
+      // Only update if theme changed
+      if (currentTheme !== systemTheme) {
+        root.classList.remove("light", "dark");
+        root.classList.add(systemTheme);
+      }
     };
 
     mediaQuery.addEventListener("change", handleChange);

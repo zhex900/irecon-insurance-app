@@ -1,6 +1,6 @@
 import { FileStackIcon } from "lucide-react";
 
-import { MainManager } from "~/components/documents/library";
+import { LibraryManager } from "~/components/documents/library";
 import { PageHeader } from "~/components/layout/app-layout";
 import { requireFeatureOrSuperAdminPage } from "~/lib/auth/authorize.server";
 import { isAdminRole, isSuperAdmin } from "~/lib/auth/roles";
@@ -271,7 +271,7 @@ export default function SettingsLibraryDocumentsRoute({
         <FileStackIcon className="mt-0.5 size-4 shrink-0" />
         <p>Uploading replaces an existing file with the same name.</p>
       </div>
-      <MainManager
+      <LibraryManager
         documents={loaderData.documents}
         coverTypes={loaderData.coverTypes}
         canEdit={loaderData.canEdit}

@@ -2,7 +2,11 @@ import type { Template } from "@pdfme/common";
 import { useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 
-import { MergePanel , OverlayToolbar , SelectionToolbar } from "~/components/documents/pdf/designer";
+import {
+  MergePanel,
+  OverlayToolbar,
+  SelectionToolbar,
+} from "~/components/documents/pdf/designer";
 import { EditorSkeleton } from "~/components/documents/templates/loading";
 import { usePdfmeDesignerActions } from "~/hooks/pdfme-designer/use-actions";
 import { usePdfmeDesignerLifecycle } from "~/hooks/pdfme-designer/use-lifecycle";
@@ -33,7 +37,7 @@ type PdfmeDesignerProps = {
   toolbarHost?: HTMLElement | null;
 };
 
-export function MainDesigner({
+export function PdfDesigner({
   ref,
   template,
   editable = true,

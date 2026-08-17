@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { FormProvider, type Resolver,useForm } from "react-hook-form";
+import { FormProvider, type Resolver, useForm } from "react-hook-form";
 
 import { JustSavedProvider } from "~/components/forms/field-save-highlight";
 import type { Client, ReferenceData } from "~/lib/db/types";
@@ -12,7 +12,7 @@ import {
 
 import { FormInner } from "./form-inner";
 
-export function MainForm({
+export function ClientForm({
   client,
   reference,
   cancelTo,

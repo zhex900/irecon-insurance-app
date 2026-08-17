@@ -1,6 +1,6 @@
 // Barrel exports for PDF designer components
-export type { PdfmeDesignerHandle } from "./main-designer";
-export { MainDesigner } from "./main-designer";
 export { MergePanel } from "./merge-panel";
 export { OverlayToolbar } from "./overlay-toolbar";
+export type { PdfmeDesignerHandle } from "./pdf-designer";
+export { PdfDesigner } from "./pdf-designer";
 export { SelectionToolbar } from "./selection-toolbar";

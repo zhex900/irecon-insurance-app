@@ -2,7 +2,7 @@ import type { Template } from "@pdfme/common";
 import { useCallback, useRef } from "react";
 
 import {
-  MainDesigner,
+  PdfDesigner,
   type PdfmeDesignerHandle,
 } from "~/components/documents/pdf/designer";
 import { PreviewDialog } from "~/components/documents/pdf/preview";
@@ -23,7 +23,7 @@ import { useDocumentTemplatePreview } from "~/hooks/use-document-template-previe
 import type { DocumentTemplateEditorLoaderData } from "~/lib/documents/template-editor-types";
 import { formatDocumentTemplateTitle } from "~/lib/documents/template-title";
 
-export function MainEditor({
+export function DocumentTemplateEditor({
   loaderData,
 }: {
   loaderData: DocumentTemplateEditorLoaderData;
@@ -140,7 +140,7 @@ export function MainEditor({
           onPublish={() => editor.submitTemplate("publish")}
         />
 
-        <MainDesigner
+        <PdfDesigner
           key={docTemplate.key}
           ref={designerRef}
           template={docTemplate.template as Template}

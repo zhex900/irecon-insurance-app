@@ -3,8 +3,8 @@ import { useEffect, useRef, useState } from "react";
 import { useFetcher, useRevalidator } from "react-router";
 import { toast } from "sonner";
 
-import { MainTable } from "~/components/documents/library";
 import { CoverTypesDialog } from "~/components/documents/library/dialogs";
+import { LibraryTable } from "~/components/documents/library/table";
 import { PreviewDialog } from "~/components/documents/pdf/preview";
 import {
   completedItem,
@@ -28,7 +28,7 @@ import {
 } from "~/lib/documents/library-documents";
 import { cn, formatDate } from "~/lib/utils";
 
-export function MainManager({
+export function LibraryManager({
   documents,
   coverTypes,
   canEdit,
@@ -357,7 +357,7 @@ export function MainManager({
         </Alert>
       )}
 
-      <MainTable
+      <LibraryTable
         files={uploadFiles}
         documentsById={docsById}
         coverTypes={coverTypes}
