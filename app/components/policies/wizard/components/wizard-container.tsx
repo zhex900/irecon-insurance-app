@@ -3,10 +3,7 @@ import type { ReactNode } from "react";
 import { POLICY_STICKY_RAIL_CLASS } from "~/components/policies/policy-form-layout";
 import { cn } from "~/lib/utils";
 
-import {
-  type WizardMode,
-  wizardModeCardBorderClass,
-} from "../shared/wizard-shared";
+import { type WizardMode } from "../shared/wizard-shared";
 
 export type DecomposedContainerProps = {
   children: ReactNode;
@@ -19,8 +16,6 @@ export function WizardContainer({
   wizardMode,
   className,
 }: DecomposedContainerProps) {
-  const borderClassName = wizardModeCardBorderClass(wizardMode);
-
   return (
     <div
       className={cn(
@@ -32,7 +27,7 @@ export function WizardContainer({
         "[&_[data-slot=card]]:overflow-x-hidden",
         wizardMode === "view" &&
           "[&_[data-slot=card]]:bg-muted/40 [&_input]:bg-muted/30 [&_select]:bg-muted/30 [&_textarea]:bg-muted/30",
-        borderClassName,
+        // borderClassName,
         className,
       )}
       data-wizard-mode={wizardMode}
