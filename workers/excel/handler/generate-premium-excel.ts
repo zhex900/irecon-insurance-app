@@ -1,10 +1,17 @@
-import { CONTENT_TYPES, CUSTOM_HEADERS } from "../constants/config";
+import {
+  CONTENT_TYPES,
+  CUSTOM_HEADERS,
+  MAX_REQUEST_SIZE_BYTES,
+  REQUEST_TIMEOUT_MS,
+} from "../constants/config";
 import type { BuildPremiumExcelInput } from "../services/excel-types";
 import { generatePremiumExcelRequestSchema } from "../types/schemas";
-
-function jsonError(error: string, status: number): Response {
-  return Response.json({ error }, { status });
-}
+import {
+  isPayloadTooLarge,
+  jsonError,
+  RequestTimeoutError,
+  withTimeout,
+} from "./request-guard";
 
 function workbookResponse(
   bytes: Uint8Array,
@@ -31,12 +38,16 @@ function workbookResponse(
 export async function generatePremiumExcel(
   requestData: unknown,
 ): Promise<Response> {
-  const started = Date.now();
+  if (isPayloadTooLarge(requestData, MAX_REQUEST_SIZE_BYTES)) {
+    return jsonError("payload_too_large", 413);
+  }
+
   const parsed = generatePremiumExcelRequestSchema.safeParse(requestData);
   if (!parsed.success) {
     return jsonError("Invalid premium workbook request", 400);
   }
 
+  const started = Date.now();
   try {
     const { buildPremiumExcelWorkbook } = await import("../services");
     const input: BuildPremiumExcelInput = {
@@ -47,7 +58,10 @@ export async function generatePremiumExcel(
       generatedBy: parsed.data.options?.generatedBy || "Excel Worker",
     };
 
-    const bytes = await buildPremiumExcelWorkbook(input);
+    const bytes = await withTimeout(
+      buildPremiumExcelWorkbook(input),
+      REQUEST_TIMEOUT_MS,
+    );
     const policyNumber =
       parsed.data.options?.policyNumber ||
       parsed.data.data.policy.policyNumber ||
@@ -55,6 +69,9 @@ export async function generatePremiumExcel(
     const filename = `premium-breakdown-${policyNumber}-${Date.now()}.xlsx`;
     return workbookResponse(bytes, filename, Date.now() - started);
   } catch (error) {
+    if (error instanceof RequestTimeoutError) {
+      return jsonError("Premium workbook generation timed out", 504);
+    }
     console.error(
       "Premium workbook generation failed",
       error instanceof Error ? error.name : "unknown",

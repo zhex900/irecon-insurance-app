@@ -1,16 +1,12 @@
-import { type RefObject,useEffect, useRef, useState } from "react";
-import { useBlocker, type useFetcher,useNavigate } from "react-router";
+import { type RefObject,useEffect } from "react";
+import { type useFetcher, useNavigate } from "react-router";
 
 import type { Policy } from "~/lib/db/types";
-import { discardPolicyDraftClient } from "~/lib/services/policy/draft.client";
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
 
-import {
-  clearWizardStepState,
-  consumeWizardLeave,
-} from "../../wizard-step-memory";
-import { useMode } from "../utils/use-mode";
-import type { PolicyLeaveApi } from "./use-draft-save";
+import type { PolicyLeaveApi } from "../draft/use-draft-types";
+import { useLeaveActions } from "../leave/use-leave-actions";
+import { useLeaveState } from "../leave/use-leave-state";
 import type { PolicyWizardActionData } from "./use-premium-calc";
 
 export function usePolicyLeaveGuard({
@@ -22,6 +18,7 @@ export function usePolicyLeaveGuard({
   savePolicy,
   setDraftSaveError,
   fetcher,
+  leaveApiRef,
 }: {
   policy: Policy;
   hasUnsavedChanges: boolean;
@@ -31,6 +28,7 @@ export function usePolicyLeaveGuard({
   savePolicy: (overrides?: Partial<CarPolicyFormValues>) => Promise<boolean>;
   setDraftSaveError: (error: string | null) => void;
   fetcher: ReturnType<typeof useFetcher<PolicyWizardActionData>>;
+  leaveApiRef: RefObject<PolicyLeaveApi | null>;
 }): PolicyLeaveApi & {
   pendingLeaveAfterSave: boolean;
   discardConfirmOpen: boolean;
@@ -44,200 +42,67 @@ export function usePolicyLeaveGuard({
   handleCancelClick: () => void;
 } {
   const navigate = useNavigate();
-  const [pendingLeaveAfterSave, setPendingLeaveAfterSave] = useState(false);
-  const pendingLeaveAfterSaveRef = useRef(false);
-  useEffect(() => {
-    pendingLeaveAfterSaveRef.current = pendingLeaveAfterSave;
+  const state = useLeaveState({
+    policy,
+    hasUnsavedChanges,
+    hasUnsavedChangesRef,
+    setHasUnsavedChanges,
+    fetcher,
   });
-  const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false);
-  const [discarding, setDiscarding] = useState(false);
-  const allowLeaveRef = useRef(false);
-  /** Where the user was headed when the leave dialog opened (survives blocker.reset). */
-  const pendingLeaveDestinationRef = useRef<string | null>(null);
-
-  const { readOnly, isNew, isFormTerminal } = useMode();
-
-  // New policies: always confirm before leaving (avoids orphan drafts).
-  // Existing policies: only block when there are unsaved edits.
-  const blocker = useBlocker(() => {
-    if (readOnly || allowLeaveRef.current) return false;
-    if (consumeWizardLeave(policy.policyId)) {
-      allowLeaveRef.current = true;
-      return false;
-    }
-    if (isNew) return true;
-    return hasUnsavedChangesRef.current;
+  const actions = useLeaveActions({
+    policy,
+    navigate,
+    blocker: state.blocker,
+    allowLeaveRef: state.allowLeaveRef,
+    pendingLeaveAfterSaveRef: state.pendingLeaveAfterSaveRef,
+    pendingLeaveDestinationRef: state.pendingLeaveDestinationRef,
+    setPendingLeaveAfterSave: state.setPendingLeaveAfterSave,
+    setDiscardConfirmOpen: state.setDiscardConfirmOpen,
+    setDiscarding: state.setDiscarding,
+    setDraftSaveError,
+    saveDraftNow,
+    savePolicy,
+    readOnly: state.readOnly,
+    isNew: state.isNew,
+    isFormTerminal: state.isFormTerminal,
   });
-
-  // Full save failed after we cleared dirty state — restore so the user can retry.
-  const failureHandledRef = useRef<PolicyWizardActionData | undefined>(
-    undefined,
-  );
-  useEffect(() => {
-    if (fetcher.state !== "idle" || !fetcher.data) return;
-    if (failureHandledRef.current === fetcher.data) return;
-    failureHandledRef.current = fetcher.data;
-    const failed =
-      Boolean(fetcher.data.formError) || Boolean(fetcher.data.errors);
-    if (!failed || !allowLeaveRef.current) return;
-    allowLeaveRef.current = false;
-    hasUnsavedChangesRef.current = true;
-    setHasUnsavedChanges(true);
-    if (pendingLeaveAfterSaveRef.current) setPendingLeaveAfterSave(false);
-  }, [fetcher.state, fetcher.data, hasUnsavedChangesRef, setHasUnsavedChanges]);
-
-  // If unsaved clears while blocked: stay on new policies so discard can run;
-  // existing policies with a clean form can dismiss the block. Never reset while
-  // a leave-save is in flight — optimistic draft save clears dirty before navigation.
-  useEffect(() => {
-    if (blocker.state === "blocked" && blocker.location) {
-      pendingLeaveDestinationRef.current = `${blocker.location.pathname}${blocker.location.search}${blocker.location.hash}`;
-    }
-    if (blocker.state !== "blocked") return;
-    if (allowLeaveRef.current) {
-      setPendingLeaveAfterSave(false);
-      blocker.proceed();
-      return;
-    }
-    if (pendingLeaveAfterSaveRef.current) return;
-    if (!isNew && !hasUnsavedChanges) {
-      blocker.reset();
-    }
-  }, [blocker, hasUnsavedChanges, isNew]);
-
-  async function discardNewPolicy() {
-    setDiscarding(true);
-    setDraftSaveError(null);
-    try {
-      const result = await discardPolicyDraftClient(policy.policyId);
-      if (!result.ok) {
-        setDraftSaveError(
-          result.formError ?? "Could not discard this policy. Try again.",
-        );
-        setDiscardConfirmOpen(false);
-        if (blocker.state === "blocked") blocker.reset();
-        return;
-      }
-      clearWizardStepState(policy.policyId);
-      allowLeaveRef.current = true;
-      setDiscardConfirmOpen(false);
-      if (blocker.state === "blocked") {
-        blocker.proceed();
-      } else {
-        navigate(`/clients/${policy.clientId}`);
-      }
-    } catch {
-      setDraftSaveError(
-        "Could not discard this policy. Check your connection.",
-      );
-      setDiscardConfirmOpen(false);
-      if (blocker.state === "blocked") blocker.reset();
-    } finally {
-      setDiscarding(false);
-    }
-  }
-
-  function leaveWithoutSaving() {
-    if (isNew) {
-      void discardNewPolicy();
-      return;
-    }
-    allowLeaveRef.current = true;
-    pendingLeaveAfterSaveRef.current = false;
-    setPendingLeaveAfterSave(false);
-    if (blocker.state === "blocked") {
-      blocker.proceed();
-    }
-  }
-
-  async function saveAndLeaveForTerminalStatus() {
-    const ok = await savePolicy();
-    if (!ok) return false;
-
-    setDiscardConfirmOpen(false);
-    if (blocker.state === "blocked") {
-      blocker.proceed();
-    } else {
-      navigate(
-        pendingLeaveDestinationRef.current ?? `/clients/${policy.clientId}`,
-      );
-    }
-    pendingLeaveDestinationRef.current = null;
-    return true;
-  }
-
-  async function saveAndLeaveForDraft() {
-    await saveDraftNow();
-  }
-
-  async function saveAndLeave() {
-    pendingLeaveAfterSaveRef.current = true;
-    setPendingLeaveAfterSave(true);
-
-    try {
-      if (isFormTerminal) {
-        const success = await saveAndLeaveForTerminalStatus();
-        if (!success) {
-          pendingLeaveAfterSaveRef.current = false;
-          setPendingLeaveAfterSave(false);
-          return;
-        }
-      } else {
-        await saveAndLeaveForDraft();
-      }
-
-      // Clear pending state if not already cleared by save operations
-      if (!pendingLeaveAfterSaveRef.current) {
-        setPendingLeaveAfterSave(false);
-      }
-    } catch {
-      pendingLeaveAfterSaveRef.current = false;
-      setPendingLeaveAfterSave(false);
-    }
-  }
-
-  function stayOnPage() {
-    pendingLeaveAfterSaveRef.current = false;
-    setPendingLeaveAfterSave(false);
-    setDiscardConfirmOpen(false);
-    if (blocker.state === "blocked") {
-      blocker.reset();
-    }
-  }
-
-  function handleCancelClick() {
-    if (readOnly) {
-      navigate(`/clients/${policy.clientId}`);
-      return;
-    }
-    if (isNew) {
-      setDiscardConfirmOpen(true);
-      return;
-    }
-    navigate(`/clients/${policy.clientId}`);
-  }
 
   const leaveDialogOpen =
-    blocker.state === "blocked" ||
-    (isNew && discardConfirmOpen) ||
-    pendingLeaveAfterSave ||
-    discarding;
+    state.blocker.state === "blocked" ||
+    (state.isNew && state.discardConfirmOpen) ||
+    state.pendingLeaveAfterSave ||
+    state.discarding;
+
+  useEffect(() => {
+    leaveApiRef.current = {
+      blocker: state.blocker,
+      allowLeaveRef: state.allowLeaveRef,
+      pendingLeaveAfterSaveRef: state.pendingLeaveAfterSaveRef,
+      pendingLeaveDestinationRef: state.pendingLeaveDestinationRef,
+      setPendingLeaveAfterSave: state.setPendingLeaveAfterSave,
+      setDiscardConfirmOpen: state.setDiscardConfirmOpen,
+    };
+  }, [
+    leaveApiRef,
+    state.blocker,
+    state.allowLeaveRef,
+    state.pendingLeaveAfterSaveRef,
+    state.pendingLeaveDestinationRef,
+    state.setPendingLeaveAfterSave,
+    state.setDiscardConfirmOpen,
+  ]);
 
   return {
-    blocker,
-    allowLeaveRef,
-    pendingLeaveAfterSaveRef,
-    pendingLeaveDestinationRef,
-    pendingLeaveAfterSave,
-    setPendingLeaveAfterSave,
-    discardConfirmOpen,
-    setDiscardConfirmOpen,
-    discarding,
+    blocker: state.blocker,
+    allowLeaveRef: state.allowLeaveRef,
+    pendingLeaveAfterSaveRef: state.pendingLeaveAfterSaveRef,
+    pendingLeaveDestinationRef: state.pendingLeaveDestinationRef,
+    pendingLeaveAfterSave: state.pendingLeaveAfterSave,
+    setPendingLeaveAfterSave: state.setPendingLeaveAfterSave,
+    discardConfirmOpen: state.discardConfirmOpen,
+    setDiscardConfirmOpen: state.setDiscardConfirmOpen,
+    discarding: state.discarding,
     leaveDialogOpen,
-    discardNewPolicy,
-    leaveWithoutSaving,
-    saveAndLeave,
-    stayOnPage,
-    handleCancelClick,
+    ...actions,
   };
 }

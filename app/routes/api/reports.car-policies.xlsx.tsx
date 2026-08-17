@@ -5,7 +5,6 @@ import { getExcelService } from "~/lib/cloudflare.server";
 import { invalidInputResponse } from "~/lib/http/route-input";
 import { trackUsage } from "~/lib/observability/metrics.server";
 import {
-  auditReportExport,
   exportCarPolicyDetailExcel,
   exportCarPolicySummaryExcel,
   resolveOptionalIsoDateParam,
@@ -30,7 +29,7 @@ const querySchema = z.object({
 });
 
 export async function loader({ request, context }: Route.LoaderArgs) {
-  const actor = await requireAuth(request);
+  await requireAuth(request);
   const url = new URL(request.url);
   const parsed = querySchema.safeParse(Object.fromEntries(url.searchParams));
   if (!parsed.success)
@@ -59,20 +58,6 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     const slug = status.replace(/\s+/g, "-").toLowerCase();
     const filename = `car-policy-report-${slug}-${dateFrom}-${dateTo}.xlsx`;
 
-    await auditReportExport({
-      actor,
-      entityId: "car-policies-detail",
-      summary: `Exported CAR policy detail Excel for ${status} (${page.rows.length} rows)`,
-      filename,
-      metadata: {
-        dateFrom,
-        dateTo,
-        statusLabel: status,
-        rowCount: page.rows.length,
-      },
-      request,
-    });
-
     trackUsage("report.export", {
       report: "car_policies",
       view: "detail",
@@ -92,19 +77,6 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
   const summary = await getCarPolicyReportSummary(dateFrom, dateTo);
   const filename = `car-policy-report-${dateFrom}-${dateTo}.xlsx`;
-
-  await auditReportExport({
-    actor,
-    entityId: "car-policies-summary",
-    summary: `Exported CAR policy summary Excel (${summary.length} rows)`,
-    filename,
-    metadata: {
-      dateFrom,
-      dateTo,
-      rowCount: summary.length,
-    },
-    request,
-  });
 
   trackUsage("report.export", {
     report: "car_policies",

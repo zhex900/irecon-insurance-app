@@ -142,10 +142,23 @@ export function validateAdjustmentFinish(
   return null;
 }
 
-/** @internal exported for unit tests */
+/** Fields `resolveAdjustmentRates` reads — Excel's slimmer snapshot is enough. */
+export type AdjustmentRateSource = Pick<
+  RatingSnapshot,
+  | "contractWorksAppliedRate"
+  | "liabilityAppliedRate"
+  | "contractWorksMinPremium"
+  | "liabilityMinPremium"
+  | "terrorismRate"
+  | "eslRate"
+  | "contractWorksStampDutyRate"
+  | "liabilityStampDutyRate"
+>;
+
+/** @internal exported for unit tests and the Excel worker (display rates only). */
 export function resolveAdjustmentRates(
   premium: PremiumBreakdown,
-  rating: RatingSnapshot,
+  rating: AdjustmentRateSource,
   originalTurnover: number,
 ) {
   const s1Base = premium.contractWorksBasePremium;

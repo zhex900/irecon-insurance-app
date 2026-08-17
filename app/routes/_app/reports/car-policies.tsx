@@ -24,6 +24,7 @@ import {
   pageSizeSearchHref,
   parsePagination,
 } from "~/lib/pagination";
+import { recordAuditEventClient } from "~/lib/services/audit/client";
 import {
   filtersForCarSearchStatus,
   getCarPolicyReportSummary,
@@ -112,6 +113,47 @@ function statusDetailSearch(
   return `?${params.toString()}`;
 }
 
+function auditCarPolicySummaryExport(
+  dateFrom: string,
+  dateTo: string,
+  rowCount: number,
+) {
+  recordAuditEventClient({
+    action: "report.export",
+    entityType: "report",
+    entityId: "car-policies-summary",
+    summary: `Exported CAR policy summary Excel (${rowCount} rows)`,
+    metadata: {
+      filename: `car-policy-report-${dateFrom}-${dateTo}.xlsx`,
+      dateFrom,
+      dateTo,
+      rowCount,
+    },
+  });
+}
+
+function auditCarPolicyDetailExport(
+  dateFrom: string,
+  dateTo: string,
+  status: CarSearchStatus,
+  rowCount: number,
+) {
+  const slug = status.replace(/\s+/g, "-").toLowerCase();
+  recordAuditEventClient({
+    action: "report.export",
+    entityType: "report",
+    entityId: "car-policies-detail",
+    summary: `Exported CAR policy detail Excel for ${status} (${rowCount} rows)`,
+    metadata: {
+      filename: `car-policy-report-${slug}-${dateFrom}-${dateTo}.xlsx`,
+      dateFrom,
+      dateTo,
+      statusLabel: status,
+      rowCount,
+    },
+  });
+}
+
 export default function CarPolicyReportRoute({
   loaderData,
 }: Route.ComponentProps) {
@@ -177,9 +219,18 @@ export default function CarPolicyReportRoute({
           href={summaryExportHref}
           className={buttonVariants({ variant: "outline" })}
           aria-disabled={totalPolicies === 0}
-          {...(totalPolicies === 0
-            ? { tabIndex: -1, onClick: (e) => e.preventDefault() }
-            : {})}
+          tabIndex={totalPolicies === 0 ? -1 : undefined}
+          onClick={(event) => {
+            if (totalPolicies === 0) {
+              event.preventDefault();
+              return;
+            }
+            auditCarPolicySummaryExport(
+              loaderData.dateFrom,
+              loaderData.dateTo,
+              summary.length,
+            );
+          }}
         >
           <DownloadIcon data-icon="inline-start" />
           Export Excel
@@ -274,9 +325,19 @@ export default function CarPolicyReportRoute({
                   href={detailExportHref}
                   className={buttonVariants({ variant: "outline", size: "sm" })}
                   aria-disabled={detail.total === 0}
-                  {...(detail.total === 0
-                    ? { tabIndex: -1, onClick: (e) => e.preventDefault() }
-                    : {})}
+                  tabIndex={detail.total === 0 ? -1 : undefined}
+                  onClick={(event) => {
+                    if (detail.total === 0) {
+                      event.preventDefault();
+                      return;
+                    }
+                    auditCarPolicyDetailExport(
+                      loaderData.dateFrom,
+                      loaderData.dateTo,
+                      detail.status,
+                      detail.total,
+                    );
+                  }}
                 >
                   <DownloadIcon data-icon="inline-start" />
                   Export Excel

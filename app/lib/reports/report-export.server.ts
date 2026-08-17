@@ -1,11 +1,9 @@
-import type { AppUser } from "~/lib/db/types";
 import { optionalIsoDateSchema } from "~/lib/http/route-input";
 import type { ReportExcelColumn } from "~/lib/reports/report-excel.server";
 import {
   buildReportExcelBuffer,
   reportExcelResponse,
 } from "~/lib/reports/report-excel.server";
-import { writeAuditLog } from "~/lib/services/audit/service";
 import type {
   CarPolicySummaryRow,
   CarSearchStatus,
@@ -19,28 +17,6 @@ import type { ExcelWorkerBinding } from "../excel/excel-worker.server";
 export function resolveOptionalIsoDateParam(raw: string | null): string {
   if (raw == null || raw === "") return "";
   return optionalIsoDateSchema.parse(raw) ?? "";
-}
-
-export async function auditReportExport(input: {
-  actor: AppUser;
-  entityId: string;
-  summary: string;
-  filename: string;
-  metadata: Record<string, unknown>;
-  request: Request;
-}) {
-  await writeAuditLog({
-    actor: input.actor,
-    action: "report.export",
-    entityType: "report",
-    entityId: input.entityId,
-    summary: input.summary,
-    metadata: {
-      filename: input.filename,
-      ...input.metadata,
-    },
-    request: input.request,
-  });
 }
 
 export const CAR_POLICY_SUMMARY_COLUMNS: ReportExcelColumn[] = [

@@ -352,12 +352,14 @@ function applyFormValues(
         values.existingStructure ?? existing.car.existingStructure,
       displayHomes: values.displayHomes ?? existing.car.displayHomes,
       // Premium lines come from the calculator / existing premium — not risk values.
-      contractWorksExistingStructurePremium:
-        extras.premium?.contractWorksExistingStructurePremium ??
-        existing.car.contractWorksExistingStructurePremium,
-      contractWorksDisplayHomesPremium:
-        extras.premium?.contractWorksDisplayHomesPremium ??
-        existing.car.contractWorksDisplayHomesPremium,
+      // When extras.premium is present (recalculate), missing DH/ES means 0 so
+      // Reset Premium clears typed add-on lines instead of keeping the last edit.
+      contractWorksExistingStructurePremium: extras.premium
+        ? (extras.premium.contractWorksExistingStructurePremium ?? 0)
+        : existing.car.contractWorksExistingStructurePremium,
+      contractWorksDisplayHomesPremium: extras.premium
+        ? (extras.premium.contractWorksDisplayHomesPremium ?? 0)
+        : existing.car.contractWorksDisplayHomesPremium,
       claimsCountLast3Years:
         values.claimsCountLast3Years ?? existing.car.claimsCountLast3Years,
       anyClaimsExceed20k:

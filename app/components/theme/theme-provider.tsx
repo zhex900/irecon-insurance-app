@@ -2,44 +2,22 @@
 
 import * as React from "react";
 
-import {
-  applyThemeToDocument,
-  persistTheme,
-  readStoredTheme,
-  type Theme,
-} from "~/lib/theme";
+import { applyThemeToDocument, persistTheme, type Theme } from "~/lib/theme";
 
 import { ThemeContext } from "./context";
 
-interface ThemeProviderProps {
+type ThemeProviderProps = {
   children: React.ReactNode;
-  defaultTheme?: Theme;
+  initialTheme?: Theme;
   enableSystem?: boolean;
-}
-
-const themeListeners = new Set<() => void>();
-
-function subscribeTheme(listener: () => void) {
-  themeListeners.add(listener);
-  return () => themeListeners.delete(listener);
-}
-
-function notifyThemeListeners() {
-  for (const listener of themeListeners) {
-    listener();
-  }
-}
+};
 
 export function ThemeProvider({
   children,
-  defaultTheme = "system",
+  initialTheme = "system",
   enableSystem = true,
 }: ThemeProviderProps) {
-  const theme = React.useSyncExternalStore(
-    subscribeTheme,
-    () => readStoredTheme(defaultTheme),
-    () => defaultTheme,
-  );
+  const [theme, setThemeState] = React.useState<Theme>(initialTheme);
 
   React.useEffect(() => {
     applyThemeToDocument(theme, { enableSystem });
@@ -60,15 +38,10 @@ export function ThemeProvider({
     return () => mediaQuery.removeEventListener("change", handleChange);
   }, [theme, enableSystem]);
 
-  const setTheme = React.useCallback(
-    (newTheme: Theme) => {
-      persistTheme(newTheme, { enableSystem, disableTransitions: true });
-      notifyThemeListeners();
-    },
-    [enableSystem],
-  );
+  const setTheme = (newTheme: Theme) => {
+    persistTheme(newTheme, { enableSystem, disableTransitions: true });
+    setThemeState(newTheme);
+  };
 
-  return (
-    <ThemeContext value={{ theme, setTheme }}>{children}</ThemeContext>
-  );
+  return <ThemeContext value={{ theme, setTheme }}>{children}</ThemeContext>;
 }

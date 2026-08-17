@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { memo, useEffect, useRef } from "react";
 import { toast } from "sonner";
 
 import { Button } from "~/components/ui/button";
@@ -7,21 +7,21 @@ import { LoadingButton } from "~/components/ui/loading-button";
 import type { PolicyWizardActionData } from "../hooks/composite/use-premium-calc";
 import { useMode } from "../hooks/utils/use-mode";
 
-export type WizardFormFooterProps = {
-  actionData: PolicyWizardActionData | undefined;
-  onCancel: () => void;
-  onSubmit: () => void;
+type FooterProps = {
+  submitDisabled: boolean;
   submitBusy: boolean;
-  submitDisabled?: boolean;
+  requestSubmit: () => void | Promise<void>;
+  handleCancelClick: () => void;
+  actionData: PolicyWizardActionData | undefined;
 };
 
-export function Footer({
-  actionData,
-  onCancel,
-  onSubmit,
+export const Footer = memo(function Footer({
+  submitDisabled,
   submitBusy,
-  submitDisabled = false,
-}: WizardFormFooterProps) {
+  requestSubmit,
+  handleCancelClick,
+  actionData,
+}: FooterProps) {
   const { readOnly, canShowSubmitButton } = useMode();
   const lastToastKeyRef = useRef<string | null>(null);
 
@@ -54,7 +54,7 @@ export function Footer({
 
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <Button type="button" variant="secondary" onClick={onCancel}>
+      <Button type="button" variant="secondary" onClick={handleCancelClick}>
         {readOnly ? "Back to client" : "Cancel"}
       </Button>
 
@@ -62,7 +62,9 @@ export function Footer({
         <LoadingButton
           type="button"
           className="ml-auto"
-          onClick={onSubmit}
+          onClick={() => {
+            void requestSubmit();
+          }}
           loading={submitBusy}
           disabled={submitDisabled}
         >
@@ -71,4 +73,4 @@ export function Footer({
       ) : null}
     </div>
   );
-}
+});

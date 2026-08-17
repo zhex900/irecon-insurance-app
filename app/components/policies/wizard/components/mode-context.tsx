@@ -1,4 +1,10 @@
 import { createContext, type ReactNode, useMemo, useState } from "react";
+import { useFormContext, useWatch } from "react-hook-form";
+
+import {
+  type CarPolicyFormValues,
+  isTerminalStatus,
+} from "~/lib/zod/policy-car";
 
 import type { WizardMode } from "../shared/wizard-shared";
 
@@ -83,7 +89,6 @@ export function ModeProvider({
   readOnly,
   isNew,
   freshSteps,
-  isFormTerminal,
   policyAlreadyTerminal,
   hasSubmittedOnce: persistedHasSubmittedOnce,
   children,
@@ -91,14 +96,17 @@ export function ModeProvider({
   readOnly: boolean;
   isNew: boolean;
   freshSteps: boolean;
-  /** Live form-selected status is terminal (drives `fieldsLocked`). */
-  isFormTerminal: boolean;
   /** Saved/persisted status is terminal (drives `policyNumberEditable`). */
   policyAlreadyTerminal: boolean;
   /** Persisted non-draft. Combined with in-session submit for `premiumPinned`. */
   hasSubmittedOnce: boolean;
   children: ReactNode;
 }) {
+  const { control } = useFormContext<CarPolicyFormValues>();
+  const selectedStatusId = Number(
+    useWatch({ control, name: "policyStatusId" }),
+  );
+  const isFormTerminal = isTerminalStatus(selectedStatusId);
   const [submittedInSession, setSubmittedInSession] = useState(false);
   const hasSubmittedOnce = submittedInSession || persistedHasSubmittedOnce;
 

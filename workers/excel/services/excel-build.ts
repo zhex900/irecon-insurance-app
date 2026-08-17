@@ -1,8 +1,6 @@
 /**
- * Premium Excel workbook orchestrator (Policy / Rates / Premium / Adjustment sheets).
- * Worker-compatible version.
- *
- * IMPORTANT: This replicates the logic from the working branch for consistent Excel output.
+ * Premium Excel workbook orchestrator (Policy / Rates / Premium / Adjustment).
+ * Renders the snapshot the app sent — it does not recalculate CAR adjustment.
  */
 import {
   type BuildPremiumExcelInput,
@@ -13,7 +11,6 @@ import {
   addPremiumExcelPolicySheet,
   addPremiumExcelPremiumSheet,
   addPremiumExcelRatesSheet,
-  calculateCarAdjustment,
   coverTypeLabel,
   loadExcelJS,
   turnoverLabelForCover,
@@ -32,22 +29,10 @@ export async function buildPremiumExcelWorkbook(
   workbook.created = new Date();
   workbook.modified = new Date();
 
-  const { policy, premium, rating } = input;
+  const { policy, premium, rating, adjustment } = input;
   const generatedAt = new Date();
   const version = input.appVersion ?? "1.0.0";
   const car = policy.car;
-
-  // Calculate adjustment if we have rating and adjustment input
-  const adjustment =
-    input.adjustment && rating
-      ? calculateCarAdjustment({
-          originalTurnover: input.adjustment.originalTurnover,
-          adjustmentTurnover: input.adjustment.adjustmentTurnover,
-          stampDutyExempt: input.adjustment.stampDutyExempt,
-          premium,
-          rating,
-        })
-      : input.adjustment;
 
   const ctx = {
     policy,

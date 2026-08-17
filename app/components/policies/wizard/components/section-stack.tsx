@@ -1,125 +1,62 @@
-import type { Dispatch, RefObject, SetStateAction } from "react";
+import { memo } from "react";
 
 import { PolicyCollapsibleSection } from "~/components/policies/policy-form-layout";
-import type {
-  CarWording,
-  Policy,
-  PremiumBreakdown,
-  ReferenceData,
-} from "~/lib/db/types";
+import type { CarWording, RatingSnapshot, ReferenceData } from "~/lib/db/types";
 
 import { useMode } from "../hooks/utils/use-mode";
 import { ClaimsWording } from "../sections/claims-wording";
 import { Excesses } from "../sections/excesses";
 import { Limits } from "../sections/limits";
-import { PremiumDeclaration } from "../sections/premium-declaration";
 import { RiskDetails } from "../sections/risk-details";
-import { SECTION_IDS } from "../shared/constants";
+import { PremiumSection } from "./premium-section";
 
-export type WizardSectionStackProps = {
+type SectionStackProps = {
   openMap: Record<string, boolean>;
-  setOpenMap: Dispatch<SetStateAction<Record<string, boolean>>>;
+  setOpenMap: (
+    map:
+      | Record<string, boolean>
+      | ((prev: Record<string, boolean>) => Record<string, boolean>),
+  ) => void;
+  borderClassName: string;
+  handleFieldBlur: () => void;
   reference: ReferenceData;
   carWording: CarWording[];
-  premium: PremiumBreakdown | undefined;
-  referralReasons: string[];
-  notes: Policy["notes"];
-  policy: Policy;
-  /** Latest rating snapshot (fetcher may be newer than policy.car.rating). */
-  rating?: Policy["car"]["rating"];
-  premiumManuallyEditedRef: RefObject<boolean>;
-  premiumManualKeysRef: RefObject<string[]>;
-  premiumRef: RefObject<PremiumBreakdown | undefined>;
-  setPremium: Dispatch<SetStateAction<PremiumBreakdown | undefined>>;
-  hasUnsavedChangesRef: RefObject<boolean>;
-  setHasUnsavedChanges: Dispatch<SetStateAction<boolean>>;
-  persistDraft: (opts?: {
-    force?: boolean;
-    skipPremiumRefresh?: boolean;
-  }) => Promise<unknown>;
-  handleFieldBlur: () => void;
-  onResetPremium?: () => void;
-  isCalculating?: boolean;
-  onExportExcel?: () => void;
-  isExportingExcel?: boolean;
-  shellCardClassName?: string;
+  rating: RatingSnapshot | undefined;
+  premiumSectionProps: Omit<
+    React.ComponentProps<typeof PremiumSection>,
+    | "open"
+    | "onOpenChange"
+    | "reference"
+    | "rating"
+    | "borderClassName"
+    | "fieldsLocked"
+  >;
 };
 
-export function SectionStack({
+export const SectionStack = memo(function SectionStack({
   openMap,
   setOpenMap,
+  borderClassName,
+  handleFieldBlur,
   reference,
   carWording,
-  premium,
-  referralReasons,
-  notes,
-  policy,
   rating,
-  premiumManuallyEditedRef,
-  premiumManualKeysRef,
-  premiumRef,
-  setPremium,
-  hasUnsavedChangesRef,
-  setHasUnsavedChanges,
-  persistDraft,
-  handleFieldBlur,
-  onResetPremium,
-  isCalculating = false,
-  onExportExcel,
-  isExportingExcel = false,
-  shellCardClassName,
-}: WizardSectionStackProps) {
+  premiumSectionProps,
+}: SectionStackProps) {
   const { fieldsLocked, premiumPinned } = useMode();
+
   const premiumSection = (
-    <PolicyCollapsibleSection
-      id={SECTION_IDS.PREMIUM}
-      title="Premium"
-      description="Premium breakdown and confirmation"
+    <PremiumSection
       open={openMap.premium ?? true}
       onOpenChange={(open) =>
         setOpenMap((prev) => ({ ...prev, premium: open }))
       }
-      className={shellCardClassName}
-    >
-      <PremiumDeclaration
-        premium={premium}
-        referralReasons={referralReasons}
-        reference={reference}
-        notes={notes}
-        rating={rating ?? policy.car.rating}
-        initialManualKeys={policy.car.premiumManualKeys}
-        premiumEditable={!fieldsLocked}
-        onPremiumChange={
-          fieldsLocked
-            ? undefined
-            : (next: PremiumBreakdown | undefined) => {
-                premiumManuallyEditedRef.current = true;
-                premiumRef.current = next;
-                setPremium(next);
-                hasUnsavedChangesRef.current = true;
-                setHasUnsavedChanges(true);
-                void persistDraft({
-                  force: true,
-                  skipPremiumRefresh: true,
-                });
-              }
-        }
-        onManualKeysChange={
-          fieldsLocked
-            ? undefined
-            : (keys: string[]) => {
-                premiumManualKeysRef.current = keys;
-              }
-        }
-        onResetPremium={fieldsLocked ? undefined : onResetPremium}
-        isCalculating={isCalculating}
-        onExportExcel={onExportExcel}
-        isExportingExcel={isExportingExcel}
-        adjustmentBreakdown={
-          policy.car.adjusted ? policy.car.adjustment?.breakdown : undefined
-        }
-      />
-    </PolicyCollapsibleSection>
+      borderClassName={borderClassName}
+      reference={reference}
+      rating={rating}
+      fieldsLocked={fieldsLocked}
+      {...premiumSectionProps}
+    />
   );
 
   return (
@@ -138,7 +75,7 @@ export function SectionStack({
         onOpenChange={(open) =>
           setOpenMap((prev) => ({ ...prev, "risk-details": open }))
         }
-        className={shellCardClassName}
+        className={borderClassName}
       >
         <RiskDetails reference={reference} />
       </PolicyCollapsibleSection>
@@ -154,7 +91,7 @@ export function SectionStack({
             "limits-of-liability": open,
           }))
         }
-        className={shellCardClassName}
+        className={borderClassName}
       >
         <Limits reference={reference} />
       </PolicyCollapsibleSection>
@@ -167,7 +104,7 @@ export function SectionStack({
         onOpenChange={(open) =>
           setOpenMap((prev) => ({ ...prev, excesses: open }))
         }
-        className={shellCardClassName}
+        className={borderClassName}
       >
         <Excesses />
       </PolicyCollapsibleSection>
@@ -180,7 +117,7 @@ export function SectionStack({
         onOpenChange={(open) =>
           setOpenMap((prev) => ({ ...prev, claims: open }))
         }
-        className={shellCardClassName}
+        className={borderClassName}
       >
         <ClaimsWording carWording={carWording} />
       </PolicyCollapsibleSection>
@@ -188,4 +125,4 @@ export function SectionStack({
       {!premiumPinned ? premiumSection : null}
     </fieldset>
   );
-}
+});

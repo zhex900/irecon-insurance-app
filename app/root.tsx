@@ -3,7 +3,6 @@ import "./app.css";
 import { Links, Meta, Outlet, Scripts, ScrollRestoration } from "react-router";
 
 import { RootErrorBoundary } from "~/components/root-error-boundary";
-import { ThemeProvider } from "~/components/theme/theme-provider";
 import { geistFontFaceCss, geistFontFaces } from "~/lib/fonts";
 import { themeInitScript } from "~/lib/theme";
 
@@ -35,9 +34,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body>
-        <ThemeProvider defaultTheme="system" enableSystem>
-          {children}
-        </ThemeProvider>
+        {children}
         <ScrollRestoration />
         <Scripts />
       </body>

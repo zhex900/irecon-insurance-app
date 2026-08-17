@@ -23,6 +23,7 @@ import { useLocation, useNavigate } from "react-router";
 
 import { useSidebar } from "~/components/ui/sidebar";
 import {
+  excludeRecentRoute,
   normalizeRecentPath,
   pushRecentRouteLocalDetailed,
   recentIdForPath,
@@ -211,6 +212,7 @@ function RecentRouteRow({
 
 function RecentsSection({
   recentRoutes,
+  currentPathname,
   enteringId,
   spilledRoute,
   open,
@@ -218,6 +220,7 @@ function RecentsSection({
   onToggle,
 }: {
   recentRoutes: SideNavLink[];
+  currentPathname: string;
   enteringId: string | null;
   /** Dropped bottom row kept mounted during insert so the list does not jump up. */
   spilledRoute: SideNavLink | null;
@@ -226,17 +229,22 @@ function RecentsSection({
   iconRail: boolean;
   onToggle: () => void;
 }) {
-  const displayRoutes = React.useMemo(() => {
-    if (!spilledRoute || !enteringId) return recentRoutes;
-    if (recentRoutes.some((route) => route.id === spilledRoute.id)) {
-      return recentRoutes;
-    }
-    return [...recentRoutes, spilledRoute];
-  }, [recentRoutes, spilledRoute, enteringId]);
+  const visibleRoutes = React.useMemo(
+    () => excludeRecentRoute(recentRoutes, currentPathname),
+    [recentRoutes, currentPathname],
+  );
 
-  // Use the committed stack (excludes spilled) so unmounting the spilled row
-  // after the insert animation does not change the box height.
-  const listHeightPx = recentsListHeightPx(recentRoutes);
+  const displayRoutes = React.useMemo(() => {
+    if (!spilledRoute || !enteringId) return visibleRoutes;
+    if (visibleRoutes.some((route) => route.id === spilledRoute.id)) {
+      return visibleRoutes;
+    }
+    return [...visibleRoutes, spilledRoute];
+  }, [visibleRoutes, spilledRoute, enteringId]);
+
+  // Use the committed visible stack (excludes spilled) so unmounting the spilled
+  // row after the insert animation does not change the box height.
+  const listHeightPx = recentsListHeightPx(visibleRoutes);
   const listOpen = open && !iconRail;
 
   return (
@@ -473,15 +481,20 @@ export const AppSideNav = React.memo(function AppSideNav({
   const location = useLocation();
   const { isMobile, setOpen } = useSidebar();
   const showExpandedNav = sidebarExpanded || isMobile;
+  const initialRecentRoutes = excludeRecentRoute(
+    data.recentRoutes,
+    location.pathname,
+  );
   const lastRecordedPathRef = React.useRef("");
-  const recentRoutesRef = React.useRef(data.recentRoutes);
+  const recentRoutesRef = React.useRef(initialRecentRoutes);
   const skipInitialPathEffectRef = React.useRef(true);
   const enterClearTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
   const recordAbortRef = React.useRef<AbortController | null>(null);
 
-  const [recentRoutes, setRecentRoutes] = React.useState(data.recentRoutes);
+  const [recentRoutes, setRecentRoutes] =
+    React.useState(initialRecentRoutes);
   const [enteringId, setEnteringId] = React.useState<string | null>(null);
   const [spilledRoute, setSpilledRoute] = React.useState<SideNavLink | null>(
     null,
@@ -537,23 +550,27 @@ export const AppSideNav = React.memo(function AppSideNav({
     }
 
     if (lastRecordedPathRef.current === path) return;
+    const previousPath = lastRecordedPathRef.current;
     lastRecordedPathRef.current = path;
 
-    const { routes, spilled } = pushRecentRouteLocalDetailed(
-      recentRoutesRef.current,
-      path,
-    );
-    setRecentRoutes(routes);
-    setSpilledRoute(spilled);
-    setEnteringId(recentIdForPath(path));
-    if (enterClearTimerRef.current !== null) {
-      clearTimeout(enterClearTimerRef.current);
+    if (previousPath) {
+      const base = excludeRecentRoute(recentRoutesRef.current, path);
+      const { routes, spilled } = pushRecentRouteLocalDetailed(
+        base,
+        previousPath,
+      );
+      setRecentRoutes(routes);
+      setSpilledRoute(spilled);
+      setEnteringId(recentIdForPath(previousPath));
+      if (enterClearTimerRef.current !== null) {
+        clearTimeout(enterClearTimerRef.current);
+      }
+      enterClearTimerRef.current = setTimeout(() => {
+        setEnteringId(null);
+        setSpilledRoute(null);
+        enterClearTimerRef.current = null;
+      }, RECENTS_ENTER_MS + 40);
     }
-    enterClearTimerRef.current = setTimeout(() => {
-      setEnteringId(null);
-      setSpilledRoute(null);
-      enterClearTimerRef.current = null;
-    }, RECENTS_ENTER_MS + 40);
 
     // Use fetch (not useFetcher) so recording a recent does not revalidate
     // the active page loaders — that was remounting/flickering the side nav
@@ -578,7 +595,7 @@ export const AppSideNav = React.memo(function AppSideNav({
         if (abort.signal.aborted) return;
         if (lastRecordedPathRef.current !== path) return;
         if (apiRoutes[0]?.href !== path) return;
-        setRecentRoutes(apiRoutes);
+        setRecentRoutes(excludeRecentRoute(apiRoutes, path));
       })
       .catch(() => {
         // Ignore abort / network errors; optimistic list already updated.
@@ -593,6 +610,7 @@ export const AppSideNav = React.memo(function AppSideNav({
       >
         <RecentsSection
           recentRoutes={recentRoutes}
+          currentPathname={location.pathname}
           enteringId={enteringId}
           spilledRoute={spilledRoute}
           open={recentsOpen}

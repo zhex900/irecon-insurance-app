@@ -6,7 +6,7 @@ import type { UseDraftSaveProps } from "../draft/use-draft-types";
 import { useDraftFieldWatching } from "../draft/use-draft-watching";
 
 export function usePolicyDraftSave(props: UseDraftSaveProps) {
-  const { form, premiumRef, premiumManualKeysRef } = props;
+  const { form, premiumRef, premiumManualKeysRef, draftSaveSyncRef } = props;
 
   // State management
   const {
@@ -56,6 +56,8 @@ export function usePolicyDraftSave(props: UseDraftSaveProps) {
     submitDraft,
     saveDraftNow,
     handleFieldBlur,
+    cancelQueuedDraftSave,
+    waitForDraftIdle,
   } = useDraftOperations({
     ...props,
     fieldsLocked,
@@ -76,6 +78,11 @@ export function usePolicyDraftSave(props: UseDraftSaveProps) {
     setManualSaving,
     publishSaveStatus,
   });
+
+  useEffect(() => {
+    if (!draftSaveSyncRef) return;
+    draftSaveSyncRef.current = { cancelQueuedDraftSave, waitForDraftIdle };
+  }, [draftSaveSyncRef, cancelQueuedDraftSave, waitForDraftIdle]);
 
   // Seed the saved snapshot once on mount
   useEffect(() => {
@@ -100,6 +107,8 @@ export function usePolicyDraftSave(props: UseDraftSaveProps) {
     saveDraftNow,
     handleFieldBlur,
     draftSnapshot,
+    cancelQueuedDraftSave,
+    waitForDraftIdle,
   };
 }
 

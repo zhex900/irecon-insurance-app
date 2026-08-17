@@ -1,53 +1,57 @@
-import type { RefObject } from "react";
+import { memo } from "react";
 import { useFormContext } from "react-hook-form";
 
 import { PolicyInformationCard } from "~/components/policies/policy-form-layout";
 import type { Policy, PremiumBreakdown, ReferenceData } from "~/lib/db/types";
 import { getTakenStatusIssues } from "~/lib/policies/taken-status";
-import { type CarPolicyFormValues,POLICY_STATUS } from "~/lib/zod/policy-car";
+import { type CarPolicyFormValues, POLICY_STATUS } from "~/lib/zod/policy-car";
 
 import { useMode } from "../hooks/utils/use-mode";
+import { useWizardDisplayFields } from "../hooks/wizard/use-wizard-display-fields";
 import { SECTION_IDS } from "../shared/constants";
 
-export type CarPolicyWizardInformationCardProps = {
-  policy: Policy;
-  reference: ReferenceData;
-  insurerName: string;
-  selectedStatusId: number;
-  selectedStatusName: string;
+type InformationCardProps = {
+  borderClassName: string;
   canChangeStatus: boolean;
-  onPolicyNumberBlur?: () => void;
   premium: PremiumBreakdown | undefined;
-  premiumRef: RefObject<PremiumBreakdown | undefined>;
+  premiumRef: React.RefObject<PremiumBreakdown | undefined>;
   isFetcherBusy: boolean;
   isCalculating: boolean;
-  className?: string;
-  onConfirmTerminalStatus: (statusId: number) => void;
-  onOpenPremiumSection: () => void;
-  onMarkAttentionPaths: (paths: string[]) => void;
+  handleFieldBlur: () => void;
+  confirmTerminalStatusAndSave: (statusId: number) => void;
+  markAttentionPaths: (paths: string[]) => void;
+  navigateToSection: (sectionId: string) => void;
+  setOpenMap: (
+    map:
+      | Record<string, boolean>
+      | ((prev: Record<string, boolean>) => Record<string, boolean>),
+  ) => void;
+  policy: Policy;
+  reference: ReferenceData;
 };
 
-export function InformationCard({
-  policy,
-  reference,
-  insurerName,
-  selectedStatusId,
-  selectedStatusName,
+export const InformationCard = memo(function InformationCard({
+  borderClassName,
   canChangeStatus,
-  onPolicyNumberBlur,
   premium,
   premiumRef,
   isFetcherBusy,
   isCalculating,
-  className,
-  onConfirmTerminalStatus,
-  onOpenPremiumSection,
-  onMarkAttentionPaths,
-}: CarPolicyWizardInformationCardProps) {
+  handleFieldBlur,
+  confirmTerminalStatusAndSave,
+  markAttentionPaths,
+  navigateToSection,
+  setOpenMap,
+  policy,
+  reference,
+}: InformationCardProps) {
   const { policyNumberEditable } = useMode();
+  const { selectedStatus, insurerName, livePolicyNumber } =
+    useWizardDisplayFields(policy, reference);
   const form = useFormContext<CarPolicyFormValues>();
-  const policyNumber = form.watch("policyNumber") || policy.policyNumber;
   const policyNumberError = form.formState.errors.policyNumber?.message;
+  const selectedStatusId =
+    selectedStatus?.policyStatusId ?? policy.policyStatusId;
 
   function takenStatusIssues() {
     const values = form.getValues();
@@ -62,7 +66,7 @@ export function InformationCard({
   return (
     <PolicyInformationCard
       insurerName={insurerName}
-      policyNumber={policyNumber}
+      policyNumber={livePolicyNumber}
       policyNumberEditable={policyNumberEditable}
       onPolicyNumberChange={(next) => {
         form.clearErrors("policyNumber");
@@ -71,10 +75,10 @@ export function InformationCard({
           shouldValidate: false,
         });
       }}
-      onPolicyNumberBlur={onPolicyNumberBlur}
+      onPolicyNumberBlur={handleFieldBlur}
       policyNumberError={policyNumberError}
       statusId={selectedStatusId}
-      statusName={selectedStatusName}
+      statusName={selectedStatus?.name ?? "Pending"}
       statusOptions={reference.policyStatuses}
       canChangeStatus={canChangeStatus}
       onStatusChange={(next) => {
@@ -83,7 +87,7 @@ export function InformationCard({
           shouldValidate: false,
         });
       }}
-      onConfirmTerminalStatus={onConfirmTerminalStatus}
+      onConfirmTerminalStatus={confirmTerminalStatusAndSave}
       validateTerminalStatus={(statusId) => {
         if (statusId !== POLICY_STATUS.Taken) return { ok: true };
         const issues = takenStatusIssues();
@@ -100,8 +104,9 @@ export function InformationCard({
         if (statusId !== POLICY_STATUS.Taken) return;
         const issues = takenStatusIssues();
         const keys = issues.map((issue) => issue.premiumKey);
-        onOpenPremiumSection();
-        onMarkAttentionPaths(keys);
+        setOpenMap((prev) => ({ ...prev, premium: true }));
+        navigateToSection(SECTION_IDS.PREMIUM);
+        markAttentionPaths(keys);
         const firstKey = keys[0];
         const target =
           (firstKey
@@ -111,7 +116,7 @@ export function InformationCard({
       }}
       statusConfirmBusy={isFetcherBusy && !isCalculating}
       adjusted={Boolean(policy.car.adjusted)}
-      className={className}
+      className={borderClassName}
     />
   );
-}
+});

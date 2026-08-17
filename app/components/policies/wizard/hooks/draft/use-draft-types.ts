@@ -5,6 +5,11 @@ import type { Blocker, NavigateFunction } from "react-router";
 import type { Policy, PremiumBreakdown } from "~/lib/db/types";
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
 
+export type PolicyDraftSaveSync = {
+  cancelQueuedDraftSave: () => void;
+  waitForDraftIdle: () => Promise<void>;
+};
+
 export type PolicyLeaveApi = {
   blocker: Blocker;
   allowLeaveRef: RefObject<boolean>;
@@ -26,4 +31,5 @@ export interface UseDraftSaveProps {
   refreshPremiumAfterSave: (dirtyPaths: string[]) => void;
   getLeaveApi: () => PolicyLeaveApi | null;
   navigate: NavigateFunction;
+  draftSaveSyncRef?: RefObject<PolicyDraftSaveSync | null>;
 }

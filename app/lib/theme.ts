@@ -4,11 +4,7 @@
  * re-render during navigation and causes a light/dark flash.
  */
 
-import {
-  getThemeFromCookies,
-  setThemeCookie,
-  type Theme,
-} from "~/lib/cookies";
+import { setThemeCookie, type Theme } from "~/lib/cookies";
 
 export type { Theme };
 
@@ -59,12 +55,6 @@ export function applyThemeToDocument(
       });
     });
   }
-}
-
-/** Read stored preference from the theme cookie (client). */
-export function readStoredTheme(defaultTheme: Theme = "system"): Theme {
-  if (typeof document === "undefined") return defaultTheme;
-  return getThemeFromCookies(document.cookie) ?? defaultTheme;
 }
 
 /** Persist preference and apply to the document. */

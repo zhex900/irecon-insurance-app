@@ -302,9 +302,13 @@ export async function action({ request, params }: Route.ActionArgs) {
   }
 
   if (intent === "recalculate" || intent === "calculate") {
+    const requestId = parsePositiveInteger(formData.get("requestId"));
     const parsed = carPolicyPricingSchema.safeParse(payload);
     if (!parsed.success) {
-      return { errors: parsed.error.flatten().fieldErrors };
+      return {
+        errors: parsed.error.flatten().fieldErrors,
+        ...(requestId != null ? { requestId } : {}),
+      };
     }
     const policy = await applyPremiumCalculation(
       policyId,
@@ -316,6 +320,7 @@ export async function action({ request, params }: Route.ActionArgs) {
       referralReasons: policy.car.referralReasons,
       rating: policy.car.rating,
       notes: policy.notes,
+      ...(requestId != null ? { requestId } : {}),
     };
   }
 

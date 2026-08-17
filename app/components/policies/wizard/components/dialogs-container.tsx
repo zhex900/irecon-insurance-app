@@ -1,51 +1,78 @@
-import { LeaveDiscardDialog,SubmitConfirmDialog } from "../wizard-dialogs";
+import { memo } from "react";
+import type { UseFormReturn } from "react-hook-form";
 
-export type DialogsProps = {
+import type { PremiumBreakdown } from "~/lib/db/types";
+import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
+
+import { LeaveDiscardDialog, SubmitConfirmDialog } from "../wizard-dialogs";
+
+type DialogsContainerProps = {
+  form: UseFormReturn<CarPolicyFormValues>;
+  premium: PremiumBreakdown | undefined;
+  premiumRef: React.RefObject<PremiumBreakdown | undefined>;
   submitConfirmOpen: boolean;
-  onSubmitConfirmOpenChange: (open: boolean) => void;
+  setSubmitConfirmOpen: (open: boolean) => void;
   submitDocumentNames: string[];
   submitBusy: boolean;
-  onSubmitConfirm: () => void;
-  leaveDialogOpen: boolean;
+  confirmSubmit: () => Promise<boolean>;
+  setSubmittedInSession: (value: boolean) => void;
+  setSubmittedFingerprint: (fingerprint: string) => void;
   pendingLeaveAfterSave: boolean;
   discarding: boolean;
-  onStay: () => void;
-  onLeaveWithoutSaving: () => void;
-  onSaveAndLeave: () => void | Promise<void>;
+  leaveDialogOpen: boolean;
+  stayOnPage: () => void;
+  leaveWithoutSaving: () => void;
+  saveAndLeave: () => Promise<void>;
 };
 
-export function DialogsContainer({
+export const DialogsContainer = memo(function DialogsContainer({
+  form,
+  premium,
+  premiumRef,
   submitConfirmOpen,
-  onSubmitConfirmOpenChange,
+  setSubmitConfirmOpen,
   submitDocumentNames,
   submitBusy,
-  onSubmitConfirm,
-  leaveDialogOpen,
+  confirmSubmit,
+  setSubmittedInSession,
+  setSubmittedFingerprint,
   pendingLeaveAfterSave,
   discarding,
-  onStay,
-  onLeaveWithoutSaving,
-  onSaveAndLeave,
-}: DialogsProps) {
+  leaveDialogOpen,
+  stayOnPage,
+  leaveWithoutSaving,
+  saveAndLeave,
+}: DialogsContainerProps) {
   return (
     <>
       <SubmitConfirmDialog
         open={submitConfirmOpen}
-        onOpenChange={onSubmitConfirmOpenChange}
+        onOpenChange={setSubmitConfirmOpen}
         documentNames={submitDocumentNames}
         busy={submitBusy}
-        onCancel={() => onSubmitConfirmOpenChange(false)}
-        onConfirm={onSubmitConfirm}
+        onCancel={() => setSubmitConfirmOpen(false)}
+        onConfirm={() => {
+          void confirmSubmit().then((ok) => {
+            if (!ok) return;
+            setSubmittedInSession(true);
+            setSubmittedFingerprint(
+              JSON.stringify({
+                values: form.getValues(),
+                premium: premiumRef.current ?? premium ?? null,
+              }),
+            );
+          });
+        }}
       />
 
       <LeaveDiscardDialog
         open={leaveDialogOpen}
         pendingLeaveAfterSave={pendingLeaveAfterSave}
         discarding={discarding}
-        onStay={onStay}
-        onLeaveWithoutSaving={onLeaveWithoutSaving}
-        onSaveAndLeave={onSaveAndLeave}
+        onStay={stayOnPage}
+        onLeaveWithoutSaving={leaveWithoutSaving}
+        onSaveAndLeave={saveAndLeave}
       />
     </>
   );
-}
+});

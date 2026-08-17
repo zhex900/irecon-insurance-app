@@ -1,28 +1,29 @@
-import { type RefObject,useState } from "react";
+import { type RefObject, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import type { useFetcher } from "react-router";
 import { toast } from "sonner";
 
 import type { Policy, PremiumBreakdown } from "~/lib/db/types";
-import { focusFormIssue } from "~/lib/form-validation-ui";
-import { getTakenStatusErrors } from "~/lib/policies/taken-status";
-import { rollupPremiumTotals } from "~/lib/pricing/premium-totals";
 import { listReviewDocumentsForConfirmClient } from "~/lib/services/policy/documents/documents.client";
 import {
   type CarPolicyFormValues,
-  carPolicyPricingSchema,
   POLICY_STATUS,
   pricingFields,
-  wizardStepFields,
 } from "~/lib/zod/policy-car";
 
-import { INTENTS, SECTION_IDS } from "../../shared/constants";
+import type { RegenerateDocumentsOptions } from "../documents/document-utils";
+import type { PolicyLeaveApi } from "../draft/use-draft-types";
 import {
-  PRICING_CONFIRMATION_STEP,
-  rememberFocusSection,
-  rememberWizardStep,
-} from "../../wizard-step-memory";
-import type { PolicyLeaveApi } from "./use-draft-save";
+  applyFormOverrides,
+  buildSavePayload,
+  clearPendingLeaveOnInvalid,
+  ensurePremiumForSubmit,
+  focusFirstWizardIssue,
+  policyForDocumentConfirm,
+  rememberPremiumAfterSubmit,
+  submitPolicySave,
+  takenStatusBlocksSave,
+} from "./submit-helpers";
 import type { PolicyWizardActionData } from "./use-premium-calc";
 
 export function usePolicySubmit({
@@ -54,12 +55,9 @@ export function usePolicySubmit({
   premiumRef: RefObject<PremiumBreakdown | undefined>;
   setPremium: (premium: PremiumBreakdown | undefined) => void;
   setReferralReasons: (reasons: string[]) => void;
-  regenerateDocumentsIfNeeded: (options?: {
-    cancelled?: () => boolean;
-    premiumOverride?: PremiumBreakdown;
-    force?: boolean;
-    replaceCoverPack?: boolean;
-  }) => Promise<void>;
+  regenerateDocumentsIfNeeded: (
+    options?: RegenerateDocumentsOptions,
+  ) => Promise<void>;
   formDataChangedForDocuments: (premiumOverride?: PremiumBreakdown) => boolean;
   goToStep: (index: number, options?: { unlock?: boolean }) => void;
   navigateToSection: (sectionId: string) => void;
@@ -74,44 +72,24 @@ export function usePolicySubmit({
   const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitDocumentNames, setSubmitDocumentNames] = useState<string[]>([]);
-
-  function policyForDocumentConfirm(): Policy {
-    const values = form.getValues();
-    const coverTypeId = Number(values.coverTypeId) || policy.car.coverTypeId;
-    return {
-      ...policy,
-      stateId: Number(values.stateId) || policy.stateId,
-      car: {
-        ...policy.car,
-        coverTypeId,
-        annualCoverTypeId:
-          coverTypeId === 1
-            ? Number(values.annualCoverTypeId) || policy.car.annualCoverTypeId
-            : null,
-      },
-    };
-  }
+  const issueFocus = {
+    form,
+    step,
+    firstIssuePath,
+    findStepForField,
+    pendingFocusPathRef,
+    goToStep,
+  };
 
   async function requestSubmit() {
     const valid = await form.trigger();
     if (!valid) {
-      const allFields = Object.values(wizardStepFields).flat().map(String);
-      const path = firstIssuePath(allFields);
-      if (path) {
-        const targetStep = findStepForField(path);
-        if (targetStep != null && targetStep !== step) {
-          pendingFocusPathRef.current = path;
-          goToStep(targetStep, { unlock: true });
-        } else {
-          focusFormIssue(form.setFocus, path);
-        }
-      }
+      focusFirstWizardIssue(issueFocus);
       return;
     }
-
     try {
       const names = await listReviewDocumentsForConfirmClient(
-        policyForDocumentConfirm(),
+        policyForDocumentConfirm(policy, form.getValues()),
       );
       setSubmitDocumentNames(names);
     } catch {
@@ -127,49 +105,26 @@ export function usePolicySubmit({
   async function confirmSubmit() {
     setSubmitting(true);
     try {
-      let premiumForDocs = premium ?? policy.car.premium;
-      if (!premiumForDocs) {
-        const parsed = carPolicyPricingSchema.safeParse(form.getValues());
-        if (!parsed.success) {
-          setSubmitConfirmOpen(false);
-          await form.trigger([...pricingFields]);
-          return false;
-        }
-        const body = new FormData();
-        body.set("intent", "recalculate");
-        body.set("payload", JSON.stringify(parsed.data));
-        const response = await fetch(`/policies/${policy.policyId}`, {
-          method: "post",
-          body,
-        });
-        const data = (await response.json()) as PolicyWizardActionData;
-        if (data.premium) {
-          const rolled = rollupPremiumTotals(data.premium);
-          setPremium(rolled);
-          premiumForDocs = rolled;
-        }
-        if (data.referralReasons) {
-          setReferralReasons(data.referralReasons);
-        }
+      const premiumForDocs = await ensurePremiumForSubmit({
+        premium,
+        fallbackPremium: policy.car.premium,
+        form,
+        policyId: policy.policyId,
+        setPremium,
+        setReferralReasons,
+      });
+      if (premiumForDocs === false) {
+        setSubmitConfirmOpen(false);
+        await form.trigger([...pricingFields]);
+        return false;
       }
       await regenerateDocumentsIfNeeded({
         premiumOverride: premiumForDocs,
-        // Confirming generation is an explicit document event: retain the
-        // previous PDFs and append the newly generated pack as the next version
-        // (unless cover type changed — ensureReviewDocumentsClient replaces).
         force: true,
       });
       const saved = await savePolicy();
       setSubmitConfirmOpen(false);
-      if (saved !== false) {
-        // Land on Premium after the save redirect/revalidation.
-        rememberWizardStep(
-          policy.policyId,
-          PRICING_CONFIRMATION_STEP,
-          PRICING_CONFIRMATION_STEP,
-        );
-        rememberFocusSection(policy.policyId, SECTION_IDS.PREMIUM);
-      }
+      if (saved !== false) rememberPremiumAfterSubmit(policy.policyId);
       return saved !== false;
     } finally {
       setSubmitting(false);
@@ -177,91 +132,52 @@ export function usePolicySubmit({
   }
 
   async function savePolicy(overrides?: Partial<CarPolicyFormValues>) {
-    if (overrides) {
-      for (const [key, value] of Object.entries(overrides)) {
-        form.setValue(key as keyof CarPolicyFormValues, value, {
-          shouldDirty: true,
-          shouldValidate: false,
-        });
-      }
-    }
+    applyFormOverrides(form, overrides);
     const valid = await form.trigger();
     if (!valid) {
-      const leave = getLeaveApi();
-      if (leave?.pendingLeaveAfterSaveRef.current) {
-        leave.pendingLeaveAfterSaveRef.current = false;
-        leave.setPendingLeaveAfterSave(false);
-      }
-      const allFields = Object.values(wizardStepFields).flat().map(String);
-      const path = firstIssuePath(allFields);
-      if (path) {
-        const targetStep = findStepForField(path);
-        if (targetStep != null && targetStep !== step) {
-          pendingFocusPathRef.current = path;
-          goToStep(targetStep, { unlock: true });
-        } else {
-          focusFormIssue(form.setFocus, path);
-        }
-      }
+      clearPendingLeaveOnInvalid(getLeaveApi());
+      focusFirstWizardIssue(issueFocus);
       return false;
     }
-    const leave = getLeaveApi();
-    if (leave) leave.allowLeaveRef.current = true;
-    const premiumOverride = premiumRef.current ?? premium;
-    const values = {
-      ...form.getValues(),
-      ...overrides,
-      ...(premiumOverride ? { premium: premiumOverride } : {}),
-    };
-    const payload = JSON.stringify(values);
-    // Clear dirty state so leave navigation is not blocked after status save.
-    savedSnapshotRef.current = payload;
-    hasUnsavedChangesRef.current = false;
-    setHasUnsavedChanges(false);
-    const body = new FormData();
-    body.set("intent", INTENTS.SAVE);
-    body.set("payload", payload);
-    fetcher.submit(body, {
-      method: "post",
-      action: `/policies/${policy.policyId}`,
+    submitPolicySave({
+      fetcher,
+      policyId: policy.policyId,
+      payload: buildSavePayload({
+        form,
+        overrides,
+        premium: premiumRef.current ?? premium,
+      }),
+      savedSnapshotRef,
+      hasUnsavedChangesRef,
+      setHasUnsavedChanges,
+      leave: getLeaveApi(),
     });
     return true;
   }
 
-  /** Confirm Taken / Not taken and persist immediately (draft save is locked once terminal). */
   function confirmTerminalStatusAndSave(statusId: number) {
-    // Menu validates Taken first; keep a hard stop here if confirm is invoked anyway.
-    if (statusId === POLICY_STATUS.Taken) {
-      const values = form.getValues();
-      const currentPremium = premiumRef.current ?? premium;
-      const takenErrors = getTakenStatusErrors(values, {
-        contractWorksExistingStructurePremium:
-          currentPremium?.contractWorksExistingStructurePremium ?? 0,
-        contractWorksPlantPremium:
-          currentPremium?.contractWorksPlantPremium ?? 0,
-      });
-      if (takenErrors.length > 0) {
-        navigateToSection(SECTION_IDS.PREMIUM);
-        return;
-      }
+    const currentPremium = premiumRef.current ?? premium;
+    if (
+      takenStatusBlocksSave({
+        statusId,
+        form,
+        premium: currentPremium,
+        navigateToSection,
+      })
+    ) {
+      return;
     }
-
-    // Detect content changes before flipping status (status alone is not in PDF fields).
-    const premiumOverride = premiumRef.current ?? premium;
     const formChanged =
       hasUnsavedChangesRef.current ||
-      formDataChangedForDocuments(premiumOverride);
-
+      formDataChangedForDocuments(currentPremium);
     form.setValue("policyStatusId", statusId, {
       shouldDirty: true,
       shouldValidate: false,
     });
-    // Pass status explicitly — getValues() can still see the previous Pending value.
-    // On Taken: regenerate Schedule/ROA when form/premium changed (or no review docs yet).
     void (async () => {
       if (statusId === POLICY_STATUS.Taken && formChanged) {
         await regenerateDocumentsIfNeeded({
-          premiumOverride,
+          premiumOverride: currentPremium,
           force: true,
         });
       }

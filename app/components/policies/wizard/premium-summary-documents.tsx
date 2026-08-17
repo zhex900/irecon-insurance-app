@@ -1,5 +1,6 @@
 import { ChevronDownIcon, FileTypeIcon, MailIcon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useFormContext } from "react-hook-form";
 
 import { PreviewDialog } from "~/components/documents/pdf/preview";
 import { EmailDocumentsDialog } from "~/components/email/email-documents-dialog";
@@ -33,6 +34,7 @@ import {
 } from "~/lib/email/templates";
 import { isPremiumExcelDocument } from "~/lib/excel/client";
 import { versionPolicyDocuments } from "~/lib/services/policy/documents/versions";
+import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
 
 export function PremiumSummaryDocuments({
   documents,
@@ -72,11 +74,13 @@ export function PremiumSummaryDocuments({
   }>;
   documentsOnly?: boolean;
 }) {
+  const form = useFormContext<CarPolicyFormValues>();
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [showPreviousVersions, setShowPreviousVersions] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
   const [emailRecipient, setEmailRecipient] =
     useState<EmailSendRecipient>("broker");
+  const [emailPolicyNumber, setEmailPolicyNumber] = useState(policyNumber);
   const [previewDoc, setPreviewDoc] = useState<PolicyDocument | null>(null);
 
   const { previewSrc, previewLoading, previewError } = usePolicyDocumentPreview(
@@ -166,6 +170,11 @@ export function PremiumSummaryDocuments({
   }
 
   function openEmail(recipient: EmailSendRecipient) {
+    setEmailPolicyNumber(
+      form.getValues("policyNumber")?.trim() ||
+        policy?.policyNumber ||
+        policyNumber,
+    );
     setEmailRecipient(recipient);
     window.setTimeout(() => setEmailOpen(true), 0);
   }
@@ -353,7 +362,7 @@ export function PremiumSummaryDocuments({
             onOpenChange={setEmailOpen}
             policyId={policy?.policyId ?? ""}
             documents={selectedDocs}
-            policyNumber={policyNumber}
+            policyNumber={emailPolicyNumber}
             clientName={clientName}
             brokerName={brokerName}
             brokerEmail={brokerEmail}

@@ -5,12 +5,9 @@
  * This simplifies imports and ensures consistent naming.
  */
 
-export {
-  addPremiumExcelAdjustmentSheet,
-  calculateCarAdjustment,
-} from "./excel-adjustment-sheet";
+export { addPremiumExcelAdjustmentSheet } from "./excel-adjustment-sheet";
 export { buildPremiumExcelWorkbook } from "./excel-build";
-export { EXCEL_REPORT_TYPES,WORKER_VERSION } from "./excel-constants";
+export { EXCEL_REPORT_TYPES, WORKER_VERSION } from "./excel-constants";
 export type { GenericExcelColumn, GenericExcelInput } from "./excel-generic";
 export { buildGenericExcelWorkbook } from "./excel-generic";
 export {

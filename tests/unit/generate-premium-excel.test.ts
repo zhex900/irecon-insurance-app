@@ -7,6 +7,8 @@ import {
 } from "~/lib/excel/generate-premium.server";
 import { getPolicy } from "~/lib/services/policy/data.service";
 
+import { MAX_REQUEST_SIZE_BYTES } from "../../workers/excel/constants/config";
+import { generateGenericExcel } from "../../workers/excel/handler/generate-generic-excel";
 import { generatePremiumExcel } from "../../workers/excel/handler/generate-premium-excel";
 import {
   customReportDataSchema,
@@ -24,26 +26,87 @@ vi.mock("~/lib/observability/metrics.server", () => ({
 
 const POLICY_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
 
+const premiumWorkbookData = {
+  policy: {
+    policyId: POLICY_ID,
+    policyNumber: "ATCCWI1",
+    stateId: 1,
+    car: {
+      coverTypeId: 1,
+      siteAddress: "1 Test St",
+      insuredName: "Acme",
+      estimatedTurnover: 1_000_000,
+      plantEquipment: 0,
+      existingStructure: 0,
+      displayHomes: 0,
+      contractWorksSumInsured: 1_000_000,
+      liabilityLimitBand: 10,
+      contractWorksExistingStructurePremium: 0,
+      contractWorksDisplayHomesPremium: 0,
+    },
+  },
+  premium: {
+    contractWorksCalculatedBasePremium: 100,
+    contractWorksBasePremium: 100,
+    contractWorksPlantPremium: 0,
+    contractWorksPlantESL: 0,
+    contractWorksESL: 10,
+    contractWorksGST: 11,
+    contractWorksStampDuty: 5,
+    contractWorksTerrorismPremium: 1,
+    contractWorksPlantTerrorismPremium: 0,
+    contractWorksDisplayHomesPremium: 0,
+    contractWorksExistingStructurePremium: 0,
+    contractWorksTotalPremium: 127,
+    liabilityCalculatedBasePremium: 50,
+    liabilityBasePremium: 50,
+    liabilityESL: 5,
+    liabilityGST: 5,
+    liabilityStampDuty: 2,
+    liabilityTotalPremium: 62,
+    combinedBrokerFee: 0,
+    originalTotalPremium: 189,
+  },
+  rating: {
+    contractWorksAppliedRate: 0.2,
+    liabilityAppliedRate: 0.1,
+    contractWorksMinPremium: 0,
+    liabilityMinPremium: 0,
+    eslRate: 0.05,
+    plantEslRate: 0.05,
+    plantRate: 0,
+    contractWorksStampDutyRate: 0.05,
+    liabilityStampDutyRate: 0.05,
+    terrorismRate: 0.01,
+    terrorismTier: "A",
+  },
+};
+
 describe("generate premium excel request schema", () => {
   it("rejects a non-premium report type", () => {
     const parsed = generatePremiumExcelRequestSchema.safeParse({
       reportType: "custom",
+      data: premiumWorkbookData,
+    });
+    expect(parsed.success).toBe(false);
+  });
+
+  it("rejects a key-sniff payload that is not a full premium workbook", () => {
+    const parsed = generatePremiumExcelRequestSchema.safeParse({
+      reportType: "premiumWorkbook",
       data: {
-        policy: { policyId: POLICY_ID },
-        premium: { contractWorksBasePremium: 1 },
+        policy: { policyId: POLICY_ID, policyNumber: "SECRET-POL", car: {} },
+        premium: { contractWorksBasePremium: 100 },
+        rating: { contractWorksAppliedRate: 0.2 },
       },
     });
     expect(parsed.success).toBe(false);
   });
 
-  it("accepts a slim premium workbook payload", () => {
+  it("accepts a complete premium workbook payload", () => {
     const parsed = generatePremiumExcelRequestSchema.safeParse({
       reportType: "premiumWorkbook",
-      data: {
-        policy: { policyId: POLICY_ID, policyNumber: "ATCCWI1", car: {} },
-        premium: { contractWorksBasePremium: 100 },
-        rating: { contractWorksAppliedRate: 0.2 },
-      },
+      data: premiumWorkbookData,
       options: { generatedBy: "user-1", policyNumber: "ATCCWI1" },
     });
     expect(parsed.success).toBe(true);
@@ -66,9 +129,9 @@ describe("custom report bounds", () => {
 describe("premium excel handler errors", () => {
   it("does not echo the request payload on validation failure", async () => {
     const response = await generatePremiumExcel({
-      reportType: "custom",
+      reportType: "premiumWorkbook",
       data: {
-        policy: { policyId: POLICY_ID, policyNumber: "SECRET-POL" },
+        policy: { policyId: POLICY_ID, policyNumber: "SECRET-POL", car: {} },
         premium: { contractWorksBasePremium: 1 },
       },
     });
@@ -77,6 +140,28 @@ describe("premium excel handler errors", () => {
     expect(body).toContain("Invalid premium workbook request");
     expect(body).not.toContain("SECRET-POL");
     expect(body).not.toContain(POLICY_ID);
+  });
+
+  it("rejects oversized payloads without echoing the body", async () => {
+    const response = await generatePremiumExcel({
+      reportType: "premiumWorkbook",
+      data: { pad: "x".repeat(MAX_REQUEST_SIZE_BYTES) },
+    });
+    expect(response.status).toBe(413);
+    const body = await response.text();
+    expect(body).toBe(JSON.stringify({ error: "payload_too_large" }));
+  });
+});
+
+describe("generic excel handler errors", () => {
+  it("rejects oversized payloads without echoing the body", async () => {
+    const response = await generateGenericExcel({
+      reportType: "custom",
+      data: { pad: "x".repeat(MAX_REQUEST_SIZE_BYTES) },
+    });
+    expect(response.status).toBe(413);
+    const body = await response.text();
+    expect(body).toBe(JSON.stringify({ error: "payload_too_large" }));
   });
 });
 

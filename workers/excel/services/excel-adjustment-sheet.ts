@@ -1,17 +1,17 @@
-// 10% GST
+import { GST_RATE } from "~/constants";
+import type { AdjustmentSectionRow } from "~/lib/excel/types";
+import { resolveAdjustmentRates } from "~/server/pricing/car-adjustment-calculator";
 
 import type {
   PremiumExcelPolicyRefs,
   PremiumExcelRateRefs,
   PremiumExcelSheetContext,
-} from "./excel-types"; 
+} from "./excel-types";
 import {
   setMoneyCell,
   setPercentCell,
   styleWorkbookHeaderRow,
 } from "./excel-workbook";
-
-const GST_RATE = 0.1;
 
 type AdjRow = {
   label: string;
@@ -21,309 +21,9 @@ type AdjRow = {
   esl: string;
   gst: string;
   sd: string;
-  result: import("../../../app/lib/excel/types").AdjustmentSectionRow;
+  result: AdjustmentSectionRow;
   strong?: boolean;
 };
-
-// Helper function to round money values to 2 decimal places (cents)
-function round(value: number): number {
-  return Math.round(value * 100) / 100;
-}
-
-// Build a section row for adjustment calculation
-function buildSectionRow({
-  base,
-  terror,
-  eslRate,
-  sdRate,
-  stampDutyExempt,
-  isSection2 = false,
-}: {
-  base: number;
-  terror: number;
-  eslRate: number;
-  sdRate: number;
-  stampDutyExempt: boolean;
-  isSection2?: boolean;
-}) {
-  const esl = round((base + terror) * eslRate);
-  const gst = round((base + terror + esl) * GST_RATE);
-  const sd =
-    stampDutyExempt && isSection2
-      ? 0
-      : round((base + terror + esl + gst) * sdRate);
-
-  return {
-    trueBasePremium: base,
-    terrorismPremium: terror,
-    esl,
-    gst,
-    sd,
-    totalPremium: base + terror + esl + gst + sd,
-  };
-}
-
-// Worker-compatible implementation matching app's calculateCarAdjustment
-export function calculateCarAdjustment({
-  originalTurnover,
-  adjustmentTurnover,
-  stampDutyExempt,
-  premium,
-  rating,
-}: {
-  originalTurnover: number;
-  adjustmentTurnover: number;
-  stampDutyExempt: boolean;
-  premium: import("../../../app/lib/excel/types").PremiumBreakdown;
-  rating?: import("../../../app/lib/excel/types").RatingSnapshot;
-}): import("../../../app/lib/excel/types").AdjustmentBreakdown {
-  const rates = resolveAdjustmentRates(premium, rating, originalTurnover);
-
-  const originalSection1 = buildSectionRow({
-    base: premium.contractWorksBasePremium || 0,
-    terror: premium.contractWorksTerrorismPremium || 0,
-    eslRate: rates.eslRate,
-    sdRate: rates.contractWorksStampDutyRate,
-    stampDutyExempt: false,
-    isSection2: false,
-  });
-
-  const originalSection2 = buildSectionRow({
-    base: premium.liabilityBasePremium || 0,
-    terror: 0,
-    eslRate: rates.eslRate,
-    sdRate: rates.liabilityStampDutyRate,
-    stampDutyExempt,
-    isSection2: true,
-  });
-
-  // Round bases to cents before tax lines (matches Excel ROUND on each step).
-  const adjustedSection1Base = round(
-    Math.max(
-      adjustmentTurnover * rates.contractWorksAppliedRate,
-      rates.contractWorksMinPremium,
-    ),
-  );
-
-  const adjustedSection1 = buildSectionRow({
-    base: adjustedSection1Base,
-    terror: round(adjustedSection1Base * rates.terrorismRate),
-    eslRate: rates.eslRate,
-    sdRate: rates.contractWorksStampDutyRate,
-    stampDutyExempt: false,
-    isSection2: false,
-  });
-
-  const adjustedSection2Base = round(
-    Math.max(
-      adjustmentTurnover * rates.liabilityAppliedRate,
-      rates.liabilityMinPremium,
-    ),
-  );
-
-  const adjustedSection2 = buildSectionRow({
-    base: adjustedSection2Base,
-    terror: 0,
-    eslRate: rates.eslRate,
-    sdRate: rates.liabilityStampDutyRate,
-    stampDutyExempt,
-    isSection2: true,
-  });
-
-  // Calculate delta with 75% floor rule
-  const deltaBase = (origBase: number, adjBase: number) => {
-    if (
-      adjBase < origBase &&
-      origBase > 0 &&
-      (origBase - adjBase) / origBase > 0.25
-    ) {
-      return -origBase * 0.25; // 75% floor
-    }
-    return adjBase - origBase;
-  };
-
-  const deltaSection1Base = deltaBase(
-    premium.contractWorksBasePremium || 0,
-    adjustedSection1Base,
-  );
-  const deltaSection1Terror = round(deltaSection1Base * rates.terrorismRate);
-
-  const deltaSection1 = buildSectionRow({
-    base: deltaSection1Base,
-    terror: deltaSection1Terror,
-    eslRate: rates.eslRate,
-    sdRate: rates.contractWorksStampDutyRate,
-    stampDutyExempt: false,
-    isSection2: false,
-  });
-
-  const deltaSection2Base = deltaBase(
-    premium.liabilityBasePremium || 0,
-    adjustedSection2Base,
-  );
-  const deltaSection2Terror = 0;
-
-  const deltaSection2 = buildSectionRow({
-    base: deltaSection2Base,
-    terror: deltaSection2Terror,
-    eslRate: rates.eslRate,
-    sdRate: rates.liabilityStampDutyRate,
-    stampDutyExempt,
-    isSection2: true,
-  });
-
-  return {
-    originalTurnover,
-    adjustmentTurnover,
-    stampDutyExempt,
-    original: {
-      section1: originalSection1,
-      section2: originalSection2,
-      total: {
-        trueBasePremium:
-          originalSection1.trueBasePremium + originalSection2.trueBasePremium,
-        terrorismPremium:
-          originalSection1.terrorismPremium + originalSection2.terrorismPremium,
-        esl: originalSection1.esl + originalSection2.esl,
-        gst: originalSection1.gst + originalSection2.gst,
-        sd: originalSection1.sd + originalSection2.sd,
-        totalPremium:
-          originalSection1.totalPremium + originalSection2.totalPremium,
-      },
-    },
-    adjustment: {
-      section1: adjustedSection1,
-      section2: adjustedSection2,
-      total: {
-        trueBasePremium:
-          adjustedSection1.trueBasePremium + adjustedSection2.trueBasePremium,
-        terrorismPremium:
-          adjustedSection1.terrorismPremium + adjustedSection2.terrorismPremium,
-        esl: adjustedSection1.esl + adjustedSection2.esl,
-        gst: adjustedSection1.gst + adjustedSection2.gst,
-        sd: adjustedSection1.sd + adjustedSection2.sd,
-        totalPremium:
-          adjustedSection1.totalPremium + adjustedSection2.totalPremium,
-      },
-    },
-    delta: {
-      section1: deltaSection1,
-      section2: deltaSection2,
-      total: {
-        trueBasePremium:
-          deltaSection1.trueBasePremium + deltaSection2.trueBasePremium,
-        terrorismPremium:
-          deltaSection1.terrorismPremium + deltaSection2.terrorismPremium,
-        esl: deltaSection1.esl + deltaSection2.esl,
-        gst: deltaSection1.gst + deltaSection2.gst,
-        sd: deltaSection1.sd + deltaSection2.sd,
-        totalPremium: deltaSection1.totalPremium + deltaSection2.totalPremium,
-      },
-    },
-  };
-}
-
-// Worker-compatible implementation matching app's resolveAdjustmentRates exactly
-function resolveAdjustmentRates(
-  premium: import("../../../app/lib/excel/types").PremiumBreakdown,
-  rating: import("../../../app/lib/excel/types").RatingSnapshot | undefined,
-  originalTurnover: number,
-) {
-  if (!rating) {
-    return {
-      contractWorksAppliedRate: 0,
-      liabilityAppliedRate: 0,
-      contractWorksMinPremium: 0,
-      liabilityMinPremium: 0,
-      terrorismRate: 0,
-      eslRate: 0,
-      contractWorksStampDutyRate: 0,
-      liabilityStampDutyRate: 0,
-    };
-  }
-
-  // Helper function to round to 6 decimal places (matching Math.Round(value, 6))
-  function roundRate(value: number): number {
-    return Math.round(value * 1e6) / 1e6;
-  }
-
-  // Resolve applied rate logic matching app's resolveAppliedRate
-  function resolveAppliedRate(
-    beforeBase: number,
-    trueBase: number,
-    turnover: number,
-    fallback: number,
-  ): number {
-    if (!(turnover > 0)) return fallback;
-    const numerator = beforeBase < trueBase ? beforeBase : trueBase;
-    return roundRate(numerator / turnover);
-  }
-
-  // Rate from premium logic matching app's rateFromPremium
-  function rateFromPremium(
-    numerator: number,
-    denominator: number,
-    fallback: number,
-  ): number {
-    if (!(denominator > 0) || !Number.isFinite(numerator)) return fallback;
-    return roundRate(numerator / denominator);
-  }
-
-  // Extract premium components matching app's variable names
-  const s1Base = premium.contractWorksBasePremium || 0;
-  const s1Terror = premium.contractWorksTerrorismPremium || 0;
-  const s1Plant = premium.contractWorksPlantPremium || 0;
-  const s1PlantTerror = premium.contractWorksPlantTerrorismPremium || 0;
-  const s1PlantEsl = premium.contractWorksPlantESL || 0;
-  const s1Esl = premium.contractWorksESL || 0;
-  const s1Gst = premium.contractWorksGST || 0;
-  const s1Sd = premium.contractWorksStampDuty || 0;
-  const s2Base = premium.liabilityBasePremium || 0;
-  const s2Esl = premium.liabilityESL || 0;
-  const s2Gst = premium.liabilityGST || 0;
-  const s2Sd = premium.liabilityStampDuty || 0;
-
-  // Calculate denominators matching app exactly
-  const terrorDenom = s1Base;
-  const eslDenom = s1Base + s1Terror;
-  // Legacy SDRateSection1 denom excludes ES/DH (CARNewPolicy.aspx.cs ~502–503).
-  const sd1Denom =
-    s1Base + s1Terror + s1Plant + s1PlantTerror + s1PlantEsl + s1Esl + s1Gst;
-  const sd2Denom = s2Base + s2Esl + s2Gst;
-
-  return {
-    contractWorksAppliedRate: resolveAppliedRate(
-      premium.contractWorksCalculatedBasePremium || 0,
-      s1Base,
-      originalTurnover,
-      rating.contractWorksAppliedRate || 0,
-    ),
-    liabilityAppliedRate: resolveAppliedRate(
-      premium.liabilityCalculatedBasePremium || 0,
-      s2Base,
-      originalTurnover,
-      rating.liabilityAppliedRate || 0,
-    ),
-    contractWorksMinPremium: rating.contractWorksMinPremium || 0,
-    liabilityMinPremium: rating.liabilityMinPremium || 0,
-    terrorismRate: rateFromPremium(
-      s1Terror,
-      terrorDenom,
-      rating.terrorismRate || 0,
-    ),
-    eslRate: rateFromPremium(s1Esl, eslDenom, rating.eslRate || 0),
-    contractWorksStampDutyRate: rateFromPremium(
-      s1Sd,
-      sd1Denom,
-      rating.contractWorksStampDutyRate || 0,
-    ),
-    liabilityStampDutyRate: rateFromPremium(
-      s2Sd,
-      sd2Denom,
-      rating.liabilityStampDutyRate || 0,
-    ),
-  };
-}
 
 export function addPremiumExcelAdjustmentSheet(
   workbook: import("exceljs").Workbook,
@@ -356,24 +56,12 @@ export function addPremiumExcelAdjustmentSheet(
   };
 
   const P = {
-    cwBase: INPUT.bindCwBase,
     cwTrue: INPUT.bindCwTrue,
     cwTerror: INPUT.bindCwTerror,
-    cwPlant: INPUT.bindCwPlant,
-    cwPlantTerror: INPUT.bindCwPlantTerror,
-    cwPlantEsl: INPUT.bindCwPlantEsl,
-    cwEsl: INPUT.bindCwEsl,
-    cwGst: INPUT.bindCwGst,
-    cwSd: INPUT.bindCwSd,
-    llBase: INPUT.bindLlBase,
     llTrue: INPUT.bindLlTrue,
-    llEsl: INPUT.bindLlEsl,
-    llGst: INPUT.bindLlGst,
-    llSd: INPUT.bindLlSd,
   } as const;
 
-  // Exact app rates (resolveAdjustmentRates → 6 dp). Values only — do not
-  // re-derive in Excel or float divide can drift 1¢ from the policy UI.
+  // Display rates from the app calculator — do not re-derive amounts here.
   const frozen = rating
     ? resolveAdjustmentRates(premium, rating, adjustment.originalTurnover)
     : null;
@@ -435,7 +123,6 @@ export function addPremiumExcelAdjustmentSheet(
     sd1: "Adjustment!$B$13",
     sd2: "Adjustment!$B$14",
     gst: "Adjustment!$B$15",
-    origTo: "Adjustment!$B$2",
     adjTo: "Adjustment!$B$3",
     sdExempt: "Adjustment!$B$4",
   } as const;
@@ -483,22 +170,6 @@ export function addPremiumExcelAdjustmentSheet(
         }
       }
     });
-    return head + 3;
-  }
-
-  // Check if adjustment has the expected structure
-  if (!adjustment.original || !adjustment.adjustment || !adjustment.delta) {
-    // Simplified fallback for worker when full adjustment structure isn't available
-    const noteRow = 17;
-    adj.mergeCells(`A${noteRow}:G${noteRow}`);
-    adj.getCell(`A${noteRow}`).value =
-      "Adjustment calculation requires full adjustment data structure. Using simplified calculation.";
-    adj.getCell(`A${noteRow}`).font = {
-      size: 9,
-      color: { argb: "FF6B7280" },
-      italic: true,
-    };
-    return;
   }
 
   const originalStart = 17;

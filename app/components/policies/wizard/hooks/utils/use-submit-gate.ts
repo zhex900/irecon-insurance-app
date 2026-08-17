@@ -1,34 +1,36 @@
 import { useState } from "react";
-import { type UseFormReturn,useWatch } from "react-hook-form";
 
 import type { PremiumBreakdown } from "~/lib/db/types";
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
 
+function submitFingerprint(
+  values: CarPolicyFormValues,
+  premium: PremiumBreakdown | null | undefined,
+) {
+  return JSON.stringify({
+    values,
+    premium: premium ?? null,
+  });
+}
+
 export function useCarPolicyWizardSubmitGate({
-  form,
+  values,
   premium,
   policyPremium,
   hasSubmittedOnce,
   isFormValid,
 }: {
-  form: UseFormReturn<CarPolicyFormValues>;
+  values: CarPolicyFormValues;
   premium: PremiumBreakdown | undefined;
   policyPremium: PremiumBreakdown | undefined;
   hasSubmittedOnce: boolean;
   isFormValid: boolean;
 }) {
-  const watchedValues = useWatch({ control: form.control });
-  const submitFingerprint = JSON.stringify({
-    values: watchedValues,
-    premium: premium ?? null,
-  });
+  const currentFingerprint = submitFingerprint(values, premium);
   const [submittedFingerprint, setSubmittedFingerprint] = useState(() =>
-    JSON.stringify({
-      values: form.getValues(),
-      premium: premium ?? policyPremium ?? null,
-    }),
+    submitFingerprint(values, premium ?? policyPremium),
   );
-  const hasChangesSinceSubmit = submitFingerprint !== submittedFingerprint;
+  const hasChangesSinceSubmit = currentFingerprint !== submittedFingerprint;
   const submitDisabled =
     !isFormValid || (hasSubmittedOnce && !hasChangesSinceSubmit);
 

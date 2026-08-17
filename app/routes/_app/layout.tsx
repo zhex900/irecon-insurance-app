@@ -8,6 +8,7 @@ import { RootErrorBoundary } from "~/components/root-error-boundary";
 import { toBrokerSession } from "~/lib/auth/session";
 import { requireAuth } from "~/lib/auth/session/server.server";
 import { getSessionTimeoutClientState } from "~/lib/auth/session/timeout.server";
+import { getThemeWithFallback } from "~/lib/cookies";
 import { updateRequestContext } from "~/lib/observability/request-context.server";
 import { setSentryUser } from "~/lib/observability/sentry.server";
 import { getSideNavData } from "~/lib/services/navigation/side-nav.service";
@@ -38,6 +39,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     recentsOpen: shellNav.recentsOpen,
     navSectionsExpanded,
     sessionTimeout: getSessionTimeoutClientState(request),
+    theme: getThemeWithFallback(request),
   };
 }
 
@@ -79,6 +81,7 @@ export default function AppLayoutRoute({ loaderData }: Route.ComponentProps) {
       recentsOpen={loaderData.recentsOpen}
       navSectionsExpanded={loaderData.navSectionsExpanded}
       sessionTimeout={loaderData.sessionTimeout}
+      theme={loaderData.theme}
     />
   );
 }
@@ -95,6 +98,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
         recentsOpen={data.recentsOpen}
         navSectionsExpanded={data.navSectionsExpanded}
         sessionTimeout={data.sessionTimeout}
+        theme={data.theme}
         content={<RootErrorBoundary error={error} />}
       />
     );

@@ -1,20 +1,23 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import type { NavigateFunction } from "react-router";
 
 import type { PolicySaveStatus } from "~/components/forms/field-save-highlight";
-import { flattenDirtyPaths } from "~/components/forms/field-save-highlight";
 import type { Policy, PremiumBreakdown } from "~/lib/db/types";
-import { savePolicyDraftClient } from "~/lib/services/policy/draft.client";
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
 
-import type { PolicyLeaveApi } from "../composite/use-draft-save";
 import {
-  createDraftSnapshot,
-  SaveEpochTracker,
-  toastPolicyDraftSaved,
-  validateSavedPaths,
-} from "./use-draft-utils";
+  beginDraftSave,
+  discardInFlightDraft,
+  type DraftPersistRefs,
+  type DraftPersistSetters,
+  finishDraftSaveAttempt,
+  queueFollowUpDraftSave,
+  queueInFlightDraftSave,
+  waitWhileDraftSaving,
+} from "./draft-persist";
+import type { PolicyLeaveApi } from "./use-draft-types";
+import { createDraftSnapshot, SaveEpochTracker } from "./use-draft-utils";
 
 export function useDraftOperations({
   policy,
@@ -75,6 +78,57 @@ export function useDraftOperations({
   setManualSaving: (value: boolean) => void;
   publishSaveStatus: (status: PolicySaveStatus) => void;
 }) {
+  const refs = useMemo<DraftPersistRefs>(
+    () => ({
+      hasUnsavedChangesRef,
+      isSavingDraftRef,
+      pendingSaveAfterCurrentRef,
+      pendingSkipPremiumRefreshRef,
+      lastHandledSavedAtRef,
+      pendingDraftPayloadRef,
+      pendingDirtyPathsRef,
+      savedSnapshotRef,
+      previousSnapshotRef,
+      previousSavedAtRef,
+      premiumManuallyEditedRef,
+      saveEpochTracker,
+    }),
+    [
+      hasUnsavedChangesRef,
+      isSavingDraftRef,
+      pendingSaveAfterCurrentRef,
+      pendingSkipPremiumRefreshRef,
+      lastHandledSavedAtRef,
+      pendingDraftPayloadRef,
+      pendingDirtyPathsRef,
+      savedSnapshotRef,
+      previousSnapshotRef,
+      previousSavedAtRef,
+      premiumManuallyEditedRef,
+      saveEpochTracker,
+    ],
+  );
+  const setters = useMemo<DraftPersistSetters>(
+    () => ({
+      setHasUnsavedChanges,
+      setDraftSavedAt,
+      setDraftSaveError,
+      commitSavedPaths,
+      rollbackSavedPaths,
+      publishSaveStatus,
+      refreshPremiumAfterSave,
+    }),
+    [
+      setHasUnsavedChanges,
+      setDraftSavedAt,
+      setDraftSaveError,
+      commitSavedPaths,
+      rollbackSavedPaths,
+      publishSaveStatus,
+      refreshPremiumAfterSave,
+    ],
+  );
+
   const draftSnapshot = useCallback(
     (values: CarPolicyFormValues = form.getValues()) => {
       return createDraftSnapshot(
@@ -93,160 +147,44 @@ export function useDraftOperations({
     } = {}): Promise<boolean> => {
       if (fieldsLocked) return false;
       if (isSavingDraftRef.current) {
-        // Do not drop blur/Save while a request is in flight — save again when done.
-        pendingSaveAfterCurrentRef.current = true;
-        if (skipPremiumRefresh) pendingSkipPremiumRefreshRef.current = true;
+        queueInFlightDraftSave({ ...refs, skipPremiumRefresh });
         return false;
       }
       if (!force && !hasUnsavedChangesRef.current) return false;
 
-      const leave = getLeaveApi();
-      const dirtyFromHighlight = getDirtyPaths();
-      const dirtyFromRhf = flattenDirtyPaths(form.formState.dirtyFields);
-      pendingDirtyPathsRef.current =
-        dirtyFromHighlight.length > 0 ? dirtyFromHighlight : dirtyFromRhf;
-      const pathsToValidate = [...pendingDirtyPathsRef.current];
-
-      const values = {
-        ...form.getValues(),
-        ...(premiumRef.current ? { premium: premiumRef.current } : {}),
-        premiumManualKeys: premiumManualKeysRef.current,
-      };
-      const payload = draftSnapshot();
-      pendingDraftPayloadRef.current = payload;
-
-      // --- Optimistic UI (in-place, no "Saving…" flicker) ---
-      const epoch = saveEpochTracker.current.increment();
-      previousSnapshotRef.current = savedSnapshotRef.current;
-      previousSavedAtRef.current = lastHandledSavedAtRef.current;
-      const optimisticSavedAt = new Date().toISOString();
-
-      savedSnapshotRef.current = payload;
-      hasUnsavedChangesRef.current = false;
-      setHasUnsavedChanges(false);
-      setDraftSaveError(null);
-      setDraftSavedAt(optimisticSavedAt);
-      commitSavedPaths(pendingDirtyPathsRef.current);
-      publishSaveStatus("saved");
-      validateSavedPaths(form, pathsToValidate);
-
-      isSavingDraftRef.current = true;
-      pendingSaveAfterCurrentRef.current = false;
-
+      const { epoch, payload } = beginDraftSave({
+        refs,
+        setters,
+        form,
+        getDirtyPaths,
+        draftSnapshot,
+      });
       try {
-        const data = await savePolicyDraftClient(policy.policyId, values);
-
-        // A newer save started — ignore this response for UI.
-        if (!saveEpochTracker.current.isCurrent(epoch)) return false;
-
-        if (!data.ok) {
-          // Roll back optimistic UI
-          savedSnapshotRef.current = previousSnapshotRef.current;
-          setDraftSavedAt(previousSavedAtRef.current);
-          hasUnsavedChangesRef.current = true;
-          setHasUnsavedChanges(true);
-          rollbackSavedPaths(pendingDirtyPathsRef.current);
-          const policyNumberError = data.errors?.policyNumber?.[0];
-          if (policyNumberError) {
-            form.setError("policyNumber", {
-              type: "server",
-              message: policyNumberError,
-            });
-          }
-          setDraftSaveError(
-            data.formError ??
-              "Draft could not be saved. Check the form and try again.",
-          );
-          publishSaveStatus("error");
-          if (leave?.pendingLeaveAfterSaveRef.current) {
-            leave.pendingLeaveAfterSaveRef.current = false;
-            leave.setPendingLeaveAfterSave(false);
-          }
-          return false;
-        }
-
-        form.clearErrors("policyNumber");
-        lastHandledSavedAtRef.current = data.savedAt;
-        setDraftSavedAt(data.savedAt);
-        setDraftSaveError(null);
-
-        const currentPayload = draftSnapshot();
-        const editedDuringSave =
-          !pendingDraftPayloadRef.current ||
-          pendingDraftPayloadRef.current !== currentPayload;
-
-        if (editedDuringSave) {
-          // Keep optimistic clear for what we saved; watch will mark new edits unsaved.
-          savedSnapshotRef.current = pendingDraftPayloadRef.current ?? payload;
-          hasUnsavedChangesRef.current = true;
-          setHasUnsavedChanges(true);
-          pendingSaveAfterCurrentRef.current = true;
-        } else {
-          savedSnapshotRef.current = currentPayload;
-          hasUnsavedChangesRef.current = false;
-          setHasUnsavedChanges(false);
-          publishSaveStatus("saved");
-        }
-
-        // Server recalculate zeros ES/DH and uses base×τ only — never run it after
-        // a Premium Breakdown manual edit (client CalculatePremium already ran).
-        if (!skipPremiumRefresh && !premiumManuallyEditedRef.current) {
-          refreshPremiumAfterSave(pendingDirtyPathsRef.current);
-        }
-        toastPolicyDraftSaved(
-          policy.policyNumber,
-          pendingDirtyPathsRef.current,
-        );
-
-        if (leave?.pendingLeaveAfterSaveRef.current && !editedDuringSave) {
-          leave.pendingLeaveAfterSaveRef.current = false;
-          leave.setPendingLeaveAfterSave(false);
-          leave.setDiscardConfirmOpen(false);
-          leave.allowLeaveRef.current = true;
-          const destination =
-            leave.pendingLeaveDestinationRef.current ??
-            `/clients/${policy.clientId}`;
-          leave.pendingLeaveDestinationRef.current = null;
-          if (leave.blocker.state === "blocked") {
-            leave.blocker.proceed();
-          } else {
-            navigate(destination);
-          }
-        }
-        return true;
-      } catch {
-        if (!saveEpochTracker.current.isCurrent(epoch)) return false;
-        savedSnapshotRef.current = previousSnapshotRef.current;
-        setDraftSavedAt(previousSavedAtRef.current);
-        hasUnsavedChangesRef.current = true;
-        setHasUnsavedChanges(true);
-        rollbackSavedPaths(pendingDirtyPathsRef.current);
-        setDraftSaveError("Draft could not be saved. Check your connection.");
-        publishSaveStatus("error");
-        if (leave?.pendingLeaveAfterSaveRef.current) {
-          leave.pendingLeaveAfterSaveRef.current = false;
-          leave.setPendingLeaveAfterSave(false);
-        }
-        return false;
+        return await finishDraftSaveAttempt({
+          epoch,
+          refs,
+          setters,
+          leave: getLeaveApi(),
+          form,
+          draftSnapshot,
+          skipPremiumRefresh,
+          policyNumber: policy.policyNumber,
+          payload,
+          clientId: policy.clientId,
+          navigate,
+          policyId: policy.policyId,
+          premium: premiumRef.current,
+          premiumManualKeys: premiumManualKeysRef.current,
+        });
       } finally {
-        if (saveEpochTracker.current.isCurrent(epoch)) {
-          isSavingDraftRef.current = false;
-          if (pendingSaveAfterCurrentRef.current) {
-            pendingSaveAfterCurrentRef.current = false;
-            const skipPremiumRefresh = pendingSkipPremiumRefreshRef.current;
-            pendingSkipPremiumRefreshRef.current = false;
-            queueMicrotask(() => {
-              void persistDraft({ force: true, skipPremiumRefresh });
-            });
-          }
-        }
+        queueFollowUpDraftSave({ epoch, refs, persistDraft });
       }
     },
     [
       fieldsLocked,
+      refs,
+      setters,
       isSavingDraftRef,
-      pendingSaveAfterCurrentRef,
-      pendingSkipPremiumRefreshRef,
       hasUnsavedChangesRef,
       getLeaveApi,
       getDirtyPaths,
@@ -254,24 +192,9 @@ export function useDraftOperations({
       premiumRef,
       premiumManualKeysRef,
       draftSnapshot,
-      saveEpochTracker,
-      savedSnapshotRef,
-      previousSnapshotRef,
-      previousSavedAtRef,
-      lastHandledSavedAtRef,
-      pendingDirtyPathsRef,
-      pendingDraftPayloadRef,
-      setHasUnsavedChanges,
-      setDraftSaveError,
-      setDraftSavedAt,
-      commitSavedPaths,
-      publishSaveStatus,
       policy.policyId,
       policy.clientId,
       policy.policyNumber,
-      rollbackSavedPaths,
-      refreshPremiumAfterSave,
-      premiumManuallyEditedRef,
       navigate,
     ],
   );
@@ -295,11 +218,21 @@ export function useDraftOperations({
     submitDraft();
   }, [fieldsLocked, hasUnsavedChangesRef, submitDraft]);
 
+  const cancelQueuedDraftSave = useCallback(() => {
+    discardInFlightDraft(refs);
+  }, [refs]);
+
+  const waitForDraftIdle = useCallback(() => {
+    return waitWhileDraftSaving(isSavingDraftRef);
+  }, [isSavingDraftRef]);
+
   return {
     draftSnapshot,
     persistDraft,
     submitDraft,
     saveDraftNow,
     handleFieldBlur,
+    cancelQueuedDraftSave,
+    waitForDraftIdle,
   };
 }

@@ -340,13 +340,6 @@ test.describe("policy status transitions", () => {
   });
 });
 
-/**
- * Coverage for the wizard's readOnly / isNew / freshSteps mode-driven UI —
- * added as a regression net before the boolean-prop → PolicyWizardProvider
- * refactor (see docs/plans/car-wizard-boolean-props-refactor.md). Asserts on
- * the `data-wizard-mode` attribute set in car-policy-wizard-inner.tsx and the
- * Submit/Cancel button visibility rules in the header + footer.
- */
 test.describe("policy wizard modes", () => {
   test('new draft policy renders in "new" mode, then "edit" mode once the ?new=1 marker is gone', async ({
     page,

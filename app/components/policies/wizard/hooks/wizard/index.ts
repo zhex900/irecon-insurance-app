@@ -1,4 +1,6 @@
 // Wizard subsystem exports
+export * from "./use-deferred-form-values";
+export * from "./use-wizard-display-fields";
 export * from "./use-wizard-focus";
 export * from "./use-wizard-navigation-utils";
 export * from "./use-wizard-sections";

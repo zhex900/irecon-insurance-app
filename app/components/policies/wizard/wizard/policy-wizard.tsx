@@ -1,15 +1,17 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { FormProvider, type Resolver,useForm } from "react-hook-form";
+import { FormProvider, type Resolver, useForm } from "react-hook-form";
 
 import { JustSavedProvider } from "~/components/forms/field-save-highlight";
 import {
   type CarPolicyFormValues,
   carPolicySchema,
+  isTerminalStatus,
 } from "~/lib/zod/policy-car";
 
+import { ModeProvider } from "../components/mode-context";
 import { policyToFormValues } from "../shared/policy-to-values";
 import type { WizardProps } from "../shared/wizard-shared";
-import { WizardInner } from "./wizard-inner";
+import { WizardDefault } from "./wizard-default";
 
 export function PolicyWizard({
   policy,
@@ -51,26 +53,35 @@ export function PolicyWizard({
     reValidateMode: "onChange",
   });
 
+  const policyAlreadyTerminal = isTerminalStatus(policy.policyStatusId);
+  // Persisted only — ModeProvider ORs this with in-session submit.
+  const hasSubmittedOnce = !policy.isDraft;
+
   return (
     <FormProvider {...form}>
       <JustSavedProvider>
-        <WizardInner
-          policy={policy}
-          reference={reference}
-          carWording={carWording}
+        <ModeProvider
           readOnly={readOnly}
-          freshSteps={freshSteps}
           isNew={isNew}
-          clientName={clientName}
-          brokerName={brokerName}
-          brokerEmail={brokerEmail}
-          noteAuthors={initialNoteAuthors}
-          emailTemplates={emailTemplates}
-          emailDirectory={emailDirectory}
-          emailTemplateVars={emailTemplateVars}
-          footerImageWidth={footerImageWidth}
-          headerActions={headerActions}
-        />
+          freshSteps={freshSteps}
+          policyAlreadyTerminal={policyAlreadyTerminal}
+          hasSubmittedOnce={hasSubmittedOnce}
+        >
+          <WizardDefault
+            policy={policy}
+            reference={reference}
+            carWording={carWording}
+            clientName={clientName}
+            brokerName={brokerName}
+            brokerEmail={brokerEmail}
+            noteAuthors={initialNoteAuthors}
+            emailTemplates={emailTemplates}
+            emailDirectory={emailDirectory}
+            emailTemplateVars={emailTemplateVars}
+            footerImageWidth={footerImageWidth}
+            headerActions={headerActions}
+          />
+        </ModeProvider>
       </JustSavedProvider>
     </FormProvider>
   );

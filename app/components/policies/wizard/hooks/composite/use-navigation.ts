@@ -1,7 +1,12 @@
+import { useCallback } from "react";
 import { type UseFormReturn } from "react-hook-form";
 
 import type { PremiumBreakdown } from "~/lib/db/types";
-import { flattenFieldErrors,focusFormIssue, orderFormIssues  } from "~/lib/form-validation-ui";
+import {
+  flattenFieldErrors,
+  focusFormIssue,
+  orderFormIssues,
+} from "~/lib/form-validation-ui";
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
 
 import { useWizardFocusManagement } from "../wizard/use-wizard-focus";
@@ -13,12 +18,14 @@ import { useWizardValidationState } from "../wizard/use-wizard-validation-state"
 export function usePolicyWizardNavigation({
   policyId,
   form,
+  values,
   policyPremium,
   isDraft,
   navIds,
 }: {
   policyId: string;
   form: UseFormReturn<CarPolicyFormValues>;
+  values: CarPolicyFormValues;
   policyPremium: PremiumBreakdown | null | undefined;
   /** Used to re-run post-submit focus after save revalidation. */
   isDraft: boolean;
@@ -63,6 +70,7 @@ export function usePolicyWizardNavigation({
     fieldOrder,
   } = useWizardValidationState({
     form,
+    values,
   });
 
   // Focus management
@@ -87,33 +95,42 @@ export function usePolicyWizardNavigation({
   });
 
   // Navigation functions
-  function goToStep(index: number, { unlock = false } = {}) {
-    const result = goToStepRaw(index, { unlock });
-    if (!result) return;
-    const { sectionId } = result;
-    setOpenMap((prev: Record<string, boolean>) => ({
-      ...prev,
-      [sectionId]: true,
-    }));
-    setActiveSectionId(sectionId);
-    queueMicrotask(() => {
-      document.getElementById(sectionId)?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
+  const goToStep = useCallback(
+    function goToStep(index: number, { unlock = false } = {}) {
+      const result = goToStepRaw(index, { unlock });
+      if (!result) return;
+      const { sectionId } = result;
+      setOpenMap((prev: Record<string, boolean>) => ({
+        ...prev,
+        [sectionId]: true,
+      }));
+      setActiveSectionId(sectionId);
+      queueMicrotask(() => {
+        document.getElementById(sectionId)?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
       });
-    });
-  }
+    },
+    [goToStepRaw, setActiveSectionId, setOpenMap],
+  );
 
-  function navigateToSection(
-    sectionId: string,
-    { ensureOpen = true }: { ensureOpen?: boolean } = {},
-  ) {
-    return navigateToSectionRaw(sectionId, { ensureOpen });
-  }
+  const navigateToSection = useCallback(
+    function navigateToSection(
+      sectionId: string,
+      { ensureOpen = true }: { ensureOpen?: boolean } = {},
+    ) {
+      return navigateToSectionRaw(sectionId, { ensureOpen });
+    },
+    [navigateToSectionRaw],
+  );
 
-  function navigateToSectionFirstIssue(sectionId: string) {
-    return navigateToSectionFirstIssueRaw(sectionId, sectionFirstIssuePaths);
-  }
+  const navigateToSectionFirstIssue = useCallback(
+    function navigateToSectionFirstIssue(sectionId: string) {
+      return navigateToSectionFirstIssueRaw(sectionId, sectionFirstIssuePaths);
+    },
+    [navigateToSectionFirstIssueRaw, sectionFirstIssuePaths],
+  );
 
   // Utility functions
   function firstIssuePath(fieldOrderOverride?: string[]) {

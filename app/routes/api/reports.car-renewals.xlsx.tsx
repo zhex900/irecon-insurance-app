@@ -3,7 +3,6 @@ import { getExcelService } from "~/lib/cloudflare.server";
 import { queryTextSchema } from "~/lib/http/route-input";
 import { trackUsage } from "~/lib/observability/metrics.server";
 import {
-  auditReportExport,
   exportCarRenewalReportExcel,
   resolveOptionalIsoDateParam,
 } from "~/lib/reports/report-export.server";
@@ -15,7 +14,7 @@ import { POLICY_STATUS } from "~/lib/zod/policy-car";
 import type { Route } from "./+types/reports.car-renewals.xlsx";
 
 export async function loader({ request, context }: Route.LoaderArgs) {
-  const actor = await requireAuth(request);
+  await requireAuth(request);
   const url = new URL(request.url);
   const referenceDate =
     resolveOptionalIsoDateParam(url.searchParams.get("ref")) || todayIsoDate();
@@ -44,21 +43,6 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   }));
 
   const filename = `car-renewal-report-${referenceDate}.xlsx`;
-
-  await auditReportExport({
-    actor,
-    entityId: "car-renewals",
-    summary: `Exported CAR renewal Excel (${rows.length} rows)`,
-    filename,
-    metadata: {
-      referenceDate,
-      rowCount: rows.length,
-      search: search || undefined,
-      statusIds,
-      policyCategoryIds,
-    },
-    request,
-  });
 
   trackUsage("report.export", { report: "car_renewals", view: "list" });
 

@@ -18,6 +18,7 @@ import { NavigationProgress } from "~/components/layout/navigation-progress";
 import { OfflineDialog } from "~/components/layout/offline-dialog";
 import { Logo } from "~/components/logo";
 import { Badge } from "~/components/reui/badge";
+import { ThemeProvider } from "~/components/theme/theme-provider";
 import { ThemeToggle } from "~/components/theme/theme-toggle";
 import { Button } from "~/components/ui/button";
 import {
@@ -54,6 +55,7 @@ import {
 } from "~/lib/app-version";
 import type { SessionTimeoutClientState } from "~/lib/auth/session";
 import { APP_NAME } from "~/lib/brand";
+import type { Theme } from "~/lib/cookies";
 import type { BrokerSession } from "~/lib/db/types";
 import { SentryUserSync } from "~/lib/observability/sentry-user-sync";
 import type { SideNavData } from "~/lib/services/navigation/side-nav.service";
@@ -142,6 +144,7 @@ export function AppLayout({
   recentsOpen = false,
   navSectionsExpanded = [],
   sessionTimeout = null,
+  theme = "system",
   content,
 }: {
   broker: BrokerSession;
@@ -154,6 +157,8 @@ export function AppLayout({
   navSectionsExpanded?: NavSectionId[];
   /** Idle / absolute session limits for the client timeout dialog. */
   sessionTimeout?: SessionTimeoutClientState | null;
+  /** Saved theme preference from cookie (SSR). */
+  theme?: Theme;
   /** When set (e.g. layout ErrorBoundary), replace the route Outlet. */
   content?: React.ReactNode;
 }) {
@@ -196,70 +201,72 @@ export function AppLayout({
   );
 
   return (
-    <TooltipProvider>
-      <SentryUserSync userId={broker.id} email={broker.email} />
-      <NavigationProgress />
-      <OfflineDialog />
-      <SessionTimeoutDialog config={sessionTimeout} />
-      <SidebarProvider
-        open={shellNav.sidebarOpen}
-        onOpenChange={handleSidebarOpenChange}
-      >
-        <Sidebar collapsible="icon" variant="sidebar">
-          <SidebarHeader className="flex h-14 w-full shrink-0 flex-row items-center gap-1 border-b border-sidebar-border px-2 group-data-[collapsible=icon]:justify-center">
-            <SidebarBrand />
-          </SidebarHeader>
+    <ThemeProvider initialTheme={theme} enableSystem>
+      <TooltipProvider>
+        <SentryUserSync userId={broker.id} email={broker.email} />
+        <NavigationProgress />
+        <OfflineDialog />
+        <SessionTimeoutDialog config={sessionTimeout} />
+        <SidebarProvider
+          open={shellNav.sidebarOpen}
+          onOpenChange={handleSidebarOpenChange}
+        >
+          <Sidebar collapsible="icon" variant="sidebar">
+            <SidebarHeader className="flex h-14 w-full shrink-0 flex-row items-center gap-1 border-b border-sidebar-border px-2 group-data-[collapsible=icon]:justify-center">
+              <SidebarBrand />
+            </SidebarHeader>
 
-          <SidebarContent>
-            <SidebarGroup>
-              <SidebarGroupContent>
-                <AppSideNav
-                  data={sideNav}
-                  recentsOpen={shellNav.recentsOpen}
-                  sidebarExpanded={shellNav.sidebarOpen}
-                  navSectionsExpanded={shellNav.navSectionsExpanded}
-                  onRecentsOpenChange={handleRecentsOpenChange}
-                  onNavSectionsChange={handleNavSectionsChange}
-                />
-              </SidebarGroupContent>
-            </SidebarGroup>
-          </SidebarContent>
+            <SidebarContent>
+              <SidebarGroup>
+                <SidebarGroupContent>
+                  <AppSideNav
+                    data={sideNav}
+                    recentsOpen={shellNav.recentsOpen}
+                    sidebarExpanded={shellNav.sidebarOpen}
+                    navSectionsExpanded={shellNav.navSectionsExpanded}
+                    onRecentsOpenChange={handleRecentsOpenChange}
+                    onNavSectionsChange={handleNavSectionsChange}
+                  />
+                </SidebarGroupContent>
+              </SidebarGroup>
+            </SidebarContent>
 
-          <SidebarFooter className="border-t border-sidebar-border">
-            <div className="flex items-center justify-between gap-2 px-2 py-1 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
-              <Badge
-                variant="outline"
-                className={cn(
-                  "max-w-full truncate font-mono text-[10px] tabular-nums group-data-[collapsible=icon]:hidden",
-                  getAppEnvironmentBadgeClass(appEnv),
-                )}
-                title={`App version ${appVersion}`}
-              >
-                {appVersion}
-              </Badge>
-              <SidebarCollapseToggle />
+            <SidebarFooter className="border-t border-sidebar-border">
+              <div className="flex items-center justify-between gap-2 px-2 py-1 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "max-w-full truncate font-mono text-[10px] tabular-nums group-data-[collapsible=icon]:hidden",
+                    getAppEnvironmentBadgeClass(appEnv),
+                  )}
+                  title={`App version ${appVersion}`}
+                >
+                  {appVersion}
+                </Badge>
+                <SidebarCollapseToggle />
+              </div>
+            </SidebarFooter>
+          </Sidebar>
+
+          <SidebarInset className="relative z-0 min-w-0 overflow-x-hidden">
+            <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-card px-4 md:px-6">
+              {/* Mobile: open sheet. Desktop toggle lives in the sidebar footer. */}
+              <SidebarTrigger className="md:hidden" aria-label="Open menu" />
+              <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
+              <div className="ml-auto flex min-w-0 items-center gap-3">
+                <ThemeToggle />
+                <AccountMenu broker={broker} />
+              </div>
+            </header>
+
+            <div className="relative z-0 min-w-0 flex-1 p-4 md:p-8">
+              {content ?? <Outlet />}
             </div>
-          </SidebarFooter>
-        </Sidebar>
-
-        <SidebarInset className="relative z-0 min-w-0 overflow-x-hidden">
-          <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-card px-4 md:px-6">
-            {/* Mobile: open sheet. Desktop toggle lives in the sidebar footer. */}
-            <SidebarTrigger className="md:hidden" aria-label="Open menu" />
-            <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
-            <div className="ml-auto flex min-w-0 items-center gap-3">
-              <ThemeToggle />
-              <AccountMenu broker={broker} />
-            </div>
-          </header>
-
-          <div className="relative z-0 min-w-0 flex-1 p-4 md:p-8">
-            {content ?? <Outlet />}
-          </div>
-        </SidebarInset>
-      </SidebarProvider>
-      <Toaster />
-    </TooltipProvider>
+          </SidebarInset>
+        </SidebarProvider>
+        <Toaster />
+      </TooltipProvider>
+    </ThemeProvider>
   );
 }
 

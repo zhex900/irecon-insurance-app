@@ -1,428 +1,121 @@
-import { type ReactNode, useEffect, useMemo, useRef } from "react";
-import { useFormContext } from "react-hook-form";
-import { useFetcher, useNavigate } from "react-router";
-
-import { useJustSaved } from "~/components/forms/field-save-highlight";
-import { getPolicyFormNavItems } from "~/components/policies/policy-form-layout";
-import { type CarPolicyFormValues, POLICY_STATUS } from "~/lib/zod/policy-car";
+import { useCallback, useMemo } from "react";
 
 import {
-  type PolicyLeaveApi,
-  type PolicyWizardActionData,
   usePolicyDocuments,
   usePolicyDraftSave,
   usePolicyLeaveGuard,
-  usePolicyNotes,
   usePolicyPremiumCalc,
   usePolicySubmit,
   usePolicyWizardNavigation,
 } from "../hooks";
 import { usePolicyDraftKeyboardSave } from "../hooks/draft/use-draft-keyboard";
-import { useMode } from "../hooks/utils/use-mode";
 import { useCarPolicyWizardSubmitGate } from "../hooks/utils/use-submit-gate";
 import {
-  wizardModeCardBorderClass,
-  type WizardProps,
-} from "../shared/wizard-shared";
+  buildPremiumPanelProps,
+  canChangeWizardStatus,
+  createIssueAttentionHandlers,
+  wizardBorderClassName,
+  type WizardStateParts,
+} from "./assemble-wizard-state";
+import { useWizardCore, type WizardStateProps } from "./use-wizard-core";
+import {
+  documentsInput,
+  draftInput,
+  gateInput,
+  leaveInput,
+  navigationInput,
+  premiumInput,
+  submitInput,
+} from "./wizard-state-inputs";
 
-/**
- * CarPolicyWizard state hook that contains all the logic from the original component
- * This separates state and logic from UI rendering
- */
-export function useWizardState({
-  policy,
-  reference,
-  carWording,
-  clientName = "",
-  brokerName = "",
-  brokerEmail = "",
-  noteAuthors: initialNoteAuthors,
-  emailTemplates = [],
-  emailDirectory = [],
-  emailTemplateVars,
-  footerImageWidth,
-  headerActions: _headerActions,
-}: Omit<WizardProps, "readOnly" | "isNew" | "freshSteps"> & {
-  headerActions?: ReactNode;
-}) {
-  const form = useFormContext<CarPolicyFormValues>();
-  // Subscribe so post-trigger reads of formState.errors are current.
-  void form.formState.errors;
-  const {
-    commitSavedPaths,
-    rollbackSavedPaths,
-    getDirtyPaths,
-    markAttentionPaths,
-  } = useJustSaved();
-
-  const fetcher = useFetcher<PolicyWizardActionData>();
-  const navigate = useNavigate();
-  const leaveApiRef = useRef<PolicyLeaveApi | null>(null);
-  const getLeaveApi = () => leaveApiRef.current;
-
-  const selectedStatusId = Number(form.watch("policyStatusId"));
-  const selectedStatus = reference.policyStatuses.find(
-    (item: { policyStatusId: number }) =>
-      item.policyStatusId === selectedStatusId,
+export function useWizardState(
+  props: WizardStateProps,
+  core: ReturnType<typeof useWizardCore>,
+) {
+  const navigation = usePolicyWizardNavigation(navigationInput(core, props));
+  const premiumCalc = usePolicyPremiumCalc(
+    premiumInput(core, navigation, props),
   );
-  const livePolicyNumber =
-    form.watch("policyNumber")?.trim() || policy.policyNumber;
-  const coverTypeId =
-    Number(form.watch("coverTypeId")) || policy.car.coverTypeId;
-  const coverTypeName =
-    reference.coverTypes.find(
-      (item: { coverTypeId: number }) => item.coverTypeId === coverTypeId,
-    )?.name ?? "";
-  const insurerCode = form.watch("insurerCode");
-  const insurerName =
-    reference.insurers.find(
-      (item: { code: string }) => item.code === insurerCode,
-    )?.name ?? insurerCode;
-
-  const {
-    fieldsLocked,
-    isNew,
-    wizardMode,
-    premiumPinned,
-    hasSubmittedOnce,
-    setSubmittedInSession,
-  } = useMode();
-
-  const navItems = useMemo(
-    () => getPolicyFormNavItems(premiumPinned),
-    [premiumPinned],
+  const documents = usePolicyDocuments(
+    documentsInput(core, premiumCalc, props),
   );
-  const navIds = useMemo(
-    () => navItems.map((item: { id: string }) => item.id),
-    [navItems],
+  const draftSave = usePolicyDraftSave(draftInput(core, premiumCalc, props));
+  const submit = usePolicySubmit(
+    submitInput({ core, navigation, premiumCalc, documents, draftSave, props }),
+  );
+  const leave = usePolicyLeaveGuard(
+    leaveInput({ core, draftSave, submit, props }),
+  );
+  const gate = useCarPolicyWizardSubmitGate(
+    gateInput(core, premiumCalc, navigation, props),
+  );
+  usePolicyDraftKeyboardSave(draftSave.saveDraftNow);
+
+  const parts: WizardStateParts = useMemo(
+    () => ({
+      props,
+      core,
+      navigation,
+      premiumCalc,
+      documents,
+      draftSave,
+      submit,
+      leave,
+      gate,
+    }),
+    [props, core, navigation, premiumCalc, documents, draftSave, submit, leave, gate],
   );
 
-  const navigation = usePolicyWizardNavigation({
-    policyId: policy.policyId,
-    form,
-    policyPremium: policy.car.premium,
-    isDraft: Boolean(policy.isDraft),
-    navIds,
-  });
-  const {
-    openMap,
-    setOpenMap,
-    activeSectionId,
-    pendingFocusPathRef,
-    goToStep,
-    navigateToSection,
-    navigateToIssue,
-    navigateToSectionFirstIssue,
-    firstIssuePath,
-    findStepForField,
-    invalidIssues,
-    sectionIssueCounts,
-    sectionIssuePaths,
-    isFormValid,
-    step,
-  } = navigation;
+  const borderClassName = wizardBorderClassName(parts);
 
-  const { notes, noteAuthors, addNote, updateNote, noteError, isSavingNote } =
-    usePolicyNotes({
-      policy,
-      noteAuthors: initialNoteAuthors,
-      fetcher,
-    });
-
-  const premiumCalc = usePolicyPremiumCalc({
-    policy,
-    form,
-    fetcher,
-    premiumSectionOpen: openMap.premium ?? true,
-  });
-  const {
-    premium,
-    setPremium,
-    premiumRef,
-    premiumManuallyEditedRef,
-    premiumManualKeysRef,
-    referralReasons,
-    setReferralReasons,
-    isFetcherBusy,
-    isCalculating,
-    resetManualPremium,
-    refreshPremiumAfterSave,
-  } = premiumCalc;
-
-  const {
-    documents,
-    isGeneratingDocuments,
-    isExportingExcel,
-    exportPremiumExcel: exportPremiumExcelFromDocuments,
-    regenerateDocumentsIfNeeded,
-    formDataChangedForDocuments,
-    buildDocumentSnapshot,
-  } = usePolicyDocuments({
-    policy,
-    form,
-    premium,
-    premiumRef,
-    premiumManualKeysRef,
-    referralReasons,
-    rating: fetcher.data?.rating,
-    carWording,
-    brokerFeeLines: reference.feeNames,
-  });
-
-  const draftSave = usePolicyDraftSave({
-    policy,
-    form,
-    premiumRef,
-    premiumManuallyEditedRef,
-    premiumManualKeysRef,
-    getDirtyPaths,
-    commitSavedPaths,
-    rollbackSavedPaths,
-    refreshPremiumAfterSave,
-    getLeaveApi,
-    navigate,
-  });
-  const {
-    hasUnsavedChanges,
-    hasUnsavedChangesRef,
-    setHasUnsavedChanges,
-    saveStatus,
-    savedSnapshotRef,
-    persistDraft,
-    saveDraftNow,
-    handleFieldBlur,
-    setDraftSaveError,
-  } = draftSave;
-
-  const submit = usePolicySubmit({
-    policy,
-    form,
-    fetcher,
-    step,
-    premium,
-    premiumRef,
-    setPremium,
-    setReferralReasons,
-    regenerateDocumentsIfNeeded,
-    formDataChangedForDocuments,
-    goToStep,
-    navigateToSection,
-    firstIssuePath,
-    findStepForField,
-    pendingFocusPathRef,
-    getLeaveApi,
-    savedSnapshotRef,
-    hasUnsavedChangesRef,
-    setHasUnsavedChanges,
-  });
-  const {
-    submitConfirmOpen,
-    setSubmitConfirmOpen,
-    submitting,
-    submitDocumentNames,
-    requestSubmit,
-    confirmSubmit,
-    savePolicy,
-    confirmTerminalStatusAndSave,
-  } = submit;
-
-  const leave = usePolicyLeaveGuard({
-    policy,
-    hasUnsavedChanges,
-    hasUnsavedChangesRef,
-    setHasUnsavedChanges,
-    saveDraftNow,
-    savePolicy,
-    setDraftSaveError,
-    fetcher,
-  });
-  useEffect(() => {
-    leaveApiRef.current = leave;
-  });
-
-  const {
-    pendingLeaveAfterSave,
-    discarding,
-    leaveDialogOpen,
-    leaveWithoutSaving,
-    saveAndLeave,
-    stayOnPage,
-    handleCancelClick,
-  } = leave;
-
-  // Status stays locked on drafts / new policies — changeable only after submit.
-  const canChangeStatus =
-    !policy.isDraft &&
-    policy.policyStatusId === POLICY_STATUS.Pending &&
-    !fieldsLocked;
-
-  function handleSectionIssueCounter(sectionId: string) {
-    navigateToSectionFirstIssue(sectionId);
-    const paths = sectionIssuePaths[sectionId] ?? [];
-    if (paths.length === 0) return;
-    // Yellow attention — clear red invalid so the cue stays warning.
-    for (const path of paths) {
-      form.clearErrors(path as keyof CarPolicyFormValues);
-    }
-    markAttentionPaths(paths);
-  }
-
-  function handleNavigateToIssue(path: string) {
-    navigateToIssue(path);
-    // Same yellow border cue as section counters (not red invalid).
-    form.clearErrors(path as keyof CarPolicyFormValues);
-    markAttentionPaths([path]);
-  }
-
-  // Submit enablement:
-  // 1) form must pass carPolicySchema (`isFormValid` — see side-nav issue counts)
-  // 2) after submit / when non-draft: require a change vs last submitted snapshot
-  const { submitDisabled, setSubmittedFingerprint } =
-    useCarPolicyWizardSubmitGate({
-      form,
-      premium,
-      policyPremium: policy.car.premium,
-      hasSubmittedOnce,
-      isFormValid,
-    });
-  const submitBusy = submitting;
-  usePolicyDraftKeyboardSave(saveDraftNow);
-
-  // Memoize the border class to avoid recomputation
-  const borderClassName = useMemo(
-    () => wizardModeCardBorderClass(wizardMode),
-    [wizardMode],
+  const premiumPanelProps = useMemo(
+    () => buildPremiumPanelProps(parts, borderClassName),
+    [parts, borderClassName],
   );
 
-  const premiumPanelProps = {
-    premium,
-    referralReasons,
-    isCalculating,
-    documents,
-    isGeneratingDocuments,
-    policyNumber: livePolicyNumber,
-    clientName,
-    brokerName,
-    brokerEmail,
-    emailTemplates,
-    emailDirectory,
-    emailTemplateVars,
-    footerImageWidth,
-    policy,
-    getPreviewPolicy: buildDocumentSnapshot,
-    carWording,
-    brokerFeeLines: reference.feeNames,
-    className: borderClassName,
-  };
+  const issueHandlers = useMemo(
+    () =>
+      createIssueAttentionHandlers({
+        form: core.form,
+        markAttentionPaths: core.justSaved.markAttentionPaths,
+        navigateToIssue: navigation.navigateToIssue,
+        navigateToSectionFirstIssue: navigation.navigateToSectionFirstIssue,
+        sectionIssuePaths: navigation.sectionIssuePaths,
+      }),
+    [
+      core.form,
+      core.justSaved.markAttentionPaths,
+      navigation.navigateToIssue,
+      navigation.navigateToSectionFirstIssue,
+      navigation.sectionIssuePaths,
+    ],
+  );
 
-  async function exportPremiumExcel() {
-    await saveDraftNow();
-    await exportPremiumExcelFromDocuments();
-  }
+  const exportPremiumExcel = useCallback(async () => {
+    await draftSave.saveDraftNow();
+    await documents.exportPremiumExcel();
+  }, [draftSave, documents]);
+
+  const canChangeStatus = canChangeWizardStatus(
+    props.policy,
+    core.mode.fieldsLocked,
+  );
 
   return {
-    // Form state
-    form,
-    fetcher,
-
-    // State helpers from useJustSaved
-    markAttentionPaths,
-
-    // UI state
-    selectedStatus,
-    livePolicyNumber,
-    coverTypeName,
-    insurerName,
-    fieldsLocked,
-    isNew,
-    wizardMode,
-    premiumPinned,
-    hasSubmittedOnce,
-    setSubmittedInSession,
-
-    // Navigation
-    navItems,
-    activeSectionId,
-    openMap,
-    setOpenMap,
+    core,
     navigation,
-    invalidIssues,
-    sectionIssueCounts,
-    sectionIssuePaths,
-
-    // Notes
-    notes,
-    noteAuthors,
-    addNote,
-    updateNote,
-    noteError,
-    isSavingNote,
-
-    // Premium
-    premium,
-    setPremium,
-    premiumRef,
-    premiumManuallyEditedRef,
-    premiumManualKeysRef,
-    referralReasons,
-    setReferralReasons,
-    isFetcherBusy,
-    isCalculating,
-    resetManualPremium,
-    refreshPremiumAfterSave,
-
-    // Documents
+    premiumCalc,
     documents,
-    isGeneratingDocuments,
-    isExportingExcel,
-    exportPremiumExcel,
-    regenerateDocumentsIfNeeded,
-    formDataChangedForDocuments,
-    buildDocumentSnapshot,
-
-    // Draft save
-    hasUnsavedChanges,
-    hasUnsavedChangesRef,
-    setHasUnsavedChanges,
-    saveStatus,
-    savedSnapshotRef,
-    persistDraft,
-    saveDraftNow,
-    handleFieldBlur,
-    setDraftSaveError,
-
-    // Submit
-    submitConfirmOpen,
-    setSubmitConfirmOpen,
-    submitting,
-    submitDocumentNames,
-    requestSubmit,
-    confirmSubmit,
-    savePolicy,
-    confirmTerminalStatusAndSave,
-    submitDisabled,
-    submitBusy,
-    setSubmittedFingerprint,
-
-    // Leave guard
-    pendingLeaveAfterSave,
-    discarding,
-    leaveDialogOpen,
-    leaveWithoutSaving,
-    saveAndLeave,
-    stayOnPage,
-    handleCancelClick,
-
-    // Helpers
-    canChangeStatus,
-    handleSectionIssueCounter,
-    handleNavigateToIssue,
+    draftSave,
+    submit,
+    leave,
+    gate,
     borderClassName,
     premiumPanelProps,
-    getLeaveApi,
+    canChangeStatus,
+    exportPremiumExcel,
+    ...issueHandlers,
   };
 }
 
-export type CarPolicyWizardState = ReturnType<
-  typeof useCarPolicyWizardSubmitGate
->;
+export type CarPolicyWizardState = ReturnType<typeof useWizardState>;

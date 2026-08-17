@@ -1,4 +1,5 @@
 // Draft subsystem exports
+export * from "./draft-persist";
 export * from "./use-draft-keyboard";
 export * from "./use-draft-operations";
 export * from "./use-draft-state";

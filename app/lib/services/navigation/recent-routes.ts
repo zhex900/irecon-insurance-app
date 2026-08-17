@@ -168,6 +168,16 @@ export function recentLabelFallback(path: string, previous?: string): string {
   return decodeURIComponent(segment).replace(/[-_]/g, " ");
 }
 
+/** Drop the active path from a Recents stack (client display / state). */
+export function excludeRecentRoute(
+  routes: RecentRouteLink[],
+  pathname: string,
+): RecentRouteLink[] {
+  const current = normalizeRecentPath(pathname);
+  if (!current) return routes;
+  return routes.filter((route) => route.href !== current);
+}
+
 /** Move `path` to the front of a Recents stack (max 5). */
 export function pushRecentRouteLocal(
   routes: RecentRouteLink[],

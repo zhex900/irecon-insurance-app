@@ -1,57 +1,61 @@
-import type { ReactNode } from "react";
+import { memo } from "react";
 
-import type { PolicySaveStatus } from "~/components/forms/field-save-highlight";
 import { PolicySaveStatusBadge } from "~/components/forms/field-save-highlight";
 import { PolicyStickyHeader } from "~/components/policies/policy-form-layout";
 import { LoadingButton } from "~/components/ui/loading-button";
 import { StatusBadge } from "~/components/ui/status-badge";
+import type { Policy, ReferenceData } from "~/lib/db/types";
 import { cn } from "~/lib/utils";
 
+import type { usePolicyWizardNavigation } from "../hooks/composite/use-navigation";
 import { useMode } from "../hooks/utils/use-mode";
+import { useWizardDisplayFields } from "../hooks/wizard/use-wizard-display-fields";
 import {
   wizardModeBadge,
   wizardModeHeaderClass,
 } from "../shared/wizard-shared";
+import type { WizardDraftSlice, WizardSubmitSlice } from "./assemble-wizard-state";
 import { MobileSectionNav } from "./mobile-section-nav";
 
-export type CarPolicyWizardHeaderProps = {
-  policyNumber: string;
-  clientId: string;
-  clientName: string;
-  coverTypeName?: string;
-  selectedStatus?: { policyStatusId: number; name: string };
-  saveStatus: PolicySaveStatus;
-  adjusted: boolean;
-  headerActions?: ReactNode;
-  submitDisabled: boolean;
-  submitBusy: boolean;
-  onRequestSubmit: () => void;
-  navItems: { id: string; label: string }[];
+type HeaderProps = {
+  policy: Policy;
+  reference: ReferenceData;
+  clientName?: string;
+  headerActions?: React.ReactNode;
+  saveStatus: WizardDraftSlice["saveStatus"];
+  submitDisabled: WizardSubmitSlice["submitDisabled"];
+  submitBusy: WizardSubmitSlice["submitBusy"];
+  requestSubmit: WizardSubmitSlice["requestSubmit"];
+  navItems: Array<{ id: string; label: string }>;
   activeSectionId: string;
-  onNavigateSection: (sectionId: string) => void;
-  sectionIssueCounts: Record<string, number>;
+  onNavigate: ReturnType<
+    typeof usePolicyWizardNavigation
+  >["navigateToSection"];
+  sectionIssueCounts: ReturnType<
+    typeof usePolicyWizardNavigation
+  >["sectionIssueCounts"];
   onNavigateToSectionFirstIssue: (sectionId: string) => void;
 };
 
-export function Header({
-  policyNumber,
-  clientId,
-  clientName,
-  coverTypeName,
-  selectedStatus,
-  saveStatus,
-  adjusted,
+export const Header = memo(function Header({
+  policy,
+  reference,
+  clientName = "",
   headerActions,
+  saveStatus,
   submitDisabled,
   submitBusy,
-  onRequestSubmit,
+  requestSubmit,
   navItems,
   activeSectionId,
-  onNavigateSection,
+  onNavigate,
   sectionIssueCounts,
   onNavigateToSectionFirstIssue,
-}: CarPolicyWizardHeaderProps) {
+}: HeaderProps) {
   const { wizardMode, canShowSubmitButton } = useMode();
+  const { livePolicyNumber, coverTypeName, selectedStatus } =
+    useWizardDisplayFields(policy, reference);
+
   return (
     <div
       className={cn(
@@ -61,19 +65,19 @@ export function Header({
       )}
     >
       <PolicyStickyHeader
-        policyNumber={policyNumber}
-        clientId={clientId}
+        policyNumber={livePolicyNumber}
+        clientId={policy.clientId}
         clientName={clientName || "Client"}
-        coverTypeName={coverTypeName}
+        coverTypeName={coverTypeName || undefined}
         className="static border-0 bg-transparent backdrop-blur-none"
         modeBadge={wizardModeBadge(wizardMode)}
         breadcrumbs={[
           { label: "Clients", to: "/clients" },
           {
             label: clientName || "Client",
-            to: `/clients/${clientId}`,
+            to: `/clients/${policy.clientId}`,
           },
-          { label: policyNumber },
+          { label: livePolicyNumber },
         ]}
         statusBadge={
           selectedStatus ? (
@@ -88,7 +92,7 @@ export function Header({
             <PolicySaveStatusBadge status={saveStatus} />
           ) : null
         }
-        adjusted={adjusted}
+        adjusted={Boolean(policy.car.adjusted)}
         actions={headerActions}
         expandControl={
           canShowSubmitButton ? (
@@ -96,7 +100,9 @@ export function Header({
               type="button"
               size="sm"
               disabled={submitDisabled}
-              onClick={onRequestSubmit}
+              onClick={() => {
+                void requestSubmit();
+              }}
               loading={submitBusy}
             >
               Submit
@@ -108,11 +114,11 @@ export function Header({
         <MobileSectionNav
           items={navItems}
           activeSectionId={activeSectionId}
-          onNavigate={onNavigateSection}
+          onNavigate={onNavigate}
           sectionIssueCounts={sectionIssueCounts}
           onNavigateToSectionFirstIssue={onNavigateToSectionFirstIssue}
         />
       </div>
     </div>
   );
-}
+});

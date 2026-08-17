@@ -16,52 +16,45 @@ export function usePremiumStateManagement({ policy }: { policy: Policy }) {
   const [premium, setPremium] = useState<PremiumBreakdown | undefined>(() =>
     withRolledTotals(policy.car.premium),
   );
+  const [premiumManualKeys, setPremiumManualKeys] = useState<string[]>(
+    () => policy.car.premiumManualKeys ?? [],
+  );
   const premiumRef = useRef(premium);
+  const premiumManualKeysRef = useRef(premiumManualKeys);
 
   useEffect(() => {
     premiumRef.current = premium;
+  });
+  useEffect(() => {
+    premiumManualKeysRef.current = premiumManualKeys;
   });
 
   /** When true, skip auto-recalculate so click-to-edit premium values stick. */
   const premiumManuallyEditedRef = useRef(false);
 
-  /** Premium Breakdown lines the broker click-edited (persisted with draft). */
-  const premiumManualKeysRef = useRef<string[]>(
-    policy.car.premiumManualKeys ?? [],
+  const [prevPolicySnapshot, setPrevPolicySnapshot] = useState<PolicySnapshot>(
+    () => createPolicySnapshot(policy),
   );
+  const currentSnapshot = createPolicySnapshot(policy);
+  if (hasPolicyChanged(currentSnapshot, prevPolicySnapshot)) {
+    setPrevPolicySnapshot(currentSnapshot);
+    setPremium(withRolledTotals(policy.car.premium));
+    setPremiumManualKeys(policy.car.premiumManualKeys ?? []);
+  }
 
-  // Track previous policy identity to detect changes
-  const prevPolicySnapshotRef = useRef<PolicySnapshot | null>(null);
-
-  // Initialize the snapshot
   useEffect(() => {
-    if (!prevPolicySnapshotRef.current) {
-      prevPolicySnapshotRef.current = createPolicySnapshot(policy);
-    }
-  }, [policy]);
-
-  // Reset premium when policy identity changes
-  useEffect(() => {
-    const currentSnapshot = createPolicySnapshot(policy);
-
-    if (!hasPolicyChanged(currentSnapshot, prevPolicySnapshotRef.current)) {
-      return;
-    }
-
-    // Update ref first to prevent race conditions
-    prevPolicySnapshotRef.current = currentSnapshot;
-
-    // Reset manual edit flags and premium state
     premiumManuallyEditedRef.current = false;
     premiumManualKeysRef.current = policy.car.premiumManualKeys ?? [];
-    setPremium(withRolledTotals(policy.car.premium));
-  }, [policy, policy.car.premium, policy.car.premiumManualKeys]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on the same identity as the render-time reset above
+  }, [policy.policyId, policy.car.premium]);
 
   return {
     premium,
     setPremium,
     premiumRef,
     premiumManuallyEditedRef,
+    premiumManualKeys,
+    setPremiumManualKeys,
     premiumManualKeysRef,
     fieldsLocked,
   };

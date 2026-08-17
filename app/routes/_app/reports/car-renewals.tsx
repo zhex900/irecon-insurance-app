@@ -33,6 +33,7 @@ import {
   parsePagination,
 } from "~/lib/pagination";
 import { parseIdListParam } from "~/lib/search/id-list-param";
+import { recordAuditEventClient } from "~/lib/services/audit/client";
 import { getReferenceData } from "~/lib/services/reference.service";
 import { listReportPoliciesPage } from "~/lib/services/reports/list.service";
 import { dueNextDays, todayIsoDate } from "~/lib/services/reports/service";
@@ -95,6 +96,29 @@ export async function loader({ request }: Route.LoaderArgs) {
 function toggleId(list: number[], id: number, checked: boolean): number[] {
   if (checked) return list.includes(id) ? list : [...list, id];
   return list.filter((item) => item !== id);
+}
+
+function auditCarRenewalExport(input: {
+  referenceDate: string;
+  rowCount: number;
+  search: string;
+  statusIds: number[];
+  policyCategoryIds: number[];
+}) {
+  recordAuditEventClient({
+    action: "report.export",
+    entityType: "report",
+    entityId: "car-renewals",
+    summary: `Exported CAR renewal Excel (${input.rowCount} rows)`,
+    metadata: {
+      filename: `car-renewal-report-${input.referenceDate}.xlsx`,
+      referenceDate: input.referenceDate,
+      rowCount: input.rowCount,
+      search: input.search || undefined,
+      statusIds: input.statusIds,
+      policyCategoryIds: input.policyCategoryIds,
+    },
+  });
 }
 
 export default function CarRenewalReportRoute({
@@ -175,9 +199,20 @@ export default function CarRenewalReportRoute({
               href={exportHref}
               className={buttonVariants({ variant: "outline" })}
               aria-disabled={loaderData.total === 0}
-              {...(loaderData.total === 0
-                ? { tabIndex: -1, onClick: (e) => e.preventDefault() }
-                : {})}
+              tabIndex={loaderData.total === 0 ? -1 : undefined}
+              onClick={(event) => {
+                if (loaderData.total === 0) {
+                  event.preventDefault();
+                  return;
+                }
+                auditCarRenewalExport({
+                  referenceDate: loaderData.referenceDate,
+                  rowCount: loaderData.total,
+                  search: loaderData.search,
+                  statusIds: loaderData.statusIds,
+                  policyCategoryIds: loaderData.policyCategoryIds,
+                });
+              }}
             >
               <DownloadIcon data-icon="inline-start" />
               Export Excel

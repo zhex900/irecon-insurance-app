@@ -1,38 +1,38 @@
+import type { useFetcher } from "react-router";
+
 import { PolicyNotesCard } from "~/components/policies/policy-notes-card";
-import type { PolicyNote } from "~/lib/db/types";
+import type { Policy } from "~/lib/db/types";
 import type { NoteAuthor } from "~/lib/services/users/service";
 
+import { usePolicyNotes } from "../hooks/composite/use-notes";
+import type { PolicyWizardActionData } from "../hooks/composite/use-premium-calc";
 import { useMode } from "../hooks/utils/use-mode";
 import { wizardModeCardBorderClass } from "../shared/wizard-shared";
 
-export function MobileNotes({
-  notes,
-  noteAuthors,
-  policyIsDraft,
-  onAddNote,
-  onUpdateNote,
-  noteBusy,
-  noteError,
-}: {
-  notes?: PolicyNote[];
-  noteAuthors: Record<string, NoteAuthor>;
-  policyIsDraft: boolean;
-  onAddNote: (description: string) => void;
-  onUpdateNote: (policyNoteId: number, description: string) => void;
-  noteBusy: boolean;
-  noteError: string | null;
-}) {
-  const { wizardMode } = useMode();
+type MobileNotesProps = {
+  policy: Policy;
+  noteAuthors?: Record<string, NoteAuthor>;
+  fetcher: ReturnType<typeof useFetcher<PolicyWizardActionData>>;
+};
+
+export function MobileNotes({ policy, noteAuthors, fetcher }: MobileNotesProps) {
+  const { isNew, wizardMode } = useMode();
+  const notesState = usePolicyNotes({ policy, noteAuthors, fetcher });
+
+  if (isNew) return null;
+
   return (
-    <PolicyNotesCard
-      notes={notes ?? []}
-      noteAuthors={noteAuthors}
-      canAddNotes={!policyIsDraft}
-      onAddNote={onAddNote}
-      onUpdateNote={onUpdateNote}
-      noteBusy={noteBusy}
-      noteError={noteError}
-      className={wizardModeCardBorderClass(wizardMode)}
-    />
+    <div className="xl:hidden">
+      <PolicyNotesCard
+        notes={notesState.notes ?? []}
+        noteAuthors={notesState.noteAuthors}
+        canAddNotes={!policy.isDraft}
+        onAddNote={notesState.addNote}
+        onUpdateNote={notesState.updateNote}
+        noteBusy={notesState.isSavingNote}
+        noteError={notesState.noteError}
+        className={wizardModeCardBorderClass(wizardMode)}
+      />
+    </div>
   );
 }
