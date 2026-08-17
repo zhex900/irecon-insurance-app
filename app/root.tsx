@@ -1,10 +1,18 @@
 import "./app.css";
 
-import { Links, Meta, Outlet, Scripts, ScrollRestoration } from "react-router";
+import {
+  Links,
+  Meta,
+  Outlet,
+  Scripts,
+  ScrollRestoration,
+  useLoaderData,
+} from "react-router";
 
 import { RootErrorBoundary } from "~/components/root-error-boundary";
 import { ThemeProvider } from "~/components/theme/theme-provider";
-import { geistFontFaces, themeInitScript } from "~/lib/fonts";
+import { getThemeClassForSSR, getThemeFromCookies } from "~/lib/cookies";
+import { geistFontFaceCss, geistFontFaces } from "~/lib/fonts";
 
 import type { Route } from "./+types/root";
 
@@ -22,27 +30,42 @@ export const links: Route.LinksFunction = () => [
   })),
 ];
 
+export async function loader({ request }: Route.LoaderArgs) {
+  const cookie = request.headers.get("Cookie");
+
+  const theme = getThemeFromCookies(cookie);
+
+  return {
+    theme: theme ?? "system",
+  };
+}
+
 export function Layout({ children }: { children: React.ReactNode }) {
+  const loaderData = useLoaderData<typeof loader>();
+  const { theme } = loaderData;
+
+  // Determine which theme class to apply for SSR
+  const themeClass = getThemeClassForSSR(theme);
+
   return (
-    <html lang="en">
+    <html lang="en" className={themeClass}>
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <Meta />
         <Links />
+        <style
+          dangerouslySetInnerHTML={{
+            __html: geistFontFaceCss(),
+          }}
+        />
       </head>
       <body>
-        <ThemeProvider defaultTheme="system" enableSystem>
+        <ThemeProvider initialTheme={theme} enableSystem>
           {children}
         </ThemeProvider>
         <ScrollRestoration />
         <Scripts />
-        {/* Inline script to prevent theme flash - runs before hydration */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: themeInitScript,
-          }}
-        />
       </body>
     </html>
   );

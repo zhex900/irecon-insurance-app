@@ -122,7 +122,7 @@ export async function action({ request, params }: Route.ActionArgs) {
     }
 
     try {
-      const deleted = await deletePolicies(ids, { clientId });
+      const deleted = await deletePolicies(ids, { clientId, userId: actor.userId });
       await writeAuditLog({
         actor,
         action: "policy.delete",

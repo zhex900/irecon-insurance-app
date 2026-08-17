@@ -31,5 +31,3 @@ export function geistFontFaceCss() {
     .join("\n");
 }
 
-/** Apply saved/system theme before paint to avoid light→dark text reflow. */
-export const themeInitScript = `(function(){try{var t=localStorage.getItem("theme");var d=t==="dark"||((t==null||t==="system")&&window.matchMedia("(prefers-color-scheme: dark)").matches);if(d)document.documentElement.classList.add("dark");}catch(e){}})();`;

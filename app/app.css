@@ -2,7 +2,7 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-/* Geist @font-face is inlined in root.tsx (same URL as preload) so first paint is stable. */
+/* Geist @font-face is injected via style tag in root.tsx (same URL as preload) so first paint is stable. */
 
 @custom-variant dark (&:is(.dark *));
 
