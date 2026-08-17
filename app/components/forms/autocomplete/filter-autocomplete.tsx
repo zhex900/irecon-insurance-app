@@ -1,5 +1,6 @@
-import { useMemo, useRef, useState } from "react";
 import { ChevronsUpDownIcon, XIcon } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+
 import { Field, FieldLabel } from "~/components/ui/field";
 import {
   FloatingListbox,
@@ -7,6 +8,7 @@ import {
 } from "~/components/ui/floating-listbox";
 import { Input } from "~/components/ui/input";
 import { cn } from "~/lib/utils";
+
 import type { FormAutocompleteOption } from "./form-autocomplete";
 import { valuesEqual } from "./utils";
 

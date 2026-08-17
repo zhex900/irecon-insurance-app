@@ -11,10 +11,11 @@ import {
   Undo2Icon,
   UploadIcon,
 } from "lucide-react";
+
+import { AppSelect } from "~/components/ui/app-select";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { LoadingButton } from "~/components/ui/loading-button";
-import { AppSelect } from "~/components/ui/app-select";
 import { DOCUMENT_LABEL_MAX_LENGTH } from "~/lib/documents/document-label";
 import type { DocumentPageOrientation } from "~/lib/pdf/templates";
 

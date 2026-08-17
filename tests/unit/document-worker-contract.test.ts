@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import {
   PDF_RENDER_CONTRACT_VERSION,
   pdfRenderErrorSchema,

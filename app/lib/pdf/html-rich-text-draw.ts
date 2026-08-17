@@ -5,31 +5,32 @@
 import type { Font } from "@pdfme/common";
 import {
   PDFDocument,
-  StandardFonts,
   type PDFFont,
   type PDFPage,
   rgb,
+  StandardFonts,
 } from "pdf-lib";
+
+import { ENDORSEMENT_PAGE_BOTTOM_MARGIN_MM } from "~/lib/pdf/endorsement-expand";
 import {
   parsePdfmeFontName,
-  resolvePdfmeFontName,
   type PdfmeFontFamily,
   type PdfmeFontStyle,
   type PdfmeFontWeight,
+  resolvePdfmeFontName,
 } from "~/lib/pdf/font-config";
-import { ENDORSEMENT_PAGE_BOTTOM_MARGIN_MM } from "~/lib/pdf/endorsement-expand";
+import { heuristicTextWidthPt } from "~/lib/pdf/html-rich-text-geometry";
 import {
   countLinesFittingInBandMm,
+  type DrawLine,
   endorsementDrawBoxBottomMm,
   htmlToDrawLines,
   lineHasInk,
-  type DrawLine,
 } from "~/lib/pdf/html-rich-text-lines";
-import { heuristicTextWidthPt } from "~/lib/pdf/html-rich-text-geometry";
 
 export {
-  htmlToDrawLines,
   type DrawLine,
+  htmlToDrawLines,
   type HtmlToDrawLinesOptions,
 } from "~/lib/pdf/html-rich-text-lines";
 

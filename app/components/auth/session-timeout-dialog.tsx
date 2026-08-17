@@ -1,6 +1,8 @@
+import { LogInIcon } from "lucide-react";
 import * as React from "react";
 import { useFetcher } from "react-router";
-import { LogInIcon } from "lucide-react";
+
+import { Button } from "~/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -8,7 +10,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
-import { Button } from "~/components/ui/button";
 import { Spinner } from "~/components/ui/spinner";
 import {
   evaluateSessionTimeout,

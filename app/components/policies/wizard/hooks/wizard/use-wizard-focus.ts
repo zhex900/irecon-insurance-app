@@ -1,13 +1,15 @@
 import { useEffect, useRef } from "react";
 import { type UseFormReturn } from "react-hook-form";
+
 import { focusFormIssue } from "~/lib/form-validation-ui";
+import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
+
 import {
-  rememberWizardStep,
   clearFocusSection,
   peekFocusSection,
+  rememberWizardStep,
 } from "../../wizard-step-memory";
 import { sectionIdForStep } from "./use-wizard-navigation-utils";
-import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
 
 export function useWizardFocusManagement({
   policyId,

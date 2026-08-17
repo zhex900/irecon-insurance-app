@@ -1,6 +1,7 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { generatePolicyPdf } from "~/lib/pdf/generate";
+import { afterEach,beforeEach, describe, expect, it, vi } from "vitest";
+
 import type { Policy } from "~/lib/db/types";
+import { generatePolicyPdf } from "~/lib/pdf/generate";
 
 /**
  * Simplified PDF integration tests.

@@ -4,6 +4,10 @@ import {
   libraryDocumentMatchesPolicy,
   type LibraryDocumentRecord,
 } from "~/lib/documents/library-documents";
+import {
+  type BrokerFeeLineInput,
+  policyToMergeInputs,
+} from "~/lib/pdf/merge-fields";
 import type { DocumentTemplate } from "~/lib/pdf/templates";
 import {
   formatDocTimestamp,
@@ -14,10 +18,6 @@ import {
   adjustmentDocumentsFingerprint,
   reviewDocumentsFingerprint,
 } from "~/lib/services/policy/documents/fingerprints";
-import {
-  policyToMergeInputs,
-  type BrokerFeeLineInput,
-} from "~/lib/pdf/merge-fields";
 
 export type PackTemplateMeta = Pick<
   DocumentTemplate,

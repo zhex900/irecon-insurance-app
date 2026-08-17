@@ -1,17 +1,18 @@
 import type { Plugin, PropPanelWidgetProps, Schema } from "@pdfme/common";
 import { multiVariableText, text } from "@pdfme/schemas";
+
 import {
+  parsePdfmeFontName,
   PDFME_FONT_FAMILIES,
   PDFME_FONT_STYLE_LABELS,
   PDFME_FONT_STYLES,
   PDFME_FONT_WEIGHT_LABELS,
   PDFME_FONT_WEIGHTS,
-  parsePdfmeFontName,
-  pdfmeFontVariantsForFamily,
-  resolvePdfmeFontName,
   type PdfmeFontFamily,
   type PdfmeFontStyle,
+  pdfmeFontVariantsForFamily,
   type PdfmeFontWeight,
+  resolvePdfmeFontName,
 } from "~/lib/pdf/font-config";
 
 type TextLikeSchema = Schema & {

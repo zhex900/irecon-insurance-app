@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
+
 import {
-  slugifyDocumentTemplateKey,
-  saveDocumentTemplateInputSchema,
   createDocumentTemplateInputSchema,
+  saveDocumentTemplateInputSchema,
+  slugifyDocumentTemplateKey,
   updateDocumentTemplateMetaInputSchema,
 } from "~/lib/services/documents/document-templates";
 

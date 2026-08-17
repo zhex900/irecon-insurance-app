@@ -4,8 +4,8 @@
  */
 
 import {
-  loadExcelJS,
   formatCurrencyCell,
+  loadExcelJS,
   styleWorkbookHeaderRow,
 } from "./excel-workbook";
 

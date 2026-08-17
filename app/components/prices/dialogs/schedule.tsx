@@ -1,12 +1,6 @@
 import { Form, useNavigation } from "react-router";
-import { LoadingButton } from "~/components/ui/loading-button";
-import type { PriceCatalogueKind } from "~/lib/services/price/types";
-import {
-  DialogShell,
-  FooterButton,
-  MetaRow,
-  type ScheduleView,
-} from "~/components/prices/shared/dialog-shell";
+
+import { FeesBody } from "~/components/prices/bodies/fees";
 import {
   CarBody,
   EslBody,
@@ -14,7 +8,15 @@ import {
   StampBody,
 } from "~/components/prices/bodies/primary";
 import { TerrorBody } from "~/components/prices/bodies/terror";
-import { FeesBody } from "~/components/prices/bodies/fees";
+import {
+  DialogShell,
+  FooterButton,
+  MetaRow,
+  type ScheduleView,
+} from "~/components/prices/shared/dialog-shell";
+import { LoadingButton } from "~/components/ui/loading-button";
+import type { PriceCatalogueKind } from "~/lib/services/price/types";
+
 export function Schedule({
   title,
   closeHref,

@@ -1,5 +1,5 @@
 // Barrel exports for client list components
-export { Table as ClientsTable } from "./clients-table";
-export { TableFilters } from "./table-filters";
-export { ListFilters } from "./list-filters";
-export type { FilterOption } from "./table-filters";
+export { ClientsListFilters } from "./clients-list-filters";
+export { ClientsTable } from "./clients-table";
+export type { ClientsTableFilterOption } from "./clients-table-filters";
+export { ClientsTableFilters } from "./clients-table-filters";

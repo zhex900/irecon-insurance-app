@@ -1,11 +1,13 @@
 import { useMemo } from "react";
-import { useWatch, type UseFormReturn } from "react-hook-form";
+import { type UseFormReturn,useWatch } from "react-hook-form";
+
+import type { Policy } from "~/lib/db/types";
 import {
   buildReferralReasons,
   liabilityLimitLabel,
 } from "~/lib/pricing/referral-reasons";
-import type { Policy } from "~/lib/db/types";
 import { type CarPolicyFormValues } from "~/lib/zod/policy-car";
+
 import { FIELD_PATHS } from "../../shared/constants";
 
 export function useReferralReasons({

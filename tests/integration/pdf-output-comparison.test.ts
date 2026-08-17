@@ -1,6 +1,7 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import { generatePolicyPdf } from "~/lib/pdf/generate";
+import { beforeEach,describe, expect, it, vi } from "vitest";
+
 import type { Policy } from "~/lib/db/types";
+import { generatePolicyPdf } from "~/lib/pdf/generate";
 import type { DocumentTemplate } from "~/lib/pdf/templates";
 
 // Fixed mocking approach: Mock @pdfme/generator and handle dynamic imports properly

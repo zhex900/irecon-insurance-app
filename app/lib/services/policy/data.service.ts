@@ -1,20 +1,20 @@
 import { and, desc, eq, inArray, ne, sql } from "drizzle-orm";
-import { getClient } from "~/lib/services/clients/service";
+
+import { getDb } from "~/lib/db/client";
+import { policyToRows, rowsToPolicy } from "~/lib/db/policy-mapper";
+import { policy, policyCar, policyCarAdjustment } from "~/lib/db/schema";
+import type { Policy, PolicySummary } from "~/lib/db/types";
+import { trackUsage } from "~/lib/observability/metrics.server";
+import { normalizeExcesses } from "~/lib/policies/excesses";
+import { createInformationalNote } from "~/lib/policies/policy-notes";
+import { formatPolicyNumberFromSeq } from "~/lib/policies/policy-number";
+import { normalizeSubLimits } from "~/lib/policies/sub-limits";
+import { getClient , listClients } from "~/lib/services/clients/service";
 import {
   getDefaultExcesses,
   getReferenceData,
 } from "~/lib/services/reference.service";
-import { getDb } from "~/lib/db/client";
-import { policy, policyCar, policyCarAdjustment } from "~/lib/db/schema";
-import { policyToRows, rowsToPolicy } from "~/lib/db/policy-mapper";
-import { normalizeExcesses } from "~/lib/policies/excesses";
-import { formatPolicyNumberFromSeq } from "~/lib/policies/policy-number";
-import { normalizeSubLimits } from "~/lib/policies/sub-limits";
-import type { Policy, PolicySummary } from "~/lib/db/types";
-import { trackUsage } from "~/lib/observability/metrics.server";
 import { POLICY_STATUS } from "~/lib/zod/policy-car";
-import { listClients } from "~/lib/services/clients/service";
-import { createInformationalNote } from "~/lib/policies/policy-notes";
 
 /**
  * True when another policy already holds this number (case-insensitive).

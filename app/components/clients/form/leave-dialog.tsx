@@ -1,5 +1,4 @@
 import { Button } from "~/components/ui/button";
-import { LoadingButton } from "~/components/ui/loading-button";
 import {
   Dialog,
   DialogContent,
@@ -8,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
+import { LoadingButton } from "~/components/ui/loading-button";
 
 export function LeaveDialog({
   open,

@@ -1,27 +1,29 @@
-import { useEffect, useReducer, useRef, useState } from "react";
+import type { Template } from "@pdfme/common";
 import type { RefObject } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import {
   useBlocker,
   useFetcher,
   useNavigate,
   useRevalidator,
 } from "react-router";
-import type { Template } from "@pdfme/common";
 import { toast } from "sonner";
+
 import type { PdfmeDesignerHandle } from "~/components/documents/pdf/designer";
-import { collectMergeFields } from "~/lib/documents/template-editor-form";
 import {
   diffDirtyState,
   initialTemplateEditorAutosaveState,
   templateEditorAutosaveReducer,
 } from "~/lib/documents/template-editor-autosave";
-import { useDocumentTemplateEditorFetcher } from "./use-fetcher";
+import { collectMergeFields } from "~/lib/documents/template-editor-form";
+import type { DocumentTemplateEditorLoaderData } from "~/lib/documents/template-editor-types";
 import {
-  getTemplateOrientation,
   type DocumentPageOrientation,
+  getTemplateOrientation,
 } from "~/lib/pdf/templates";
 import type { DocumentTemplateHistoryEntry } from "~/lib/services/documents/document-template-history";
-import type { DocumentTemplateEditorLoaderData } from "~/lib/documents/template-editor-types";
+
+import { useDocumentTemplateEditorFetcher } from "./use-fetcher";
 
 type FetcherData = {
   ok: boolean;

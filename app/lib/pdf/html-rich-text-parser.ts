@@ -4,12 +4,12 @@
  */
 
 import type { PdfmeFontFamily } from "~/lib/pdf/font-config";
+import type { WordingListStyle } from "~/lib/policies/wording/html";
 import {
   defaultListStyleForTag,
   formatWordingListMarker,
   isWordingListStyle,
 } from "~/lib/policies/wording/html";
-import type { WordingListStyle } from "~/lib/policies/wording/html";
 
 export type RichTextRunStyle = {
   bold: boolean;

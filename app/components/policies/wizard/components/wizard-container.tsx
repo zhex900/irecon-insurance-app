@@ -1,10 +1,12 @@
 import type { ReactNode } from "react";
-import { cn } from "~/lib/utils";
-import {
-  wizardModeCardBorderClass,
-  type WizardMode,
-} from "../shared/wizard-shared";
+
 import { POLICY_STICKY_RAIL_CLASS } from "~/components/policies/policy-form-layout";
+import { cn } from "~/lib/utils";
+
+import {
+  type WizardMode,
+  wizardModeCardBorderClass,
+} from "../shared/wizard-shared";
 
 export type DecomposedContainerProps = {
   children: ReactNode;
@@ -12,7 +14,7 @@ export type DecomposedContainerProps = {
   className?: string;
 };
 
-export function DecomposedContainer({
+export function WizardContainer({
   children,
   wizardMode,
   className,

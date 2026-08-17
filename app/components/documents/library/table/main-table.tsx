@@ -6,14 +6,20 @@ import {
   Trash2Icon,
   XIcon,
 } from "lucide-react";
+
+import {
+  coverTypeLabel,
+  type CoverTypeOption,
+  type UploadItem,
+} from "~/components/documents/shared";
 import { Badge } from "~/components/reui/badge";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
-import { Spinner } from "~/components/ui/spinner";
 import {
   InteractiveTableActionsCell,
   InteractiveTableRow,
 } from "~/components/ui/interactive-table-row";
+import { Spinner } from "~/components/ui/spinner";
 import {
   Table,
   TableBody,
@@ -22,11 +28,6 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table";
-import {
-  coverTypeLabel,
-  type CoverTypeOption,
-  type UploadItem,
-} from "~/components/documents/shared";
 import { formatBytes } from "~/hooks/utilities";
 import { DOCUMENT_LABEL_MAX_LENGTH } from "~/lib/documents/document-label";
 import type { LibraryDocumentRecord } from "~/lib/documents/library-documents";

@@ -1,17 +1,18 @@
 import type { Template } from "@pdfme/common";
 import type { DesignerSelectedSchema, DesignerSelection } from "@pdfme/ui";
-import type { BulkSchemaRef } from "~/lib/pdf/pdf-bulk-format";
+
 import {
   DEFAULT_ENDORSEMENT_BLOCK_GAP_MM,
   ENDORSEMENT_BLOCK_GAP_KEY,
   ENDORSEMENT_CONTENT_FIELD,
   ENDORSEMENT_SUBJECT_FIELD,
 } from "~/lib/pdf/endorsement-expand";
+import { resolvePdfmeFontName } from "~/lib/pdf/font-config";
 import {
   endorsementsTableContent,
   estimateTableHeightMm,
 } from "~/lib/pdf/merge-fields";
-import { resolvePdfmeFontName } from "~/lib/pdf/font-config";
+import type { BulkSchemaRef } from "~/lib/pdf/pdf-bulk-format";
 import { withBlankPageBackground } from "~/lib/pdf/templates";
 
 export type SchemaLike = {

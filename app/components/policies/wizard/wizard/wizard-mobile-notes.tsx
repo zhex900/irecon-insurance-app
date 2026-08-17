@@ -1,8 +1,8 @@
-import { MobileNotes as MobileNotesComponent } from "../components/mobile-notes";
-import { useWizardInner } from "./provider";
+import { MobileNotes } from "../components/mobile-notes";
 import { useMode } from "../hooks/utils/use-mode";
+import { useWizardInner } from "./provider";
 
-export function MobileNotes() {
+export function WizardMobileNotes() {
   const { state, props } = useWizardInner();
   const { isNew } = useMode();
   const { policy } = props;
@@ -11,7 +11,7 @@ export function MobileNotes() {
 
   return (
     <div className="xl:hidden">
-      <MobileNotesComponent
+      <MobileNotes
         notes={state.notes}
         noteAuthors={state.noteAuthors}
         policyIsDraft={Boolean(policy.isDraft)}

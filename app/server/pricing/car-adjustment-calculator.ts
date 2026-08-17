@@ -1,10 +1,10 @@
+import { GST_RATE } from "~/constants";
 import type {
   AdjustmentBreakdown,
   AdjustmentSectionRow,
   PremiumBreakdown,
   RatingSnapshot,
 } from "~/lib/db/types";
-import { GST_RATE } from "~/constants";
 
 /**
  * End-of-term adjustment (legacy CARAdjust.aspx).

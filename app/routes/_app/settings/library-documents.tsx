@@ -1,14 +1,16 @@
 import { FileStackIcon } from "lucide-react";
-import { PageHeader } from "~/components/layout/app-layout";
+
 import { MainManager } from "~/components/documents/library";
-import { isAdminRole, isSuperAdmin } from "~/lib/auth/roles";
+import { PageHeader } from "~/components/layout/app-layout";
 import { requireFeatureOrSuperAdminPage } from "~/lib/auth/authorize.server";
+import { isAdminRole, isSuperAdmin } from "~/lib/auth/roles";
 import { requireAuth } from "~/lib/auth/session/server.server";
+import { pageTitle } from "~/lib/brand";
 import { getLibraryDocumentsBucket } from "~/lib/cloudflare.server";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
 import { parseFormIntent, parsePositiveInteger } from "~/lib/http/route-input";
+import { referenceData } from "~/lib/reference-data";
 import { writeAuditLog } from "~/lib/services/audit/service";
-import { isFeatureEnabled } from "~/lib/services/feature-flags";
 import {
   deleteLibraryDocument,
   listLibraryDocuments,
@@ -16,9 +18,9 @@ import {
   updateLibraryDocumentLabel,
   uploadLibraryDocument,
 } from "~/lib/services/documents/library-documents";
-import { referenceData } from "~/lib/reference-data";
+import { isFeatureEnabled } from "~/lib/services/feature-flags";
+
 import type { Route } from "./+types/library-documents";
-import { pageTitle } from "~/lib/brand";
 
 export function meta() {
   return [{ title: pageTitle("Library Documents") }];

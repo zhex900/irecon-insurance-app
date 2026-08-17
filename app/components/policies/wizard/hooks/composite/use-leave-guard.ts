@@ -1,15 +1,17 @@
-import { useEffect, useRef, useState, type RefObject } from "react";
-import { useBlocker, useNavigate, type useFetcher } from "react-router";
+import { type RefObject,useEffect, useRef, useState } from "react";
+import { useBlocker, type useFetcher,useNavigate } from "react-router";
+
 import type { Policy } from "~/lib/db/types";
 import { discardPolicyDraftClient } from "~/lib/services/policy/draft.client";
+import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
+
 import {
   clearWizardStepState,
   consumeWizardLeave,
 } from "../../wizard-step-memory";
+import { useMode } from "../utils/use-mode";
 import type { PolicyLeaveApi } from "./use-draft-save";
 import type { PolicyWizardActionData } from "./use-premium-calc";
-import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
-import { useMode } from "../utils/use-mode";
 
 export function usePolicyLeaveGuard({
   policy,

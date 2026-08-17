@@ -1,11 +1,13 @@
-import {
-  isTerminalStatus,
-  type CarPolicyFormValues,
-} from "~/lib/zod/policy-car";
 import { useFormContext } from "react-hook-form";
+
+import {
+  type CarPolicyFormValues,
+  isTerminalStatus,
+} from "~/lib/zod/policy-car";
+
 import { ModeProvider } from "../components/mode-context";
-import { WizardContent as Content } from "./wizard-content";
 import type { WizardProps } from "../shared/wizard-shared";
+import { WizardContent as Content } from "./wizard-content";
 
 export function WizardInner({
   policy,

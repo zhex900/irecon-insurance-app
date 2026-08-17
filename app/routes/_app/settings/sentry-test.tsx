@@ -1,4 +1,5 @@
 import { useState } from "react";
+
 import { PageHeader } from "~/components/layout/app-layout";
 import { Button, buttonVariants } from "~/components/ui/button";
 import { getAppEnvironment, getAppVersion } from "~/lib/app-version";
@@ -8,6 +9,7 @@ import { pageTitle } from "~/lib/brand";
 import { trackClientUsage } from "~/lib/observability/metrics.client";
 import { trackUsage } from "~/lib/observability/metrics.server";
 import { cn } from "~/lib/utils";
+
 import type { Route } from "./+types/sentry-test";
 
 export function meta() {

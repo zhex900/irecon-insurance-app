@@ -2,6 +2,7 @@
  * Per-user route history for the side nav Recents stack.
  */
 import { and, desc, eq, notInArray, sql } from "drizzle-orm";
+
 import { getDb } from "~/lib/db/client";
 import { appUserRecentRoute, client, policy, policyCar } from "~/lib/db/schema";
 import { formatDocumentTemplateTitle } from "~/lib/documents/template-title";
@@ -9,11 +10,11 @@ import { getLatestDocumentTemplate } from "~/lib/services/documents/document-tem
 import {
   matchRecentLeafSection,
   normalizeRecentPath,
+  RECENT_ROUTES_MAX,
   recentCaptionForPath,
   recentIdForPath,
-  recentTemplateNameFromKey,
-  RECENT_ROUTES_MAX,
   type RecentLeafSection,
+  recentTemplateNameFromKey,
 } from "~/lib/services/navigation/recent-routes";
 import type { SideNavLink } from "~/lib/services/navigation/side-nav.service";
 

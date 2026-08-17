@@ -1,25 +1,25 @@
+import { CircleAlertIcon, UploadIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useFetcher, useRevalidator } from "react-router";
-import { CircleAlertIcon, UploadIcon } from "lucide-react";
 import { toast } from "sonner";
+
+import { MainTable } from "~/components/documents/library";
+import { CoverTypesDialog } from "~/components/documents/library/dialogs";
 import { PreviewDialog } from "~/components/documents/pdf/preview";
 import {
   completedItem,
   type CoverTypeOption,
-  type LibraryDocumentActionData as ActionData,
+  type LibraryDocumentActionData,
   MAX_FILES,
   MAX_SIZE,
-  type UploadItem,
   toUploadItems,
+  type UploadItem,
 } from "~/components/documents/shared";
-import { CoverTypesDialog } from "~/components/documents/library/dialogs";
-import { MainTable } from "~/components/documents/library";
-
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { formatBytes } from "~/hooks/utilities";
 import {
-  useFileUploadFixed,
   type FileWithPreview,
+  useFileUploadFixed,
 } from "~/hooks/utilities/use-file-upload-fixed";
 import { normalizeDocumentLabel } from "~/lib/documents/document-label";
 import {
@@ -38,10 +38,10 @@ export function MainManager({
   canEdit: boolean;
 }) {
   const revalidator = useRevalidator();
-  const uploadFetcher = useFetcher<ActionData>();
-  const deleteFetcher = useFetcher<ActionData>();
-  const labelFetcher = useFetcher<ActionData>();
-  const coverFetcher = useFetcher<ActionData>();
+  const uploadFetcher = useFetcher<LibraryDocumentActionData>();
+  const deleteFetcher = useFetcher<LibraryDocumentActionData>();
+  const labelFetcher = useFetcher<LibraryDocumentActionData>();
+  const coverFetcher = useFetcher<LibraryDocumentActionData>();
 
   const [uploadFiles, setUploadFiles] = useState<UploadItem[]>(() =>
     toUploadItems(documents),
@@ -70,8 +70,12 @@ export function MainManager({
   const lastDeleteKeyRef = useRef<string | null>(null);
   const lastLabelKeyRef = useRef<string | null>(null);
   const lastCoverKeyRef = useRef<string | null>(null);
-  const handledUploadDataRef = useRef<ActionData | undefined>(undefined);
-  const handledDeleteDataRef = useRef<ActionData | undefined>(undefined);
+  const handledUploadDataRef = useRef<LibraryDocumentActionData | undefined>(
+    undefined,
+  );
+  const handledDeleteDataRef = useRef<LibraryDocumentActionData | undefined>(
+    undefined,
+  );
 
   function kickUpload() {
     if (uploadBusyRef.current) return;

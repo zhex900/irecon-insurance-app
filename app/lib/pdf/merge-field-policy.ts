@@ -1,14 +1,12 @@
 import type { CarWording, Policy } from "~/lib/db/types";
 import {
-  activeBandExcessAmounts,
-  contractValueBandLabel,
-} from "~/lib/policies/excesses";
-import { combinedTrueBasePremium } from "~/lib/pricing/premium-totals";
-import { formatDate } from "~/lib/utils";
+  canonicalMergeFieldName,
+  normalizeMultiVariableTextSchema,
+} from "~/lib/pdf/merge-field-schemas";
 import {
-  ENDORSEMENTS_TABLE_FIELD,
   collectEndorsementWordings,
   coverLabel,
+  ENDORSEMENTS_TABLE_FIELD,
   endorsementsTableContent,
   liabilityLabel,
   money,
@@ -16,9 +14,11 @@ import {
   yesNo,
 } from "~/lib/pdf/merge-field-tables";
 import {
-  canonicalMergeFieldName,
-  normalizeMultiVariableTextSchema,
-} from "~/lib/pdf/merge-field-schemas";
+  activeBandExcessAmounts,
+  contractValueBandLabel,
+} from "~/lib/policies/excesses";
+import { combinedTrueBasePremium } from "~/lib/pricing/premium-totals";
+import { formatDate } from "~/lib/utils";
 
 export type BrokerFeeLineInput = {
   name: string;

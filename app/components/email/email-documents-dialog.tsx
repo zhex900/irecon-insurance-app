@@ -1,13 +1,23 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FileTextIcon, MailIcon, PaperclipIcon, XIcon } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+
 import { EmailDocumentFrame } from "~/components/email/email-document-frame";
+import {
+  EMAIL_DOCUMENTS_EXTRA_ACCEPT,
+  EMAIL_DOCUMENTS_EXTRA_MAX_FILES,
+  EMAIL_DOCUMENTS_EXTRA_MAX_SIZE,
+  EMAIL_DOCUMENTS_RECIPIENT_LABELS,
+  filledEmailDocumentsTemplateBody,
+} from "~/components/email/email-documents-dialog-helpers";
+import { sendPolicyDocumentsEmail } from "~/components/email/email-documents-send";
+import { EmailRecipientsInput } from "~/components/email/email-recipients-input";
 import {
   EmailRichEditor,
   type EmailRichEditorHandle,
 } from "~/components/email/email-rich-editor";
+import { Badge } from "~/components/reui/badge";
 import { Button } from "~/components/ui/button";
-import { LoadingButton } from "~/components/ui/loading-button";
 import {
   Dialog,
   DialogContent,
@@ -18,33 +28,24 @@ import {
 } from "~/components/ui/dialog";
 import { FieldLabel } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
-import { EmailRecipientsInput } from "~/components/email/email-recipients-input";
+import { LoadingButton } from "~/components/ui/loading-button";
+import { formatBytes } from "~/hooks/utilities";
+import {
+  type FileWithPreview,
+  useFileUploadFixed,
+} from "~/hooks/utilities/use-file-upload-fixed";
 import type { PolicyDocument } from "~/lib/db/types";
-import { Badge } from "~/components/reui/badge";
 import type { EmailDirectoryEntry } from "~/lib/email/directory";
 import { EMAIL_FOOTER_DISPLAY_WIDTH_DEFAULT } from "~/lib/email/footer-display";
 import {
   applyEmailTemplate,
   EMAIL_TEMPLATE_META,
-  ensureEmailEditorHtml,
-  isEmailHtmlBody,
   type EmailSendRecipient,
   type EmailTemplate,
   type EmailTemplateVars,
+  ensureEmailEditorHtml,
+  isEmailHtmlBody,
 } from "~/lib/email/templates";
-import { formatBytes } from "~/hooks/utilities";
-import {
-  useFileUploadFixed,
-  type FileWithPreview,
-} from "~/hooks/utilities/use-file-upload-fixed";
-import { sendPolicyDocumentsEmail } from "~/components/email/email-documents-send";
-import {
-  EMAIL_DOCUMENTS_EXTRA_ACCEPT,
-  EMAIL_DOCUMENTS_EXTRA_MAX_FILES,
-  EMAIL_DOCUMENTS_EXTRA_MAX_SIZE,
-  EMAIL_DOCUMENTS_RECIPIENT_LABELS,
-  filledEmailDocumentsTemplateBody,
-} from "~/components/email/email-documents-dialog-helpers";
 
 export function EmailDocumentsDialog({
   open,

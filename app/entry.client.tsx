@@ -1,7 +1,8 @@
+import * as Sentry from "@sentry/react-router/cloudflare";
 import { startTransition, StrictMode } from "react";
 import { hydrateRoot } from "react-dom/client";
 import { HydratedRouter } from "react-router/dom";
-import * as Sentry from "@sentry/react-router/cloudflare";
+
 import { getAppEnvironment, getAppVersion } from "~/lib/app-version";
 
 const dsn = import.meta.env.VITE_SENTRY_DSN?.trim();

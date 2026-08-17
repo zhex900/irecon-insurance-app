@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { buildReferralReasons } from "~/lib/pricing/referral-reasons";
 
 const ratingOk = {

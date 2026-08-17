@@ -1,13 +1,12 @@
-import { PremiumSummary } from "../sections/premium-summary";
 import type {
   CarAdjustmentRecord,
   CarWording,
   Policy,
-  PremiumBreakdown,
-} from "~/lib/db/types";
-import type { PolicyDocument } from "~/lib/db/types";
+ PolicyDocument,  PremiumBreakdown } from "~/lib/db/types";
 import type { EmailDirectoryEntry } from "~/lib/email/directory";
 import type { EmailTemplate, EmailTemplateVars } from "~/lib/email/templates";
+
+import { PremiumSummary } from "../sections/premium-summary";
 
 export type PremiumPanelProps = {
   documentsOnly?: boolean;

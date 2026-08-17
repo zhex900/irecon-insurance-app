@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+
 import { getDb } from "~/lib/db/client";
 import { appEmailFooterImage } from "~/lib/db/schema";
 import { DEFAULT_EMAIL_FOOTER_DATA_URI } from "~/lib/email/default-footer-data-uri";

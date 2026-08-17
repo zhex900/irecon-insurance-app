@@ -1,12 +1,13 @@
 import {
+  type ReactNode,
+  type RefObject,
   useCallback,
   useEffect,
   useLayoutEffect,
   useState,
-  type ReactNode,
-  type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
+
 import { cn } from "~/lib/utils";
 
 export type FloatingListPosition = {

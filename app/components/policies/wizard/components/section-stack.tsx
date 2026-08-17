@@ -1,9 +1,5 @@
 import type { Dispatch, RefObject, SetStateAction } from "react";
-import { ClaimsWording } from "../sections/claims-wording";
-import { PremiumDeclaration } from "../sections/premium-declaration";
-import { RiskDetails } from "../sections/risk-details";
-import { Excesses } from "../sections/excesses";
-import { Limits } from "../sections/limits";
+
 import { PolicyCollapsibleSection } from "~/components/policies/policy-form-layout";
 import type {
   CarWording,
@@ -11,7 +7,13 @@ import type {
   PremiumBreakdown,
   ReferenceData,
 } from "~/lib/db/types";
+
 import { useMode } from "../hooks/utils/use-mode";
+import { ClaimsWording } from "../sections/claims-wording";
+import { Excesses } from "../sections/excesses";
+import { Limits } from "../sections/limits";
+import { PremiumDeclaration } from "../sections/premium-declaration";
+import { RiskDetails } from "../sections/risk-details";
 import { SECTION_IDS } from "../shared/constants";
 
 export type WizardSectionStackProps = {

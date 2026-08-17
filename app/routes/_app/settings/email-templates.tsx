@@ -1,30 +1,32 @@
-import { useRef, useState, type ComponentType } from "react";
-import { Link } from "react-router";
 import {
   ArrowRightIcon,
   Building2Icon,
   ImageIcon,
+  type LucideProps,
   MinusIcon,
   PlusIcon,
   UsersIcon,
-  type LucideProps,
 } from "lucide-react";
+import { type ComponentType,useRef, useState } from "react";
+import { Link } from "react-router";
 import { toast } from "sonner";
-import { RootErrorBoundary } from "~/components/root-error-boundary";
+
 import { PageHeader } from "~/components/layout/app-layout";
+import { Badge } from "~/components/reui/badge";
+import { RootErrorBoundary } from "~/components/root-error-boundary";
 import { Button } from "~/components/ui/button";
 import { ButtonGroup } from "~/components/ui/button-group";
-import { LoadingButton } from "~/components/ui/loading-button";
 import {
   Card,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
-import { Badge } from "~/components/reui/badge";
-import { requireAuth } from "~/lib/auth/session/server.server";
+import { LoadingButton } from "~/components/ui/loading-button";
 import { requireFeatureOrSuperAdminPage } from "~/lib/auth/authorize.server";
 import { isSuperAdmin } from "~/lib/auth/roles";
+import { requireAuth } from "~/lib/auth/session/server.server";
+import { pageTitle } from "~/lib/brand";
 import {
   EMAIL_FOOTER_DISPLAY_WIDTH_DEFAULT,
   EMAIL_FOOTER_DISPLAY_WIDTH_MAX,
@@ -41,8 +43,8 @@ import {
 import { getEmailFooterDisplayWidth } from "~/lib/services/email/footer-image.server";
 import { listEmailTemplates } from "~/lib/services/email/templates.server";
 import { isFeatureEnabled } from "~/lib/services/feature-flags";
+
 import type { Route } from "./+types/email-templates";
-import { pageTitle } from "~/lib/brand";
 
 export function meta() {
   return [{ title: pageTitle("Email Templates") }];

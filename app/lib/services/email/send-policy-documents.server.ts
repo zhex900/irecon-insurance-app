@@ -2,27 +2,27 @@ import type { R2BucketLike } from "~/lib/cloudflare.server";
 import type { CarWording, Policy, PolicyDocument } from "~/lib/db/types";
 import type { EmailSendRecipient } from "~/lib/email/templates";
 import {
-  renderPolicyPdf,
-  type PdfWorkerBinding,
-} from "~/lib/pdf/pdf-worker.server";
-import { buildLegacyTextPdfBlob } from "~/lib/pdf/legacy-text-pdf";
-import type { BrokerFeeLineInput } from "~/lib/pdf/merge-fields";
-import { getRequestContext } from "~/lib/observability/request-context.server";
-import {
   trackDistribution,
   trackUsage,
 } from "~/lib/observability/metrics.server";
+import { getRequestContext } from "~/lib/observability/request-context.server";
+import { buildLegacyTextPdfBlob } from "~/lib/pdf/legacy-text-pdf";
+import type { BrokerFeeLineInput } from "~/lib/pdf/merge-fields";
+import {
+  type PdfWorkerBinding,
+  renderPolicyPdf,
+} from "~/lib/pdf/pdf-worker.server";
 import { resolvePublishedPdfTemplate } from "~/lib/services/documents/document-templates";
 import {
   getLibraryDocumentByFilename,
   getLibraryDocumentById,
 } from "~/lib/services/documents/library-documents";
-import { getLibraryDocumentObject } from "~/lib/storage/library-documents.server";
 import {
   sendEmail,
   type SendEmailAttachment,
 } from "~/lib/services/email/resend.server";
 import { getCarWording } from "~/lib/services/reference.service";
+import { getLibraryDocumentObject } from "~/lib/storage/library-documents.server";
 import { resolveBrokerFeeLines } from "~/server/pricing/rate-resolver";
 
 /** Soft cap before we refuse oversized packs (Resend limit is 40MB encoded). */

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { useFetcher } from "react-router";
 import { toast } from "sonner";
+
 import type { Policy } from "~/lib/db/types";
 import type { NoteAuthor } from "~/lib/services/users/service";
 

@@ -1,6 +1,7 @@
 import { PhoneIcon } from "lucide-react";
-import { type ClientSearchResult } from "~/lib/search/client-match";
+
 import { HighlightText } from "~/components/search/highlight";
+import { type ClientSearchResult } from "~/lib/search/client-match";
 import { fieldMatches } from "~/lib/search/match";
 
 export type { ClientSearchResult } from "~/lib/search/client-match";

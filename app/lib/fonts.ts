@@ -1,5 +1,5 @@
-import geistLatin from "@fontsource-variable/geist/files/geist-latin-wght-normal.woff2?url";
 import geistLatinExt from "@fontsource-variable/geist/files/geist-latin-ext-wght-normal.woff2?url";
+import geistLatin from "@fontsource-variable/geist/files/geist-latin-wght-normal.woff2?url";
 
 /** Same hashed URLs used for preload + @font-face so the font is cached before paint. */
 export const geistFontFaces = [

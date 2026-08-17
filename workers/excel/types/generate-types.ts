@@ -4,10 +4,10 @@
  */
 
 import type {
+  AdjustmentBreakdown,
   Policy,
   PremiumBreakdown,
   RatingSnapshot,
-  AdjustmentBreakdown,
 } from "../../../app/lib/excel/types";
 import type { ExcelWorkerRequest } from "./schemas";
 

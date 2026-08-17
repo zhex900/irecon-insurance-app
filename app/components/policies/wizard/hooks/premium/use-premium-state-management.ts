@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from "react";
+
 import type { Policy, PremiumBreakdown } from "~/lib/db/types";
+
 import { useMode } from "../utils/use-mode";
 import {
   createPolicySnapshot,
   hasPolicyChanged,
-  withRolledTotals,
   type PolicySnapshot,
+  withRolledTotals,
 } from "./use-premium-utils";
 
 export function usePremiumStateManagement({ policy }: { policy: Policy }) {

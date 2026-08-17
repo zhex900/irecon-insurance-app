@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDownIcon, FileTypeIcon, MailIcon } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+
 import { PreviewDialog } from "~/components/documents/pdf/preview";
 import { EmailDocumentsDialog } from "~/components/email/email-documents-dialog";
 import { Badge } from "~/components/reui/badge";
@@ -22,14 +23,14 @@ import {
 import { usePolicyDocumentPreview } from "~/hooks/use-policy-document-preview";
 import type { CarWording, Policy, PolicyDocument } from "~/lib/db/types";
 import { formatDocumentLabel } from "~/lib/documents/document-label";
+import type { EmailDirectoryEntry } from "~/lib/email/directory";
 import {
   DEFAULT_EMAIL_TEMPLATES,
-  resolveBrokerTemplateKey,
   type EmailSendRecipient,
   type EmailTemplate,
   type EmailTemplateVars,
+  resolveBrokerTemplateKey,
 } from "~/lib/email/templates";
-import type { EmailDirectoryEntry } from "~/lib/email/directory";
 import { isPremiumExcelDocument } from "~/lib/excel/client";
 import { versionPolicyDocuments } from "~/lib/services/policy/documents/versions";
 

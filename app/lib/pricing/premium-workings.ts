@@ -1,6 +1,7 @@
 import type { PremiumBreakdown, RatingSnapshot } from "~/lib/db/types";
+
 import { calcBundle } from "./premium-calculations";
-import { roundMoney, step, formatCurrency, formatRate } from "./premium-utils";
+import { formatCurrency, formatRate,roundMoney, step } from "./premium-utils";
 
 export type PremiumWorkingStep = {
   label: string;

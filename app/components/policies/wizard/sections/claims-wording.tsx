@@ -1,11 +1,13 @@
 import { useState } from "react";
 import {
-  useFormContext,
-  Controller,
   type Control,
+  Controller,
   type FieldError as RhfFieldError,
+  useFormContext,
 } from "react-hook-form";
+
 import { useFieldSaveState } from "~/components/forms/field-save-highlight";
+import { WordingHtmlView } from "~/components/policies/wording-html-view";
 import { Checkbox } from "~/components/ui/checkbox";
 import {
   Dialog,
@@ -14,19 +16,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
-import { WordingHtmlView } from "~/components/policies/wording-html-view";
 import { Field, FieldError, FieldLabel } from "~/components/ui/field";
 import {
   FieldInput,
   FieldTextarea,
   Select,
 } from "~/components/ui/form-controls";
-import { cn } from "~/lib/utils";
-import { plainTextFromWordingHtml } from "~/lib/policies/wording/html";
-import { type CarPolicyFormValues } from "~/lib/zod/policy-car";
 import type { CarWording } from "~/lib/db/types";
-import { Section } from "../section-shared";
+import { plainTextFromWordingHtml } from "~/lib/policies/wording/html";
+import { cn } from "~/lib/utils";
+import { type CarPolicyFormValues } from "~/lib/zod/policy-car";
+
 import { CustomWordingsEditor } from "../section-custom-wordings";
+import { Section } from "../section-shared";
 
 export function ClaimsWording({ carWording }: { carWording: CarWording[] }) {
   const {

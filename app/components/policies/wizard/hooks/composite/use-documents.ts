@@ -1,34 +1,35 @@
 import {
+  type RefObject,
   useCallback,
   useEffect,
   useRef,
   useState,
-  type RefObject,
 } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { useRouteLoaderData } from "react-router";
 import { toast } from "sonner";
+
 import type {
   CarWording,
   Policy,
   PolicyDocument,
   PremiumBreakdown,
 } from "~/lib/db/types";
-import type { BrokerFeeLineInput } from "~/lib/pdf/merge-fields";
 import { downloadPremiumExcelDocument } from "~/lib/excel/client";
+import {
+  trackClientDistribution,
+  trackClientUsage,
+} from "~/lib/observability/metrics.client";
+import type { BrokerFeeLineInput } from "~/lib/pdf/merge-fields";
 import {
   ensureReviewDocumentsClient,
   savePolicyDocumentsClient,
   syncPolicyDocumentLabelsClient,
 } from "~/lib/services/policy/documents/documents.client";
-import { isPreservedAcrossCoverReplace } from "~/lib/services/policy/documents/merge";
 import { reviewDocumentsFingerprint } from "~/lib/services/policy/documents/fingerprints";
+import { isPreservedAcrossCoverReplace } from "~/lib/services/policy/documents/merge";
 import { policySnapshotFromForm } from "~/lib/services/policy/documents/snapshot-from-form";
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
-import {
-  trackClientDistribution,
-  trackClientUsage,
-} from "~/lib/observability/metrics.client";
 
 export function usePolicyDocuments({
   policy,

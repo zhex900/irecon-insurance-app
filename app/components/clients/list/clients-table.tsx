@@ -1,5 +1,7 @@
-import { useNavigate } from "react-router";
 import { Trash2Icon, UsersIcon } from "lucide-react";
+import { useNavigate } from "react-router";
+
+import { SearchHighlight } from "~/components/search/highlight-cell";
 import { Button } from "~/components/ui/button";
 import {
   Empty,
@@ -13,7 +15,7 @@ import {
   InteractiveTableRow,
 } from "~/components/ui/interactive-table-row";
 import {
-  Table as UITable,
+  Table,
   TableBody,
   TableCell,
   TableHead,
@@ -21,9 +23,8 @@ import {
   TableRow,
 } from "~/components/ui/table";
 import { TablePagination } from "~/components/ui/table-pagination";
-import { SearchHighlight } from "~/components/search/highlight-cell";
-import { fieldMatches } from "~/lib/search/match";
 import type { ReferenceData } from "~/lib/db/types";
+import { fieldMatches } from "~/lib/search/match";
 import type { ClientListItem } from "~/lib/services/clients/list.service";
 import { formatDate } from "~/lib/utils";
 
@@ -40,7 +41,7 @@ export type ClientsIndexTableProps = {
   onDeleteRequest: (client: ClientListItem) => void;
 };
 
-export function Table({
+export function ClientsTable({
   clients,
   total,
   page,
@@ -56,7 +57,7 @@ export function Table({
 
   return (
     <div className="overflow-hidden rounded-xl border bg-card">
-      <UITable>
+      <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Client Name</TableHead>
@@ -191,7 +192,7 @@ export function Table({
             })
           )}
         </TableBody>
-      </UITable>
+      </Table>
       <TablePagination
         total={total}
         page={page}

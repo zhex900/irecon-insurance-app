@@ -1,21 +1,22 @@
 import { Trash2Icon } from "lucide-react";
-import { ClientPopover as ClientSummaryPopover } from "~/components/clients/summary";
+
+import { ClientPopover } from "~/components/clients/summary";
+import type { DeletablePolicyRef } from "~/components/policies/delete-policies-dialog";
 import { Badge } from "~/components/reui/badge";
+import { SearchHighlight } from "~/components/search/highlight-cell";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import {
   InteractiveTableActionsCell,
   InteractiveTableRow,
 } from "~/components/ui/interactive-table-row";
+import { StatusBadge } from "~/components/ui/status-badge";
 import { TableCell } from "~/components/ui/table";
-import { SearchHighlight } from "~/components/search/highlight-cell";
-import { fieldMatches } from "~/lib/search/match";
 import type { ReferenceData } from "~/lib/db/types";
+import { fieldMatches } from "~/lib/search/match";
 import type { PolicyListItem } from "~/lib/services/policies/list.service";
 import { formatCurrency, formatDate } from "~/lib/utils";
-import { StatusBadge } from "~/components/ui/status-badge";
 import { isTerminalStatus } from "~/lib/zod/policy-car";
-import type { DeletablePolicyRef } from "~/components/policies/delete-policies-dialog";
 
 export type PolicyListTableRowProps = {
   policy: PolicyListItem;
@@ -105,7 +106,7 @@ export function PolicyListTableRow({
       </TableCell>
       {showClientColumn ? (
         <InteractiveTableActionsCell>
-          <ClientSummaryPopover
+          <ClientPopover
             client={{
               ...policy.client,
               accountManagerName: reference.accountManagers.find(
@@ -129,7 +130,7 @@ export function PolicyListTableRow({
             ) : (
               policy.client.name || "—"
             )}
-          </ClientSummaryPopover>
+          </ClientPopover>
         </InteractiveTableActionsCell>
       ) : null}
       <TableCell>

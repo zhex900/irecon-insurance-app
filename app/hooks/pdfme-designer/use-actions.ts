@@ -1,6 +1,7 @@
-import { useImperativeHandle, type Ref } from "react";
 import type { Template } from "@pdfme/common";
 import type { DesignerSelectedSchema } from "@pdfme/ui";
+import { type Ref,useImperativeHandle } from "react";
+
 import type { PdfmeDesignerHandle } from "~/components/documents/pdf/designer";
 import {
   createEndorsementsTableSchema,
@@ -17,13 +18,6 @@ import {
   uniqueSchemaName,
 } from "~/components/documents/shared";
 import {
-  applyFontWeightToSchemas,
-  applyHeightToSchemas,
-  applyTransparentBackground,
-  moveSchemasZOrder,
-  spaceSchemasVertically,
-} from "~/lib/pdf/pdf-bulk-format";
-import {
   ENDORSEMENT_CONTENT_FIELD,
   ENDORSEMENT_SUBJECT_FIELD,
   readEndorsementBlockGapMm,
@@ -31,9 +25,16 @@ import {
 } from "~/lib/pdf/endorsement-expand";
 import { ENDORSEMENTS_TABLE_FIELD } from "~/lib/pdf/merge-fields";
 import {
+  applyFontWeightToSchemas,
+  applyHeightToSchemas,
+  applyTransparentBackground,
+  moveSchemasZOrder,
+  spaceSchemasVertically,
+} from "~/lib/pdf/pdf-bulk-format";
+import {
+  type DocumentPageOrientation,
   getTemplateOrientation,
   withPageOrientation,
-  type DocumentPageOrientation,
 } from "~/lib/pdf/templates";
 
 export function usePdfmeDesignerActions({

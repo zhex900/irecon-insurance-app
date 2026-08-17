@@ -1,3 +1,4 @@
+import { Badge } from "~/components/reui/badge";
 import { Button } from "~/components/ui/button";
 import {
   Dialog,
@@ -8,7 +9,6 @@ import {
   DialogTitle,
 } from "~/components/ui/dialog";
 import { LoadingButton } from "~/components/ui/loading-button";
-import { Badge } from "~/components/reui/badge";
 import type { TemplateChange } from "~/lib/pdf/template-changelog";
 
 export function LeaveDialog({

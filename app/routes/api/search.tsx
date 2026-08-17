@@ -1,4 +1,5 @@
 import { z } from "zod";
+
 import { requireAuth } from "~/lib/auth/session/server.server";
 import {
   invalidInputResponse,
@@ -12,11 +13,12 @@ import {
   filtersForCarSearchStatus,
   listReportPoliciesPage,
 } from "~/lib/services/reports/list.service";
+import { CAR_SEARCH_STATUSES } from "~/lib/services/reports/service";
 import {
   searchClients,
   searchGlobal,
 } from "~/lib/services/search/global-search.service";
-import { CAR_SEARCH_STATUSES } from "~/lib/services/reports/service";
+
 import type { Route } from "./+types/search";
 
 const searchQuerySchema = z.object({

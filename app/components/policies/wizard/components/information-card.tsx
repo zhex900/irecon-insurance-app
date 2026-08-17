@@ -1,9 +1,11 @@
-import { useFormContext } from "react-hook-form";
-import { PolicyInformationCard } from "~/components/policies/policy-form-layout";
-import { getTakenStatusIssues } from "~/lib/policies/taken-status";
-import { POLICY_STATUS, type CarPolicyFormValues } from "~/lib/zod/policy-car";
-import type { Policy, PremiumBreakdown, ReferenceData } from "~/lib/db/types";
 import type { RefObject } from "react";
+import { useFormContext } from "react-hook-form";
+
+import { PolicyInformationCard } from "~/components/policies/policy-form-layout";
+import type { Policy, PremiumBreakdown, ReferenceData } from "~/lib/db/types";
+import { getTakenStatusIssues } from "~/lib/policies/taken-status";
+import { type CarPolicyFormValues,POLICY_STATUS } from "~/lib/zod/policy-car";
+
 import { useMode } from "../hooks/utils/use-mode";
 import { SECTION_IDS } from "../shared/constants";
 

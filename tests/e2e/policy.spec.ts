@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+
 import { demoUsers, loginAs, mockResendEmailApi } from "./helpers/auth";
 import { seedClients, seedPolicies } from "./helpers/seed";
 

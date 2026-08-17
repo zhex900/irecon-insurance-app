@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
+
 import { cn } from "~/lib/utils";
+
 import { useMode } from "../hooks/utils/use-mode";
 
 export function WizardContainer({ children }: { children: ReactNode }) {

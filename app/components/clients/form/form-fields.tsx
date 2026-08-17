@@ -1,15 +1,16 @@
-import { Link } from "react-router";
 import { useFormContext } from "react-hook-form";
+import { Link } from "react-router";
+
 import { ArAutocomplete as AuthorisedRepresentativeAutocomplete } from "~/components/clients/representatives";
 import { FormAutocomplete } from "~/components/forms/autocomplete";
+import {
+  type PolicySaveStatus,
+  PolicySaveStatusBadge,
+} from "~/components/forms/field-save-highlight";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { FieldInput } from "~/components/ui/form-controls";
 import { LoadingButton } from "~/components/ui/loading-button";
-import {
-  PolicySaveStatusBadge,
-  type PolicySaveStatus,
-} from "~/components/forms/field-save-highlight";
 import type { ReferenceData } from "~/lib/db/types";
 import type { ClientFormValues } from "~/lib/zod/client";
 

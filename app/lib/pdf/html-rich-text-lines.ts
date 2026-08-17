@@ -4,6 +4,10 @@
  */
 import type { PdfmeFontFamily } from "~/lib/pdf/font-config";
 import {
+  endorsementReserveHeightForLinesMm,
+  heuristicTextWidthPt,
+} from "~/lib/pdf/html-rich-text-geometry";
+import {
   defaultListStyleForTag,
   formatWordingListMarker,
   isWordingListStyle,
@@ -13,6 +17,13 @@ import {
   sanitizeWordingHtml,
   type WordingListStyle,
 } from "~/lib/policies/wording/html";
+
+import {
+  cloneStyle,
+  decodeEntities,
+  parseStyleDecls,
+  readAttr,
+} from "./html-utils";
 
 const MM_TO_PT = 72 / 25.4;
 
@@ -36,18 +47,6 @@ export type DrawLine = {
   /** Same <ol>/<ul> instance — used to size/align the shared marker column. */
   listGroupId?: number;
 };
-
-import {
-  decodeEntities,
-  readAttr,
-  parseStyleDecls,
-  cloneStyle,
-} from "./html-utils";
-
-import {
-  heuristicTextWidthPt,
-  endorsementReserveHeightForLinesMm,
-} from "~/lib/pdf/html-rich-text-geometry";
 
 export type HtmlToDrawLinesOptions = {
   /**
@@ -485,13 +484,13 @@ export function estimateWordingHtmlHeightMm(
 // Re-export geometry functions for backward compatibility
 // Re-export geometry functions for backward compatibility
 export {
-  endorsementPaintTopInsetMm,
-  endorsementLineStepMm,
-  minEndorsementPaintBandMm,
-  endorsementPaintHeightForLinesMm,
-  endorsementReserveHeightForLinesMm,
-  endorsementDrawBoxBottomMm,
   countLinesFittingInBandMm,
-  splitLineCountsIntoPages,
+  endorsementDrawBoxBottomMm,
+  endorsementLineStepMm,
+  endorsementPaintHeightForLinesMm,
+  endorsementPaintTopInsetMm,
+  endorsementReserveHeightForLinesMm,
+  minEndorsementPaintBandMm,
   splitHeightIntoPageChunks,
+  splitLineCountsIntoPages,
 } from "~/lib/pdf/html-rich-text-geometry";

@@ -5,8 +5,8 @@
 
 import type {
   DrawLine,
-  TextRun,
   RichTextRunStyle,
+  TextRun,
 } from "./html-rich-text-parser";
 
 const MM_TO_PT = 72 / 25.4;

@@ -1,10 +1,12 @@
 import { useFormContext } from "react-hook-form";
-import { FormFields } from "./form-fields";
-import { LeaveDialog } from "./leave-dialog";
-import { useFormDraft } from "./hooks/use-draft";
+
 import { useJustSaved } from "~/components/forms/field-save-highlight";
 import type { Client, ReferenceData } from "~/lib/db/types";
 import type { ClientFormValues } from "~/lib/zod/client";
+
+import { FormFields } from "./form-fields";
+import { useFormDraft } from "./hooks/use-draft";
+import { LeaveDialog } from "./leave-dialog";
 
 export function FormInner({
   client,

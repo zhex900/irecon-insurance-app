@@ -1,7 +1,7 @@
 // Barrel exports for wizard sections
-export { RiskDetails } from "./risk-details";
 export { ClaimsWording } from "./claims-wording";
-export { PremiumDeclaration } from "./premium-declaration";
 export { Excesses } from "./excesses";
 export { Limits } from "./limits";
+export { PremiumDeclaration } from "./premium-declaration";
 export { PremiumSummary } from "./premium-summary";
+export { RiskDetails } from "./risk-details";

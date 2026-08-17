@@ -1,17 +1,17 @@
-import { WizardGrid as Grid } from "./wizard-grid";
-import { MainContent } from "./main-content";
-import { PremiumAside } from "./premium-aside";
-import { WizardHeader } from "./wizard-header";
+import { WizardContainer } from "../components/wizard-container";
+import { useMode } from "../hooks/utils/use-mode";
+import { DesktopPremium } from "./desktop-premium";
 import { WizardDesktopRail } from "./desktop-rail";
+import { Dialogs } from "./dialogs";
+import { FormFooter } from "./form-footer";
 import { InfoCard } from "./info-card";
 import { MobilePremium } from "./mobile-premium";
-import { MobileNotes } from "./mobile-notes";
+import { PremiumAside } from "./premium-aside";
 import { SectionStack } from "./section-stack";
-import { FormFooter } from "./form-footer";
-import { DesktopPremium } from "./desktop-premium";
-import { Dialogs } from "./dialogs";
-import { DecomposedContainer as WizardContainer } from "../components/decomposed-container";
-import { useMode } from "../hooks/utils/use-mode";
+import { WizardGrid } from "./wizard-grid";
+import { WizardHeader } from "./wizard-header";
+import { WizardMainContent } from "./wizard-main-content";
+import { WizardMobileNotes } from "./wizard-mobile-notes";
 
 export function WizardDefault() {
   const { wizardMode } = useMode();
@@ -19,21 +19,21 @@ export function WizardDefault() {
     <WizardContainer wizardMode={wizardMode}>
       <WizardHeader />
 
-      <Grid>
+      <WizardGrid>
         <WizardDesktopRail />
 
-        <MainContent>
+        <WizardMainContent>
           <InfoCard />
           <MobilePremium />
-          <MobileNotes />
+          <WizardMobileNotes />
           <SectionStack />
           <FormFooter />
-        </MainContent>
+        </WizardMainContent>
 
         <PremiumAside>
           <DesktopPremium />
         </PremiumAside>
-      </Grid>
+      </WizardGrid>
 
       <Dialogs />
     </WizardContainer>

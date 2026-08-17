@@ -36,6 +36,7 @@ const CLIENT_ONLY_PREFIXES = [
   "prosemirror-schema-list",
   "prosemirror-history",
   "prosemirror-tables",
+  "next-themes",
 ] as const;
 
 const CLIENT_ONLY_MODULE_SUFFIXES = [
@@ -64,6 +65,8 @@ const STUB_SOURCE = `
 export default {};
 export const Designer = class { constructor() {} destroy() {} getTemplate() { return null; } };
 export const generate = async () => new Uint8Array();
+export const ThemeProvider = ({ children }) => children;
+export const useTheme = () => ({ theme: "light", setTheme: () => {} });
 export const text = {};
 export const multiVariableText = {};
 export const table = {};

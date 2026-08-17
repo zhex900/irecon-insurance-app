@@ -1,8 +1,10 @@
+import { SearchIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useNavigation, useSubmit } from "react-router";
-import { SearchIcon } from "lucide-react";
+
+import { ClientSearchResultDetails } from "~/components/search/client-result";
+import { SearchResultsStatus } from "~/components/search/search-results-status";
 import { Button } from "~/components/ui/button";
-import { Spinner } from "~/components/ui/spinner";
 import {
   Dialog,
   DialogContent,
@@ -12,17 +14,16 @@ import {
   DialogTrigger,
 } from "~/components/ui/dialog";
 import { Input } from "~/components/ui/input";
-import {
-  clientHasVisibleMatch,
-  type ClientSearchResult,
-} from "~/lib/search/client-match";
-import { ClientSearchResultDetails } from "~/components/search/client-result";
-import { SearchResultsStatus } from "~/components/search/search-results-status";
+import { Spinner } from "~/components/ui/spinner";
 import { useApiSearch } from "~/hooks/search";
 import {
   CLIENT_PICKER_SEARCH_PARAMS,
   type ClientsSearchApiResponse,
 } from "~/lib/search/api-search";
+import {
+  clientHasVisibleMatch,
+  type ClientSearchResult,
+} from "~/lib/search/client-match";
 import { cn } from "~/lib/utils";
 
 type ClientHit = ClientSearchResult;

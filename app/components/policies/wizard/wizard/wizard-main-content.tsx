@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-export function MainContent({ children }: { children: ReactNode }) {
+export function WizardMainContent({ children }: { children: ReactNode }) {
   return (
     <div
       data-policy-form-scroll

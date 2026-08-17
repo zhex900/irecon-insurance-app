@@ -1,8 +1,8 @@
 /**
  * Data for the app shell hierarchical side nav.
  */
-import type { AppUser } from "~/lib/db/types";
 import { isAdminRole, isSuperAdmin } from "~/lib/auth/roles";
+import type { AppUser } from "~/lib/db/types";
 import { isFeatureEnabled } from "~/lib/services/feature-flags";
 import { listRecentRoutes } from "~/lib/services/navigation/recent-routes.server";
 

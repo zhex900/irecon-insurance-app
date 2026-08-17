@@ -1,8 +1,8 @@
+import { monitorCriticalOperation } from "~/lib/performance/internal-monitoring.server";
+import { getReferenceData } from "~/lib/services/reference.service";
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
 import { calculateCarPremium } from "~/server/pricing/car-calculator";
 import { resolveBrokerFeeTotal } from "~/server/pricing/rate-resolver";
-import { getReferenceData } from "~/lib/services/reference.service";
-import { monitorCriticalOperation } from "~/lib/performance/internal-monitoring.server";
 
 export async function calculatePremiumForPolicy(input: CarPolicyFormValues) {
   return monitorCriticalOperation("premiumCalculation", async () => {
@@ -20,8 +20,8 @@ export async function calculatePremiumForPolicy(input: CarPolicyFormValues) {
 /** Re-exports for server callers that historically imported notes from here. */
 export {
   buildReferralNotes,
-  mergeReferralNotes,
-  createMessageNote,
   createInformationalNote,
+  createMessageNote,
+  mergeReferralNotes,
   sortPolicyNotesDescending,
 } from "~/lib/policies/policy-notes";

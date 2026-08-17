@@ -1,10 +1,10 @@
+import type { FileWithPreview } from "~/hooks/utilities";
 import {
   applyEmailTemplate,
   buildOutboundTemplateHtml,
   type EmailSendRecipient,
   type EmailTemplateVars,
 } from "~/lib/email/templates";
-import type { FileWithPreview } from "~/hooks/utilities";
 
 export const EMAIL_DOCUMENTS_RECIPIENT_LABELS: Record<
   EmailSendRecipient,

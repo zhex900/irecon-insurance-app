@@ -12,11 +12,12 @@ import {
   UsersIcon,
 } from "lucide-react";
 import { Link, useNavigation } from "react-router";
-import { PageHeader } from "~/components/layout/app-layout";
+
 import {
   EditorShell,
   ListShell,
 } from "~/components/documents/templates/loading";
+import { PageHeader } from "~/components/layout/app-layout";
 import { ThemeModePicker } from "~/components/theme-toggle";
 import {
   Card,
@@ -25,13 +26,14 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
-import { requireAuth } from "~/lib/auth/session/server.server";
-import { isAdminRole, isSuperAdmin } from "~/lib/auth/roles";
 import { throwUnauthorizedPage } from "~/lib/auth/authorize.server";
+import { isAdminRole, isSuperAdmin } from "~/lib/auth/roles";
+import { requireAuth } from "~/lib/auth/session/server.server";
+import { pageTitle } from "~/lib/brand";
 import { isFeatureEnabled } from "~/lib/services/feature-flags";
 import { viewerCanAccessSettings } from "~/lib/services/navigation/side-nav.service";
+
 import type { Route } from "./+types/_index";
-import { pageTitle } from "~/lib/brand";
 
 export function meta() {
   return [{ title: pageTitle("Settings") }];

@@ -1,10 +1,12 @@
 import { eq } from "drizzle-orm";
+
 import { getDb } from "~/lib/db/client";
-import { NotFoundError } from "~/lib/errors";
 import {
   brokerFeeSchedule,
   brokerFeeScheduleLine,
 } from "~/lib/db/price-schema";
+import { NotFoundError } from "~/lib/errors";
+
 import { POLICY_TYPE_CAR, requireDate, strNum } from "./helpers";
 import type { FeeScheduleInput } from "./types";
 

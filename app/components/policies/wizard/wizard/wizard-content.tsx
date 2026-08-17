@@ -1,6 +1,6 @@
 import type { WizardProps } from "../shared/wizard-shared";
 import { WizardInnerProvider } from "./provider";
-import { WizardDefault as Default } from "./wizard-default";
+import { WizardDefault } from "./wizard-default";
 
 export function WizardContent({
   policy,
@@ -31,7 +31,7 @@ export function WizardContent({
       footerImageWidth={footerImageWidth}
       headerActions={headerActions}
     >
-      <Default />
+      <WizardDefault />
     </WizardInnerProvider>
   );
 }

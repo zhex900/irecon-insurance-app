@@ -1,8 +1,8 @@
 import { Form, Link, useNavigation, useSearchParams } from "react-router";
+
 import { AuthHashSessionBridge } from "~/components/auth/auth-hash-session-bridge";
 import { AuthShell } from "~/components/auth/auth-shell";
 import { buttonVariants } from "~/components/ui/button";
-import { LoadingButton } from "~/components/ui/loading-button";
 import {
   Field,
   FieldError,
@@ -10,15 +10,17 @@ import {
   FieldLabel,
 } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
-import { cn } from "~/lib/utils";
+import { LoadingButton } from "~/components/ui/loading-button";
+import { pageTitle } from "~/lib/brand";
 import { logger } from "~/lib/observability/logger.server";
 import {
   appendClearAuthSessionCookies,
   getAuthUserWithSession,
   updatePassword,
 } from "~/lib/supabase/auth.server";
+import { cn } from "~/lib/utils";
+
 import type { Route } from "./+types/reset-password";
-import { pageTitle } from "~/lib/brand";
 
 export function meta() {
   return [{ title: pageTitle("Reset password") }];

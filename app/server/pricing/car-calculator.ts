@@ -1,15 +1,15 @@
-import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
 import {
   GST_RATE,
   PLANT_CERTIFICATE_TURNOVER_LIMIT,
   TERROR_START_DATE,
   VERSION_21_START_DATE,
 } from "~/constants";
+import { rollupPremiumTotals } from "~/lib/pricing/premium-totals";
 import {
   buildReferralReasons,
   liabilityLimitLabel,
 } from "~/lib/pricing/referral-reasons";
-import { rollupPremiumTotals } from "~/lib/pricing/premium-totals";
+import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
 import {
   resolveEsl,
   resolvePlantRate,
@@ -19,8 +19,8 @@ import {
 } from "~/server/pricing/rate-resolver";
 import type {
   CarCalculatorResult,
-  RatingSnapshot,
   LiabilityLimitBand,
+  RatingSnapshot,
   ResolvedPlant,
   ResolvedPrice,
 } from "~/server/pricing/types";

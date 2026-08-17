@@ -1,14 +1,15 @@
 import { useMemo, useRef, useState } from "react";
-import { Input } from "~/components/ui/input";
+
+import { HighlightText } from "~/components/search/highlight";
 import {
   FloatingListbox,
   useFloatingListPosition,
 } from "~/components/ui/floating-listbox";
+import { Input } from "~/components/ui/input";
 import {
   EMAIL_DIRECTORY_KIND_LABEL,
   type EmailDirectoryEntry,
 } from "~/lib/email/directory";
-import { HighlightText } from "~/components/search/highlight";
 import { cn } from "~/lib/utils";
 
 /** Head (completed addresses + separator) and the fragment currently being typed. */

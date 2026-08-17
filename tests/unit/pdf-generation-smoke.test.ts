@@ -1,4 +1,7 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeEach,describe, expect, it, vi } from "vitest";
+
+// Import after mocking
+import { generatePolicyPdf } from "~/lib/pdf/generate";
 
 /**
  * Minimal PDF generation smoke tests.
@@ -27,9 +30,6 @@ vi.mock("~/lib/pdf/generate", () => ({
       }),
   ),
 }));
-
-// Import after mocking
-import { generatePolicyPdf } from "~/lib/pdf/generate";
 
 describe("PDF Generation Smoke Tests", () => {
   beforeEach(() => {

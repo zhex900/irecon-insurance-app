@@ -1,29 +1,29 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { useFetcher, useNavigate } from "react-router";
+import { type ReactNode,useEffect, useMemo, useRef, useState } from "react";
 import { useFormContext } from "react-hook-form";
+import { useFetcher, useNavigate } from "react-router";
 
-import { getPolicyFormNavItems } from "~/components/policies/policy-form-layout";
-import { POLICY_STATUS, type CarPolicyFormValues } from "~/lib/zod/policy-car";
 import { useJustSaved } from "~/components/forms/field-save-highlight";
+import { getPolicyFormNavItems } from "~/components/policies/policy-form-layout";
+import { type CarPolicyFormValues,POLICY_STATUS } from "~/lib/zod/policy-car";
 
 import {
-  usePolicyNotes,
-  usePolicyDocuments,
-  usePolicyPremiumCalc,
-  usePolicyWizardNavigation,
-  usePolicyDraftSave,
-  usePolicySubmit,
-  usePolicyLeaveGuard,
-  type PolicyWizardActionData,
   type PolicyLeaveApi,
+  type PolicyWizardActionData,
+  usePolicyDocuments,
+  usePolicyDraftSave,
+  usePolicyLeaveGuard,
+  usePolicyNotes,
+  usePolicyPremiumCalc,
+  usePolicySubmit,
+  usePolicyWizardNavigation,
 } from "../hooks";
-import { useCarPolicyWizardSubmitGate } from "../hooks/utils/use-submit-gate";
 import { usePolicyDraftKeyboardSave } from "../hooks/draft/use-draft-keyboard";
+import { useMode } from "../hooks/utils/use-mode";
+import { useCarPolicyWizardSubmitGate } from "../hooks/utils/use-submit-gate";
 import {
   wizardModeCardBorderClass,
   type WizardProps,
 } from "../shared/wizard-shared";
-import { useMode } from "../hooks/utils/use-mode";
 
 /**
  * CarPolicyWizard state hook that contains all the logic from the original component

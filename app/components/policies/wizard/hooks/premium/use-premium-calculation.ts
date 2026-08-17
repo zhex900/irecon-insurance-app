@@ -1,7 +1,9 @@
 import { useEffect, useRef } from "react";
 import type { useFetcher } from "react-router";
+
 import type { Policy, PremiumBreakdown } from "~/lib/db/types";
 import type { NoteAuthor } from "~/lib/services/users/service";
+
 import { withRolledTotals } from "./use-premium-utils";
 
 export type PolicyWizardActionData = {

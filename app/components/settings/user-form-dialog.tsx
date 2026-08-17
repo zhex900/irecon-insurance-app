@@ -1,11 +1,10 @@
-import { useEffect, useRef, useState } from "react";
-import { useActionData, useNavigation, useSubmit } from "react-router";
-import { useHandledActionData } from "~/hooks/utilities";
-import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CameraIcon } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { FormProvider, useForm, useWatch } from "react-hook-form";
+import { useActionData, useNavigation, useSubmit } from "react-router";
+
 import { Button } from "~/components/ui/button";
-import { LoadingButton } from "~/components/ui/loading-button";
 import { Checkbox } from "~/components/ui/checkbox";
 import {
   Dialog,
@@ -17,18 +16,20 @@ import {
 import { Field, FieldError, FieldLabel } from "~/components/ui/field";
 import { Select } from "~/components/ui/form-controls";
 import { Input } from "~/components/ui/input";
-import { UserAvatar } from "~/components/ui/user-avatar";
+import { LoadingButton } from "~/components/ui/loading-button";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "~/components/ui/tooltip";
+import { UserAvatar } from "~/components/ui/user-avatar";
+import { useHandledActionData } from "~/hooks/utilities";
 import type { AppUser } from "~/lib/db/types";
 import { flattenFieldErrors, focusFormIssue } from "~/lib/form-validation-ui";
 import {
   appUserCreateSchema,
-  appUserSchema,
   type AppUserFormValues,
+  appUserSchema,
 } from "~/lib/zod/app-user";
 
 type UserFormActionData =

@@ -1,7 +1,7 @@
 // Documents Worker Contract
 // Defines the API contract between Portal and Documents Worker
 
-import type { Template, Font } from "@pdfme/common";
+import type { Font,Template } from "@pdfme/common";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export interface DocumentDesignerProps {

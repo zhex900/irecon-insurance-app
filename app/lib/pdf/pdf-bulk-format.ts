@@ -1,9 +1,10 @@
 import type { Template } from "@pdfme/common";
+
 import {
   parsePdfmeFontName,
   pdfmeFontVariantsForFamily,
-  resolvePdfmeFontName,
   type PdfmeFontWeight,
+  resolvePdfmeFontName,
 } from "~/lib/pdf/font-config";
 
 export type BulkSchemaRef = {

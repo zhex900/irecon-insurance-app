@@ -5,9 +5,9 @@
  * that help identify potential issues without complex infrastructure.
  */
 
-import { writeAuditLog } from "~/lib/services/audit/service";
 import type { AppUser } from "~/lib/db/types";
 import { logger } from "~/lib/observability/logger.server";
+import { writeAuditLog } from "~/lib/services/audit/service";
 
 export type SecurityEventType =
   | "LOGIN_SUCCESS"

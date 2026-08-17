@@ -1,5 +1,5 @@
-import type { AppUser } from "~/lib/db/types";
 import { isAdminRole, isSuperAdmin } from "~/lib/auth/roles";
+import type { AppUser } from "~/lib/db/types";
 
 /** User-facing copy when an authenticated user hits a page they cannot open. */
 export const UNAUTHORIZED_PAGE_MESSAGE =

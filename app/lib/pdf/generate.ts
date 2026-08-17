@@ -1,28 +1,28 @@
-import type { CarWording, Policy, PolicyDocument } from "~/lib/db/types";
 import type { Font } from "@pdfme/common";
+
+import type { CarWording, Policy, PolicyDocument } from "~/lib/db/types";
 import { isStaticSchemaName } from "~/lib/documents/template-editor-form";
-import { expandEndorsementPairSchemas } from "~/lib/pdf/endorsement-expand";
+import { expandEndorsementPairSchemas , parseEndorsementPairsFromInputs } from "~/lib/pdf/endorsement-expand";
 import { applyFlowPushDown } from "~/lib/pdf/flow-push-down";
-import { applyEndorsementRichDrawOps } from "~/lib/pdf/html-rich-text-draw";
 import type { EndorsementRichDrawOp } from "~/lib/pdf/html-rich-text-draw";
+import { applyEndorsementRichDrawOps } from "~/lib/pdf/html-rich-text-draw";
 import { buildLegacyTextPdfBlob } from "~/lib/pdf/legacy-text-pdf";
 import {
+  type BrokerFeeLineInput,
   ENDORSEMENTS_TABLE_FIELD,
   normalizePdfmeTemplateSchemas,
   policyToMergeInputs,
   resolveMultiVariableTextInput,
   syncTableSchemasToInputs,
-  type BrokerFeeLineInput,
 } from "~/lib/pdf/merge-fields";
-import { parseEndorsementPairsFromInputs } from "~/lib/pdf/endorsement-expand";
 import { pdfmePlugins } from "~/lib/pdf/pdf-plugins";
-import type { DocumentTemplate } from "~/lib/pdf/templates";
 import {
+  type CachedPublishedTemplate,
   getCachedPublishedTemplate,
   invalidatePdfTemplateOverrideCache,
   setCachedPublishedTemplate,
-  type CachedPublishedTemplate,
 } from "~/lib/pdf/template-override-cache";
+import type { DocumentTemplate } from "~/lib/pdf/templates";
 import {
   looksLikeHtml,
   plainTextFromWordingHtml,

@@ -33,7 +33,7 @@ const CollapsibleContent = CollapsiblePanel;
 
 export {
   Collapsible,
-  CollapsibleTrigger,
-  CollapsiblePanel,
   CollapsibleContent,
+  CollapsiblePanel,
+  CollapsibleTrigger,
 };

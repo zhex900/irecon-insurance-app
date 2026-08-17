@@ -1,10 +1,11 @@
 import { asc, ilike, or, sql } from "drizzle-orm";
+
 import { getDb } from "~/lib/db/client";
 import { authorisedRepresentative } from "~/lib/db/schema";
 import type { WholesaleBroker } from "~/lib/db/types";
 import { type PageResult, toPageResult } from "~/lib/pagination";
-import { likePattern, resolvePage } from "~/lib/services/shared/list-query";
 import { normalizeAuthorisedRepresentative } from "~/lib/services/authorised-representatives/normalize";
+import { likePattern, resolvePage } from "~/lib/services/shared/list-query";
 
 export async function listAuthorisedRepresentativesPage(input: {
   search?: string;

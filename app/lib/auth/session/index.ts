@@ -7,10 +7,10 @@
 
 // Export timeout functionality (shared between client and server)
 export type {
-  SessionTimeoutConfig,
   SessionTimeoutClientState,
-  SessionTiming,
+  SessionTimeoutConfig,
   SessionTimeoutVerdict,
+  SessionTiming,
 } from "./timeout";
 export { evaluateSessionTimeout } from "./timeout";
 

@@ -1,12 +1,9 @@
-import {
-  formatCurrencyCell,
-  styleWorkbookHeaderRow as styleHeaderRow,
-} from "./excel-workbook";
 import { liabilityBandLabel, stateCode } from "./excel-labels";
 import type {
   PremiumExcelPolicyRefs,
   PremiumExcelSheetContext,
 } from "./excel-types";
+import { formatCurrencyCell, styleWorkbookHeaderRow } from "./excel-workbook";
 
 export function addPremiumExcelPolicySheet(
   workbook: import("exceljs").Workbook,
@@ -115,7 +112,7 @@ export function addPremiumExcelPolicySheet(
   inputs.getCell("A2").value = "Field";
   inputs.getCell("B2").value = "Value";
   inputs.getCell("C2").value = "Notes";
-  styleHeaderRow(inputs.getRow(2), 3);
+  styleWorkbookHeaderRow(inputs.getRow(2), 3);
 
   inputRows.forEach(([label, value, kind], index) => {
     const row = 3 + index;

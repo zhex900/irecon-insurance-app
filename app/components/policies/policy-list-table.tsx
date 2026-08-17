@@ -1,5 +1,6 @@
-import { useNavigate } from "react-router";
 import { FileTextIcon, Trash2Icon } from "lucide-react";
+import { useNavigate } from "react-router";
+
 import {
   ColumnClientFilterHeader,
   type ColumnClientFilterOption,
@@ -7,8 +8,8 @@ import {
 import { ColumnDateFilterHeader } from "~/components/forms/column-date-filter-header";
 import { ColumnFilterHeader } from "~/components/forms/column-filter-header";
 import {
-  DeletePoliciesDialog,
   type DeletablePolicyRef,
+  DeletePoliciesDialog,
 } from "~/components/policies/delete-policies-dialog";
 import { PolicyListTableRow } from "~/components/policies/policy-list-table-row";
 import { Button } from "~/components/ui/button";
@@ -33,18 +34,18 @@ import type { PolicyListSelection } from "~/hooks/policy-list/use-selection";
 import type { ReferenceData } from "~/lib/db/types";
 import { pageSearchHref, pageSizeSearchHref } from "~/lib/pagination";
 import {
+  type DateRangeValue,
   EXPIRY_PRESETS,
+  type ExpiryPresetId,
   INCEPTION_PRESETS,
+  type InceptionPresetId,
   rangeForExpiryPreset,
   rangeForInceptionPreset,
-  type DateRangeValue,
-  type ExpiryPresetId,
-  type InceptionPresetId,
 } from "~/lib/search/date-range-filter";
 import {
+  type PolicyListUrlFilters,
   withDateRangeParam,
   withIdListParam,
-  type PolicyListUrlFilters,
 } from "~/lib/search/policy-list-filters";
 import type { PolicyListItem } from "~/lib/services/policies/list.service";
 

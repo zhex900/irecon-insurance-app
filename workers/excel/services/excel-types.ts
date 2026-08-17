@@ -4,10 +4,10 @@
  */
 
 import type {
+  AdjustmentBreakdown,
   Policy,
   PremiumBreakdown,
   RatingSnapshot,
-  AdjustmentBreakdown,
 } from "../../../app/lib/excel/types";
 
 /** Bump when Premium / Policy / Rates / Adjustment sheet layout or formulas change. */

@@ -1,17 +1,18 @@
+import { POLICY_STICKY_RAIL_CLASS } from "~/components/policies/policy-form-layout";
 import { cn } from "~/lib/utils";
+
+import { DesktopRail } from "../components/desktop-rail";
+import { DialogsContainer } from "../components/dialogs-container";
+import { Footer } from "../components/footer";
 import { Header } from "../components/header";
 import { InformationCard } from "../components/information-card";
-import { PremiumPanel } from "../components/premium-panel";
-import { DesktopRail } from "../components/desktop-rail";
 import { MobileNotes } from "../components/mobile-notes";
+import { PremiumPanel } from "../components/premium-panel";
 import { SectionStack } from "../components/section-stack";
-import { Footer } from "../components/footer";
-import { DialogsContainer } from "../components/dialogs-container";
-import { POLICY_STICKY_RAIL_CLASS } from "~/components/policies/policy-form-layout";
-import { SECTION_IDS } from "../shared/constants";
 import { useWizardState } from "../components/use-wizard-state";
+import { SECTION_IDS } from "../shared/constants";
 
-export function NewWizard({
+export function NewPolicyWizard({
   policy,
   reference,
   carWording,

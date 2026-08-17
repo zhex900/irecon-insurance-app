@@ -1,7 +1,8 @@
-import { wizardStepFields, wizardSteps } from "~/lib/zod/policy-car";
-import type { PremiumBreakdown } from "~/lib/db/types";
-import { PRICING_CONFIRMATION_STEP } from "../../wizard-step-memory";
 import { sectionIdForStep } from "~/components/policies/policy-form-layout";
+import type { PremiumBreakdown } from "~/lib/db/types";
+import { wizardStepFields, wizardSteps } from "~/lib/zod/policy-car";
+
+import { PRICING_CONFIRMATION_STEP } from "../../wizard-step-memory";
 
 /**
  * Find which wizard step a field path belongs to

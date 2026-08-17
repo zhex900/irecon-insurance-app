@@ -1,9 +1,10 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeEach,describe, expect, it, vi } from "vitest";
+
 import {
-  logSecurityEvent,
-  logAuthEvent,
-  logSuspiciousActivity,
   logAdminAction,
+  logAuthEvent,
+  logSecurityEvent,
+  logSuspiciousActivity,
 } from "~/lib/security/basic-logging.server";
 
 // Mock the dependencies

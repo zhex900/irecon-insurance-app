@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import type { PolicyDocument } from "~/lib/db/types";
 import { versionPolicyDocuments } from "~/lib/services/policy/documents/versions";
 

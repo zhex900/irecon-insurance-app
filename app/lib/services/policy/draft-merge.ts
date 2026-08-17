@@ -1,13 +1,13 @@
-import { isTerminalStatus, POLICY_STATUS } from "~/lib/zod/policy-car";
-import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
-import type { Policy } from "~/lib/db/types";
-import { resolvePolicyNumberForSave } from "~/lib/policies/policy-number";
-import { carPolicyDraftSchema } from "~/lib/zod/policy-car";
 import type { z } from "zod";
+
+import type { Policy } from "~/lib/db/types";
 import {
   flatCustomWordings,
   normalizeCustomWordings,
 } from "~/lib/policies/custom-wordings";
+import { resolvePolicyNumberForSave } from "~/lib/policies/policy-number";
+import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
+import { carPolicyDraftSchema,isTerminalStatus, POLICY_STATUS  } from "~/lib/zod/policy-car";
 
 type DraftValues = z.infer<typeof carPolicyDraftSchema>;
 

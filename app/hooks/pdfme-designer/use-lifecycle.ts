@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from "react";
 import type { Template } from "@pdfme/common";
 import type { DesignerSelectedSchema } from "@pdfme/ui";
+import { useCallback, useEffect, useRef, useState } from "react";
+
 import {
   type DesignerInstance,
   growTableHeightsFromContent,

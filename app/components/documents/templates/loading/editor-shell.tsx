@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+
 import { PageHeader } from "~/components/layout/app-layout";
 import { formatDocumentTemplateTitle } from "~/lib/documents/template-title";
 import { cn } from "~/lib/utils";

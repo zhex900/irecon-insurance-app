@@ -1,3 +1,11 @@
+import {
+  type CarScheduleView,
+  type EslScheduleView,
+  NumInput,
+  type PlantScheduleView,
+  RatePercentInput,
+  type StampScheduleView,
+} from "~/components/prices/shared";
 import { Field, FieldLabel } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import {
@@ -9,14 +17,7 @@ import {
   TableRow,
 } from "~/components/ui/table";
 import { formatCurrency, formatRate } from "~/lib/utils";
-import {
-  NumInput,
-  RatePercentInput,
-  type CarScheduleView,
-  type EslScheduleView,
-  type PlantScheduleView,
-  type StampScheduleView,
-} from "~/components/prices/shared";
+
 export function CarBody({
   schedule,
   editing,

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { isRouteErrorResponse, Link } from "react-router";
+
 import { ErrorIllustration } from "~/components/error-illustration";
 import { Button, buttonVariants } from "~/components/ui/button";
 import { getResourceNotFoundCopy } from "~/lib/http/resource-not-found";

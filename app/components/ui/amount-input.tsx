@@ -1,14 +1,15 @@
+import { CheckIcon } from "lucide-react";
 import { useState } from "react";
 import { Controller, useFormContext } from "react-hook-form";
-import { CheckIcon } from "lucide-react";
-import { formatAmountInput, sanitizeAmountInput } from "~/lib/amount-input";
+
+import { useFieldSaveState } from "~/components/forms/field-save-highlight";
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
   InputGroupText,
 } from "~/components/ui/input-group";
-import { useFieldSaveState } from "~/components/forms/field-save-highlight";
+import { formatAmountInput, sanitizeAmountInput } from "~/lib/amount-input";
 import { cn } from "~/lib/utils";
 
 type AmountInputProps = Omit<

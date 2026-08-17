@@ -1,4 +1,5 @@
 import { image, line, rectangle, table } from "@pdfme/schemas";
+
 import {
   multiVariableTextWithTypeface,
   textWithTypeface,

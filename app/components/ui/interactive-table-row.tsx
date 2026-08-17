@@ -86,4 +86,4 @@ function InteractiveTableActionsCell({
   );
 }
 
-export { InteractiveTableRow, InteractiveTableActionsCell };
+export { InteractiveTableActionsCell,InteractiveTableRow };

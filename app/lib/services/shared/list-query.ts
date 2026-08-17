@@ -1,4 +1,4 @@
-import { type PaginationParams, clampPageSize } from "~/lib/pagination";
+import { clampPageSize,type PaginationParams } from "~/lib/pagination";
 
 export function likePattern(q: string) {
   return `%${q.replace(/[%_\\]/g, "\\$&")}%`;

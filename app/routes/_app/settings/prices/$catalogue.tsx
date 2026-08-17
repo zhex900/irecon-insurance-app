@@ -1,6 +1,7 @@
+import { PlusIcon, Trash2Icon } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link, Outlet, redirect, useNavigate } from "react-router";
-import { PlusIcon, Trash2Icon } from "lucide-react";
+
 import { PageHeader } from "~/components/layout/app-layout";
 import { Badge } from "~/components/reui/badge";
 import {
@@ -22,21 +23,22 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table";
-import { requireAuth } from "~/lib/auth/session/server.server";
-import { publicErrorMessage } from "~/lib/http/public-error.server";
 import { isSuperAdmin } from "~/lib/auth/roles";
+import { requireAuth } from "~/lib/auth/session/server.server";
+import { pageTitle } from "~/lib/brand";
+import { publicErrorMessage } from "~/lib/http/public-error.server";
 import {
   emptyCatalogue,
   isPriceCatalogueSlug,
   kindToSlug,
+  PRICE_CATALOGUE_SLUGS,
+  type PriceCatalogueSlug,
   pricesDeleteHref,
   pricesItemHref,
   pricesListHref,
   pricesNewHref,
   slugLabel,
   slugToKind,
-  type PriceCatalogueSlug,
-  PRICE_CATALOGUE_SLUGS,
 } from "~/lib/pricing/settings-shared";
 import {
   getPriceCatalogueSnapshot,
@@ -49,8 +51,8 @@ import {
   formatNumber,
   formatRate,
 } from "~/lib/utils";
+
 import type { Route } from "./+types/$catalogue";
-import { pageTitle } from "~/lib/brand";
 
 export function meta({ params }: Route.MetaArgs) {
   const slug = params.catalogue ?? "car-rates";

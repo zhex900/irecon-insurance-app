@@ -1,3 +1,5 @@
+import { PremiumSummaryDocuments } from "~/components/policies/wizard/premium-summary-documents";
+import { PremiumSummaryTotals } from "~/components/policies/wizard/premium-summary-totals";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import type {
   CarAdjustmentRecord,
@@ -8,8 +10,6 @@ import type {
 } from "~/lib/db/types";
 import type { EmailDirectoryEntry } from "~/lib/email/directory";
 import type { EmailTemplate, EmailTemplateVars } from "~/lib/email/templates";
-import { PremiumSummaryDocuments } from "~/components/policies/wizard/premium-summary-documents";
-import { PremiumSummaryTotals } from "~/components/policies/wizard/premium-summary-totals";
 
 export function PremiumSummary({
   premium,

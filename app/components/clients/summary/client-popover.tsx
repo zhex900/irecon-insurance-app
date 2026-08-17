@@ -1,9 +1,10 @@
-import { Link } from "react-router";
-import type { ReactNode } from "react";
 import { ArrowUpRightIcon } from "lucide-react";
+import type { ReactNode } from "react";
+import { Link } from "react-router";
+
 import { Button } from "~/components/ui/button";
 import {
-  Popover as UIPopover,
+  Popover,
   PopoverContent,
   PopoverDescription,
   PopoverHeader,
@@ -67,7 +68,7 @@ export function ClientPopover({
   const label = children ?? (client.name || "—");
 
   return (
-    <UIPopover>
+    <Popover>
       <PopoverTrigger
         openOnHover
         delay={150}
@@ -117,6 +118,6 @@ export function ClientPopover({
           </Button>
         </div>
       </PopoverContent>
-    </UIPopover>
+    </Popover>
   );
 }

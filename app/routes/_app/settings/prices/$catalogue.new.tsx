@@ -1,8 +1,11 @@
 import { redirect, useActionData } from "react-router";
+
 import { Editor } from "~/components/prices";
+import { withSuccessToast } from "~/hooks/utilities";
 import { requireSuperAdminPage } from "~/lib/auth/authorize.server";
 import { isSuperAdmin } from "~/lib/auth/roles";
 import { requireAuth } from "~/lib/auth/session/server.server";
+import { pageTitle } from "~/lib/brand";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
 import {
   createTemplate,
@@ -12,25 +15,24 @@ import {
   slugLabel,
   slugToKind,
 } from "~/lib/pricing/settings-shared";
-import { withSuccessToast } from "~/hooks/utilities";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import {
+  type CarScheduleInput,
   createCarSchedule,
   createEslSchedule,
   createFeeSchedule,
   createPlantRate,
   createStampSchedule,
   createTerrorSchedule,
-  getPriceCatalogueSnapshot,
-  type CarScheduleInput,
   type EslScheduleInput,
   type FeeScheduleInput,
+  getPriceCatalogueSnapshot,
   type PlantRateInput,
   type StampScheduleInput,
   type TerrorScheduleInput,
 } from "~/lib/services/price/catalogue.server";
+
 import type { Route } from "./+types/$catalogue.new";
-import { pageTitle } from "~/lib/brand";
 
 export function meta({ params }: Route.MetaArgs) {
   const slug = params.catalogue ?? "car-rates";

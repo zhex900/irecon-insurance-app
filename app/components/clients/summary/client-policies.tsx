@@ -1,4 +1,5 @@
 import { FileTextIcon } from "lucide-react";
+
 import { ListSearchField } from "~/components/forms/list-search-field";
 import { PolicyListTable } from "~/components/policies/policy-list-table";
 import {
@@ -8,8 +9,8 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "~/components/ui/empty";
-import { useActionSuccessToast } from "~/hooks/utilities";
 import { usePolicyListPage } from "~/hooks/policy-list/use-page";
+import { useActionSuccessToast } from "~/hooks/utilities";
 import type { ReferenceData } from "~/lib/db/types";
 import type { PolicyListUrlFilters } from "~/lib/search/policy-list-filters";
 import type { PolicyListItem } from "~/lib/services/policies/list.service";

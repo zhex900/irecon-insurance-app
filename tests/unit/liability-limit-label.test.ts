@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { policyToMergeInputs } from "~/lib/pdf/merge-fields";
+
 import type { Policy } from "~/lib/db/types";
+import { policyToMergeInputs } from "~/lib/pdf/merge-fields";
 
 function basePolicy(opts: {
   liabilityLimitBand?: number | string;

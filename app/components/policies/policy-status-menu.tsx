@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from "react";
 import { CheckIcon, ChevronsUpDownIcon } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+
 import { Button } from "~/components/ui/button";
-import { LoadingButton } from "~/components/ui/loading-button";
 import {
   Dialog,
   DialogContent,
@@ -18,6 +18,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
+import { LoadingButton } from "~/components/ui/loading-button";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { cn } from "~/lib/utils";
 import { isTerminalStatus, POLICY_STATUS } from "~/lib/zod/policy-car";

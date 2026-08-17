@@ -1,26 +1,27 @@
-import { useCallback, useRef } from "react";
 import type { Template } from "@pdfme/common";
-import {
-  EditableTitle,
-  TemplateVersionBadges,
-  EditorToolbar,
-} from "~/components/documents/templates/editor";
+import { useCallback, useRef } from "react";
+
 import {
   MainDesigner,
   type PdfmeDesignerHandle,
 } from "~/components/documents/pdf/designer";
+import { PreviewDialog } from "~/components/documents/pdf/preview";
 import {
   DeleteDialog,
-  TemplateConfirmDialog,
   LeaveDialog,
+  TemplateConfirmDialog,
 } from "~/components/documents/templates/dialogs";
+import {
+  EditableTitle,
+  EditorToolbar,
+  TemplateVersionBadges,
+} from "~/components/documents/templates/editor";
 import { HistorySheet } from "~/components/documents/templates/history";
-import { PreviewDialog } from "~/components/documents/pdf/preview";
 import { PageHeader } from "~/components/layout/app-layout";
 import { useDocumentTemplateEditorController } from "~/hooks/document-template-editor/use-controller";
 import { useDocumentTemplatePreview } from "~/hooks/use-document-template-preview";
-import { formatDocumentTemplateTitle } from "~/lib/documents/template-title";
 import type { DocumentTemplateEditorLoaderData } from "~/lib/documents/template-editor-types";
+import { formatDocumentTemplateTitle } from "~/lib/documents/template-title";
 
 export function MainEditor({
   loaderData,

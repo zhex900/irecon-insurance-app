@@ -1,10 +1,11 @@
 import { asc, ilike, or, sql } from "drizzle-orm";
+
 import { getDb } from "~/lib/db/client";
 import { accountManager } from "~/lib/db/schema";
 import type { AccountManager } from "~/lib/db/types";
 import { type PageResult, toPageResult } from "~/lib/pagination";
-import { likePattern, resolvePage } from "~/lib/services/shared/list-query";
 import { normalizeAccountManager } from "~/lib/services/account-managers/normalize";
+import { likePattern, resolvePage } from "~/lib/services/shared/list-query";
 
 export async function listAccountManagersPage(input: {
   search?: string;

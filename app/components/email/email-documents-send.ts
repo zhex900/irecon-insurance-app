@@ -1,19 +1,20 @@
 import { toast } from "sonner";
-import type { PolicyDocument } from "~/lib/db/types";
-import {
-  buildOutboundTemplateHtml,
-  htmlToPlainText,
-  preferEmailHtml,
-  type EmailSendRecipient,
-  type EmailTemplateVars,
-} from "~/lib/email/templates";
-import type { EmailRichEditorHandle } from "~/components/email/email-rich-editor";
+
 import {
   EMAIL_DOCUMENTS_RECIPIENT_LABELS,
   emailAttachmentToBase64,
   isBrowserUploadFile,
 } from "~/components/email/email-documents-dialog-helpers";
+import type { EmailRichEditorHandle } from "~/components/email/email-rich-editor";
 import type { FileWithPreview } from "~/hooks/utilities";
+import type { PolicyDocument } from "~/lib/db/types";
+import {
+  buildOutboundTemplateHtml,
+  type EmailSendRecipient,
+  type EmailTemplateVars,
+  htmlToPlainText,
+  preferEmailHtml,
+} from "~/lib/email/templates";
 
 export async function sendPolicyDocumentsEmail({
   policyId,

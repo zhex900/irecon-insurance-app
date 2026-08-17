@@ -19,7 +19,7 @@ const WORKERS = [
   {
     name: "PDF Worker",
     config: "wrangler.pdf.jsonc",
-    port: 8787,
+    port: 8789, // Changed from 8787 (conflicts with Cursor)
     inspectorPort: 9230,
     envFile: "workers/documents-local.env",
   },

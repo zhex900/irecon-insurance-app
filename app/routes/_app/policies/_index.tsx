@@ -1,11 +1,13 @@
 import { useActionData } from "react-router";
+
 import { ListSearchField } from "~/components/forms/list-search-field";
 import { PageHeader } from "~/components/layout/app-layout";
 import { NewPolicyClientDialog } from "~/components/policies/new-policy-client-dialog";
 import { PolicyListTable } from "~/components/policies/policy-list-table";
-import { useActionSuccessToast } from "~/hooks/utilities";
 import { usePolicyListPage } from "~/hooks/policy-list/use-page";
+import { useActionSuccessToast } from "~/hooks/utilities";
 import { requireAuth } from "~/lib/auth/session/server.server";
+import { pageTitle } from "~/lib/brand";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
 import { parseFormIntent, parseUuid } from "~/lib/http/route-input";
 import { parsePagination } from "~/lib/pagination";
@@ -15,8 +17,8 @@ import { getClientsByIds } from "~/lib/services/clients/service";
 import { listPoliciesPage } from "~/lib/services/policies/list.service";
 import { deletePolicies } from "~/lib/services/policy/data.service";
 import { getReferenceDataAsync } from "~/lib/services/reference.service";
+
 import type { Route } from "./+types/_index";
-import { pageTitle } from "~/lib/brand";
 
 const PAGE_SIZE = 25;
 

@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
+
 import type { CarWording, Policy, PolicyDocument } from "~/lib/db/types";
+import { isPremiumExcelDocument } from "~/lib/excel/client";
 import {
   trackClientDistribution,
   trackClientUsage,
 } from "~/lib/observability/metrics.client";
 import { buildPdfBlobFromDocument } from "~/lib/pdf/generate";
 import { reviewDocumentsFingerprint } from "~/lib/services/policy/documents/fingerprints";
-import { isPremiumExcelDocument } from "~/lib/excel/client";
 
 export function usePolicyDocumentPreview({
   previewDoc,

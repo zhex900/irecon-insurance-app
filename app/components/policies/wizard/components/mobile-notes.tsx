@@ -1,8 +1,9 @@
 import { PolicyNotesCard } from "~/components/policies/policy-notes-card";
-import type { NoteAuthor } from "~/lib/services/users/service";
 import type { PolicyNote } from "~/lib/db/types";
-import { wizardModeCardBorderClass } from "../shared/wizard-shared";
+import type { NoteAuthor } from "~/lib/services/users/service";
+
 import { useMode } from "../hooks/utils/use-mode";
+import { wizardModeCardBorderClass } from "../shared/wizard-shared";
 
 export function MobileNotes({
   notes,

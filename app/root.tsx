@@ -1,10 +1,12 @@
+import "./app.css";
+
 import { Links, Meta, Outlet, Scripts, ScrollRestoration } from "react-router";
 
-import type { Route } from "./+types/root";
 import { RootErrorBoundary } from "~/components/root-error-boundary";
 import { ThemeProvider } from "~/components/theme-provider";
-import { geistFontFaceCss, geistFontFaces, themeInitScript } from "~/lib/fonts";
-import "./app.css";
+import { geistFontFaces } from "~/lib/fonts";
+
+import type { Route } from "./+types/root";
 
 export const links: Route.LinksFunction = () => [
   { rel: "icon", href: "/favicon.ico", sizes: "any" },
@@ -22,14 +24,12 @@ export const links: Route.LinksFunction = () => [
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en">
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <Meta />
         <Links />
-        <style dangerouslySetInnerHTML={{ __html: geistFontFaceCss() }} />
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body>
         <ThemeProvider

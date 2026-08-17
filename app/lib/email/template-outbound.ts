@@ -1,6 +1,6 @@
 import {
-  EMAIL_FOOTER_DISPLAY_WIDTH_DEFAULT,
   applyEmailFooterImageWidth,
+  EMAIL_FOOTER_DISPLAY_WIDTH_DEFAULT,
 } from "~/lib/email/template-core";
 import {
   collapseExpandedBorderStyles,
@@ -13,6 +13,7 @@ import {
   serializeStyleDeclarations,
   wrapEmailDocumentHtml,
 } from "~/lib/email/template-formatting";
+
 export function normalizeOutboundEmailHtml(html: string): string {
   let result = html;
 

@@ -1,4 +1,3 @@
-import { useEffect, useMemo, useState } from "react";
 import {
   CheckIcon,
   ChevronDownIcon,
@@ -6,6 +5,9 @@ import {
   SearchIcon,
   XIcon,
 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+
+import { ClientSearchResultDetails } from "~/components/search/client-result";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import {
@@ -16,7 +18,6 @@ import {
   PopoverTrigger,
 } from "~/components/ui/popover";
 import { Spinner } from "~/components/ui/spinner";
-import { ClientSearchResultDetails } from "~/components/search/client-result";
 import { useApiSearch } from "~/hooks/search";
 import {
   CLIENT_FILTER_SEARCH_PARAMS,

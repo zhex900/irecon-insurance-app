@@ -1,27 +1,29 @@
-import { useState, type RefObject } from "react";
-import type { useFetcher } from "react-router";
+import { type RefObject,useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
+import type { useFetcher } from "react-router";
 import { toast } from "sonner";
-import { focusFormIssue } from "~/lib/form-validation-ui";
+
 import type { Policy, PremiumBreakdown } from "~/lib/db/types";
-import { rollupPremiumTotals } from "~/lib/pricing/premium-totals";
+import { focusFormIssue } from "~/lib/form-validation-ui";
 import { getTakenStatusErrors } from "~/lib/policies/taken-status";
+import { rollupPremiumTotals } from "~/lib/pricing/premium-totals";
 import { listReviewDocumentsForConfirmClient } from "~/lib/services/policy/documents/documents.client";
 import {
+  type CarPolicyFormValues,
   carPolicyPricingSchema,
   POLICY_STATUS,
   pricingFields,
   wizardStepFields,
-  type CarPolicyFormValues,
 } from "~/lib/zod/policy-car";
+
+import { INTENTS, SECTION_IDS } from "../../shared/constants";
 import {
   PRICING_CONFIRMATION_STEP,
   rememberFocusSection,
   rememberWizardStep,
 } from "../../wizard-step-memory";
-import type { PolicyWizardActionData } from "./use-premium-calc";
 import type { PolicyLeaveApi } from "./use-draft-save";
-import { INTENTS, SECTION_IDS } from "../../shared/constants";
+import type { PolicyWizardActionData } from "./use-premium-calc";
 
 export function usePolicySubmit({
   policy,

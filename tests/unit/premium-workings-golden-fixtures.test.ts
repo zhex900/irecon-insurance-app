@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
+
+import type { PremiumBreakdown, RatingSnapshot } from "~/lib/db/types";
 import {
-  expectedPremiumValue,
   buildPremiumLineWorking,
+  expectedPremiumValue,
   isPremiumLineManual,
   // type PremiumLineWorking,
   type PremiumWorkingInputs,
 } from "~/lib/pricing/premium-workings";
-import type { PremiumBreakdown, RatingSnapshot } from "~/lib/db/types";
 
 function createRating(overrides: Partial<RatingSnapshot> = {}): RatingSnapshot {
   return {

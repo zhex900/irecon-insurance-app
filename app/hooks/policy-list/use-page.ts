@@ -1,10 +1,11 @@
 import { useDebouncedSearchQuery } from "~/hooks/search";
-import { usePolicyListSelection } from "./use-selection";
 import {
   policyListFiltersKey,
   type PolicyListUrlFilters,
 } from "~/lib/search/policy-list-filters";
 import type { PolicyListItem } from "~/lib/services/policies/list.service";
+
+import { usePolicyListSelection } from "./use-selection";
 
 type PolicyListPageFilters = Pick<
   PolicyListUrlFilters,

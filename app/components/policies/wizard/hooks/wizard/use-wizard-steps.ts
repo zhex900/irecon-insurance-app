@@ -1,15 +1,17 @@
 import { useLayoutEffect, useRef, useState } from "react";
-import { useMode } from "../utils/use-mode";
+
+import { sectionIdForStep } from "~/components/policies/policy-form-layout";
 import type { PremiumBreakdown } from "~/lib/db/types";
+import { wizardSteps } from "~/lib/zod/policy-car";
+
 import {
+  PRICING_CONFIRMATION_STEP,
   readStoredMaxStep,
   readStoredStep,
   rememberWizardStep,
-  PRICING_CONFIRMATION_STEP,
 } from "../../wizard-step-memory";
+import { useMode } from "../utils/use-mode";
 import { calculateMaxStep } from "./use-wizard-navigation-utils";
-import { sectionIdForStep } from "~/components/policies/policy-form-layout";
-import { wizardSteps } from "~/lib/zod/policy-car";
 
 export function useWizardStepManagement({
   policyId,

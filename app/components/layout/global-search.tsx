@@ -1,10 +1,11 @@
+import { FileTextIcon, SearchIcon, UsersIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-import { FileTextIcon, SearchIcon, UsersIcon } from "lucide-react";
+
 import { Badge } from "~/components/reui/badge";
 import { ClientSearchResultDetails } from "~/components/search/client-result";
-import { SearchResultsStatus } from "~/components/search/search-results-status";
 import { HighlightText } from "~/components/search/highlight";
+import { SearchResultsStatus } from "~/components/search/search-results-status";
 import { useApiSearch } from "~/hooks/search";
 import {
   GLOBAL_SEARCH_PARAMS,

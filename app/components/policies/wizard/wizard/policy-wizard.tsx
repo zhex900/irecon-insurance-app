@@ -1,15 +1,17 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { FormProvider, useForm, type Resolver } from "react-hook-form";
+import { FormProvider, type Resolver,useForm } from "react-hook-form";
+
 import { JustSavedProvider } from "~/components/forms/field-save-highlight";
 import {
-  carPolicySchema,
   type CarPolicyFormValues,
+  carPolicySchema,
 } from "~/lib/zod/policy-car";
-import { WizardInner as Inner } from "./wizard-inner";
-import type { WizardProps } from "../shared/wizard-shared";
-import { policyToFormValues } from "../shared/policy-to-values";
 
-export function Wizard({
+import { policyToFormValues } from "../shared/policy-to-values";
+import type { WizardProps } from "../shared/wizard-shared";
+import { WizardInner } from "./wizard-inner";
+
+export function PolicyWizard({
   policy,
   reference,
   carWording,
@@ -52,7 +54,7 @@ export function Wizard({
   return (
     <FormProvider {...form}>
       <JustSavedProvider>
-        <Inner
+        <WizardInner
           policy={policy}
           reference={reference}
           carWording={carWording}

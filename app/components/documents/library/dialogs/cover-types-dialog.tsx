@@ -1,5 +1,6 @@
-import { Checkbox } from "~/components/ui/checkbox";
+import type { CoverTypeOption } from "~/components/documents/shared";
 import { Button } from "~/components/ui/button";
+import { Checkbox } from "~/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -10,7 +11,6 @@ import {
 } from "~/components/ui/dialog";
 import { Label } from "~/components/ui/label";
 import { Spinner } from "~/components/ui/spinner";
-import type { CoverTypeOption } from "~/components/documents/shared";
 import type { LibraryDocumentRecord } from "~/lib/documents/library-documents";
 
 type CoverTypesDialogProps = {

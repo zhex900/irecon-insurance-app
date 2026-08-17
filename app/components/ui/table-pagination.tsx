@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router";
+
 import { AppSelect } from "~/components/ui/app-select";
-import { useHydrated } from "~/hooks/network";
 import {
   Pagination,
   PaginationContent,
@@ -10,6 +10,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "~/components/ui/pagination";
+import { useHydrated } from "~/hooks/network";
 import { totalPages } from "~/lib/pagination";
 
 const DEFAULT_PAGE_SIZE_OPTIONS = [10, 20, 25, 50, 100] as const;

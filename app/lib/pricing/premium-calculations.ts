@@ -3,8 +3,9 @@
  * Extracted from premium-workings.ts to reduce file size.
  */
 
-import type { RatingSnapshot } from "~/lib/db/types";
 import { GST_RATE } from "~/constants";
+import type { RatingSnapshot } from "~/lib/db/types";
+
 import { plantPremium } from "./plant-premium-calc";
 import type { PremiumWorkingInputs } from "./premium-workings";
 

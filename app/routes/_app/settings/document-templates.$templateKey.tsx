@@ -1,11 +1,13 @@
 import { lazy, Suspense } from "react";
+
 import { EditorShell } from "~/components/documents/templates/loading";
-import type { DocumentTemplateEditorLoaderData } from "~/lib/documents/template-editor-types";
 import { pageTitle } from "~/lib/brand";
+import type { DocumentTemplateEditorLoaderData } from "~/lib/documents/template-editor-types";
 import {
   documentTemplateAction,
   loadDocumentTemplateEditor,
 } from "~/lib/services/documents/document-template-editor.server";
+
 import type { Route } from "./+types/document-templates.$templateKey";
 
 const DocumentTemplateEditor = lazy(() =>

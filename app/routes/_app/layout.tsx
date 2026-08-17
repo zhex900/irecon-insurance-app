@@ -2,18 +2,20 @@ import {
   type ShouldRevalidateFunctionArgs,
   useRouteLoaderData,
 } from "react-router";
-import { RootErrorBoundary } from "~/components/root-error-boundary";
+
 import { AppLayout } from "~/components/layout/app-layout";
+import { RootErrorBoundary } from "~/components/root-error-boundary";
+import { toBrokerSession } from "~/lib/auth/session";
 import { requireAuth } from "~/lib/auth/session/server.server";
 import { getSessionTimeoutClientState } from "~/lib/auth/session/timeout.server";
 import { updateRequestContext } from "~/lib/observability/request-context.server";
 import { setSentryUser } from "~/lib/observability/sentry.server";
-import { toBrokerSession } from "~/lib/auth/session";
 import { getSideNavData } from "~/lib/services/navigation/side-nav.service";
 import {
-  resolveShellNavState,
   resolveNavSectionsExpanded,
+  resolveShellNavState,
 } from "~/lib/services/navigation/sidebar-state";
+
 import type { Route } from "./+types/layout";
 
 export async function loader({ request }: Route.LoaderArgs) {

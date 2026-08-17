@@ -1,7 +1,8 @@
-import { InformationCard } from "../components/information-card";
-import { useWizardInner } from "./provider";
 import { useJustSaved } from "~/components/forms/field-save-highlight";
+
+import { InformationCard } from "../components/information-card";
 import { SECTION_IDS } from "../shared/constants";
+import { useWizardInner } from "./provider";
 
 export function InfoCard() {
   const { state, props } = useWizardInner();

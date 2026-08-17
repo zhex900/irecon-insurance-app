@@ -1,14 +1,16 @@
-const GST_RATE = 0.1; // 10% GST
+// 10% GST
 
-import {
-  formatCurrencyCell,
-  setPercentCell as percentCell,
-  styleWorkbookHeaderRow as styleHeaderRow,
-} from "./excel-workbook";
 import type {
   PremiumExcelRateRefs,
   PremiumExcelSheetContext,
-} from "./excel-types";
+} from "./excel-types"; 
+import {
+  formatCurrencyCell,
+  setPercentCell,
+  styleWorkbookHeaderRow,
+} from "./excel-workbook";
+
+const GST_RATE = 0.1;
 
 export function addPremiumExcelRatesSheet(
   workbook: import("exceljs").Workbook,
@@ -29,7 +31,7 @@ export function addPremiumExcelRatesSheet(
   rates.getCell("A2").value = "Rate";
   rates.getCell("B2").value = "Value";
   rates.getCell("C2").value = "Source / notes";
-  styleHeaderRow(rates.getRow(2), 3);
+  styleWorkbookHeaderRow(rates.getRow(2), 3);
 
   // Calculate actual rates from premium for precision (matching adjustment sheet logic)
   const premiumData = premium as {
@@ -211,7 +213,7 @@ export function addPremiumExcelRatesSheet(
     const row = 3 + index;
     rates.getCell(`A${row}`).value = label;
     const cell = rates.getCell(`B${row}`);
-    if (kind === "pct") percentCell(cell, Number(value) || 0);
+    if (kind === "pct") setPercentCell(cell, Number(value) || 0);
     else if (kind === "money") {
       cell.value = Number(value) || 0;
       formatCurrencyCell(cell);

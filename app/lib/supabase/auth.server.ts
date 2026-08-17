@@ -1,9 +1,10 @@
 import { createClient } from "@supabase/supabase-js";
+
+import type { SessionTiming } from "~/lib/auth/session";
 import {
   getSupabaseAnonKey,
   getSupabaseUrl,
 } from "~/lib/supabase/env.server";
-import type { SessionTiming } from "~/lib/auth/session";
 
 const ACCESS_COOKIE = "sb-access-token";
 const REFRESH_COOKIE = "sb-refresh-token";

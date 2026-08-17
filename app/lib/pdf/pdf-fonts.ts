@@ -1,4 +1,5 @@
-import { getDefaultFont, type Font } from "@pdfme/common";
+import { type Font,getDefaultFont } from "@pdfme/common";
+
 import robotoBoldUrl from "~/assets/fonts/Roboto-Bold.ttf?url";
 import robotoBoldItalicUrl from "~/assets/fonts/Roboto-BoldItalic.ttf?url";
 import robotoItalicUrl from "~/assets/fonts/Roboto-Italic.ttf?url";

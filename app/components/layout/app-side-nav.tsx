@@ -1,39 +1,40 @@
-import * as React from "react";
-import { useLocation, useNavigate } from "react-router";
 import {
-  LayoutDashboardIcon,
-  UsersIcon,
-  FileTextIcon,
-  BarChart3Icon,
-  ContactIcon,
-  SettingsIcon,
-  FileBarChart2Icon,
-  RefreshCwIcon,
-  UserCogIcon,
-  MailIcon,
-  FileStackIcon,
-  FilePenLineIcon,
-  SlidersHorizontalIcon,
-  ScrollTextIcon,
   BadgeDollarSignIcon,
+  BarChart3Icon,
   ChevronRightIcon,
   ClockIcon,
+  ContactIcon,
+  FileBarChart2Icon,
+  FilePenLineIcon,
+  FileStackIcon,
+  FileTextIcon,
+  LayoutDashboardIcon,
   type LucideIcon,
+  MailIcon,
+  RefreshCwIcon,
+  ScrollTextIcon,
+  SettingsIcon,
+  SlidersHorizontalIcon,
+  UserCogIcon,
+  UsersIcon,
 } from "lucide-react";
+import * as React from "react";
+import { useLocation, useNavigate } from "react-router";
+
 import { useSidebar } from "~/components/ui/sidebar";
 import {
   normalizeRecentPath,
   pushRecentRouteLocalDetailed,
   recentIdForPath,
 } from "~/lib/services/navigation/recent-routes";
-import {
-  sectionFromPathname,
-  type NavSectionId,
-} from "~/lib/services/navigation/sidebar-state";
 import type {
   SideNavData,
   SideNavLink,
 } from "~/lib/services/navigation/side-nav.service";
+import {
+  type NavSectionId,
+  sectionFromPathname,
+} from "~/lib/services/navigation/sidebar-state";
 import { cn } from "~/lib/utils";
 
 type SectionId = NavSectionId;

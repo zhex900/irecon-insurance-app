@@ -1,15 +1,17 @@
-const GST_RATE = 0.1; // 10% GST
+// 10% GST
 
-import {
-  setMoneyCell as moneyCell,
-  setPercentCell as percentCell,
-  styleWorkbookHeaderRow as styleHeaderRow,
-} from "./excel-workbook";
 import type {
   PremiumExcelPolicyRefs,
   PremiumExcelRateRefs,
   PremiumExcelSheetContext,
-} from "./excel-types";
+} from "./excel-types"; 
+import {
+  setMoneyCell,
+  setPercentCell,
+  styleWorkbookHeaderRow,
+} from "./excel-workbook";
+
+const GST_RATE = 0.1;
 
 type AdjRow = {
   label: string;
@@ -340,9 +342,9 @@ export function addPremiumExcelAdjustmentSheet(
   adj.getCell("A1").font = { bold: true, size: 14 };
 
   adj.getCell("A2").value = "Original Turnover";
-  moneyCell(adj.getCell("B2"), INPUT.turnover, adjustment.originalTurnover);
+  setMoneyCell(adj.getCell("B2"), INPUT.turnover, adjustment.originalTurnover);
   adj.getCell("A3").value = "Adjustment Turnover";
-  moneyCell(
+  setMoneyCell(
     adj.getCell("B3"),
     INPUT.adjTurnover,
     adjustment.adjustmentTurnover,
@@ -380,48 +382,48 @@ export function addPremiumExcelAdjustmentSheet(
     "Frozen rates (same as app — 6 dp; amounts use ROUND to cents)";
   adj.getCell("A6").font = { bold: true };
   adj.getCell("A7").value = "CW applied rate";
-  percentCell(
+  setPercentCell(
     adj.getCell("B7"),
     frozen?.contractWorksAppliedRate ?? rating?.contractWorksAppliedRate ?? 0,
   );
   adj.getCell("A8").value = "LL applied rate";
-  percentCell(
+  setPercentCell(
     adj.getCell("B8"),
     frozen?.liabilityAppliedRate ?? rating?.liabilityAppliedRate ?? 0,
   );
   adj.getCell("A9").value = "CW min premium";
-  moneyCell(
+  setMoneyCell(
     adj.getCell("B9"),
     undefined,
     frozen?.contractWorksMinPremium ?? rating?.contractWorksMinPremium ?? 0,
   );
   adj.getCell("A10").value = "LL min premium";
-  moneyCell(
+  setMoneyCell(
     adj.getCell("B10"),
     undefined,
     frozen?.liabilityMinPremium ?? rating?.liabilityMinPremium ?? 0,
   );
   adj.getCell("A11").value = "Terrorism rate";
-  percentCell(
+  setPercentCell(
     adj.getCell("B11"),
     frozen?.terrorismRate ?? rating?.terrorismRate ?? 0,
   );
   adj.getCell("A12").value = "ESL rate";
-  percentCell(adj.getCell("B12"), frozen?.eslRate ?? rating?.eslRate ?? 0);
+  setPercentCell(adj.getCell("B12"), frozen?.eslRate ?? rating?.eslRate ?? 0);
   adj.getCell("A13").value = "CW stamp duty rate";
-  percentCell(
+  setPercentCell(
     adj.getCell("B13"),
     frozen?.contractWorksStampDutyRate ??
       rating?.contractWorksStampDutyRate ??
       0,
   );
   adj.getCell("A14").value = "LL stamp duty rate";
-  percentCell(
+  setPercentCell(
     adj.getCell("B14"),
     frozen?.liabilityStampDutyRate ?? rating?.liabilityStampDutyRate ?? 0,
   );
   adj.getCell("A15").value = "GST rate";
-  percentCell(adj.getCell("B15"), GST_RATE);
+  setPercentCell(adj.getCell("B15"), GST_RATE);
 
   const FR = {
     cwRate: "Adjustment!$B$7",
@@ -460,17 +462,21 @@ export function addPremiumExcelAdjustmentSheet(
     headers.forEach((h, i) => {
       adj.getCell(head, i + 1).value = h;
     });
-    styleHeaderRow(adj.getRow(head), 7);
+    styleWorkbookHeaderRow(adj.getRow(head), 7);
     rows.forEach((row, idx) => {
       const r = head + 1 + idx;
       adj.getCell(`A${r}`).value = row.label;
       if (row.strong) adj.getCell(`A${r}`).font = { bold: true };
-      moneyCell(adj.getCell(`B${r}`), row.total, row.result.totalPremium);
-      moneyCell(adj.getCell(`C${r}`), row.base, row.result.trueBasePremium);
-      moneyCell(adj.getCell(`D${r}`), row.terror, row.result.terrorismPremium);
-      moneyCell(adj.getCell(`E${r}`), row.esl, row.result.esl);
-      moneyCell(adj.getCell(`F${r}`), row.gst, row.result.gst);
-      moneyCell(adj.getCell(`G${r}`), row.sd, row.result.sd);
+      setMoneyCell(adj.getCell(`B${r}`), row.total, row.result.totalPremium);
+      setMoneyCell(adj.getCell(`C${r}`), row.base, row.result.trueBasePremium);
+      setMoneyCell(
+        adj.getCell(`D${r}`),
+        row.terror,
+        row.result.terrorismPremium,
+      );
+      setMoneyCell(adj.getCell(`E${r}`), row.esl, row.result.esl);
+      setMoneyCell(adj.getCell(`F${r}`), row.gst, row.result.gst);
+      setMoneyCell(adj.getCell(`G${r}`), row.sd, row.result.sd);
       if (row.strong) {
         for (const col of ["B", "C", "D", "E", "F", "G"] as const) {
           adj.getCell(`${col}${r}`).font = { bold: true };

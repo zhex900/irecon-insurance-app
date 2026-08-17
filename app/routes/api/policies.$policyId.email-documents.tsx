@@ -1,18 +1,20 @@
 import { z } from "zod";
+
 import { requireAuth } from "~/lib/auth/session/server.server";
+import {
+  getLibraryDocumentsBucket,
+  getPdfService,
+} from "~/lib/cloudflare.server";
+import { EMAIL_SEND_RECIPIENTS } from "~/lib/email/templates";
 import { ExternalServiceError } from "~/lib/errors";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
 import { parseUuid } from "~/lib/http/route-input";
-import {
-  getPdfService,
-  getLibraryDocumentsBucket,
-} from "~/lib/cloudflare.server";
-import { EMAIL_SEND_RECIPIENTS } from "~/lib/email/templates";
-import { PdfRenderServiceError } from "~/lib/pdf/pdf-worker.server";
 import { logger } from "~/lib/observability/logger.server";
+import { PdfRenderServiceError } from "~/lib/pdf/pdf-worker.server";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import { sendPolicyDocumentsEmail } from "~/lib/services/email/send-policy-documents.server";
 import { getPolicy } from "~/lib/services/policy/data.service";
+
 import type { Route } from "./+types/policies.$policyId.email-documents";
 
 const extraAttachmentSchema = z.object({

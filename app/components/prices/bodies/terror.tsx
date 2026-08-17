@@ -1,8 +1,12 @@
 import { useMemo, useState } from "react";
+
+import {
+  RatePercentInput,
+  type TerrorScheduleView,
+} from "~/components/prices/shared";
+import { AppSelect } from "~/components/ui/app-select";
 import { Field, FieldDescription, FieldLabel } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
-import { AppSelect } from "~/components/ui/app-select";
-import { Textarea } from "~/components/ui/textarea";
 import {
   Table,
   TableBody,
@@ -11,11 +15,9 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table";
+import { Textarea } from "~/components/ui/textarea";
 import { formatNumber, formatRate } from "~/lib/utils";
-import {
-  RatePercentInput,
-  type TerrorScheduleView,
-} from "~/components/prices/shared";
+
 export function TerrorBody({
   schedule,
   editing,

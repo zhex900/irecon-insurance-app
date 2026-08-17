@@ -1,4 +1,4 @@
-import { SubmitConfirmDialog, LeaveDiscardDialog } from "../wizard-dialogs";
+import { LeaveDiscardDialog,SubmitConfirmDialog } from "../wizard-dialogs";
 
 export type DialogsProps = {
   submitConfirmOpen: boolean;

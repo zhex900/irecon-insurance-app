@@ -1,3 +1,7 @@
+import type { AppUser } from "~/lib/db/types";
+import { trackUsage } from "~/lib/observability/metrics.server";
+import { queueSetCookie } from "~/lib/observability/request-context.server";
+import { getUser } from "~/lib/services/users/service";
 import {
   appendAuthSessionCookies,
   appendClearAuthSessionCookies,
@@ -5,14 +9,11 @@ import {
   getAuthUserWithSession,
   readSessionTiming,
 } from "~/lib/supabase/auth.server";
+
 import {
   evaluateSessionTimeout,
   readSessionTimeoutConfig,
 } from "./timeout.server";
-import { trackUsage } from "~/lib/observability/metrics.server";
-import { queueSetCookie } from "~/lib/observability/request-context.server";
-import { getUser } from "~/lib/services/users/service";
-import type { AppUser } from "~/lib/db/types";
 
 export type SessionEndReason = "inactivity" | "absolute";
 

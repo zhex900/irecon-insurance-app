@@ -1,17 +1,18 @@
 import { useEffect, useRef, useState } from "react";
-import { useBlocker, useNavigate } from "react-router";
 import type { UseFormReturn } from "react-hook-form";
+import { useBlocker, useNavigate } from "react-router";
 import { toast } from "sonner";
+
 import {
   flattenDirtyPaths,
   type PolicySaveStatus,
 } from "~/components/forms/field-save-highlight";
+import type { Client } from "~/lib/db/types";
+import { flattenFieldErrors, focusFormIssue } from "~/lib/form-validation-ui";
 import {
   discardClientDraftClient,
   saveClientDraftClient,
 } from "~/lib/services/clients/draft.client";
-import type { Client } from "~/lib/db/types";
-import { flattenFieldErrors, focusFormIssue } from "~/lib/form-validation-ui";
 import type { ClientFormValues } from "~/lib/zod/client";
 
 export function useFormDraft({

@@ -1,6 +1,4 @@
-import { useMemo, useState, type KeyboardEvent, type ReactNode } from "react";
-import { useFormContext } from "react-hook-form";
-import { toast } from "sonner";
+import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import {
   FileSpreadsheetIcon,
   InfoIcon,
@@ -8,7 +6,13 @@ import {
   RotateCcwIcon,
   XIcon,
 } from "lucide-react";
-import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
+import { type KeyboardEvent, type ReactNode,useMemo, useState } from "react";
+import { useFormContext } from "react-hook-form";
+import { toast } from "sonner";
+
+import { useFieldSaveState } from "~/components/forms/field-save-highlight";
+import { PolicyViewAdjustmentCards } from "~/components/policies/car-adjustment-wizard";
+import { Button } from "~/components/ui/button";
 import {
   Card,
   CardAction,
@@ -16,7 +20,6 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
-import { Input } from "~/components/ui/input";
 import {
   Dialog,
   DialogClose,
@@ -25,7 +28,7 @@ import {
   DialogPortal,
   DialogTitle,
 } from "~/components/ui/dialog";
-import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
 import {
   Table,
   TableBody,
@@ -39,32 +42,30 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "~/components/ui/tooltip";
-import { type CarPolicyFormValues } from "~/lib/zod/policy-car";
+import { sanitizeAmountInput } from "~/lib/amount-input";
 import type {
   AdjustmentBreakdown,
-  PremiumBreakdown,
   Policy,
+  PremiumBreakdown,
   RatingSnapshot,
   ReferenceData,
 } from "~/lib/db/types";
-import { cn, formatCurrency } from "~/lib/utils";
-import { sanitizeAmountInput } from "~/lib/amount-input";
-import { PolicyViewAdjustmentCards } from "~/components/policies/car-adjustment-wizard";
+import {
+  applyManualPremiumEdit,
+  type ManualPremiumSessionRates,
+} from "~/lib/pricing/premium-manual-recalc";
+import {
+  combinedTrueBasePremium,
+  rollupPremiumTotals,
+} from "~/lib/pricing/premium-totals";
 import {
   buildPremiumLineWorking,
   isPremiumLineManual,
   type PremiumLineWorking,
   type PremiumWorkingInputs,
 } from "~/lib/pricing/premium-workings";
-import { useFieldSaveState } from "~/components/forms/field-save-highlight";
-import {
-  combinedTrueBasePremium,
-  rollupPremiumTotals,
-} from "~/lib/pricing/premium-totals";
-import {
-  applyManualPremiumEdit,
-  type ManualPremiumSessionRates,
-} from "~/lib/pricing/premium-manual-recalc";
+import { cn, formatCurrency } from "~/lib/utils";
+import { type CarPolicyFormValues } from "~/lib/zod/policy-car";
 
 export function PremiumDeclaration({
   premium,

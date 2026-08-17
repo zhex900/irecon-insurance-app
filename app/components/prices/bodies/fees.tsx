@@ -1,3 +1,4 @@
+import { type FeesScheduleView,NumInput } from "~/components/prices/shared";
 import { Input } from "~/components/ui/input";
 import {
   Table,
@@ -8,7 +9,7 @@ import {
   TableRow,
 } from "~/components/ui/table";
 import { formatCurrency } from "~/lib/utils";
-import { NumInput, type FeesScheduleView } from "~/components/prices/shared";
+
 export function FeesBody({
   schedule,
   editing,

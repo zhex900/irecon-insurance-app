@@ -9,9 +9,10 @@ import {
   ilike,
   not,
   or,
-  sql,
   type SQL,
+  sql,
 } from "drizzle-orm";
+
 import { getDb } from "~/lib/db/client";
 import {
   accountManager,
@@ -21,13 +22,13 @@ import {
 } from "~/lib/db/schema";
 import type { Client } from "~/lib/db/types";
 import { type PageResult, toPageResult } from "~/lib/pagination";
+import { normalizeClient } from "~/lib/services/clients/normalize";
 import {
   digitsOnly,
   isDigitSearchQuery,
   likePattern,
   resolvePage,
 } from "~/lib/services/shared/list-query";
-import { normalizeClient } from "~/lib/services/clients/normalize";
 
 export type ClientListItem = Client & { policyCount: number };
 

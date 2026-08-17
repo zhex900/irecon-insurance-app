@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
+
 import { Badge } from "~/components/reui/badge";
 import type { CarWording, Policy, ReferenceData } from "~/lib/db/types";
-import type { EmailTemplate, EmailTemplateVars } from "~/lib/email/templates";
 import type { EmailDirectoryEntry } from "~/lib/email/directory";
+import type { EmailTemplate, EmailTemplateVars } from "~/lib/email/templates";
 import type { NoteAuthor } from "~/lib/services/users/service";
 
 export type WizardMode = "new" | "edit" | "view";

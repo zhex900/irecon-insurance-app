@@ -1,10 +1,11 @@
 import { and, asc, eq, ne, sql } from "drizzle-orm";
+
+import { getDb } from "~/lib/db/client";
+import { appUser, authorisedRepresentative, client } from "~/lib/db/schema";
 import {
   EMAIL_DIRECTORY_KIND_LABEL,
   type EmailDirectoryEntry,
 } from "~/lib/email/directory";
-import { getDb } from "~/lib/db/client";
-import { appUser, authorisedRepresentative, client } from "~/lib/db/schema";
 
 export type { EmailDirectoryEntry };
 export { EMAIL_DIRECTORY_KIND_LABEL };

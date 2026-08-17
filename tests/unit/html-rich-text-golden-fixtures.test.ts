@@ -1,18 +1,19 @@
 import { describe, expect, it } from "vitest";
+
 import {
+  countLinesFittingInBandMm,
+  endorsementLineStepMm,
+  endorsementPaintTopInsetMm,
+  endorsementReserveHeightForLinesMm,
+  minEndorsementPaintBandMm,
+  splitLineCountsIntoPages,
+} from "~/lib/pdf/html-rich-text-geometry";
+import {
+  estimateWordingHtmlHeightMm,
   htmlToDrawLines,
   wordingHtmlLineCount,
-  estimateWordingHtmlHeightMm,
   // type DrawLine,
 } from "~/lib/pdf/html-rich-text-lines";
-import {
-  endorsementReserveHeightForLinesMm,
-  splitLineCountsIntoPages,
-  countLinesFittingInBandMm,
-  endorsementPaintTopInsetMm,
-  endorsementLineStepMm,
-  minEndorsementPaintBandMm,
-} from "~/lib/pdf/html-rich-text-geometry";
 
 const measure = (text: string) => text.length * 5;
 

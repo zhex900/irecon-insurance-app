@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
-import { Logo } from "~/components/logo";
+
 import { OfflineDialog } from "~/components/layout/offline-dialog";
+import { Logo } from "~/components/logo";
 
 function AuthBlueprintBackground() {
   return (
@@ -97,7 +98,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
               className="hover:text-foreground hover:underline"
             >
               © Copyright Irecon Insurance Services Pty Ltd{" "}
-              {new Date().getFullYear()}
+              {/* {new Date().getFullYear()} */}
             </a>
           </p>
         </div>

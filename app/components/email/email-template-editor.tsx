@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { useFetcher } from "react-router";
 import { CodeIcon, PencilIcon } from "lucide-react";
+import { type FormEvent,useEffect, useMemo, useRef, useState } from "react";
+import { useFetcher } from "react-router";
 import { toast } from "sonner";
+
 import { EmailDocumentFrame } from "~/components/email/email-document-frame";
 import { EmailHtmlCodeEditor } from "~/components/email/email-html-code-editor";
 import { EmailTemplateEditorActions } from "~/components/email/email-template-editor-actions";

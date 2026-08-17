@@ -6,9 +6,10 @@ import {
   useActionData,
   useNavigation,
 } from "react-router";
-import { ClientPolicies as ClientPoliciesTable } from "~/components/clients/summary";
+
+import { ClientPolicies } from "~/components/clients/summary";
+import { PageHeader } from "~/components/layout/app-layout";
 import { Button } from "~/components/ui/button";
-import { LoadingButton } from "~/components/ui/loading-button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import {
   Dialog,
@@ -18,26 +19,27 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
-import { PageHeader } from "~/components/layout/app-layout";
+import { LoadingButton } from "~/components/ui/loading-button";
 import { withSuccessToast } from "~/hooks/utilities";
 import { requireAuth } from "~/lib/auth/session/server.server";
-import { parseFormIntent, parseUuid } from "~/lib/http/route-input";
-import { clientNotFoundResponse } from "~/lib/http/resource-not-found";
+import { pageTitle } from "~/lib/brand";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
+import { clientNotFoundResponse } from "~/lib/http/resource-not-found";
+import { parseFormIntent, parseUuid } from "~/lib/http/route-input";
 import { parsePagination } from "~/lib/pagination";
 import { parsePolicyListFiltersFromUrl } from "~/lib/search/policy-list-filters";
-import { formatCurrency, formatDate } from "~/lib/utils";
 import { writeAuditLog } from "~/lib/services/audit/service";
-import { listPoliciesPage } from "~/lib/services/policies/list.service";
 import {
   countClientPolicies,
   deleteClient,
   getClient,
 } from "~/lib/services/clients/service";
+import { listPoliciesPage } from "~/lib/services/policies/list.service";
 import { deletePolicies } from "~/lib/services/policy/data.service";
 import { getReferenceDataAsync } from "~/lib/services/reference.service";
+import { formatCurrency, formatDate } from "~/lib/utils";
+
 import type { Route } from "./+types/$clientId";
-import { pageTitle } from "~/lib/brand";
 
 const PAGE_SIZE = 25;
 
@@ -330,7 +332,7 @@ export default function ClientDetailRoute({
             </div>
           </CardHeader>
           <CardContent>
-            <ClientPoliciesTable
+            <ClientPolicies
               policies={loaderData.policies}
               total={loaderData.total}
               page={loaderData.page}

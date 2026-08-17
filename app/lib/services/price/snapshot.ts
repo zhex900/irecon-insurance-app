@@ -2,6 +2,7 @@
  * Pricing catalogue loaders for Settings → Prices.
  */
 import { asc } from "drizzle-orm";
+
 import { getDb } from "~/lib/db/client";
 import {
   brokerFeeSchedule,
@@ -19,6 +20,7 @@ import {
   priceTerrorismRate,
   state,
 } from "~/lib/db/price-schema";
+
 import { num } from "./helpers";
 import type { PriceCatalogueSnapshot } from "./types";
 

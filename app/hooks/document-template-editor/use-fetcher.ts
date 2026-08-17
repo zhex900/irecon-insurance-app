@@ -1,9 +1,10 @@
-import { useEffect, type RefObject } from "react";
-import { toast } from "sonner";
 import type { Template } from "@pdfme/common";
+import { type RefObject,useEffect } from "react";
+import { toast } from "sonner";
+
 import type { PdfmeDesignerHandle } from "~/components/documents/pdf/designer";
-import { invalidatePdfTemplateOverrideCache } from "~/lib/pdf/template-override-cache";
 import type { TemplateEditorAutosaveAction } from "~/lib/documents/template-editor-autosave";
+import { invalidatePdfTemplateOverrideCache } from "~/lib/pdf/template-override-cache";
 
 type FetcherData = {
   ok: boolean;

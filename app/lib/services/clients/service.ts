@@ -1,12 +1,13 @@
 import { asc, eq, inArray, sql } from "drizzle-orm";
-import { getReferenceDataAsync } from "~/lib/services/reference.service";
+
 import { getDb } from "~/lib/db/client";
 import { client, policy } from "~/lib/db/schema";
 import type { Client } from "~/lib/db/types";
 import { ConflictError, NotFoundError } from "~/lib/errors";
 import { trackUsage } from "~/lib/observability/metrics.server";
-import { isDigitSearchQuery } from "~/lib/services/shared/list-query";
 import { normalizeClient } from "~/lib/services/clients/normalize";
+import { getReferenceDataAsync } from "~/lib/services/reference.service";
+import { isDigitSearchQuery } from "~/lib/services/shared/list-query";
 
 export { normalizeClient };
 

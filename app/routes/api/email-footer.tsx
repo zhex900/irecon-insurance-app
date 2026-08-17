@@ -1,8 +1,9 @@
 import { z } from "zod";
+
+import { isSuperAdmin } from "~/lib/auth/roles";
 import { requireAuth } from "~/lib/auth/session/server.server";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
 import { parseFormIntent } from "~/lib/http/route-input";
-import { isSuperAdmin } from "~/lib/auth/roles";
 import {
   dataUriToBytes,
   getEmailFooterImage,
@@ -10,6 +11,7 @@ import {
   saveEmailFooterDisplayWidth,
   saveEmailFooterFile,
 } from "~/lib/services/email/footer-image.server";
+
 import type { Route } from "./+types/email-footer";
 
 const displayWidthSchema = z.coerce.number().finite();

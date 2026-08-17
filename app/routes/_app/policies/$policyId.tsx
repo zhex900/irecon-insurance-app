@@ -1,21 +1,22 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { CopyIcon, SlidersHorizontalIcon, Trash2Icon } from "lucide-react";
+import { type ReactNode,useEffect, useRef, useState } from "react";
 import {
-  redirect,
   Link,
+  redirect,
+  type ShouldRevalidateFunctionArgs,
   useActionData,
   useNavigation,
   useSearchParams,
   useSubmit,
-  type ShouldRevalidateFunctionArgs,
 } from "react-router";
 import { toast } from "sonner";
-import { CopyIcon, SlidersHorizontalIcon, Trash2Icon } from "lucide-react";
-import { Wizard as CarPolicyWizard } from "~/components/policies/wizard/wizard";
+
+import { DeletePoliciesDialog } from "~/components/policies/delete-policies-dialog";
+import { PolicyWizard } from "~/components/policies/wizard/wizard";
 import {
   allowWizardLeave,
   clearWizardStepState,
 } from "~/components/policies/wizard/wizard-step-memory";
-import { DeletePoliciesDialog } from "~/components/policies/delete-policies-dialog";
 import { Button } from "~/components/ui/button";
 import { LoadingButton } from "~/components/ui/loading-button";
 import {
@@ -24,28 +25,27 @@ import {
   TooltipTrigger,
 } from "~/components/ui/tooltip";
 import { withSuccessToast } from "~/hooks/utilities";
-import {
-  carPolicyDraftSchema,
-  carPolicyPricingSchema,
-  carPolicySchema,
-  isTerminalStatus,
-  parsePremiumOverride,
-  POLICY_STATUS,
-  type CarPolicyFormValues,
-} from "~/lib/zod/policy-car";
 import { requireAuth } from "~/lib/auth/session/server.server";
+import { pageTitle } from "~/lib/brand";
+import { emailVarsFromAccountManager } from "~/lib/email/templates";
+import { publicErrorMessage } from "~/lib/http/public-error.server";
+import {
+  clientNotFoundResponse,
+  policyNotFoundResponse,
+} from "~/lib/http/resource-not-found";
 import {
   parseFormIntent,
   parsePositiveInteger,
   parseUuid,
 } from "~/lib/http/route-input";
-import {
-  clientNotFoundResponse,
-  policyNotFoundResponse,
-} from "~/lib/http/resource-not-found";
-import { publicErrorMessage } from "~/lib/http/public-error.server";
 import { trackUsage } from "~/lib/observability/metrics.server";
 import { writeAuditLog } from "~/lib/services/audit/service";
+import { getAuthorisedRepresentative } from "~/lib/services/authorised-representatives/service";
+import { getClient } from "~/lib/services/clients/service";
+import { listEmailDirectory } from "~/lib/services/email/directory.server";
+import { getEmailFooterImage } from "~/lib/services/email/footer-image.server";
+import { listEmailTemplates } from "~/lib/services/email/templates.server";
+import { deletePolicies, getPolicy } from "~/lib/services/policy/data.service";
 import {
   addPolicyNote,
   applyPremiumCalculation,
@@ -55,20 +55,22 @@ import {
   updatePolicyNote,
   upsertPolicyFromForm,
 } from "~/lib/services/policy/orchestration.service";
-import { deletePolicies, getPolicy } from "~/lib/services/policy/data.service";
-import { getAuthorisedRepresentative } from "~/lib/services/authorised-representatives/service";
 import {
   getCarWording,
   getReferenceDataAsync,
 } from "~/lib/services/reference.service";
-import { getClient } from "~/lib/services/clients/service";
-import { listEmailTemplates } from "~/lib/services/email/templates.server";
-import { getEmailFooterImage } from "~/lib/services/email/footer-image.server";
-import { listEmailDirectory } from "~/lib/services/email/directory.server";
-import { emailVarsFromAccountManager } from "~/lib/email/templates";
 import { resolveNoteAuthors } from "~/lib/services/users/service";
+import {
+  carPolicyDraftSchema,
+  type CarPolicyFormValues,
+  carPolicyPricingSchema,
+  carPolicySchema,
+  isTerminalStatus,
+  parsePremiumOverride,
+  POLICY_STATUS,
+} from "~/lib/zod/policy-car";
+
 import type { Route } from "./+types/$policyId";
-import { pageTitle } from "~/lib/brand";
 
 export function meta({ loaderData }: Route.MetaArgs) {
   return [{ title: pageTitle(`${loaderData.policy.policyNumber}`) }];
@@ -509,7 +511,7 @@ export default function PolicyDetailRoute({
 
   return (
     <div>
-      <CarPolicyWizard
+      <PolicyWizard
         key={`${loaderData.policy.policyId}-${wasCloned ? "cloned" : "view"}`}
         policy={loaderData.policy}
         reference={loaderData.reference}

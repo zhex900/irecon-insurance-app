@@ -1,15 +1,12 @@
-const APP_NAME = "Irecon Insurance";
-
-import {
-  setMoneyCell as moneyCell,
-  styleWorkbookHeaderRow as styleHeaderRow,
-} from "./excel-workbook";
 import {
   PREMIUM_EXCEL_SPREADSHEET_VERSION,
   type PremiumExcelPolicyRefs,
   type PremiumExcelRateRefs,
   type PremiumExcelSheetContext,
 } from "./excel-types";
+import { setMoneyCell, styleWorkbookHeaderRow } from "./excel-workbook";
+
+const APP_NAME = "Irecon Insurance";
 
 type PremRow = {
   label: string;
@@ -62,7 +59,7 @@ export function addPremiumExcelPremiumSheet(
   sheet.getCell("A6").value = "Cover type";
   sheet.getCell("B6").value = coverLabel;
   sheet.getCell("C6").value = turnoverLabel;
-  moneyCell(sheet.getCell("D6"), undefined, car.estimatedTurnover ?? 0);
+  setMoneyCell(sheet.getCell("D6"), undefined, car.estimatedTurnover ?? 0);
 
   sheet.getCell("A7").value = "Site";
   sheet.mergeCells("B7:D7");
@@ -83,7 +80,7 @@ export function addPremiumExcelPremiumSheet(
   sheet.getCell(`B${headerRow}`).value = "Contract works";
   sheet.getCell(`C${headerRow}`).value = "Legal liability";
   sheet.getCell(`D${headerRow}`).value = "Combined";
-  styleHeaderRow(sheet.getRow(headerRow), 4);
+  styleWorkbookHeaderRow(sheet.getRow(headerRow), 4);
   sheet.getRow(headerRow).alignment = {
     horizontal: "center",
     vertical: "middle",
@@ -232,27 +229,27 @@ export function addPremiumExcelPremiumSheet(
     const labelCell = sheet.getCell(`A${r}`);
     labelCell.value = row.label;
     if (row.strong) labelCell.font = { bold: true };
-    if (row.b) moneyCell(sheet.getCell(`B${r}`), row.b, row.bResult ?? 0);
+    if (row.b) setMoneyCell(sheet.getCell(`B${r}`), row.b, row.bResult ?? 0);
     else if (row.bResult != null)
-      moneyCell(sheet.getCell(`B${r}`), undefined, row.bResult);
+      setMoneyCell(sheet.getCell(`B${r}`), undefined, row.bResult);
     else sheet.getCell(`B${r}`).value = "";
-    if (row.c) moneyCell(sheet.getCell(`C${r}`), row.c, row.cResult ?? 0);
+    if (row.c) setMoneyCell(sheet.getCell(`C${r}`), row.c, row.cResult ?? 0);
     else if (row.cResult != null)
-      moneyCell(sheet.getCell(`C${r}`), undefined, row.cResult);
+      setMoneyCell(sheet.getCell(`C${r}`), undefined, row.cResult);
     else sheet.getCell(`C${r}`).value = "";
-    if (row.d) moneyCell(sheet.getCell(`D${r}`), row.d, row.dResult ?? 0);
+    if (row.d) setMoneyCell(sheet.getCell(`D${r}`), row.d, row.dResult ?? 0);
     else if (row.dResult != null)
-      moneyCell(sheet.getCell(`D${r}`), undefined, row.dResult);
+      setMoneyCell(sheet.getCell(`D${r}`), undefined, row.dResult);
     else if (row.b && row.c) {
-      moneyCell(
+      setMoneyCell(
         sheet.getCell(`D${r}`),
         `SUM(B${r}:C${r})`,
         (row.bResult ?? 0) + (row.cResult ?? 0),
       );
     } else if (row.b) {
-      moneyCell(sheet.getCell(`D${r}`), `B${r}`, row.bResult ?? 0);
+      setMoneyCell(sheet.getCell(`D${r}`), `B${r}`, row.bResult ?? 0);
     } else if (row.bResult != null || row.cResult != null) {
-      moneyCell(
+      setMoneyCell(
         sheet.getCell(`D${r}`),
         undefined,
         (row.bResult ?? 0) + (row.cResult ?? 0),

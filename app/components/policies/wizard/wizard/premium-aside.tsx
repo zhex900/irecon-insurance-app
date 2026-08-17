@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
-import { cn } from "~/lib/utils";
+
 import { POLICY_STICKY_RAIL_CLASS } from "~/components/policies/policy-form-layout";
+import { cn } from "~/lib/utils";
 
 export function PremiumAside({ children }: { children: ReactNode }) {
   return (

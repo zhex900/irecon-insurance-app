@@ -1,16 +1,18 @@
-import { LoadingButton } from "~/components/ui/loading-button";
-import { StatusBadge } from "~/components/ui/status-badge";
-import { PolicyStickyHeader } from "~/components/policies/policy-form-layout";
+import type { ReactNode } from "react";
+
 import type { PolicySaveStatus } from "~/components/forms/field-save-highlight";
 import { PolicySaveStatusBadge } from "~/components/forms/field-save-highlight";
-import { MobileSectionNav } from "./mobile-section-nav";
+import { PolicyStickyHeader } from "~/components/policies/policy-form-layout";
+import { LoadingButton } from "~/components/ui/loading-button";
+import { StatusBadge } from "~/components/ui/status-badge";
+import { cn } from "~/lib/utils";
+
+import { useMode } from "../hooks/utils/use-mode";
 import {
   wizardModeBadge,
   wizardModeHeaderClass,
 } from "../shared/wizard-shared";
-import { useMode } from "../hooks/utils/use-mode";
-import { cn } from "~/lib/utils";
-import type { ReactNode } from "react";
+import { MobileSectionNav } from "./mobile-section-nav";
 
 export type CarPolicyWizardHeaderProps = {
   policyNumber: string;

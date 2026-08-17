@@ -5,20 +5,21 @@
  * - SESSION_INACTIVITY_TIMEOUT_MINUTES (default 30)
  * - SESSION_ABSOLUTE_TIMEOUT_HOURS (default 12)
  */
-import {
-  evaluateSessionTimeout,
-  type SessionTimeoutConfig,
-  type SessionTimeoutClientState,
-  type SessionTiming,
-  type SessionTimeoutVerdict,
-} from "./timeout";
 import { readSessionTiming } from "~/lib/supabase/auth.server";
 
+import {
+  evaluateSessionTimeout,
+  type SessionTimeoutClientState,
+  type SessionTimeoutConfig,
+  type SessionTimeoutVerdict,
+  type SessionTiming,
+} from "./timeout";
+
 export type {
-  SessionTimeoutConfig,
   SessionTimeoutClientState,
-  SessionTiming,
+  SessionTimeoutConfig,
   SessionTimeoutVerdict,
+  SessionTiming,
 };
 export { evaluateSessionTimeout };
 

@@ -1,14 +1,15 @@
-import { useCallback, useEffect, useRef, useState } from "react";
 import type { Template } from "@pdfme/common";
+import { useCallback, useEffect, useRef, useState } from "react";
+
 import { collectMergeFields } from "~/lib/documents/template-editor-form";
 import { expandEndorsementPairSchemas } from "~/lib/pdf/endorsement-expand";
+import type { FlowPushDown } from "~/lib/pdf/flow-push-down";
 import { applyFlowPushDown } from "~/lib/pdf/flow-push-down";
 import {
   normalizePdfmeTemplateSchemas,
   syncTableSchemasToInputs,
 } from "~/lib/pdf/merge-fields";
 import { buildSampleMergeInputs } from "~/lib/pdf/pdf-sample-merge-inputs";
-import type { FlowPushDown } from "~/lib/pdf/flow-push-down";
 import type { DocumentTemplateHistoryEntry } from "~/lib/services/documents/document-template-history";
 
 type PreviewDocTemplate = {

@@ -3,6 +3,7 @@ import {
   getSessionAppUser,
 } from "~/lib/auth/session/server.server";
 import { writeAuditLog } from "~/lib/services/audit/service";
+
 import type { Route } from "./+types/logout";
 
 async function logout(request: Request) {

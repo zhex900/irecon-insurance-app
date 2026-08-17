@@ -1,4 +1,5 @@
 import type { Template } from "@pdfme/common";
+
 import { isStaticSchemaName } from "~/lib/documents/template-editor-form";
 import type { FlowPushDown } from "~/lib/pdf/flow-push-down";
 import {

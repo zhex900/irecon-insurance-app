@@ -1,16 +1,16 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Form, Link, useFetcher, useNavigation } from "react-router";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { ChevronDownIcon } from "lucide-react";
+import { type ReactNode,useEffect, useRef, useState } from "react";
 import {
   Controller,
   FormProvider,
-  useForm,
   type Resolver,
+  useForm,
 } from "react-hook-form";
-import { ChevronDownIcon } from "lucide-react";
+import { Form, Link, useFetcher, useNavigation } from "react-router";
+
 import { Alert, AlertDescription } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
-import { LoadingButton } from "~/components/ui/loading-button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Checkbox } from "~/components/ui/checkbox";
 import {
@@ -21,6 +21,7 @@ import {
 import { Field, FieldError, FieldLabel } from "~/components/ui/field";
 import { FieldInput } from "~/components/ui/form-controls";
 import { FormulaTooltip } from "~/components/ui/formula-tooltip";
+import { LoadingButton } from "~/components/ui/loading-button";
 import {
   Table,
   TableBody,
@@ -39,11 +40,11 @@ import {
   focusFormIssue,
   orderFormIssues,
 } from "~/lib/form-validation-ui";
-import {
-  carAdjustmentInputSchema,
-  type CarAdjustmentInput,
-} from "~/lib/zod/policy-adjustment";
 import { cn, formatCurrency } from "~/lib/utils";
+import {
+  type CarAdjustmentInput,
+  carAdjustmentInputSchema,
+} from "~/lib/zod/policy-adjustment";
 
 function AdjustmentTurnoverFormula() {
   return (

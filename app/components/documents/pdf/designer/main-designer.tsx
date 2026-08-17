@@ -1,10 +1,9 @@
-import { createPortal } from "react-dom";
-import { useMemo, useState } from "react";
 import type { Template } from "@pdfme/common";
+import { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
+
+import { MergePanel , OverlayToolbar , SelectionToolbar } from "~/components/documents/pdf/designer";
 import { EditorSkeleton } from "~/components/documents/templates/loading";
-import { MergePanel } from "~/components/documents/pdf/designer";
-import { OverlayToolbar } from "~/components/documents/pdf/designer";
-import { SelectionToolbar } from "~/components/documents/pdf/designer";
 import { usePdfmeDesignerActions } from "~/hooks/pdfme-designer/use-actions";
 import { usePdfmeDesignerLifecycle } from "~/hooks/pdfme-designer/use-lifecycle";
 import {

@@ -1,10 +1,12 @@
 import { redirect } from "react-router";
+
 import { requireAuth } from "~/lib/auth/session/server.server";
-import { searchParamsObject, uuidParamSchema } from "~/lib/http/route-input";
 import { clientNotFoundResponse } from "~/lib/http/resource-not-found";
+import { searchParamsObject, uuidParamSchema } from "~/lib/http/route-input";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import { getClient } from "~/lib/services/clients/service";
 import { createPolicyDraft } from "~/lib/services/policy/data.service";
+
 import type { Route } from "./+types/new";
 
 /** Direct GET (typed URL, refresh) has nothing to create yet — send to the list. */

@@ -1,6 +1,6 @@
 import type {
-  GeneratePremiumExcelFunction,
   GenerateGenericExcelFunction,
+  GeneratePremiumExcelFunction,
 } from "../../../workers/excel/types/generate-types";
 
 export type ExcelWorkerBinding = {

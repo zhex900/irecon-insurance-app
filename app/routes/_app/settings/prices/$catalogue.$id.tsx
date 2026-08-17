@@ -1,17 +1,20 @@
 import { redirect, useActionData } from "react-router";
+
 import {
+  DeleteDialog,
   parseScheduleFormData,
   Schedule,
-  DeleteDialog,
 } from "~/components/prices";
+import { withSuccessToast } from "~/hooks/utilities";
+import { isSuperAdmin } from "~/lib/auth/roles";
 import { requireAuth } from "~/lib/auth/session/server.server";
+import { pageTitle } from "~/lib/brand";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
 import {
   booleanFlagSchema,
   parseFormIntent,
   parsePositiveInteger,
 } from "~/lib/http/route-input";
-import { isSuperAdmin } from "~/lib/auth/roles";
 import {
   isPriceCatalogueSlug,
   pricesEditHref,
@@ -21,31 +24,30 @@ import {
   slugLabel,
   slugToKind,
 } from "~/lib/pricing/settings-shared";
-import { withSuccessToast } from "~/hooks/utilities";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import {
+  type CarScheduleInput,
   deleteCarSchedule,
   deleteEslSchedule,
   deleteFeeSchedule,
   deletePlantRate,
   deleteStampSchedule,
   deleteTerrorSchedule,
+  type EslScheduleInput,
+  type FeeScheduleInput,
   getPriceCatalogueSnapshot,
+  type PlantRateInput,
+  type StampScheduleInput,
+  type TerrorScheduleInput,
   updateCarSchedule,
   updateEslSchedule,
   updateFeeSchedule,
   updatePlantRate,
   updateStampSchedule,
   updateTerrorSchedule,
-  type CarScheduleInput,
-  type EslScheduleInput,
-  type FeeScheduleInput,
-  type PlantRateInput,
-  type StampScheduleInput,
-  type TerrorScheduleInput,
 } from "~/lib/services/price/catalogue.server";
+
 import type { Route } from "./+types/$catalogue.$id";
-import { pageTitle } from "~/lib/brand";
 
 export function meta({ params }: Route.MetaArgs) {
   const slug = params.catalogue ?? "car-rates";

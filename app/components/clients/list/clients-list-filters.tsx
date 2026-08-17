@@ -4,41 +4,14 @@ import { Button } from "~/components/ui/button";
 import { Field, FieldGroup, FieldLabel } from "~/components/ui/field";
 import { FilterTag } from "~/components/ui/status-badge";
 
-export type FilterOption = {
+export type ClientsListFilterOption = {
   value: number | string;
   label: string;
   secondary?: string;
   searchText?: string;
 };
 
-export type ClientsIndexFiltersProps = {
-  search: string;
-  onSearchChange: (value: string) => void;
-  onSearchClear: () => void;
-  accountManagerId: number | null;
-  authorisedRepresentativeId: number | null;
-  arCompanyName: string;
-  policyFilter: "all" | "with" | "without";
-  accountManagerOptions: FilterOption[];
-  arCompanyOptions: FilterOption[];
-  arNameOptions: FilterOption[];
-  total: number;
-  withPolicies: number;
-  withoutPolicies: number;
-  allMatching: number;
-  hasActiveFilters: boolean;
-  onApplyFilters: (next?: {
-    search?: string;
-    accountManagerId?: number | null;
-    authorisedRepresentativeId?: number | null;
-    arCompanyName?: string;
-    policyFilter?: "all" | "with" | "without";
-    page?: number;
-  }) => void;
-  onClearFilters: () => void;
-};
-
-export function TableFilters({
+export function ClientsListFilters({
   search,
   onSearchChange,
   onSearchClear,
@@ -49,14 +22,39 @@ export function TableFilters({
   accountManagerOptions,
   arCompanyOptions,
   arNameOptions,
+  onApplyFilters,
+  onClearFilters,
+  hasActiveFilters,
   total,
   withPolicies,
   withoutPolicies,
   allMatching,
-  hasActiveFilters,
-  onApplyFilters,
-  onClearFilters,
-}: ClientsIndexFiltersProps) {
+}: {
+  search: string;
+  onSearchChange: (value: string) => void;
+  onSearchClear: () => void;
+  accountManagerId: number | null;
+  authorisedRepresentativeId: number | null;
+  arCompanyName: string;
+  policyFilter: "all" | "with" | "without";
+  accountManagerOptions: ClientsListFilterOption[];
+  arCompanyOptions: ClientsListFilterOption[];
+  arNameOptions: ClientsListFilterOption[];
+  onApplyFilters: (next?: {
+    search?: string;
+    accountManagerId?: number | null;
+    authorisedRepresentativeId?: number | null;
+    arCompanyName?: string;
+    policyFilter?: "all" | "with" | "without";
+    page?: number;
+  }) => void;
+  onClearFilters: () => void;
+  hasActiveFilters: boolean;
+  total: number;
+  withPolicies: number;
+  withoutPolicies: number;
+  allMatching: number;
+}) {
   return (
     <>
       <form

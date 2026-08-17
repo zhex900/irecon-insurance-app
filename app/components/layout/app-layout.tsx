@@ -1,15 +1,13 @@
-import * as React from "react";
-import { Link, Outlet, useFetcher, useNavigation } from "react-router";
 import {
   LogOutIcon,
   PanelLeftCloseIcon,
   PanelLeftOpenIcon,
   UserIcon,
 } from "lucide-react";
-import { Logo } from "~/components/logo";
-import { UserAvatar } from "~/components/ui/user-avatar";
-import { Toaster } from "~/components/ui/sonner";
-import { useSuccessToastFromSearch } from "~/hooks/utilities";
+import * as React from "react";
+import { Link, Outlet, useFetcher, useNavigation } from "react-router";
+
+import { SessionTimeoutDialog } from "~/components/auth/session-timeout-dialog";
 import {
   AppBreadcrumb,
   type AppBreadcrumbItem,
@@ -18,8 +16,10 @@ import { AppSideNav } from "~/components/layout/app-side-nav";
 import { GlobalSearch } from "~/components/layout/global-search";
 import { NavigationProgress } from "~/components/layout/navigation-progress";
 import { OfflineDialog } from "~/components/layout/offline-dialog";
-import { SessionTimeoutDialog } from "~/components/auth/session-timeout-dialog";
-import type { SessionTimeoutClientState } from "~/lib/auth/session";
+import { Logo } from "~/components/logo";
+import { Badge } from "~/components/reui/badge";
+import { ThemeToggle } from "~/components/theme-toggle";
+import { Button } from "~/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,26 +41,27 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "~/components/ui/sidebar";
-import { ThemeToggle } from "~/components/theme-toggle";
-import { Badge } from "~/components/reui/badge";
-import { Button } from "~/components/ui/button";
+import { Toaster } from "~/components/ui/sonner";
 import { Spinner } from "~/components/ui/spinner";
 import { TooltipProvider } from "~/components/ui/tooltip";
+import { UserAvatar } from "~/components/ui/user-avatar";
 import { useHydrated } from "~/hooks/network";
+import { useSuccessToastFromSearch } from "~/hooks/utilities";
 import {
   getAppEnvironment,
   getAppEnvironmentBadgeClass,
   getAppVersion,
 } from "~/lib/app-version";
+import type { SessionTimeoutClientState } from "~/lib/auth/session";
 import { APP_NAME } from "~/lib/brand";
 import type { BrokerSession } from "~/lib/db/types";
 import { SentryUserSync } from "~/lib/observability/sentry-user-sync";
 import type { SideNavData } from "~/lib/services/navigation/side-nav.service";
 import {
+  type NavSectionId,
   writeNavSectionsCookie,
   writeRecentsOpenCookie,
   writeSidebarOpenCookie,
-  type NavSectionId,
 } from "~/lib/services/navigation/sidebar-state";
 import { cn } from "~/lib/utils";
 
@@ -270,18 +271,6 @@ function AccountMenu({ broker }: { broker: BrokerSession }) {
     logoutFetcher.state !== "idle" ||
     (navigation.state !== "idle" && navigation.formAction?.includes("/logout"));
 
-  if (!hydrated) {
-    return (
-      <span className="rounded-full outline-none" aria-label="Account menu">
-        <UserAvatar
-          email={broker.email}
-          fullName={broker.fullName}
-          userId={broker.id}
-        />
-      </span>
-    );
-  }
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -297,41 +286,43 @@ function AccountMenu({ broker }: { broker: BrokerSession }) {
           avatarR2Key={broker.avatarR2Key}
         />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-52">
-        <DropdownMenuGroup>
-          <DropdownMenuLabel className="font-normal">
-            <div className="flex flex-col gap-0.5">
-              <span className="truncate text-sm font-medium text-foreground">
-                {broker.fullName}
-              </span>
-              <span className="truncate text-xs text-muted-foreground">
-                {broker.email}
-              </span>
-            </div>
-          </DropdownMenuLabel>
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <DropdownMenuItem render={<Link to="/profile" />}>
-            <UserIcon />
-            Profile
+      {hydrated && (
+        <DropdownMenuContent align="end" className="min-w-52">
+          <DropdownMenuGroup>
+            <DropdownMenuLabel className="font-normal">
+              <div className="flex flex-col gap-0.5">
+                <span className="truncate text-sm font-medium text-foreground">
+                  {broker.fullName}
+                </span>
+                <span className="truncate text-xs text-muted-foreground">
+                  {broker.email}
+                </span>
+              </div>
+            </DropdownMenuLabel>
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
+            <DropdownMenuItem render={<Link to="/profile" />}>
+              <UserIcon />
+              Profile
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            variant="destructive"
+            disabled={loggingOut}
+            onClick={() => {
+              void logoutFetcher.submit(null, {
+                method: "post",
+                action: "/logout",
+              });
+            }}
+          >
+            {loggingOut ? <Spinner /> : <LogOutIcon />}
+            {loggingOut ? "Logging out…" : "Log out"}
           </DropdownMenuItem>
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          variant="destructive"
-          disabled={loggingOut}
-          onClick={() => {
-            void logoutFetcher.submit(null, {
-              method: "post",
-              action: "/logout",
-            });
-          }}
-        >
-          {loggingOut ? <Spinner /> : <LogOutIcon />}
-          {loggingOut ? "Logging out…" : "Log out"}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
+        </DropdownMenuContent>
+      )}
     </DropdownMenu>
   );
 }

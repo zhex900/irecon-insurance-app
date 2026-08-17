@@ -1,10 +1,14 @@
 import { useEffect, useRef } from "react";
-import type { useFetcher } from "react-router";
 import { type UseFormReturn } from "react-hook-form";
+import type { useFetcher } from "react-router";
+
 import type { Policy } from "~/lib/db/types";
 import { carPolicyPricingSchema } from "~/lib/zod/policy-car";
 import { type CarPolicyFormValues } from "~/lib/zod/policy-car";
+
 import { INTENTS, TIMINGS } from "../../shared/constants";
+// Import and re-export types
+import type { PolicyWizardActionData } from "./use-premium-calculation";
 
 export function usePremiumAutoCalculation({
   policy,
@@ -66,6 +70,4 @@ export function usePremiumAutoCalculation({
   return {};
 }
 
-// Import and re-export types
-import type { PolicyWizardActionData } from "./use-premium-calculation";
 export type { PolicyWizardActionData };

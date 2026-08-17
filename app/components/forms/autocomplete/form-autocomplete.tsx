@@ -1,6 +1,7 @@
+import { ChevronsUpDownIcon } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { useController, useFormContext } from "react-hook-form";
-import { ChevronsUpDownIcon } from "lucide-react";
+
 import { Field, FieldError, FieldLabel } from "~/components/ui/field";
 import {
   FloatingListbox,
@@ -8,6 +9,7 @@ import {
 } from "~/components/ui/floating-listbox";
 import { Input } from "~/components/ui/input";
 import { cn } from "~/lib/utils";
+
 import { valuesEqual } from "./utils";
 
 export type FormAutocompleteOption = {

@@ -1,14 +1,14 @@
-import { Form, useActionData, useNavigation } from "react-router";
 import { useMemo, useState } from "react";
-import { TableFilters as ClientsIndexFilters } from "~/components/clients/list";
-import { ClientsTable as ClientsIndexTable } from "~/components/clients/list";
-import { DeleteClient as DeleteClientDialog } from "~/components/clients/dialogs";
+import { Form, useActionData, useNavigation } from "react-router";
+
+import { DeleteClientDialog } from "~/components/clients/dialogs";
+import { ClientsTable,ClientsTableFilters } from "~/components/clients/list";
 import { PageHeader } from "~/components/layout/app-layout";
 import { Button } from "~/components/ui/button";
-import { useHandledActionData } from "~/hooks/utilities";
-import { useActionSuccessToast } from "~/hooks/utilities";
 import { useDebouncedSearchQuery } from "~/hooks/search";
+import { useActionSuccessToast,useHandledActionData  } from "~/hooks/utilities";
 import { requireAuth } from "~/lib/auth/session/server.server";
+import { pageTitle } from "~/lib/brand";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
 import { parseFormIntent, parseUuid } from "~/lib/http/route-input";
 import {
@@ -18,13 +18,13 @@ import {
 } from "~/lib/pagination";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import {
-  listClientsPage,
   type ClientListItem,
+  listClientsPage,
 } from "~/lib/services/clients/list.service";
 import { deleteClient } from "~/lib/services/clients/service";
 import { getReferenceDataAsync } from "~/lib/services/reference.service";
+
 import type { Route } from "./+types/_index";
-import { pageTitle } from "~/lib/brand";
 
 const PAGE_SIZE = 25;
 
@@ -257,7 +257,7 @@ export default function ClientsIndexRoute({
         }
       />
 
-      <ClientsIndexFilters
+      <ClientsTableFilters
         search={search}
         onSearchChange={setSearch}
         onSearchClear={clearSearch}
@@ -283,7 +283,7 @@ export default function ClientsIndexRoute({
         <p className="mb-3 text-sm text-destructive">{actionData.error}</p>
       ) : null}
 
-      <ClientsIndexTable
+      <ClientsTable
         clients={loaderData.clients}
         total={loaderData.total}
         page={loaderData.page}
