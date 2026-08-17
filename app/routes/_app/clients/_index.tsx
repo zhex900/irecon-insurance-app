@@ -22,13 +22,13 @@ import {
   pageSizeSearchHref,
   parsePagination,
 } from "~/lib/pagination";
+import { referenceData } from "~/lib/reference-data";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import {
   type ClientListItem,
   listClientsPage,
 } from "~/lib/services/clients/list.service";
 import { deleteClient } from "~/lib/services/clients/service";
-import { referenceData } from "~/lib/reference-data";
 
 import type { Route } from "./+types/_index";
 

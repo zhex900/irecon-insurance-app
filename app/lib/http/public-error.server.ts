@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-import { DomainError } from "~/lib/errors";
 import { formatDbErrorChain } from "~/lib/db/query-gate";
+import { DomainError } from "~/lib/errors";
 import { logger } from "~/lib/observability/logger.server";
 import { captureServerException } from "~/lib/observability/sentry.server";
 

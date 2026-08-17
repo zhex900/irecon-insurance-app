@@ -61,6 +61,8 @@ Key files:
 | Client hooks | `usePolicyListMeta`, `useListReference` in `app/hooks/` |
 | Badge UX while pending | `countsPending` → em dash in column filter headers |
 
+**Hydration:** `useListReference` must not read `sessionStorage` during the initial render — only after mount in `useEffect`. Server and first client paint both use static `referenceData`; live AM/AR replaces it post-hydration.
+
 ### When to apply
 
 Use this pattern when a list loader has **any** of:

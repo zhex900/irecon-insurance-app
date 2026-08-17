@@ -3,7 +3,6 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 
-import * as schema from "~/lib/db/schema";
 import {
   DEV_QUERY_GATE_MAX,
   QueryGate,
@@ -11,6 +10,7 @@ import {
   WORKER_QUERY_GATE_MAX,
   wrapPostgresWithGate,
 } from "~/lib/db/query-gate";
+import * as schema from "~/lib/db/schema";
 
 const DEFAULT_URL = "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
 
@@ -137,13 +137,6 @@ export async function withRequestDb<T>(
   } finally {
     void store.baseSql.end({ timeout: 5 }).catch(() => {});
   }
-}
-
-function getSql() {
-  const scoped = dbContext.getStore();
-  if (scoped) return scoped.sql;
-
-  return getGlobalGatedSql();
 }
 
 export function getDb() {

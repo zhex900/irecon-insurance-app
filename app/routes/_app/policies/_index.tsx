@@ -19,12 +19,12 @@ import { pageTitle } from "~/lib/brand";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
 import { parseFormIntent, parseUuid } from "~/lib/http/route-input";
 import { parsePagination } from "~/lib/pagination";
+import { referenceData } from "~/lib/reference-data";
 import { parsePolicyListFiltersFromUrl } from "~/lib/search/policy-list-filters";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import { getClientsByIds } from "~/lib/services/clients/service";
 import { listPoliciesPageCore } from "~/lib/services/policies/list.service";
 import { deletePolicies } from "~/lib/services/policy/data.service";
-import { referenceData } from "~/lib/reference-data";
 
 import type { Route } from "./+types/_index";
 

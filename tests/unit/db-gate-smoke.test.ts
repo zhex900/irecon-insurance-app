@@ -1,10 +1,10 @@
-import postgres from "postgres";
-import { drizzle } from "drizzle-orm/postgres-js";
 import { eq } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 import { describe, expect, it } from "vitest";
 
-import { appUser } from "~/lib/db/schema";
 import { QueryGate, wrapPostgresWithGate } from "~/lib/db/query-gate";
+import { appUser } from "~/lib/db/schema";
 
 const url =
   process.env.DATABASE_URL?.trim() ||
