@@ -10,8 +10,8 @@ export type SideNavLink = {
   id: string;
   label: string;
   href: string;
-  /** Secondary line under the label (Client/Policy type, or template name). */
-  caption?: string;
+  /** Secondary line under the label (parent section or entity type). */
+  caption: string;
 };
 
 export type SideNavData = {
@@ -25,11 +25,13 @@ const REPORT_LINKS: SideNavLink[] = [
     id: "report-car-policies",
     label: "CAR Policy Report",
     href: "/reports/car-policies",
+    caption: "Reports",
   },
   {
     id: "report-car-renewals",
     label: "CAR Renewal Report",
     href: "/reports/car-renewals",
+    caption: "Reports",
   },
 ];
 
@@ -61,6 +63,7 @@ async function listSettingsLinks(viewer: AppUser): Promise<SideNavLink[]> {
       id: "settings-users",
       label: "User Management",
       href: "/settings/users",
+      caption: "Settings",
     });
   }
 
@@ -69,6 +72,7 @@ async function listSettingsLinks(viewer: AppUser): Promise<SideNavLink[]> {
       id: "settings-ar-brokers",
       label: "Authorised Representatives",
       href: "/settings/ar-brokers",
+      caption: "Settings",
     });
   }
 
@@ -77,6 +81,7 @@ async function listSettingsLinks(viewer: AppUser): Promise<SideNavLink[]> {
       id: "settings-account-managers",
       label: "Account Managers",
       href: "/settings/account-managers",
+      caption: "Settings",
     });
   }
 
@@ -85,6 +90,7 @@ async function listSettingsLinks(viewer: AppUser): Promise<SideNavLink[]> {
       id: "settings-car-wording",
       label: "Additional Wording",
       href: "/settings/car-wording",
+      caption: "Settings",
     });
   }
 
@@ -93,6 +99,7 @@ async function listSettingsLinks(viewer: AppUser): Promise<SideNavLink[]> {
       id: "settings-email-templates",
       label: "Email Templates",
       href: "/settings/email-templates",
+      caption: "Settings",
     });
   }
   if (libraryDocumentsEnabled || superAdmin) {
@@ -100,6 +107,7 @@ async function listSettingsLinks(viewer: AppUser): Promise<SideNavLink[]> {
       id: "settings-library-documents",
       label: "Library Documents",
       href: "/settings/library-documents",
+      caption: "Settings",
     });
   }
   if (documentTemplatesEnabled || superAdmin) {
@@ -107,6 +115,7 @@ async function listSettingsLinks(viewer: AppUser): Promise<SideNavLink[]> {
       id: "settings-document-templates",
       label: "Document Templates",
       href: "/settings/document-templates",
+      caption: "Settings",
     });
   }
   if (superAdmin) {
@@ -114,6 +123,7 @@ async function listSettingsLinks(viewer: AppUser): Promise<SideNavLink[]> {
       id: "settings-features",
       label: "Features",
       href: "/settings/features",
+      caption: "Settings",
     });
   }
   if (auditLogEnabled || superAdmin) {
@@ -121,6 +131,7 @@ async function listSettingsLinks(viewer: AppUser): Promise<SideNavLink[]> {
       id: "settings-audit-log",
       label: "Audit Log",
       href: "/settings/audit-log",
+      caption: "Settings",
     });
   }
   if (pricesEnabled || superAdmin) {
@@ -128,6 +139,7 @@ async function listSettingsLinks(viewer: AppUser): Promise<SideNavLink[]> {
       id: "settings-prices",
       label: "Prices",
       href: "/settings/prices/car-rates",
+      caption: "Settings",
     });
   }
 

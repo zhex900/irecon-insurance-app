@@ -12,12 +12,12 @@ import {
   AppBreadcrumb,
   type AppBreadcrumbItem,
 } from "~/components/layout/app-breadcrumb";
-import { AppSideNav } from "~/components/layout/app-side-nav";
 import { GlobalSearch } from "~/components/layout/global-search";
 import { NavigationProgress } from "~/components/layout/navigation-progress";
 import { OfflineDialog } from "~/components/layout/offline-dialog";
 import { Logo } from "~/components/logo";
 import { Badge } from "~/components/reui/badge";
+import { AppSideNav } from "~/components/side-nav";
 import { ThemeProvider } from "~/components/theme/theme-provider";
 import { ThemeToggle } from "~/components/theme/theme-toggle";
 import { Button } from "~/components/ui/button";

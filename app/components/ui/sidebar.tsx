@@ -222,7 +222,9 @@ function Sidebar({
       <div
         className={cn(
           "group peer relative hidden h-svh shrink-0 text-sidebar-foreground md:block",
-          "transition-[width] duration-200 ease-out",
+          // Animate only open↔icon rail toggles. While expanded, width is
+          // content-driven (w-max); tweening that on route/active changes flickers.
+          !open && "transition-[width] duration-200 ease-out",
           open ? fullRail : iconRail,
         )}
         data-state={state}

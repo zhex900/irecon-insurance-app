@@ -8,8 +8,13 @@ import {
 describe("recent route ordering", () => {
   it("excludeRecentRoute removes the active path", () => {
     const routes = [
-      { id: "a", href: "/clients", label: "Clients" },
-      { id: "b", href: "/policies", label: "Policies" },
+      { id: "a", href: "/clients", label: "Clients", caption: "Clients" },
+      {
+        id: "b",
+        href: "/policies",
+        label: "Policies",
+        caption: "Policies",
+      },
     ];
     expect(excludeRecentRoute(routes, "/clients")).toEqual([routes[1]]);
   });
@@ -17,9 +22,24 @@ describe("recent route ordering", () => {
   it("promotes the page being left when navigating away", () => {
     const onPolicyA = excludeRecentRoute(
       [
-        { id: "a", href: "/policies/a", label: "Policy A" },
-        { id: "b", href: "/policies/b", label: "Policy B" },
-        { id: "c", href: "/clients/c", label: "Client C" },
+        {
+          id: "a",
+          href: "/policies/a",
+          label: "Policy A",
+          caption: "Policy",
+        },
+        {
+          id: "b",
+          href: "/policies/b",
+          label: "Policy B",
+          caption: "Policy",
+        },
+        {
+          id: "c",
+          href: "/clients/c",
+          label: "Client C",
+          caption: "Client",
+        },
       ],
       "/policies/a",
     );
@@ -42,9 +62,24 @@ describe("recent route ordering", () => {
   it("preserves visit order across multiple hops", () => {
     let visible = excludeRecentRoute(
       [
-        { id: "a", href: "/policies/a", label: "Policy A" },
-        { id: "b", href: "/policies/b", label: "Policy B" },
-        { id: "c", href: "/clients/c", label: "Client C" },
+        {
+          id: "a",
+          href: "/policies/a",
+          label: "Policy A",
+          caption: "Policy",
+        },
+        {
+          id: "b",
+          href: "/policies/b",
+          label: "Policy B",
+          caption: "Policy",
+        },
+        {
+          id: "c",
+          href: "/clients/c",
+          label: "Client C",
+          caption: "Client",
+        },
       ],
       "/policies/a",
     );

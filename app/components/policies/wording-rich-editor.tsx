@@ -139,7 +139,7 @@ function WordingEditorInner({
       attributes: {
         ...(id ? { id } : {}),
         class:
-          "wording-list-styles wording-rich-editor-prose min-h-[4.5rem] px-3 py-2 text-sm outline-none",
+          "wording-list-styles wording-rich-editor-prose min-h-[4.5rem] px-3 py-2 text-sm text-foreground outline-none",
       },
     },
   });
@@ -213,7 +213,7 @@ function WordingEditorInner({
       </FieldLabel>
       <div
         className={cn(
-          "overflow-hidden rounded-md border border-input bg-background",
+          "wording-rich-editor overflow-hidden rounded-md border border-input bg-background text-foreground",
           error && "border-destructive",
           disabled && "opacity-60",
         )}

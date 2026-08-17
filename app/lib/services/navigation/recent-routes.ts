@@ -22,7 +22,7 @@ export type RecentRouteLink = {
   id: string;
   label: string;
   href: string;
-  caption?: string;
+  caption: string;
 };
 
 /**
@@ -129,22 +129,82 @@ export function recentIdForPath(path: string): string {
   return `recent-${encodeURIComponent(path)}`;
 }
 
+/** Known app routes — label is the page title, caption is the parent nav section. */
+export const STATIC_RECENT_ROUTES: Record<
+  string,
+  { label: string; caption: string }
+> = {
+  "/clients": { label: "Clients", caption: "Clients" },
+  "/policies": { label: "Policies", caption: "Policies" },
+  "/reports": { label: "Reports", caption: "Reports" },
+  "/reports/car-policies": {
+    label: "CAR Policy Report",
+    caption: "Reports",
+  },
+  "/reports/car-renewals": {
+    label: "CAR Renewal Report",
+    caption: "Reports",
+  },
+  "/settings": { label: "Settings", caption: "Settings" },
+  "/settings/users": { label: "User Management", caption: "Settings" },
+  "/settings/ar-brokers": {
+    label: "Authorised Representatives",
+    caption: "Settings",
+  },
+  "/settings/account-managers": {
+    label: "Account Managers",
+    caption: "Settings",
+  },
+  "/settings/car-wording": {
+    label: "Additional Wording",
+    caption: "Settings",
+  },
+  "/settings/email-templates": {
+    label: "Email Templates",
+    caption: "Settings",
+  },
+  "/settings/library-documents": {
+    label: "Library Documents",
+    caption: "Settings",
+  },
+  "/settings/document-templates": {
+    label: "Document Templates",
+    caption: "Settings",
+  },
+  "/settings/features": { label: "Features", caption: "Settings" },
+  "/settings/audit-log": { label: "Audit Log", caption: "Settings" },
+  "/settings/prices": { label: "Prices", caption: "Settings" },
+  "/settings/prices/car-rates": { label: "Prices", caption: "Settings" },
+  "/profile": { label: "Profile", caption: "Profile" },
+};
+
 /**
- * Caption under Recents rows.
- * Leaf sections → root nav label. Client/Policy → entity type.
+ * Caption under Recents rows — parent nav section or entity type.
  */
-export function recentCaptionForPath(path: string): string | undefined {
+export function recentCaptionForPath(path: string): string {
   const leaf = matchRecentLeafSection(path);
   if (leaf) return leaf.section.rootLabel;
 
   if (CLIENT_PATH_PATTERN.test(path)) return "Client";
   if (POLICY_PATH_PATTERN.test(path)) return "Policy";
 
-  return undefined;
+  const staticRoute = STATIC_RECENT_ROUTES[path];
+  if (staticRoute) return staticRoute.caption;
+
+  if (path.startsWith("/settings/")) return "Settings";
+  if (path.startsWith("/reports/")) return "Reports";
+  if (path.startsWith("/clients/")) return "Client";
+  if (path.startsWith("/policies/")) return "Policy";
+  if (path.startsWith("/profile")) return "Profile";
+
+  return "Page";
 }
 
 /** Optimistic client-side label until the API resolves the real one. */
 export function recentLabelFallback(path: string, previous?: string): string {
+  const staticRoute = STATIC_RECENT_ROUTES[path];
+  if (staticRoute) return staticRoute.label;
+
   const leaf = matchRecentLeafSection(path);
   if (leaf) {
     const prev = previous?.trim();
