@@ -101,7 +101,6 @@
     "isbot": "^5.2.1",
     "lucide-react": "^1.31.0",
     "md5": "^2.3.0",
-    "next-themes": "^0.4.6",
     "pdf-lib": "^1.17.1",
     "postgres": "^3.4.9",
     "prismjs": "^1.30.0",

@@ -18,7 +18,7 @@ import { NavigationProgress } from "~/components/layout/navigation-progress";
 import { OfflineDialog } from "~/components/layout/offline-dialog";
 import { Logo } from "~/components/logo";
 import { Badge } from "~/components/reui/badge";
-import { ThemeToggle } from "~/components/theme-toggle";
+import { ThemeToggle } from "~/components/theme/theme-toggle";
 import { Button } from "~/components/ui/button";
 import {
   DropdownMenu,

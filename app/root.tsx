@@ -3,7 +3,7 @@ import "./app.css";
 import { Links, Meta, Outlet, Scripts, ScrollRestoration } from "react-router";
 
 import { RootErrorBoundary } from "~/components/root-error-boundary";
-import { ThemeProvider } from "~/components/theme-provider";
+import { ThemeProvider } from "~/components/theme/theme-provider";
 import { geistFontFaces } from "~/lib/fonts";
 
 import type { Route } from "./+types/root";
@@ -32,12 +32,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
+        <ThemeProvider defaultTheme="system" enableSystem>
           {children}
         </ThemeProvider>
         <ScrollRestoration />

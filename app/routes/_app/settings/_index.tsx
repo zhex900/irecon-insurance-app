@@ -18,7 +18,7 @@ import {
   ListShell,
 } from "~/components/documents/templates/loading";
 import { PageHeader } from "~/components/layout/app-layout";
-import { ThemeModePicker } from "~/components/theme-toggle";
+import { ThemeModePicker } from "~/components/theme/theme-toggle";
 import {
   Card,
   CardContent,
