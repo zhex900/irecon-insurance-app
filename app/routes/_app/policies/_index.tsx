@@ -8,10 +8,9 @@ import { ListSearchField } from "~/components/forms/list-search-field";
 import { PageHeader } from "~/components/layout/app-layout";
 import { NewPolicyClientDialog } from "~/components/policies/new-policy-client-dialog";
 import { PolicyListTable } from "~/components/policies/policy-list-table";
-import { useListReference } from "~/hooks/list";
 import {
-  usePolicyListMeta,
   usePolicyListPage,
+  usePolicyListSecondary,
 } from "~/hooks/policy-list";
 import { useActionSuccessToast } from "~/hooks/utilities";
 import { requireAuth } from "~/lib/auth/session/server.server";
@@ -181,9 +180,8 @@ export default function PoliciesIndexRoute({
     expiryPresetCounts,
     allCount,
     countsPending,
-  } = usePolicyListMeta(searchParams);
-
-  const { reference: listReference } = useListReference();
+    reference: listReference,
+  } = usePolicyListSecondary(searchParams);
 
   const reference = useMemo(() => {
     if (!listReference) return referenceData;

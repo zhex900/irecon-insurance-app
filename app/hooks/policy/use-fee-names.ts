@@ -4,30 +4,31 @@ import { useFetcher } from "react-router";
 import { useHydrated } from "~/hooks/network";
 import {
   getReferenceSessionCacheGeneration,
-  listReferenceSessionCacheKey,
+  policyFeeNamesSessionCacheKey,
   subscribeReferenceSessionCacheInvalidation,
 } from "~/lib/client/reference-session-cache";
-import type { ListReferenceData } from "~/lib/services/reference.service";
+import type { ReferenceData } from "~/lib/db/types";
 
-function readCachedReference(): ListReferenceData | null {
+function readCachedFeeNames(asOf: string): ReferenceData["feeNames"] | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = sessionStorage.getItem(listReferenceSessionCacheKey());
+    const raw = sessionStorage.getItem(policyFeeNamesSessionCacheKey(asOf));
     if (!raw) return null;
-    return JSON.parse(raw) as ListReferenceData;
+    return JSON.parse(raw) as ReferenceData["feeNames"];
   } catch {
     return null;
   }
 }
 
-/** Load live AM + AR for list filters via `/api/reference/list` (session-cached). */
-export function useListReference() {
+/** Live broker fee lines for premium breakdown (session-cached per inception date). */
+export function usePolicyFeeNames(feeAsOf: string, enabled = true) {
   const hydrated = useHydrated();
-  const fetcher = useFetcher<ListReferenceData>();
+  const fetcher = useFetcher<ReferenceData["feeNames"]>();
   const loadRef = useRef(fetcher.load);
+  const asOf = feeAsOf.slice(0, 10) || new Date().toISOString().slice(0, 10);
   const cacheGeneration = useSyncExternalStore(
-    subscribeReferenceSessionCacheInvalidation.bind(null, "list-reference"),
-    () => getReferenceSessionCacheGeneration("list-reference"),
+    subscribeReferenceSessionCacheInvalidation.bind(null, "policy-fee-names"),
+    () => getReferenceSessionCacheGeneration("policy-fee-names"),
     () => 0,
   );
   const [loadedGeneration, setLoadedGeneration] = useState(cacheGeneration);
@@ -45,32 +46,32 @@ export function useListReference() {
     }
   }, [fetcher.state, fetcher.data, cacheGeneration]);
 
-  const cached = hydrated ? readCachedReference() : null;
+  const cached = hydrated && enabled ? readCachedFeeNames(asOf) : null;
   const fetched =
     fetcher.state === "idle" &&
     fetcher.data &&
     loadedGeneration === cacheGeneration
       ? fetcher.data
       : null;
-  const reference = cached ?? fetched ?? null;
-  const pending = reference == null && fetcher.state === "loading";
+  const feeNames = cached ?? fetched ?? null;
+  const pending = enabled && feeNames == null && fetcher.state === "loading";
 
   useEffect(() => {
-    if (!hydrated || cached || fetcher.state !== "idle") return;
-    loadRef.current("/api/reference/list");
-  }, [hydrated, cached, fetcher.state, cacheGeneration]);
+    if (!enabled || !hydrated || cached || fetcher.state !== "idle") return;
+    loadRef.current(`/api/reference/fee-names?asOf=${encodeURIComponent(asOf)}`);
+  }, [enabled, hydrated, cached, fetcher.state, asOf, cacheGeneration]);
 
   useEffect(() => {
     if (fetcher.state !== "idle" || !fetcher.data) return;
     try {
       sessionStorage.setItem(
-        listReferenceSessionCacheKey(),
+        policyFeeNamesSessionCacheKey(asOf),
         JSON.stringify(fetcher.data),
       );
     } catch {
       // Private browsing / quota — ignore.
     }
-  }, [fetcher.data, fetcher.state]);
+  }, [fetcher.data, fetcher.state, asOf]);
 
-  return { reference, pending };
+  return { feeNames, pending };
 }

@@ -15,7 +15,12 @@ import {
   type ScheduleView,
 } from "~/components/prices/shared/dialog-shell";
 import { LoadingButton } from "~/components/ui/loading-button";
+import { invalidatePolicyFeeNamesSessionCache } from "~/lib/client/reference-session-cache";
 import type { PriceCatalogueKind } from "~/lib/services/price/types";
+
+function invalidateFeeNamesIfNeeded(catalogue: string) {
+  if (catalogue === "fees") invalidatePolicyFeeNamesSessionCache();
+}
 
 export function Schedule({
   title,
@@ -86,6 +91,7 @@ export function Schedule({
           method="post"
           action={formAction}
           className="flex flex-col gap-4"
+          onSubmit={() => invalidateFeeNamesIfNeeded(catalogue)}
         >
           <input type="hidden" name="intent" value="update" />
           <input type="hidden" name="catalogue" value={catalogue} />
@@ -169,7 +175,11 @@ export function DeleteDialog({
           <FooterButton href={closeHref} onClick={onClose}>
             Cancel
           </FooterButton>
-          <Form method="post" action={formAction}>
+          <Form
+            method="post"
+            action={formAction}
+            onSubmit={() => invalidateFeeNamesIfNeeded(catalogue)}
+          >
             <input type="hidden" name="intent" value="delete" />
             <input type="hidden" name="catalogue" value={catalogue} />
             <input type="hidden" name="id" value={id} />

@@ -16,18 +16,12 @@ import { WizardDefault } from "./wizard-default";
 export function PolicyWizard({
   policy,
   reference,
-  carWording,
   readOnly = false,
   freshSteps = false,
   isNew = false,
   clientName = "",
-  brokerName = "",
-  brokerEmail = "",
   noteAuthors: initialNoteAuthors,
-  emailTemplates = [],
-  emailDirectory = [],
-  emailTemplateVars,
-  footerImageWidth,
+  onPolicyUpdated,
   headerActions,
 }: WizardProps) {
   const form = useForm<CarPolicyFormValues>({
@@ -70,15 +64,9 @@ export function PolicyWizard({
           <WizardDefault
             policy={policy}
             reference={reference}
-            carWording={carWording}
             clientName={clientName}
-            brokerName={brokerName}
-            brokerEmail={brokerEmail}
             noteAuthors={initialNoteAuthors}
-            emailTemplates={emailTemplates}
-            emailDirectory={emailDirectory}
-            emailTemplateVars={emailTemplateVars}
-            footerImageWidth={footerImageWidth}
+            onPolicyUpdated={onPolicyUpdated}
             headerActions={headerActions}
           />
         </ModeProvider>

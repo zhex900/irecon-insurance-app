@@ -31,6 +31,7 @@ import {
   rangeForExpiryPreset,
   rangeForInceptionPreset,
 } from "~/lib/search/date-range-filter";
+import type { ListReferenceData } from "~/lib/services/reference.service";
 import { likePattern, resolvePage } from "~/lib/services/shared/list-query";
 
 export type PolicyListClientSummary = {
@@ -115,6 +116,11 @@ export type PolicyListMeta = {
 };
 
 export type PolicyListMetaResponse = PolicyListMeta & { allCount: number };
+
+export type PolicyListSecondaryResponse = {
+  meta: PolicyListMetaResponse;
+  reference: ListReferenceData;
+};
 
 export type ListPoliciesPageResult = PageResult<PolicyListItem> &
   PolicyListPremiumTotals &
@@ -403,23 +409,42 @@ async function selectPolicyListRows(
 export async function getPolicyListMeta(
   input: ListPoliciesPageInput = {},
 ): Promise<PolicyListMeta> {
-  const [statusCounts, coverCounts, categoryCounts, datePresetCounts] =
-    await Promise.all([
-      countByGroup(input, { omitStatus: true }, { column: policy.policyStatusId }),
-      countByGroup(input, { omitCover: true }, { column: policyCar.coverTypeId }),
-      countByGroup(input, { omitCategory: true }, {
-        column: policy.policyCategoryId,
-      }),
-      countAllDatePresets(input),
-    ]);
+  const [facetCounts, datePresetCounts] = await Promise.all([
+    countAllFacetGroups(input),
+    countAllDatePresets(input),
+  ]);
 
   return {
-    statusCounts,
-    coverCounts,
-    categoryCounts,
-    inceptionPresetCounts: datePresetCounts.inceptionPresetCounts,
-    expiryPresetCounts: datePresetCounts.expiryPresetCounts,
+    ...facetCounts,
+    ...datePresetCounts,
   };
+}
+
+/** Status / cover / category counts — sequential to stay within the query gate. */
+async function countAllFacetGroups(
+  input: ListPoliciesPageInput,
+): Promise<
+  Pick<
+    PolicyListMeta,
+    "statusCounts" | "coverCounts" | "categoryCounts"
+  >
+> {
+  const statusCounts = await countByGroup(
+    input,
+    { omitStatus: true },
+    { column: policy.policyStatusId },
+  );
+  const coverCounts = await countByGroup(
+    input,
+    { omitCover: true },
+    { column: policyCar.coverTypeId },
+  );
+  const categoryCounts = await countByGroup(
+    input,
+    { omitCategory: true },
+    { column: policy.policyCategoryId },
+  );
+  return { statusCounts, coverCounts, categoryCounts };
 }
 
 /** Table rows + pagination only — used by list loaders that fetch meta via `/api/*`. */
@@ -434,27 +459,25 @@ export async function listPoliciesPageCore(
   return toPageResult(mapPolicyListRows(rows), total, pagination);
 }
 
-/** One scan for all inception/expiry preset badge counts (replaces N separate counts). */
+/** Inception + expiry preset badge counts — sequential (different filter bases). */
 async function countAllDatePresets(input: ListPoliciesPageInput): Promise<{
   inceptionPresetCounts: Record<string, number>;
   expiryPresetCounts: Record<string, number>;
 }> {
-  const [inceptionPresetCounts, expiryPresetCounts] = await Promise.all([
-    countDatePresets(
-      input,
-      INCEPTION_PRESETS,
-      (id) => rangeForInceptionPreset(id as InceptionPresetId),
-      policy.dateStart,
-      { omitInception: true },
-    ),
-    countDatePresets(
-      input,
-      EXPIRY_PRESETS,
-      (id) => rangeForExpiryPreset(id as ExpiryPresetId),
-      policy.dateEnd,
-      { omitExpiry: true },
-    ),
-  ]);
+  const inceptionPresetCounts = await countDatePresets(
+    input,
+    INCEPTION_PRESETS,
+    (id) => rangeForInceptionPreset(id as InceptionPresetId),
+    policy.dateStart,
+    { omitInception: true },
+  );
+  const expiryPresetCounts = await countDatePresets(
+    input,
+    EXPIRY_PRESETS,
+    (id) => rangeForExpiryPreset(id as ExpiryPresetId),
+    policy.dateEnd,
+    { omitExpiry: true },
+  );
   return { inceptionPresetCounts, expiryPresetCounts };
 }
 

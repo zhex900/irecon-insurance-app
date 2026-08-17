@@ -1,5 +1,7 @@
 import { useCallback, useMemo } from "react";
 
+import { useCarWording } from "~/hooks/policy";
+
 import {
   usePolicyDocuments,
   usePolicyDraftSave,
@@ -33,11 +35,14 @@ export function useWizardState(
   core: ReturnType<typeof useWizardCore>,
 ) {
   const navigation = usePolicyWizardNavigation(navigationInput(core, props));
+  const premiumSectionOpen = navigation.openMap.premium ?? true;
+  const claimsSectionOpen = navigation.openMap.claims ?? true;
+  const { carWording } = useCarWording(premiumSectionOpen || claimsSectionOpen);
   const premiumCalc = usePolicyPremiumCalc(
     premiumInput(core, navigation, props),
   );
   const documents = usePolicyDocuments(
-    documentsInput(core, premiumCalc, props),
+    documentsInput(core, premiumCalc, props, carWording),
   );
   const draftSave = usePolicyDraftSave(draftInput(core, premiumCalc, props));
   const submit = usePolicySubmit(
@@ -69,8 +74,8 @@ export function useWizardState(
   const borderClassName = wizardBorderClassName(parts);
 
   const premiumPanelProps = useMemo(
-    () => buildPremiumPanelProps(parts, borderClassName),
-    [parts, borderClassName],
+    () => buildPremiumPanelProps(parts, borderClassName, carWording),
+    [parts, borderClassName, carWording],
   );
 
   const issueHandlers = useMemo(
@@ -112,6 +117,7 @@ export function useWizardState(
     gate,
     borderClassName,
     premiumPanelProps,
+    carWording,
     canChangeStatus,
     exportPremiumExcel,
     ...issueHandlers,

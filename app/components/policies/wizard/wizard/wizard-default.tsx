@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 
 import { POLICY_STICKY_RAIL_CLASS } from "~/components/policies/policy-form-layout";
+import { usePolicySaveSync } from "~/hooks/policy";
 import { cn } from "~/lib/utils";
 
 import { DesktopRail } from "../components/desktop-rail";
@@ -22,6 +23,11 @@ import { useMode } from "../hooks/utils/use-mode";
 
 export function WizardDefault(props: WizardStateProps) {
   const core = useWizardCore();
+  usePolicySaveSync({
+    fetcher: core.fetcher,
+    onPolicyUpdated: props.onPolicyUpdated,
+    onSubmitted: () => core.mode.setSubmittedInSession(true),
+  });
   const wizard = useWizardState(props, core);
   const { wizardMode } = useMode();
   const { navigation, premiumCalc, draftSave, submit, leave, gate } = wizard;
@@ -101,6 +107,7 @@ export function WizardDefault(props: WizardStateProps) {
           policy={props.policy}
           noteAuthors={props.noteAuthors}
           fetcher={core.fetcher}
+          onPolicyUpdated={props.onPolicyUpdated}
         />
 
         <div
@@ -131,6 +138,7 @@ export function WizardDefault(props: WizardStateProps) {
             policy={props.policy}
             noteAuthors={props.noteAuthors}
             fetcher={core.fetcher}
+            onPolicyUpdated={props.onPolicyUpdated}
           />
           <SectionStack
             openMap={navigation.openMap}
@@ -138,7 +146,7 @@ export function WizardDefault(props: WizardStateProps) {
             borderClassName={wizard.borderClassName}
             handleFieldBlur={draftSave.handleFieldBlur}
             reference={props.reference}
-            carWording={props.carWording}
+            carWording={wizard.carWording}
             rating={rating}
             premiumSectionProps={premiumSectionProps}
           />

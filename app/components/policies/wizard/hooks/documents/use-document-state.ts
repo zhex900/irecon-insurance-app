@@ -42,6 +42,7 @@ export function useDocumentState({ policy }: { policy: Policy }) {
   );
   const documentsRef = useRef(documents);
   const policyRef = useRef(policy);
+  const lastServerDocumentsRef = useRef(policy.documents);
   useEffect(() => {
     documentsRef.current = documents;
     policyRef.current = policy;
@@ -49,8 +50,14 @@ export function useDocumentState({ policy }: { policy: Policy }) {
 
   const lastPolicyIdRef = useRef(policy.policyId);
   useEffect(() => {
-    if (lastPolicyIdRef.current === policy.policyId) return;
+    if (
+      lastPolicyIdRef.current === policy.policyId &&
+      lastServerDocumentsRef.current === policy.documents
+    ) {
+      return;
+    }
     lastPolicyIdRef.current = policy.policyId;
+    lastServerDocumentsRef.current = policy.documents;
     setDocuments(policy.documents ?? []);
   }, [policy.policyId, policy.documents]);
 

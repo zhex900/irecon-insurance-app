@@ -2,26 +2,37 @@ import type postgres from "postgres";
 
 import { logger } from "~/lib/observability/logger.server";
 
-/** In-flight query cap per request (Workers postgres pool max is 5). */
-export const WORKER_QUERY_GATE_MAX = 3;
-export const DEV_QUERY_GATE_MAX = 8;
+/** In-flight query cap per request (Workers postgres pool max is 2). */
+export const WORKER_QUERY_GATE_MAX = 1; // 3 - testing only
+export const DEV_QUERY_GATE_MAX = 1; // 8 - testing only
 
-const TRANSIENT_RETRY_ATTEMPTS = 3;
+const TRANSIENT_RETRY_ATTEMPTS = 1;
 const TRANSIENT_RETRY_BASE_MS = 50;
 const SLOW_QUEUE_WAIT_MS = 500;
 
-let poolResetHandler: (() => void) | undefined;
+let poolResetHandler: (() => void | Promise<void>) | undefined;
 
 /** Called by `app/lib/db/client.ts` to drop stale shared pools before retry. */
-export function registerPoolResetHandler(handler: () => void) {
+export function registerPoolResetHandler(handler: () => void | Promise<void>) {
   poolResetHandler = handler;
 }
 
 export class QueryGate {
   private inFlight = 0;
   private readonly queue: Array<() => void> = [];
+  private readonly drainWaiters: Array<() => void> = [];
 
   constructor(private readonly maxConcurrent: number) {}
+
+  /** Wait until no queries are in-flight or queued (safe before pool reset). */
+  drain(): Promise<void> {
+    if (this.inFlight === 0 && this.queue.length === 0) {
+      return Promise.resolve();
+    }
+    return new Promise((resolve) => {
+      this.drainWaiters.push(resolve);
+    });
+  }
 
   run<T>(fn: () => Promise<T>): Promise<T> {
     return this.acquire().then(async (waitMs) => {
@@ -51,7 +62,7 @@ export class QueryGate {
         ) {
           throw error;
         }
-        poolResetHandler?.();
+        await poolResetHandler?.();
         await sleep(TRANSIENT_RETRY_BASE_MS * (tryIndex + 1));
         return attempt(tryIndex + 1);
       }
@@ -77,6 +88,13 @@ export class QueryGate {
     this.inFlight = Math.max(0, this.inFlight - 1);
     const next = this.queue.shift();
     if (next) next();
+    this.notifyDrained();
+  }
+
+  private notifyDrained() {
+    if (this.inFlight > 0 || this.queue.length > 0) return;
+    const waiters = this.drainWaiters.splice(0);
+    for (const resolve of waiters) resolve();
   }
 }
 
@@ -205,8 +223,13 @@ export function wrapPostgresWithGate(sql: Sql, gate: QueryGate): Sql {
 
       if (prop === "begin") {
         return (...args: unknown[]) => {
-          const wrapTx = (tx: postgres.TransactionSql): postgres.TransactionSql =>
-            wrapPostgresWithGate(tx as unknown as Sql, gate) as unknown as postgres.TransactionSql;
+          const wrapTx = (
+            tx: postgres.TransactionSql,
+          ): postgres.TransactionSql =>
+            wrapPostgresWithGate(
+              tx as unknown as Sql,
+              gate,
+            ) as unknown as postgres.TransactionSql;
           if (typeof args[0] === "function") {
             const cb = args[0] as (tx: postgres.TransactionSql) => unknown;
             return target.begin((tx) => cb(wrapTx(tx)));

@@ -12,6 +12,7 @@ import {
 
 export type PolicyWizardActionData = {
   ok?: boolean;
+  intent?: "save";
   savedAt?: string;
   formError?: string;
   premium?: Policy["car"]["premium"];
@@ -23,6 +24,7 @@ export type PolicyWizardActionData = {
   draft?: boolean;
   message?: string;
   requestId?: number;
+  policy?: Policy;
 };
 
 export function usePremiumFetcherUpdates({

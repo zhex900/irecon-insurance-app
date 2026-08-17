@@ -40,10 +40,11 @@ import {
 } from "~/components/ui/table";
 import { TablePagination } from "~/components/ui/table-pagination";
 import { useDebouncedSearchQuery } from "~/hooks/search";
-import { useActionSuccessToast,useHandledActionData  } from "~/hooks/utilities";
+import { useActionSuccessToast, useHandledActionData } from "~/hooks/utilities";
 import { requireAdminPage } from "~/lib/auth/authorize.server";
 import { requireAuth } from "~/lib/auth/session/server.server";
 import { pageTitle } from "~/lib/brand";
+import { invalidateListReferenceSessionCache } from "~/lib/client/reference-session-cache";
 import type { WholesaleBroker } from "~/lib/db/types";
 import { flattenFieldErrors, focusFormIssue } from "~/lib/form-validation-ui";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
@@ -252,7 +253,10 @@ function ArFormDialog({
   useHandledActionData(actionData, {
     enabled: open,
     intents: ["create", "update"],
-    onSuccess: () => onOpenChange(false),
+    onSuccess: () => {
+      invalidateListReferenceSessionCache();
+      onOpenChange(false);
+    },
   });
 
   return (
@@ -381,7 +385,10 @@ export default function SettingsArBrokersRoute({
 
   useHandledActionData(actionData, {
     intents: "delete",
-    onSuccess: () => setDeleting(null),
+    onSuccess: () => {
+      invalidateListReferenceSessionCache();
+      setDeleting(null);
+    },
   });
 
   function openCreate() {

@@ -29,20 +29,28 @@ type DesktopRailProps = {
   policy: Policy;
   noteAuthors?: Record<string, NoteAuthor>;
   fetcher: ReturnType<typeof useFetcher<PolicyWizardActionData>>;
+  onPolicyUpdated?: (policy: Policy) => void;
 };
 
 function DesktopNotes({
   policy,
   noteAuthors,
   fetcher,
+  onPolicyUpdated,
   className,
 }: {
   policy: Policy;
   noteAuthors?: Record<string, NoteAuthor>;
   fetcher: ReturnType<typeof useFetcher<PolicyWizardActionData>>;
+  onPolicyUpdated?: (policy: Policy) => void;
   className?: string;
 }) {
-  const notesState = usePolicyNotes({ policy, noteAuthors, fetcher });
+  const notesState = usePolicyNotes({
+    policy,
+    noteAuthors,
+    fetcher,
+    onPolicyUpdated,
+  });
 
   return (
     <PolicyNotesCard
@@ -71,6 +79,7 @@ export const DesktopRail = memo(function DesktopRail({
   policy,
   noteAuthors,
   fetcher,
+  onPolicyUpdated,
 }: DesktopRailProps) {
   const { wizardMode, isNew } = useMode();
   const borderClassName = wizardModeCardBorderClass(wizardMode);
@@ -99,6 +108,7 @@ export const DesktopRail = memo(function DesktopRail({
             policy={policy}
             noteAuthors={noteAuthors}
             fetcher={fetcher}
+            onPolicyUpdated={onPolicyUpdated}
             className={borderClassName}
           />
         </div>

@@ -1,6 +1,6 @@
 import type { UseFormReturn } from "react-hook-form";
 
-import type { Policy } from "~/lib/db/types";
+import type { CarWording, Policy } from "~/lib/db/types";
 import { type CarPolicyFormValues, POLICY_STATUS } from "~/lib/zod/policy-car";
 
 import type { usePolicyDocuments } from "../hooks/composite/use-documents";
@@ -69,6 +69,7 @@ export function createIssueAttentionHandlers(options: {
 export function buildPremiumPanelProps(
   parts: WizardStateParts,
   borderClassName: string,
+  carWording: CarWording[],
 ) {
   const { props, premiumCalc, documents } = parts;
   return {
@@ -79,15 +80,10 @@ export function buildPremiumPanelProps(
     isGeneratingDocuments: documents.isGeneratingDocuments,
     policyNumber: props.policy.policyNumber,
     clientName: props.clientName ?? "",
-    brokerName: props.brokerName ?? "",
-    brokerEmail: props.brokerEmail ?? "",
-    emailTemplates: props.emailTemplates ?? [],
-    emailDirectory: props.emailDirectory ?? [],
-    emailTemplateVars: props.emailTemplateVars,
-    footerImageWidth: props.footerImageWidth,
+    reference: props.reference,
     policy: props.policy,
     getPreviewPolicy: documents.buildDocumentSnapshot,
-    carWording: props.carWording,
+    carWording,
     brokerFeeLines: props.reference.feeNames,
     className: borderClassName,
   };

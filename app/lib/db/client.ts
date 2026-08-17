@@ -53,23 +53,27 @@ function queryGateLimit() {
 }
 
 function workerPoolMax() {
-  return 5;
+  // One request-scoped pool; gate caps concurrency — fewer Hyperdrive connections.
+  return 2;
 }
 
 function createSql(url: string) {
   return postgres(url, {
     max: isCloudflareWorker() ? workerPoolMax() : 10,
     prepare: false,
-    idle_timeout: isCloudflareWorker() ? 20 : 0,
-    max_lifetime: isCloudflareWorker() ? 60 : 0,
+    idle_timeout: isCloudflareWorker() ? 0 : 0,
+    max_lifetime: isCloudflareWorker() ? 0 : 0,
     connect_timeout: 30,
   });
 }
 
 /** Reset dev/global fallback pool (not used for Worker request-scoped pools). */
-export function resetSharedDbPool() {
+export async function resetSharedDbPool() {
+  if (globalForDb.__ireconGate) {
+    await globalForDb.__ireconGate.drain();
+  }
   if (globalForDb.__ireconBaseSql) {
-    void globalForDb.__ireconBaseSql.end({ timeout: 0 }).catch(() => {});
+    await globalForDb.__ireconBaseSql.end({ timeout: 2 }).catch(() => {});
   }
   globalForDb.__ireconBaseSql = undefined;
   globalForDb.__ireconBaseSqlUrl = undefined;
@@ -80,7 +84,7 @@ export function resetSharedDbPool() {
 
 function getDevBaseSql(url = getDatabaseUrl()): Sql {
   if (globalForDb.__ireconBaseSql && globalForDb.__ireconBaseSqlUrl !== url) {
-    resetSharedDbPool();
+    void resetSharedDbPool();
   }
   if (!globalForDb.__ireconBaseSql) {
     globalForDb.__ireconBaseSql = createSql(url);
@@ -120,7 +124,22 @@ function createStore(url = getDatabaseUrl()): DbStore {
   return { sql, db, gate, baseSql };
 }
 
-registerPoolResetHandler(resetSharedDbPool);
+/** Drop the active pool (request-scoped on Workers, global in dev) before retry. */
+export async function resetActiveDbPool() {
+  const store = dbContext.getStore();
+  if (store) {
+    await store.gate.drain();
+    await store.baseSql.end({ timeout: 2 }).catch(() => {});
+    const baseSql = createSql(getDatabaseUrl());
+    store.baseSql = baseSql;
+    store.sql = createGatedSql(baseSql, store.gate);
+    store.db = drizzle(store.sql, { schema });
+    return;
+  }
+  await resetSharedDbPool();
+}
+
+registerPoolResetHandler(resetActiveDbPool);
 
 /**
  * Run `fn` with a request-scoped DB client (Cloudflare Workers).

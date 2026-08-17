@@ -12,6 +12,11 @@ import {
 import { Field, FieldLabel } from "~/components/ui/field";
 import { LoadingButton } from "~/components/ui/loading-button";
 import { Textarea } from "~/components/ui/textarea";
+import { invalidatePolicyFeeNamesSessionCache } from "~/lib/client/reference-session-cache";
+
+function invalidateFeeNamesIfNeeded(catalogue: string) {
+  if (catalogue === "fees") invalidatePolicyFeeNamesSessionCache();
+}
 
 export interface EditorProps {
   title: string;
@@ -56,7 +61,11 @@ export function Editor({
 
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
-        <Form method="post" className="flex flex-col gap-4">
+        <Form
+          method="post"
+          className="flex flex-col gap-4"
+          onSubmit={() => invalidateFeeNamesIfNeeded(catalogue)}
+        >
           <input type="hidden" name="intent" value={intent} />
           <input type="hidden" name="catalogue" value={catalogue} />
           {id != null ? <input type="hidden" name="id" value={id} /> : null}

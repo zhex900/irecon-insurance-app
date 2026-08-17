@@ -55,12 +55,46 @@ describe("QueryGate", () => {
 
     expect(attempts).toBe(2);
   });
+
+  it("drain waits until in-flight and queued work finishes", async () => {
+    const gate = new QueryGate(1);
+    let released = false;
+
+    const running = gate.run(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      released = true;
+    });
+    const queued = gate.run(async () => {});
+
+    const drained = gate.drain();
+    let drainResolved = false;
+    void drained.then(() => {
+      drainResolved = true;
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    expect(drainResolved).toBe(false);
+
+    await Promise.all([running, queued, drained]);
+    expect(released).toBe(true);
+    expect(drainResolved).toBe(true);
+  });
 });
 
 describe("isTransientDbError", () => {
   it("detects connection errors in postgres.js messages", () => {
     expect(
       isTransientDbError(new Error("Failed query: connection terminated")),
+    ).toBe(true);
+  });
+
+  it("detects hyperdrive connection_closed errors", () => {
+    expect(
+      isTransientDbError(
+        new Error(
+          "Failed query: select 1 | cause: write CONNECTION_CLOSED host.hyperdrive.local:5432",
+        ),
+      ),
     ).toBe(true);
   });
 

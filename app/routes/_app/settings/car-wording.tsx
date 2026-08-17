@@ -41,11 +41,12 @@ import {
 } from "~/components/ui/table";
 import { TablePagination } from "~/components/ui/table-pagination";
 import { useDebouncedSearchQuery } from "~/hooks/search";
-import { useActionSuccessToast,useHandledActionData  } from "~/hooks/utilities";
+import { useActionSuccessToast, useHandledActionData } from "~/hooks/utilities";
 import { requireFeatureOrSuperAdminPage } from "~/lib/auth/authorize.server";
 import { isAdminRole, isSuperAdmin } from "~/lib/auth/roles";
 import { requireAuth } from "~/lib/auth/session/server.server";
 import { pageTitle } from "~/lib/brand";
+import { invalidateCarWordingSessionCache } from "~/lib/client/reference-session-cache";
 import type { CarWording } from "~/lib/db/types";
 import { flattenFieldErrors, focusFormIssue } from "~/lib/form-validation-ui";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
@@ -249,7 +250,10 @@ function WordingFormDialog({
   useHandledActionData(actionData, {
     enabled: open,
     intents: ["create", "update"],
-    onSuccess: () => onOpenChange(false),
+    onSuccess: () => {
+      invalidateCarWordingSessionCache();
+      onOpenChange(false);
+    },
   });
 
   return (
@@ -357,7 +361,10 @@ export default function SettingsCarWordingRoute({
 
   useHandledActionData(actionData, {
     intents: "delete",
-    onSuccess: () => setDeleting(null),
+    onSuccess: () => {
+      invalidateCarWordingSessionCache();
+      setDeleting(null);
+    },
   });
 
   function openCreate() {

@@ -7,9 +7,8 @@ import type {
   Policy,
   PolicyDocument,
   PremiumBreakdown,
+  ReferenceData,
 } from "~/lib/db/types";
-import type { EmailDirectoryEntry } from "~/lib/email/directory";
-import type { EmailTemplate, EmailTemplateVars } from "~/lib/email/templates";
 
 export function PremiumSummary({
   premium,
@@ -19,12 +18,7 @@ export function PremiumSummary({
   isGeneratingDocuments = false,
   policyNumber,
   clientName = "",
-  brokerName = "",
-  brokerEmail = "",
-  emailTemplates = [],
-  emailDirectory = [],
-  emailTemplateVars,
-  footerImageWidth,
+  reference,
   adjustment,
   policy,
   getPreviewPolicy,
@@ -40,12 +34,7 @@ export function PremiumSummary({
   isGeneratingDocuments?: boolean;
   policyNumber: string;
   clientName?: string;
-  brokerName?: string;
-  brokerEmail?: string;
-  emailTemplates?: EmailTemplate[];
-  emailDirectory?: EmailDirectoryEntry[];
-  emailTemplateVars?: EmailTemplateVars;
-  footerImageWidth?: number;
+  reference: ReferenceData;
   adjustment?: CarAdjustmentRecord;
   policy?: Policy;
   getPreviewPolicy?: () => Policy | null;
@@ -65,12 +54,7 @@ export function PremiumSummary({
       isGeneratingDocuments={isGeneratingDocuments}
       policyNumber={policyNumber}
       clientName={clientName}
-      brokerName={brokerName}
-      brokerEmail={brokerEmail}
-      emailTemplates={emailTemplates}
-      emailDirectory={emailDirectory}
-      emailTemplateVars={emailTemplateVars}
-      footerImageWidth={footerImageWidth}
+      reference={reference}
       policy={policy}
       getPreviewPolicy={getPreviewPolicy}
       carWording={carWording}

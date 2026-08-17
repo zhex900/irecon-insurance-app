@@ -16,10 +16,12 @@ export function usePolicyNotes({
   policy,
   noteAuthors: initialAuthors,
   fetcher,
+  onPolicyUpdated,
 }: {
   policy: Policy;
   noteAuthors?: Record<string, NoteAuthor>;
   fetcher: ReturnType<typeof useFetcher<NotesActionData>>;
+  onPolicyUpdated?: (policy: Policy) => void;
 }) {
   const [notes, setNotes] = useState<Policy["notes"]>(policy.notes ?? []);
   const [noteAuthors, setNoteAuthors] = useState<Record<string, NoteAuthor>>(
@@ -70,6 +72,12 @@ export function usePolicyNotes({
       return;
     }
     setNoteError(null);
+    if (noteFetcherDataRef.current?.notes) {
+      onPolicyUpdated?.({
+        ...policy,
+        notes: noteFetcherDataRef.current.notes,
+      });
+    }
     if (
       noteFetcherDataRef.current &&
       "message" in noteFetcherDataRef.current &&
@@ -77,7 +85,7 @@ export function usePolicyNotes({
     ) {
       toast.success(noteFetcherDataRef.current.message);
     }
-  }, [fetcher.state, fetcher.data, isSavingNote]);
+  }, [fetcher.state, fetcher.data, isSavingNote, onPolicyUpdated, policy]);
 
   function addNote(description: string) {
     setNoteError(null);

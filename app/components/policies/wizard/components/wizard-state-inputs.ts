@@ -1,3 +1,5 @@
+import type { CarWording } from "~/lib/db/types";
+
 import type { usePolicyDocuments } from "../hooks/composite/use-documents";
 import type { usePolicyDraftSave } from "../hooks/composite/use-draft-save";
 import type { usePolicyWizardNavigation } from "../hooks/composite/use-navigation";
@@ -48,6 +50,7 @@ export function documentsInput(
   core: Core,
   premiumCalc: PremiumCalc,
   props: WizardStateProps,
+  carWording: CarWording[],
 ) {
   return {
     policy: props.policy,
@@ -57,7 +60,7 @@ export function documentsInput(
     premiumManualKeysRef: premiumCalc.premiumManualKeysRef,
     referralReasons: premiumCalc.referralReasons,
     rating: core.fetcher.data?.rating,
-    carWording: props.carWording,
+    carWording,
     brokerFeeLines: props.reference.feeNames,
   };
 }

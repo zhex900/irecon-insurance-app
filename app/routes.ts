@@ -48,7 +48,22 @@ export default [
   route("api/audit", "routes/api/audit.tsx"),
   route("api/search", "routes/api/search.tsx"),
   route("api/policies/list-meta", "routes/api/policies.list-meta.tsx"),
+  route(
+    "api/policies/list-secondary",
+    "routes/api/policies.list-secondary.tsx",
+  ),
+  route(
+    "api/policies/:policyId/note-authors",
+    "routes/api/policies.$policyId.note-authors.tsx",
+  ),
+  route(
+    "api/policies/:policyId/email-compose",
+    "routes/api/policies.$policyId.email-compose.tsx",
+  ),
   route("api/reference/list", "routes/api/reference.list.tsx"),
+  route("api/reference/fee-names", "routes/api/reference.fee-names.tsx"),
+  route("api/car-wording", "routes/api/car-wording.tsx"),
+  route("api/email/directory", "routes/api/email.directory.tsx"),
   route("api/recent-routes", "routes/api/recent-routes.tsx"),
   route("api/generate-excel", "routes/api/generate-excel.tsx"),
   route(

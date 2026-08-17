@@ -10,7 +10,7 @@ Measure before optimizing. Readability wins over micro-optimizations without evi
 - **Index** filters you actually use; verify slow paths with `EXPLAIN`.
 - **Transactions** for multi-table writes — correct first, then fast.
 - Prefer request-scoped `getDb()` / Hyperdrive pooling — don’t open ad-hoc pools per call.
-- **Workers query concurrency:** cap at **≤3 parallel** `getDb()` queries per loader/action. Each Worker request gets its **own postgres pool** (`max: 5`, closed after the request) plus a **per-request query gate** in `app/lib/db/client.ts` — pools must not be shared across requests (Workers I/O isolation). Use **waves** of `Promise.all`, **combined SQL** (`count(*) FILTER (WHERE …)` for badge counts), and **one query for feature flags** (`getFeatureFlagStates()`). See `app/lib/services/price/snapshot.ts` and `app/lib/services/policies/list.service.ts`.
+- **Workers query concurrency:** cap at **≤3 parallel** `getDb()` queries per loader/action. Each Worker request gets its **own postgres pool** (`max: 2`, closed after the request) plus a **per-request query gate** in `app/lib/db/client.ts` — pools must not be shared across requests (Workers I/O isolation). Use **waves** of `Promise.all`, **combined SQL** (`count(*) FILTER (WHERE …)` for badge counts), and **one query for feature flags** (`getFeatureFlagStates()`). See `app/lib/services/price/snapshot.ts` and `app/lib/services/policies/list.service.ts`.
 
 ## HTTP & payloads
 
@@ -47,8 +47,9 @@ Static catalogue fields (`policyStatuses`, `coverTypes`, …) come from `app/lib
 
 ```
 GET /policies (loader)     → count + page rows (~2 queries)
-GET /api/policies/list-meta → facet counts (separate request, after paint)
-GET /api/reference/list    → AM + AR (once per session, sessionStorage cache)
+GET /api/policies/list-secondary → facet counts + live AM/AR (one Worker request)
+GET /api/policies/list-meta → facet counts only (legacy; prefer list-secondary)
+GET /api/reference/list    → AM + AR (clients list; sessionStorage cache)
 ```
 
 Key files:
@@ -73,6 +74,21 @@ Use this pattern when a list loader has **any** of:
 - Full `getReferenceDataAsync()` when the UI only needs AM/AR
 
 Keep synchronous loaders for detail pages that need premium totals and meta on first paint (e.g. `/clients/:id` policies tab).
+
+### Policy detail (`/policies/:id`)
+
+The policy wizard loader returns **policy + client name only** (~2 queries). Secondary data loads after paint:
+
+| Data | Hook / API | When |
+| ---- | ---------- | ---- |
+| Broker fee lines | `usePolicyFeeNames` → `/api/reference/fee-names` | After mount (session-cached per inception date) |
+| CAR wording | `useCarWording` → `/api/car-wording` | When Premium or Claims section is open |
+| Note authors | `usePolicyNoteAuthors` → `/api/policies/:id/note-authors` | When policy has notes |
+| Email compose | `usePolicyEmailCompose` → `/api/policies/:id/email-compose` | When user opens Send email |
+
+**Save without revalidation:** `intent=save` returns `{ ok, policy, message }`; `shouldRevalidate` skips the loader. Local policy state updates via `usePolicySaveSync` + toast — avoids re-running email directory scans on status change.
+
+Static reference fields (`coverTypes`, `states`, …) come from `referenceData` on the client; only `feeNames` is merged from the async hook.
 
 ### Adding a new async list route
 

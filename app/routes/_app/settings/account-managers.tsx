@@ -40,7 +40,7 @@ import {
 } from "~/components/ui/table";
 import { TablePagination } from "~/components/ui/table-pagination";
 import { useDebouncedSearchQuery } from "~/hooks/search";
-import { useActionSuccessToast,useHandledActionData  } from "~/hooks/utilities";
+import { useActionSuccessToast, useHandledActionData } from "~/hooks/utilities";
 import {
   requireAdminPage,
   requireFeatureOrSuperAdminPage,
@@ -48,6 +48,7 @@ import {
 import { isSuperAdmin } from "~/lib/auth/roles";
 import { requireAuth } from "~/lib/auth/session/server.server";
 import { pageTitle } from "~/lib/brand";
+import { invalidateListReferenceSessionCache } from "~/lib/client/reference-session-cache";
 import type { AccountManager } from "~/lib/db/types";
 import { flattenFieldErrors, focusFormIssue } from "~/lib/form-validation-ui";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
@@ -263,7 +264,10 @@ function AccountManagerFormDialog({
   useHandledActionData(actionData, {
     enabled: open,
     intents: ["create", "update"],
-    onSuccess: () => onOpenChange(false),
+    onSuccess: () => {
+      invalidateListReferenceSessionCache();
+      onOpenChange(false);
+    },
   });
 
   return (
@@ -399,7 +403,10 @@ export default function SettingsAccountManagersRoute({
 
   useHandledActionData(actionData, {
     intents: "delete",
-    onSuccess: () => setDeleting(null),
+    onSuccess: () => {
+      invalidateListReferenceSessionCache();
+      setDeleting(null);
+    },
   });
 
   function openCreate() {

@@ -1,9 +1,7 @@
 import type { ReactNode } from "react";
 
 import { Badge } from "~/components/reui/badge";
-import type { CarWording, Policy, ReferenceData } from "~/lib/db/types";
-import type { EmailDirectoryEntry } from "~/lib/email/directory";
-import type { EmailTemplate, EmailTemplateVars } from "~/lib/email/templates";
+import type { Policy, ReferenceData } from "~/lib/db/types";
 import type { NoteAuthor } from "~/lib/services/users/service";
 
 export type WizardMode = "new" | "edit" | "view";
@@ -53,17 +51,11 @@ export function wizardModeCardBorderClass(mode: WizardMode) {
 export type WizardProps = {
   policy: Policy;
   reference: ReferenceData;
-  carWording: CarWording[];
   readOnly?: boolean;
   freshSteps?: boolean;
   isNew?: boolean;
   clientName?: string;
-  brokerName?: string;
-  brokerEmail?: string;
   noteAuthors?: Record<string, NoteAuthor>;
-  emailTemplates?: EmailTemplate[];
-  emailDirectory?: EmailDirectoryEntry[];
-  emailTemplateVars?: EmailTemplateVars;
-  footerImageWidth?: number;
+  onPolicyUpdated?: (policy: Policy) => void;
   headerActions?: ReactNode;
 };

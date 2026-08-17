@@ -21,11 +21,17 @@ export function getReferenceData(): ReferenceData {
 
 /** Live account managers + ARs only — for list page filters (not full reference payload). */
 export async function getListReferenceAsync(): Promise<ListReferenceData> {
-  const [accountManagers, wholesaleBrokers] = await Promise.all([
-    listAccountManagers(),
-    listAuthorisedRepresentatives(),
-  ]);
+  const accountManagers = await listAccountManagers();
+  const wholesaleBrokers = await listAuthorisedRepresentatives();
   return { accountManagers, wholesaleBrokers };
+}
+
+/** Live broker fee schedule lines for premium breakdown (as-of policy inception). */
+export async function getFeeNamesAsync(
+  feeAsOfDate?: string,
+): Promise<ReferenceData["feeNames"]> {
+  const asOf = feeAsOfDate ?? new Date().toISOString().slice(0, 10);
+  return resolveBrokerFeeLines(asOf);
 }
 
 /** Reference data with live account managers, ARs, excess defaults, and broker fee schedule from the DB. */

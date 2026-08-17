@@ -13,11 +13,22 @@ type MobileNotesProps = {
   policy: Policy;
   noteAuthors?: Record<string, NoteAuthor>;
   fetcher: ReturnType<typeof useFetcher<PolicyWizardActionData>>;
+  onPolicyUpdated?: (policy: Policy) => void;
 };
 
-export function MobileNotes({ policy, noteAuthors, fetcher }: MobileNotesProps) {
+export function MobileNotes({
+  policy,
+  noteAuthors,
+  fetcher,
+  onPolicyUpdated,
+}: MobileNotesProps) {
   const { isNew, wizardMode } = useMode();
-  const notesState = usePolicyNotes({ policy, noteAuthors, fetcher });
+  const notesState = usePolicyNotes({
+    policy,
+    noteAuthors,
+    fetcher,
+    onPolicyUpdated,
+  });
 
   if (isNew) return null;
 
