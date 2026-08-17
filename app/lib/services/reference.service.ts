@@ -10,8 +10,22 @@ import { listAuthorisedRepresentatives } from "~/lib/services/authorised-represe
 import { listCarWordings } from "~/lib/services/car-wording/service";
 import { resolveBrokerFeeLines } from "~/server/pricing/rate-resolver";
 
+export type ListReferenceData = Pick<
+  ReferenceData,
+  "accountManagers" | "wholesaleBrokers"
+>;
+
 export function getReferenceData(): ReferenceData {
   return referenceData;
+}
+
+/** Live account managers + ARs only — for list page filters (not full reference payload). */
+export async function getListReferenceAsync(): Promise<ListReferenceData> {
+  const [accountManagers, wholesaleBrokers] = await Promise.all([
+    listAccountManagers(),
+    listAuthorisedRepresentatives(),
+  ]);
+  return { accountManagers, wholesaleBrokers };
 }
 
 /** Reference data with live account managers, ARs, excess defaults, and broker fee schedule from the DB. */

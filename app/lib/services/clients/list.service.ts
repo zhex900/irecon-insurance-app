@@ -155,15 +155,24 @@ export async function listClientsPage(
   const whereForCounts = filters.length > 0 ? and(...filters) : undefined;
 
   // Workers postgres pools are small — one combined count scan, then list rows.
+  const policyCountByClient = db
+    .select({
+      clientId: policy.clientId,
+      count: sql<number>`count(*)::int`.as("policy_count"),
+    })
+    .from(policy)
+    .groupBy(policy.clientId)
+    .as("policy_count_by_client");
+
   const [{ allTotal, withPolicies, withoutPolicies }, listRows] =
     await Promise.all([
       countClientsSummary(whereForCounts),
       db
         .select({
           client,
-          policyCount: sql<number>`(
-        select count(*)::int from policy p where p.client_id = ${client.clientId}
-      )`.as("policy_count"),
+          policyCount: sql<number>`coalesce(${policyCountByClient.count}, 0)::int`.as(
+            "policy_count",
+          ),
         })
         .from(client)
         .leftJoin(
@@ -176,6 +185,10 @@ export async function listClientsPage(
             client.authorisedRepresentativeId,
             authorisedRepresentative.authorisedRepresentativeId,
           ),
+        )
+        .leftJoin(
+          policyCountByClient,
+          eq(client.clientId, policyCountByClient.clientId),
         )
         .where(where)
         .orderBy(asc(client.name))

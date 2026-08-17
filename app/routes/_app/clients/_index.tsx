@@ -1,10 +1,16 @@
 import { useMemo, useState } from "react";
-import { Form, useActionData, useNavigation } from "react-router";
+import {
+  Form,
+  type ShouldRevalidateFunctionArgs,
+  useActionData,
+  useNavigation,
+} from "react-router";
 
 import { DeleteClientDialog } from "~/components/clients/dialogs";
 import { ClientsTable,ClientsTableFilters } from "~/components/clients/list";
 import { PageHeader } from "~/components/layout/app-layout";
 import { Button } from "~/components/ui/button";
+import { useListReference } from "~/hooks/list";
 import { useDebouncedSearchQuery } from "~/hooks/search";
 import { useActionSuccessToast,useHandledActionData  } from "~/hooks/utilities";
 import { requireAuth } from "~/lib/auth/session/server.server";
@@ -22,7 +28,7 @@ import {
   listClientsPage,
 } from "~/lib/services/clients/list.service";
 import { deleteClient } from "~/lib/services/clients/service";
-import { getReferenceDataAsync } from "~/lib/services/reference.service";
+import { referenceData } from "~/lib/reference-data";
 
 import type { Route } from "./+types/_index";
 
@@ -30,6 +36,23 @@ const PAGE_SIZE = 25;
 
 export function meta() {
   return [{ title: pageTitle("Clients") }];
+}
+
+export function shouldRevalidate({
+  formData,
+  actionResult,
+  defaultShouldRevalidate,
+}: ShouldRevalidateFunctionArgs) {
+  if (formData?.get("intent") === "delete") return true;
+  if (
+    actionResult &&
+    typeof actionResult === "object" &&
+    "intent" in actionResult &&
+    (actionResult as { intent?: string }).intent === "delete"
+  ) {
+    return true;
+  }
+  return defaultShouldRevalidate;
 }
 
 function parsePositiveInt(value: string | null) {
@@ -66,8 +89,6 @@ export async function loader({ request }: Route.LoaderArgs) {
     offset: pagination.offset,
   });
 
-  const reference = await getReferenceDataAsync();
-
   return {
     clients: page.rows,
     total: page.total,
@@ -76,7 +97,6 @@ export async function loader({ request }: Route.LoaderArgs) {
     withPolicies: page.withPolicies,
     withoutPolicies: page.withoutPolicies,
     allMatching: page.withPolicies + page.withoutPolicies,
-    reference,
     filters: {
       search,
       accountManagerId,
@@ -152,31 +172,42 @@ export default function ClientsIndexRoute({
     onSuccess: () => setDeleting(null),
   });
 
+  const { reference: listReference } = useListReference();
+
+  const reference = useMemo(() => {
+    if (!listReference) return referenceData;
+    return {
+      ...referenceData,
+      accountManagers: listReference.accountManagers,
+      wholesaleBrokers: listReference.wholesaleBrokers,
+    };
+  }, [listReference]);
+
   const accountManagerOptions = useMemo(
     () =>
-      loaderData.reference.accountManagers.map((manager) => ({
+      reference.accountManagers.map((manager) => ({
         value: manager.accountManagerId,
         label: manager.fullName,
         secondary: manager.abbrev,
       })),
-    [loaderData.reference.accountManagers],
+    [reference.accountManagers],
   );
 
   const arNameOptions = useMemo(
     () =>
-      loaderData.reference.wholesaleBrokers.map((ar) => ({
+      reference.wholesaleBrokers.map((ar) => ({
         value: ar.authorisedRepresentativeId,
         label: ar.fullName,
         secondary: ar.companyName,
         searchText: `${ar.companyName} ${ar.arNumber}`,
       })),
-    [loaderData.reference.wholesaleBrokers],
+    [reference.wholesaleBrokers],
   );
 
   const arCompanyOptions = useMemo(() => {
     const seen = new Set<string>();
     const options: { value: string; label: string }[] = [];
-    for (const ar of loaderData.reference.wholesaleBrokers) {
+    for (const ar of reference.wholesaleBrokers) {
       const company = ar.companyName.trim();
       if (!company) continue;
       const key = company.toLowerCase();
@@ -185,7 +216,7 @@ export default function ClientsIndexRoute({
       options.push({ value: company, label: company });
     }
     return options.sort((a, b) => a.label.localeCompare(b.label));
-  }, [loaderData.reference.wholesaleBrokers]);
+  }, [reference.wholesaleBrokers]);
 
   function buildParams(next?: {
     search?: string;
@@ -289,7 +320,7 @@ export default function ClientsIndexRoute({
         pageSize={loaderData.pageSize}
         searchQuery={searchQuery}
         searchFilter={loaderData.filters.search}
-        reference={loaderData.reference}
+        reference={reference}
         pageHref={pageHref}
         pageSizeHref={pageSizeHref}
         onDeleteRequest={setDeleting}

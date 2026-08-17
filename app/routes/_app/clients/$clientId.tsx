@@ -70,7 +70,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
       expiryTo: filters.expiry.to,
       limit: pagination.limit,
       offset: pagination.offset,
-    }),
+    }, { includePremium: true, includeMeta: true }),
     countClientPolicies(clientId),
   ]);
   if (!client) throw clientNotFoundResponse();

@@ -26,6 +26,7 @@ export function ColumnDateFilterHeader({
   onChange,
   rangeForPreset,
   presetCounts,
+  countsPending = false,
   align = "start",
   inputIdPrefix,
 }: {
@@ -36,6 +37,7 @@ export function ColumnDateFilterHeader({
   rangeForPreset: (preset: string) => { from: string; to: string };
   /** Counts keyed by preset id (shown on the right of each quick option). */
   presetCounts?: Record<string, number>;
+  countsPending?: boolean;
   align?: "start" | "center" | "end";
   inputIdPrefix: string;
 }) {
@@ -157,6 +159,10 @@ export function ColumnDateFilterHeader({
                 {presetCounts ? (
                   <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
                     {presetCounts[preset.id] ?? 0}
+                  </span>
+                ) : countsPending ? (
+                  <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                    —
                   </span>
                 ) : null}
               </button>

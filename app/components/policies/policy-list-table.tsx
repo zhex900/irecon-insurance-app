@@ -54,11 +54,12 @@ export type PolicyListTableProps = {
   total: number;
   page: number;
   pageSize: number;
-  statusCounts: Record<number, number>;
-  coverCounts: Record<number, number>;
-  categoryCounts: Record<number, number>;
-  inceptionPresetCounts: Record<string, number>;
-  expiryPresetCounts: Record<string, number>;
+  statusCounts?: Record<number, number>;
+  coverCounts?: Record<number, number>;
+  categoryCounts?: Record<number, number>;
+  inceptionPresetCounts?: Record<string, number>;
+  expiryPresetCounts?: Record<string, number>;
+  countsPending?: boolean;
   q: string;
   searchQuery: string;
   filters: Pick<
@@ -137,6 +138,7 @@ export function PolicyListTable({
   categoryCounts,
   inceptionPresetCounts,
   expiryPresetCounts,
+  countsPending = false,
   q,
   searchQuery,
   filters,
@@ -241,6 +243,7 @@ export function PolicyListTable({
               <TableHead>
                 <ColumnFilterHeader
                   label="Status"
+                  countsPending={countsPending}
                   selected={filters.statusIds.map(String)}
                   onChange={(next) =>
                     applyColumnFilter(
@@ -251,13 +254,14 @@ export function PolicyListTable({
                   options={reference.policyStatuses.map((status) => ({
                     value: String(status.policyStatusId),
                     label: status.name,
-                    count: statusCounts[status.policyStatusId] ?? 0,
+                    count: statusCounts?.[status.policyStatusId],
                   }))}
                 />
               </TableHead>
               <TableHead>
                 <ColumnFilterHeader
                   label="Cover"
+                  countsPending={countsPending}
                   selected={filters.coverTypeIds.map(String)}
                   onChange={(next) =>
                     applyColumnFilter(
@@ -268,13 +272,14 @@ export function PolicyListTable({
                   options={reference.coverTypes.map((cover) => ({
                     value: String(cover.coverTypeId),
                     label: cover.name,
-                    count: coverCounts[cover.coverTypeId] ?? 0,
+                    count: coverCounts?.[cover.coverTypeId],
                   }))}
                 />
               </TableHead>
               <TableHead>
                 <ColumnFilterHeader
                   label="Category"
+                  countsPending={countsPending}
                   selected={filters.policyCategoryIds.map(String)}
                   onChange={(next) =>
                     applyColumnFilter(
@@ -285,7 +290,7 @@ export function PolicyListTable({
                   options={reference.policyCategories.map((category) => ({
                     value: String(category.policyCategoryId),
                     label: category.name,
-                    count: categoryCounts[category.policyCategoryId] ?? 0,
+                    count: categoryCounts?.[category.policyCategoryId],
                   }))}
                 />
               </TableHead>
@@ -293,6 +298,7 @@ export function PolicyListTable({
                 <ColumnDateFilterHeader
                   label="Inception"
                   inputIdPrefix={dateInputIdPrefix}
+                  countsPending={countsPending}
                   presets={INCEPTION_PRESETS}
                   value={filters.inception}
                   presetCounts={inceptionPresetCounts}
@@ -309,6 +315,7 @@ export function PolicyListTable({
                     "inception",
                     "expiry",
                   )}
+                  countsPending={countsPending}
                   presets={EXPIRY_PRESETS}
                   value={filters.expiry}
                   presetCounts={expiryPresetCounts}

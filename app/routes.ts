@@ -47,6 +47,8 @@ export default [
   ),
   route("api/audit", "routes/api/audit.tsx"),
   route("api/search", "routes/api/search.tsx"),
+  route("api/policies/list-meta", "routes/api/policies.list-meta.tsx"),
+  route("api/reference/list", "routes/api/reference.list.tsx"),
   route("api/recent-routes", "routes/api/recent-routes.tsx"),
   route("api/generate-excel", "routes/api/generate-excel.tsx"),
   route(

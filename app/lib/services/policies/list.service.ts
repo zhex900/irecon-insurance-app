@@ -106,14 +106,37 @@ export type PolicyListPremiumTotals = {
   totalBrokerFeeExGst: number;
 };
 
+export type PolicyListMeta = {
+  statusCounts: Record<number, number>;
+  coverCounts: Record<number, number>;
+  categoryCounts: Record<number, number>;
+  inceptionPresetCounts: Record<string, number>;
+  expiryPresetCounts: Record<string, number>;
+};
+
+export type PolicyListMetaResponse = PolicyListMeta & { allCount: number };
+
 export type ListPoliciesPageResult = PageResult<PolicyListItem> &
-  PolicyListPremiumTotals & {
-    statusCounts: Record<number, number>;
-    coverCounts: Record<number, number>;
-    categoryCounts: Record<number, number>;
-    inceptionPresetCounts: Record<string, number>;
-    expiryPresetCounts: Record<string, number>;
-  };
+  PolicyListPremiumTotals &
+  PolicyListMeta;
+
+export type ListPoliciesPageOptions = {
+  includePremium?: boolean;
+  includeMeta?: boolean;
+};
+
+const EMPTY_PREMIUM: PolicyListPremiumTotals = {
+  totalBasePremiumExGst: 0,
+  totalBrokerFeeExGst: 0,
+};
+
+const EMPTY_META: PolicyListMeta = {
+  statusCounts: {},
+  coverCounts: {},
+  categoryCounts: {},
+  inceptionPresetCounts: {},
+  expiryPresetCounts: {},
+};
 
 type FilterOmit = {
   omitStatus?: boolean;
@@ -298,7 +321,144 @@ async function countWithFilters(
   return Number(row?.count ?? 0);
 }
 
+type PolicyListRow = Awaited<ReturnType<typeof selectPolicyListRows>>[number];
+
+function mapPolicyListRows(rows: PolicyListRow[]): PolicyListItem[] {
+  return rows.map((row) => {
+    const clientName = row.clientName?.trim() || "—";
+    return {
+      policyId: row.policyId,
+      policyNumber: row.policyNumber,
+      clientId: row.clientId,
+      clientName,
+      client: {
+        clientId: row.clientId,
+        name: clientName,
+        tradingName: row.clientTradingName?.trim() ?? "",
+        abn: row.clientAbn?.trim() ?? "",
+        phone: row.clientPhone?.trim() ?? "",
+        email: row.clientEmail?.trim() ?? "",
+        accountManagerId: row.clientAccountManagerId ?? 0,
+      },
+      policyStatusId: row.policyStatusId,
+      policyCategoryId: row.policyCategoryId,
+      coverTypeId: row.coverTypeId,
+      insuredName: row.insuredName ?? "",
+      dateStart: row.dateStart.toISOString().slice(0, 10),
+      dateEnd: row.dateEnd.toISOString().slice(0, 10),
+      isDraft: Boolean(row.isDraft),
+      adjusted: row.adjustmentPolicyId != null,
+      originalTotalPremium:
+        row.originalTotalPremium == null
+          ? null
+          : Number(row.originalTotalPremium),
+      createdWhen: row.createdWhen.toISOString(),
+    };
+  });
+}
+
+async function selectPolicyListRows(
+  input: ListPoliciesPageInput,
+  pagination: ReturnType<typeof resolvePage>,
+) {
+  const db = getDb();
+  const filters = buildPolicyListFilters(input);
+  const where = filters.length > 0 ? and(...filters) : undefined;
+  return db
+    .select({
+      policyId: policy.policyId,
+      policyNumber: policy.policyNumber,
+      clientId: policy.clientId,
+      clientName: client.name,
+      clientTradingName: client.tradingName,
+      clientAbn: client.abn,
+      clientPhone: client.phone,
+      clientEmail: client.email,
+      clientAccountManagerId: client.accountManagerId,
+      policyStatusId: policy.policyStatusId,
+      policyCategoryId: policy.policyCategoryId,
+      coverTypeId: policyCar.coverTypeId,
+      insuredName: policyCar.insuredName,
+      dateStart: policy.dateStart,
+      dateEnd: policy.dateEnd,
+      isDraft: policy.isDraft,
+      adjustmentPolicyId: policyCarAdjustment.policyId,
+      originalTotalPremium: policyCar.originalTotalPremium,
+      createdWhen: policy.createdWhen,
+    })
+    .from(policy)
+    .innerJoin(policyCar, eq(policy.policyId, policyCar.policyId))
+    .leftJoin(client, eq(policy.clientId, client.clientId))
+    .leftJoin(
+      policyCarAdjustment,
+      eq(policy.policyId, policyCarAdjustment.policyId),
+    )
+    .where(where)
+    .orderBy(desc(policy.createdWhen), desc(policy.policyId))
+    .limit(pagination.limit)
+    .offset(pagination.offset);
+}
+
+/** Filter badge counts for the policies list (separate from row fetch for async loading). */
+export async function getPolicyListMeta(
+  input: ListPoliciesPageInput = {},
+): Promise<PolicyListMeta> {
+  const [statusCounts, coverCounts, categoryCounts, datePresetCounts] =
+    await Promise.all([
+      countByGroup(input, { omitStatus: true }, { column: policy.policyStatusId }),
+      countByGroup(input, { omitCover: true }, { column: policyCar.coverTypeId }),
+      countByGroup(input, { omitCategory: true }, {
+        column: policy.policyCategoryId,
+      }),
+      countAllDatePresets(input),
+    ]);
+
+  return {
+    statusCounts,
+    coverCounts,
+    categoryCounts,
+    inceptionPresetCounts: datePresetCounts.inceptionPresetCounts,
+    expiryPresetCounts: datePresetCounts.expiryPresetCounts,
+  };
+}
+
+/** Table rows + pagination only — used by list loaders that fetch meta via `/api/*`. */
+export async function listPoliciesPageCore(
+  input: ListPoliciesPageInput = {},
+): Promise<PageResult<PolicyListItem>> {
+  const pagination = resolvePage(input);
+  const [total, rows] = await Promise.all([
+    countWithFilters(input),
+    selectPolicyListRows(input, pagination),
+  ]);
+  return toPageResult(mapPolicyListRows(rows), total, pagination);
+}
+
 /** One scan for all inception/expiry preset badge counts (replaces N separate counts). */
+async function countAllDatePresets(input: ListPoliciesPageInput): Promise<{
+  inceptionPresetCounts: Record<string, number>;
+  expiryPresetCounts: Record<string, number>;
+}> {
+  const [inceptionPresetCounts, expiryPresetCounts] = await Promise.all([
+    countDatePresets(
+      input,
+      INCEPTION_PRESETS,
+      (id) => rangeForInceptionPreset(id as InceptionPresetId),
+      policy.dateStart,
+      { omitInception: true },
+    ),
+    countDatePresets(
+      input,
+      EXPIRY_PRESETS,
+      (id) => rangeForExpiryPreset(id as ExpiryPresetId),
+      policy.dateEnd,
+      { omitExpiry: true },
+    ),
+  ]);
+  return { inceptionPresetCounts, expiryPresetCounts };
+}
+
+/** One scan for preset badge counts on a single date column. */
 async function countDatePresets(
   input: ListPoliciesPageInput,
   presets: readonly DatePreset[],
@@ -372,116 +532,16 @@ export async function countPoliciesForClientIds(
 
 export async function listPoliciesPage(
   input: ListPoliciesPageInput = {},
+  options: ListPoliciesPageOptions = {},
 ): Promise<ListPoliciesPageResult> {
-  const db = getDb();
-  const pagination = resolvePage(input);
-  const filters = buildPolicyListFilters(input);
-  const where = filters.length > 0 ? and(...filters) : undefined;
+  const includePremium = options.includePremium ?? false;
+  const includeMeta = options.includeMeta ?? true;
 
-  // Workers postgres pools are small (max ~5). Batch loader queries in waves of ≤3
-  // instead of one Promise.all fan-out — see docs/architecture/performance.md.
-  const [total, premiumTotals, rows] = await Promise.all([
-    countWithFilters(input),
-    sumPolicyListPremiums(input),
-    db
-      .select({
-        policyId: policy.policyId,
-        policyNumber: policy.policyNumber,
-        clientId: policy.clientId,
-        clientName: client.name,
-        clientTradingName: client.tradingName,
-        clientAbn: client.abn,
-        clientPhone: client.phone,
-        clientEmail: client.email,
-        clientAccountManagerId: client.accountManagerId,
-        policyStatusId: policy.policyStatusId,
-        policyCategoryId: policy.policyCategoryId,
-        coverTypeId: policyCar.coverTypeId,
-        insuredName: policyCar.insuredName,
-        dateStart: policy.dateStart,
-        dateEnd: policy.dateEnd,
-        isDraft: policy.isDraft,
-        adjustmentPolicyId: policyCarAdjustment.policyId,
-        originalTotalPremium: policyCar.originalTotalPremium,
-        createdWhen: policy.createdWhen,
-      })
-      .from(policy)
-      .innerJoin(policyCar, eq(policy.policyId, policyCar.policyId))
-      .leftJoin(client, eq(policy.clientId, client.clientId))
-      .leftJoin(
-        policyCarAdjustment,
-        eq(policy.policyId, policyCarAdjustment.policyId),
-      )
-      .where(where)
-      .orderBy(desc(policy.createdWhen), desc(policy.policyId))
-      .limit(pagination.limit)
-      .offset(pagination.offset),
+  const [core, premiumTotals, meta] = await Promise.all([
+    listPoliciesPageCore(input),
+    includePremium ? sumPolicyListPremiums(input) : Promise.resolve(EMPTY_PREMIUM),
+    includeMeta ? getPolicyListMeta(input) : Promise.resolve(EMPTY_META),
   ]);
 
-  const [statusCounts, coverCounts, categoryCounts] = await Promise.all([
-    countByGroup(input, { omitStatus: true }, { column: policy.policyStatusId }),
-    countByGroup(input, { omitCover: true }, { column: policyCar.coverTypeId }),
-    countByGroup(input, { omitCategory: true }, {
-      column: policy.policyCategoryId,
-    }),
-  ]);
-
-  const [inceptionPresetCounts, expiryPresetCounts] = await Promise.all([
-    countDatePresets(
-      input,
-      INCEPTION_PRESETS,
-      (id) => rangeForInceptionPreset(id as InceptionPresetId),
-      policy.dateStart,
-      { omitInception: true },
-    ),
-    countDatePresets(
-      input,
-      EXPIRY_PRESETS,
-      (id) => rangeForExpiryPreset(id as ExpiryPresetId),
-      policy.dateEnd,
-      { omitExpiry: true },
-    ),
-  ]);
-
-  const items: PolicyListItem[] = rows.map((row) => {
-    const clientName = row.clientName?.trim() || "—";
-    return {
-      policyId: row.policyId,
-      policyNumber: row.policyNumber,
-      clientId: row.clientId,
-      clientName,
-      client: {
-        clientId: row.clientId,
-        name: clientName,
-        tradingName: row.clientTradingName?.trim() ?? "",
-        abn: row.clientAbn?.trim() ?? "",
-        phone: row.clientPhone?.trim() ?? "",
-        email: row.clientEmail?.trim() ?? "",
-        accountManagerId: row.clientAccountManagerId ?? 0,
-      },
-      policyStatusId: row.policyStatusId,
-      policyCategoryId: row.policyCategoryId,
-      coverTypeId: row.coverTypeId,
-      insuredName: row.insuredName ?? "",
-      dateStart: row.dateStart.toISOString().slice(0, 10),
-      dateEnd: row.dateEnd.toISOString().slice(0, 10),
-      isDraft: Boolean(row.isDraft),
-      adjusted: row.adjustmentPolicyId != null,
-      originalTotalPremium:
-        row.originalTotalPremium == null
-          ? null
-          : Number(row.originalTotalPremium),
-      createdWhen: row.createdWhen.toISOString(),
-    };
-  });
-
-  return {
-    ...toPageResult(items, total, pagination),
-    ...premiumTotals,
-    statusCounts,
-    coverCounts,
-    categoryCounts,
-    inceptionPresetCounts,
-    expiryPresetCounts,
-  };
+  return { ...core, ...premiumTotals, ...meta };
 }

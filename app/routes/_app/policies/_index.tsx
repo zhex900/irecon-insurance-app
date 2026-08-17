@@ -1,10 +1,18 @@
-import { useActionData } from "react-router";
+import { useMemo } from "react";
+import {
+  type ShouldRevalidateFunctionArgs,
+  useActionData,
+} from "react-router";
 
 import { ListSearchField } from "~/components/forms/list-search-field";
 import { PageHeader } from "~/components/layout/app-layout";
 import { NewPolicyClientDialog } from "~/components/policies/new-policy-client-dialog";
 import { PolicyListTable } from "~/components/policies/policy-list-table";
-import { usePolicyListPage } from "~/hooks/policy-list/use-page";
+import { useListReference } from "~/hooks/list";
+import {
+  usePolicyListMeta,
+  usePolicyListPage,
+} from "~/hooks/policy-list";
 import { useActionSuccessToast } from "~/hooks/utilities";
 import { requireAuth } from "~/lib/auth/session/server.server";
 import { pageTitle } from "~/lib/brand";
@@ -14,9 +22,9 @@ import { parsePagination } from "~/lib/pagination";
 import { parsePolicyListFiltersFromUrl } from "~/lib/search/policy-list-filters";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import { getClientsByIds } from "~/lib/services/clients/service";
-import { listPoliciesPage } from "~/lib/services/policies/list.service";
+import { listPoliciesPageCore } from "~/lib/services/policies/list.service";
 import { deletePolicies } from "~/lib/services/policy/data.service";
-import { getReferenceDataAsync } from "~/lib/services/reference.service";
+import { referenceData } from "~/lib/reference-data";
 
 import type { Route } from "./+types/_index";
 
@@ -26,9 +34,21 @@ export function meta() {
   return [{ title: pageTitle("Policies") }];
 }
 
-/** Always refetch when landing on the list (e.g. after creating/editing a policy). */
-export function shouldRevalidate() {
-  return true;
+export function shouldRevalidate({
+  formData,
+  actionResult,
+  defaultShouldRevalidate,
+}: ShouldRevalidateFunctionArgs) {
+  if (formData?.get("intent") === "delete") return true;
+  if (
+    actionResult &&
+    typeof actionResult === "object" &&
+    "intent" in actionResult &&
+    (actionResult as { intent?: string }).intent === "delete"
+  ) {
+    return true;
+  }
+  return defaultShouldRevalidate;
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -37,39 +57,28 @@ export async function loader({ request }: Route.LoaderArgs) {
   const filters = parsePolicyListFiltersFromUrl(url);
   const pagination = parsePagination(url, { defaultSize: PAGE_SIZE });
 
-  const page = await listPoliciesPage({
-    search: filters.q,
-    policyStatusIds: filters.statusIds,
-    coverTypeIds: filters.coverTypeIds,
-    policyCategoryIds: filters.policyCategoryIds,
-    clientIds: filters.clientIds,
-    inceptionFrom: filters.inception.from,
-    inceptionTo: filters.inception.to,
-    expiryFrom: filters.expiry.from,
-    expiryTo: filters.expiry.to,
-    limit: pagination.limit,
-    offset: pagination.offset,
-  });
-
-  const [reference, selectedClients] = await Promise.all([
-    getReferenceDataAsync(),
+  const [page, selectedClients] = await Promise.all([
+    listPoliciesPageCore({
+      search: filters.q,
+      policyStatusIds: filters.statusIds,
+      coverTypeIds: filters.coverTypeIds,
+      policyCategoryIds: filters.policyCategoryIds,
+      clientIds: filters.clientIds,
+      inceptionFrom: filters.inception.from,
+      inceptionTo: filters.inception.to,
+      expiryFrom: filters.expiry.from,
+      expiryTo: filters.expiry.to,
+      limit: pagination.limit,
+      offset: pagination.offset,
+    }),
     getClientsByIds(filters.clientIds),
   ]);
-
-  const allCount = Object.values(page.statusCounts).reduce((a, b) => a + b, 0);
 
   return {
     policies: page.rows,
     total: page.total,
     page: page.page,
     pageSize: page.pageSize,
-    statusCounts: page.statusCounts,
-    coverCounts: page.coverCounts,
-    categoryCounts: page.categoryCounts,
-    inceptionPresetCounts: page.inceptionPresetCounts,
-    expiryPresetCounts: page.expiryPresetCounts,
-    allCount,
-    reference,
     q: filters.q,
     filters: {
       statusIds: filters.statusIds,
@@ -164,6 +173,34 @@ export default function PoliciesIndexRoute({
     deleteIntent: "delete",
   });
 
+  const {
+    statusCounts,
+    coverCounts,
+    categoryCounts,
+    inceptionPresetCounts,
+    expiryPresetCounts,
+    allCount,
+    countsPending,
+  } = usePolicyListMeta(searchParams);
+
+  const { reference: listReference } = useListReference();
+
+  const reference = useMemo(() => {
+    if (!listReference) return referenceData;
+    return {
+      ...referenceData,
+      accountManagers: listReference.accountManagers,
+      wholesaleBrokers: listReference.wholesaleBrokers,
+    };
+  }, [listReference]);
+
+  const totalSummary =
+    allCount != null
+      ? `${loaderData.total} of ${allCount} policies`
+      : countsPending
+        ? `${loaderData.total} policies`
+        : `${loaderData.total} policies`;
+
   return (
     <div>
       <PageHeader
@@ -181,9 +218,7 @@ export default function PoliciesIndexRoute({
           placeholder="Search policy #, insured, client…"
           aria-label="Search policies"
         />
-        <p className="text-sm text-muted-foreground">
-          {loaderData.total} of {loaderData.allCount} policies
-        </p>
+        <p className="text-sm text-muted-foreground">{totalSummary}</p>
       </div>
 
       {actionData &&
@@ -200,15 +235,16 @@ export default function PoliciesIndexRoute({
         total={loaderData.total}
         page={loaderData.page}
         pageSize={loaderData.pageSize}
-        statusCounts={loaderData.statusCounts}
-        coverCounts={loaderData.coverCounts}
-        categoryCounts={loaderData.categoryCounts}
-        inceptionPresetCounts={loaderData.inceptionPresetCounts}
-        expiryPresetCounts={loaderData.expiryPresetCounts}
+        statusCounts={statusCounts}
+        coverCounts={coverCounts}
+        categoryCounts={categoryCounts}
+        inceptionPresetCounts={inceptionPresetCounts}
+        expiryPresetCounts={expiryPresetCounts}
+        countsPending={countsPending}
         q={loaderData.q}
         searchQuery={searchQuery}
         filters={loaderData.filters}
-        reference={loaderData.reference}
+        reference={reference}
         selection={selection}
         search={search}
         searchParams={searchParams}
