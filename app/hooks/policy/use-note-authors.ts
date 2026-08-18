@@ -4,6 +4,9 @@ import { useFetcher } from "react-router";
 import { useHydrated } from "~/hooks/network";
 import type { NoteAuthor } from "~/lib/services/users/service";
 
+/** Stable empty map — avoids resetting consumers that sync on reference equality. */
+export const EMPTY_NOTE_AUTHORS: Record<string, NoteAuthor> = {};
+
 /** Note author profiles — loaded when the policy has notes. */
 export function usePolicyNoteAuthors(policyId: string, hasNotes: boolean) {
   const hydrated = useHydrated();
@@ -20,7 +23,7 @@ export function usePolicyNoteAuthors(policyId: string, hasNotes: boolean) {
   }, [hasNotes, hydrated, fetcher.data, fetcher.state, policyId]);
 
   return {
-    noteAuthors: fetcher.data ?? {},
+    noteAuthors: fetcher.data ?? EMPTY_NOTE_AUTHORS,
     pending: hasNotes && !fetcher.data && fetcher.state === "loading",
   };
 }

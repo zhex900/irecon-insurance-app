@@ -56,7 +56,7 @@ export function PremiumFeeRows({
   return (
     <>
       {feeNames.map((fee) => (
-        <TableRow key={fee.name}>
+        <TableRow key={fee.sortOrder}>
           <TableCell className="py-2 pr-2">
             <span className="wrap-break-word">
               {fee.name}{" "}

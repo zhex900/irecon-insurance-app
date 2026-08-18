@@ -48,8 +48,8 @@ export default [
   route("api/audit", "routes/api/audit.tsx"),
   route("api/search", "routes/api/search.tsx"),
   route(
-    "api/policies/list-secondary",
-    "routes/api/policies.list-secondary.tsx",
+    "api/policies/list-stats",
+    "routes/api/policies.list-stats.tsx",
   ),
   route(
     "api/policies/:policyId/note-authors",

@@ -2,24 +2,24 @@ import { useMemo } from "react";
 
 import { useOptionalApi } from "~/hooks/network/use-optional-api";
 import {
-  buildPolicyListSecondaryUrl,
-  policyListSecondaryKey,
-} from "~/lib/search/policy-list-secondary-api";
-import type { PolicyListSecondaryResponse } from "~/lib/services/policies/list.service";
+  buildPolicyListStatsUrl,
+  policyListStatsKey,
+} from "~/lib/search/policy-list-stats-api";
+import type { PolicyListStatsResponse } from "~/lib/services/policies/list.service";
 import type { ListReferenceData } from "~/lib/services/reference.service";
 
-/** Load filter badge counts + live AM/AR in one `/api/policies/list-secondary` request. */
-export function usePolicyListSecondary(searchParams: URLSearchParams) {
-  const secondaryKey = useMemo(
-    () => policyListSecondaryKey(searchParams),
+/** Load filter badge counts + live AM/AR in one `/api/policies/list-stats` request. */
+export function usePolicyListStats(searchParams: URLSearchParams) {
+  const statsKey = useMemo(
+    () => policyListStatsKey(searchParams),
     [searchParams],
   );
   const url = useMemo(
-    () => buildPolicyListSecondaryUrl(new URLSearchParams(secondaryKey)),
-    [secondaryKey],
+    () => buildPolicyListStatsUrl(new URLSearchParams(statsKey)),
+    [statsKey],
   );
 
-  const { data, pending } = useOptionalApi<PolicyListSecondaryResponse>(url);
+  const { data, pending } = useOptionalApi<PolicyListStatsResponse>(url);
 
   return {
     meta: data?.meta,

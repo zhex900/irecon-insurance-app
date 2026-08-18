@@ -20,6 +20,7 @@ import {
 import { LoadingButton } from "~/components/ui/loading-button";
 import { Textarea } from "~/components/ui/textarea";
 import { UserHoverCard } from "~/components/ui/user-hover-card";
+import { EMPTY_NOTE_AUTHORS } from "~/hooks/policy/use-note-authors";
 import { POLICY_MESSAGE_NOTE_TYPE_ID, type PolicyNote } from "~/lib/db/types";
 import { sortPolicyNotesDescending } from "~/lib/policies/policy-notes";
 import type { NoteAuthor } from "~/lib/services/users/service";
@@ -48,7 +49,7 @@ function canEditNote(
 
 export function PolicyNotesCard({
   notes = [],
-  noteAuthors = {},
+  noteAuthors = EMPTY_NOTE_AUTHORS,
   canAddNotes = false,
   onAddNote,
   onUpdateNote,

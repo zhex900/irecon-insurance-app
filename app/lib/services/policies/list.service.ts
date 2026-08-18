@@ -117,7 +117,7 @@ export type PolicyListMeta = {
 
 export type PolicyListMetaResponse = PolicyListMeta & { allCount: number };
 
-export type PolicyListSecondaryResponse = {
+export type PolicyListStatsResponse = {
   meta: PolicyListMetaResponse;
   reference: ListReferenceData;
 };

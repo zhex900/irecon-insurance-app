@@ -35,9 +35,12 @@ export function useWizardState(
   core: ReturnType<typeof useWizardCore>,
 ) {
   const navigation = usePolicyWizardNavigation(navigationInput(core, props));
-  const premiumSectionOpen = navigation.openMap.premium ?? true;
-  const claimsSectionOpen = navigation.openMap.claims ?? true;
-  const { carWording } = useCarWording(premiumSectionOpen || claimsSectionOpen);
+  const claimsSectionOpen = navigation.openMap.claims ?? false;
+  const hasSelectedWording =
+    (props.policy.car.selectedWordingIds?.length ?? 0) > 0;
+  const { carWording } = useCarWording(
+    claimsSectionOpen || hasSelectedWording,
+  );
   const premiumCalc = usePolicyPremiumCalc(
     premiumInput(core, navigation, props),
   );

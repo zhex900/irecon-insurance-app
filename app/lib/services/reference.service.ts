@@ -21,8 +21,10 @@ export function getReferenceData(): ReferenceData {
 
 /** Live account managers + ARs only — for list page filters (not full reference payload). */
 export async function getListReferenceAsync(): Promise<ListReferenceData> {
-  const accountManagers = await listAccountManagers();
-  const wholesaleBrokers = await listAuthorisedRepresentatives();
+  const [accountManagers, wholesaleBrokers] = await Promise.all([
+    listAccountManagers(),
+    listAuthorisedRepresentatives(),
+  ]);
   return { accountManagers, wholesaleBrokers };
 }
 

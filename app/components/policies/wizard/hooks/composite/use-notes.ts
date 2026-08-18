@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { useFetcher } from "react-router";
 import { toast } from "sonner";
 
+import { EMPTY_NOTE_AUTHORS } from "~/hooks/policy/use-note-authors";
 import type { Policy } from "~/lib/db/types";
 import type { NoteAuthor } from "~/lib/services/users/service";
 
@@ -25,7 +26,7 @@ export function usePolicyNotes({
 }) {
   const [notes, setNotes] = useState<Policy["notes"]>(policy.notes ?? []);
   const [noteAuthors, setNoteAuthors] = useState<Record<string, NoteAuthor>>(
-    initialAuthors ?? {},
+    initialAuthors ?? EMPTY_NOTE_AUTHORS,
   );
   const [noteError, setNoteError] = useState<string | null>(null);
   const [isSavingNote, setIsSavingNote] = useState(false);
@@ -44,7 +45,7 @@ export function usePolicyNotes({
   const [prevInitialAuthors, setPrevInitialAuthors] = useState(initialAuthors);
   if (prevInitialAuthors !== initialAuthors) {
     setPrevInitialAuthors(initialAuthors);
-    setNoteAuthors(initialAuthors ?? {});
+    setNoteAuthors(initialAuthors ?? EMPTY_NOTE_AUTHORS);
   }
 
   const [prevFetcherNotes, setPrevFetcherNotes] = useState(fetcher.data?.notes);

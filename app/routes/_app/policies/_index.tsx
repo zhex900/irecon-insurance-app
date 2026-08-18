@@ -10,7 +10,7 @@ import { NewPolicyClientDialog } from "~/components/policies/new-policy-client-d
 import { PolicyListTable } from "~/components/policies/policy-list-table";
 import {
   usePolicyListPage,
-  usePolicyListSecondary,
+  usePolicyListStats,
 } from "~/hooks/policy-list";
 import { useActionSuccessToast } from "~/hooks/utilities";
 import { requireAuth } from "~/lib/auth/session/server.server";
@@ -181,7 +181,7 @@ export default function PoliciesIndexRoute({
     allCount,
     countsPending,
     reference: listReference,
-  } = usePolicyListSecondary(searchParams);
+  } = usePolicyListStats(searchParams);
 
   const reference = useMemo(() => {
     if (!listReference) return referenceData;

@@ -42,6 +42,11 @@ export function useOptionalApi<T>(url: string | null) {
     if (!wasLoading || fetcher.state !== "idle") return;
     const pending = pendingUrlRef.current;
     if (!pending) return;
+    if (import.meta.env.DEV && fetcher.data === undefined) {
+      console.warn(
+        `[useOptionalApi] Request failed or returned no data: ${pending}`,
+      );
+    }
     setSettledUrl(pending);
     pendingUrlRef.current = null;
   }, [fetcher.state, fetcher.data]);

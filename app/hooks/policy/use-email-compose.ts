@@ -21,10 +21,6 @@ export function usePolicyEmailCompose(policyId: string, enabled: boolean) {
   const fetcher = useFetcher<PolicyEmailComposeData>();
   const loadRef = useRef(fetcher.load);
   const [loadedPolicyId, setLoadedPolicyId] = useState<string | null>(null);
-  const [prevFetcherSnapshot, setPrevFetcherSnapshot] = useState<{
-    data: PolicyEmailComposeData | undefined;
-    state: typeof fetcher.state;
-  } | null>(null);
   const [prevPolicyId, setPrevPolicyId] = useState(policyId);
 
   useEffect(() => {
@@ -34,26 +30,21 @@ export function usePolicyEmailCompose(policyId: string, enabled: boolean) {
   if (policyId !== prevPolicyId) {
     setPrevPolicyId(policyId);
     setLoadedPolicyId(null);
-    setPrevFetcherSnapshot(null);
   }
 
-  const snapshot = { data: fetcher.data, state: fetcher.state };
   if (
     fetcher.state === "idle" &&
     fetcher.data &&
     policyId &&
-    (prevFetcherSnapshot?.data !== fetcher.data ||
-      prevFetcherSnapshot?.state !== fetcher.state)
+    loadedPolicyId !== policyId
   ) {
-    setPrevFetcherSnapshot(snapshot);
     setLoadedPolicyId(policyId);
   }
 
-  const fetchedForPolicy =
+  const compose =
     fetcher.data && fetcher.state === "idle" && loadedPolicyId === policyId
       ? fetcher.data
       : null;
-  const compose = fetchedForPolicy;
   const pending = enabled && !compose;
 
   useEffect(() => {

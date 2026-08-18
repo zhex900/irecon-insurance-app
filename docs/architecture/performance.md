@@ -39,7 +39,7 @@ Heavy list routes (`/policies`, `/clients`) used to block the Worker until **all
 | Tier | What | When | Example |
 | ---- | ---- | ---- | ------- |
 | **Critical** | Table rows + pagination + filter echo | SSR loader (first paint) | `listPoliciesPageCore()`, `listClientsPage()` |
-| **Secondary** | Filter badge counts, live AM/AR lookups | `useFetcher` after mount | `/api/policies/list-secondary`, `/api/reference/list` |
+| **Secondary** | Filter badge counts, live AM/AR lookups | `useFetcher` after mount | `/api/policies/list-stats`, `/api/reference/list` |
 
 Static catalogue fields (`policyStatuses`, `coverTypes`, …) come from `app/lib/reference-data.ts` on the client. Only **live** account managers and ARs need a DB round-trip.
 
@@ -47,7 +47,7 @@ Static catalogue fields (`policyStatuses`, `coverTypes`, …) come from `app/lib
 
 ```
 GET /policies (loader)     → count + page rows (~2 queries)
-GET /api/policies/list-secondary → facet counts + live AM/AR (one Worker request)
+GET /api/policies/list-stats → facet counts + live AM/AR (one Worker request)
 GET /api/reference/list    → AM + AR (clients list; sessionStorage cache)
 ```
 
@@ -56,9 +56,9 @@ Key files:
 | Piece | Location |
 | ----- | -------- |
 | Core row fetch | `listPoliciesPageCore()` in `app/lib/services/policies/list.service.ts` |
-| Meta counts + live reference | `getPolicyListMeta()` + `getListReferenceAsync()` in `app/routes/api/policies.list-secondary.tsx` |
+| Meta counts + live reference | `getPolicyListMeta()` + `getListReferenceAsync()` in `app/routes/api/policies.list-stats.tsx` |
 | Live reference (clients) | `getListReferenceAsync()` + `app/routes/api/reference.list.tsx` |
-| Client hooks | `usePolicyListSecondary`, `useListReference`, `useReferenceSessionFetch` in `app/hooks/` |
+| Client hooks | `usePolicyListStats`, `useListReference`, `useReferenceSessionFetch` in `app/hooks/` |
 | Badge UX while pending | `countsPending` → em dash in column filter headers |
 
 **Hydration:** `useListReference` must not read `sessionStorage` during the initial render — only after mount in `useEffect`. Server and first client paint both use static `referenceData`; live AM/AR replaces it post-hydration.
@@ -93,7 +93,7 @@ Static reference fields (`coverTypes`, `states`, …) come from `referenceData` 
 
 1. Split service into **core** (rows) and **meta** (counts/options).
 2. Slim the route loader to core + pagination only.
-3. Add `GET /api/<domain>/list-secondary` (or split meta + reference endpoints) with `requireAuth` + Zod (mirror list URL params).
+3. Add `GET /api/<domain>/list-stats` (or split meta + reference endpoints) with `requireAuth` + Zod (mirror list URL params).
 4. Add a `useFetcher` hook; reload when filter search params change (omit `page` / `pageSize` for secondary data).
 5. Show rows immediately; badges/options fill in with `—` or skeleton while pending.
 6. Tighten `shouldRevalidate` — revalidate on mutations, not `return true` always.
