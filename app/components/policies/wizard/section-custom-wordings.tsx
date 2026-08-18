@@ -1,6 +1,6 @@
 import { PlusIcon } from "lucide-react";
 import { useState } from "react";
-import { Controller,useFormContext } from "react-hook-form";
+import { Controller, useFormContext } from "react-hook-form";
 
 import { WordingHtmlView } from "~/components/policies/wording-html-view";
 import { WordingRichEditor } from "~/components/policies/wording-rich-editor";

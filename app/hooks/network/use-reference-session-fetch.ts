@@ -69,8 +69,7 @@ export function useReferenceSessionFetch<T>(options: {
     }
   }, [fetcher.state, fetcher.data, cacheGeneration]);
 
-  const cached =
-    hydrated && enabled ? readSessionCache<T>(cacheKey) : null;
+  const cached = hydrated && enabled ? readSessionCache<T>(cacheKey) : null;
   const fetched =
     fetcher.state === "idle" &&
     fetcher.data != null &&

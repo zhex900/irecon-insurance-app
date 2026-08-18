@@ -24,10 +24,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "~/components/ui/tooltip";
-import {
-  usePolicyFeeNames,
-  usePolicyNoteAuthors,
-} from "~/hooks/policy";
+import { usePolicyFeeNames, usePolicyNoteAuthors } from "~/hooks/policy";
 import { withSuccessToast } from "~/hooks/utilities";
 import { requireAuth } from "~/lib/auth/session/server.server";
 import { pageTitle } from "~/lib/brand";
@@ -147,7 +144,9 @@ export async function action({ request, params }: Route.ActionArgs) {
 
   if (intent === "delete") {
     try {
-      const [deleted] = await deletePolicies([policyId], { userId: actor.userId });
+      const [deleted] = await deletePolicies([policyId], {
+        userId: actor.userId,
+      });
       await writeAuditLog({
         actor,
         action: "policy.delete",

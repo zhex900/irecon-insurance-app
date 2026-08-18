@@ -1,7 +1,5 @@
 import { useReferenceSessionFetch } from "~/hooks/network/use-reference-session-fetch";
-import {
-  listReferenceSessionCacheKey,
-} from "~/lib/client/reference-session-cache";
+import { listReferenceSessionCacheKey } from "~/lib/client/reference-session-cache";
 import type { ListReferenceData } from "~/lib/services/reference.service";
 
 /** Load live AM + AR for list filters via `/api/reference/list` (session-cached). */

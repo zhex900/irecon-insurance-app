@@ -2,7 +2,10 @@ import type { Font } from "@pdfme/common";
 
 import type { CarWording, Policy, PolicyDocument } from "~/lib/db/types";
 import { isStaticSchemaName } from "~/lib/documents/template-editor-form";
-import { expandEndorsementPairSchemas , parseEndorsementPairsFromInputs } from "~/lib/pdf/endorsement-expand";
+import {
+  expandEndorsementPairSchemas,
+  parseEndorsementPairsFromInputs,
+} from "~/lib/pdf/endorsement-expand";
 import { applyFlowPushDown } from "~/lib/pdf/flow-push-down";
 import type { EndorsementRichDrawOp } from "~/lib/pdf/html-rich-text-draw";
 import { applyEndorsementRichDrawOps } from "~/lib/pdf/html-rich-text-draw";

@@ -18,7 +18,7 @@ echo ""
 deploy_worker() {
   local worker_name=$1
   local config_path=$2
-  local env=${3:-staging}
+  local env=${3:-uat}
   
   echo -e "${BLUE}Deploying ${worker_name} to ${env}...${NC}"
   
@@ -86,7 +86,7 @@ check_worker_health() {
 
 # Main deployment sequence
 main() {
-  local env=${1:-staging}
+  local env=${1:-uat}
   
   echo -e "${BLUE}Deploying to environment: ${env}${NC}"
   echo ""

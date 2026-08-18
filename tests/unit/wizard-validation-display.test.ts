@@ -36,16 +36,12 @@ describe("computeWizardValidationState", () => {
 
 describe("resolveWizardDisplayFields", () => {
   it("prefers live form values over persisted policy fields", () => {
-    const display = resolveWizardDisplayFields(
-      policyStub(),
-      referenceStub(),
-      {
-        policyNumber: "  LIVE-99  ",
-        coverTypeId: 2,
-        insurerCode: "QBE",
-        policyStatusId: 1,
-      },
-    );
+    const display = resolveWizardDisplayFields(policyStub(), referenceStub(), {
+      policyNumber: "  LIVE-99  ",
+      coverTypeId: 2,
+      insurerCode: "QBE",
+      policyStatusId: 1,
+    });
     expect(display.livePolicyNumber).toBe("LIVE-99");
     expect(display.coverTypeName).toBe("Single Project");
     expect(display.insurerName).toBe("QBE Insurance");
@@ -53,11 +49,9 @@ describe("resolveWizardDisplayFields", () => {
   });
 
   it("falls back to the policy when live fields are empty", () => {
-    const display = resolveWizardDisplayFields(
-      policyStub(),
-      referenceStub(),
-      { policyNumber: "   " },
-    );
+    const display = resolveWizardDisplayFields(policyStub(), referenceStub(), {
+      policyNumber: "   ",
+    });
     expect(display.livePolicyNumber).toBe("POL-FALLBACK");
     expect(display.insurerName).toBe("INS");
   });

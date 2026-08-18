@@ -116,7 +116,9 @@ export type WizardSubmitSlice = Pick<
   Pick<Gate, "submitDisabled" | "setSubmittedFingerprint"> & {
     submitBusy: Submit["submitting"];
   };
-export type WizardIssueHandlers = ReturnType<typeof createIssueAttentionHandlers>;
+export type WizardIssueHandlers = ReturnType<
+  typeof createIssueAttentionHandlers
+>;
 
 export function wizardBorderClassName(
   parts: Pick<WizardStateParts, "core">,

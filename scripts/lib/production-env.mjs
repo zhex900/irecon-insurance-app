@@ -6,9 +6,9 @@ import { join } from "node:path";
 
 import {
   observability,
-  STAGING_AVATARS_BUCKET,
-  STAGING_LIBRARY_BUCKET,
-  STAGING_PROJECT_REF,
+  UAT_AVATARS_BUCKET,
+  UAT_LIBRARY_BUCKET,
+  UAT_PROJECT_REF,
   webRoot,
   writeJsonc,
 } from "./preview-env.mjs";
@@ -94,6 +94,7 @@ const fromProductionDir = {
 };
 
 const PRODUCTION_FLAGS = new Set([
+  "--copy-from-uat",
   "--copy-from-staging",
   "--skip-db",
   "--skip-r2",
@@ -230,9 +231,9 @@ export function productionR2HelperWrangler(names, { emptyOnly, copyToken }) {
         { binding: "LIBRARY_DEST", bucket_name: names.libraryBucket },
       ]
     : [
-        { binding: "AVATARS_SRC", bucket_name: STAGING_AVATARS_BUCKET },
+        { binding: "AVATARS_SRC", bucket_name: UAT_AVATARS_BUCKET },
         { binding: "AVATARS_DEST", bucket_name: names.avatarsBucket },
-        { binding: "LIBRARY_SRC", bucket_name: STAGING_LIBRARY_BUCKET },
+        { binding: "LIBRARY_SRC", bucket_name: UAT_LIBRARY_BUCKET },
         { binding: "LIBRARY_DEST", bucket_name: names.libraryBucket },
       ];
   return {
@@ -282,9 +283,9 @@ export function assertProductionDatabaseUrl(url) {
       "DATABASE_URL points at localhost. Use the production Supabase pooler URL.",
     );
   }
-  if (url.includes(STAGING_PROJECT_REF)) {
+  if (url.includes(UAT_PROJECT_REF)) {
     throw new Error(
-      `DATABASE_URL contains staging project ref ${STAGING_PROJECT_REF}. Use the production Supabase URL.`,
+      `DATABASE_URL contains UAT project ref ${UAT_PROJECT_REF}. Use the production Supabase URL.`,
     );
   }
   if (/db\.[a-z0-9]+\.supabase\.co/i.test(url)) {
@@ -294,46 +295,45 @@ export function assertProductionDatabaseUrl(url) {
   }
 }
 
-export function assertSafeStagingCopy({
-  stagingDbUrl,
+export function assertSafeUatCopy({
+  uatDbUrl,
   prodDbUrl,
-  stagingSupabaseRef,
+  uatSupabaseRef,
   prodSupabaseRef,
 }) {
-  if (!stagingDbUrl?.trim()) {
+  if (!uatDbUrl?.trim()) {
     throw new Error(
-      "Staging DATABASE_URL is missing. Add it to .env.staging for --copy-from-staging.",
+      "UAT DATABASE_URL is missing. Add it to .env.uat for --copy-from-uat.",
     );
   }
-  if (stagingDbUrl.trim() === prodDbUrl.trim()) {
+  if (uatDbUrl.trim() === prodDbUrl.trim()) {
     throw new Error(
-      "Staging and production DATABASE_URL are identical — refusing to copy.",
+      "UAT and production DATABASE_URL are identical — refusing to copy.",
     );
   }
-  if (prodDbUrl.includes(STAGING_PROJECT_REF)) {
+  if (prodDbUrl.includes(UAT_PROJECT_REF)) {
     throw new Error(
-      "Production DATABASE_URL still points at staging — refusing to copy.",
+      "Production DATABASE_URL still points at UAT — refusing to copy.",
     );
   }
-  if (
-    stagingSupabaseRef &&
-    prodSupabaseRef &&
-    stagingSupabaseRef === prodSupabaseRef
-  ) {
+  if (uatSupabaseRef && prodSupabaseRef && uatSupabaseRef === prodSupabaseRef) {
     throw new Error(
-      "Staging and production Supabase project refs match — refusing to copy.",
+      "UAT and production Supabase project refs match — refusing to copy.",
     );
   }
 }
 
-export async function loadStagingEnv() {
-  const stagingPath = join(webRoot, ".env.staging");
+/** @deprecated Use assertSafeUatCopy */
+export const assertSafeStagingCopy = assertSafeUatCopy;
+
+export async function loadUatEnv() {
+  const uatPath = join(webRoot, ".env.uat");
   let text;
   try {
-    text = await readFile(stagingPath, "utf8");
+    text = await readFile(uatPath, "utf8");
   } catch {
     throw new Error(
-      `.env.staging not found at ${stagingPath} — required for --copy-from-staging.`,
+      `.env.uat not found at ${uatPath} — required for --copy-from-uat.`,
     );
   }
   const vars = {};
@@ -354,13 +354,16 @@ export async function loadStagingEnv() {
   }
   return {
     databaseUrl:
-      vars.STAGING_DATABASE_URL?.trim() || vars.DATABASE_URL?.trim() || "",
+      vars.UAT_DATABASE_URL?.trim() || vars.DATABASE_URL?.trim() || "",
     supabaseUrl: vars.SUPABASE_URL?.trim() || "",
     projectRef:
-      vars.STAGING_SUPABASE_REF?.trim() ||
+      vars.UAT_SUPABASE_REF?.trim() ||
       extractSupabaseProjectRef(vars.SUPABASE_URL) ||
-      STAGING_PROJECT_REF,
+      UAT_PROJECT_REF,
   };
 }
+
+/** @deprecated Use loadUatEnv */
+export const loadStagingEnv = loadUatEnv;
 
 export { PRODUCTION_FLAGS };

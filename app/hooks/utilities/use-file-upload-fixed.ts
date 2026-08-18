@@ -22,9 +22,7 @@ export type FileUploadOptions = {
   onError?: (errors: string[]) => void;
 };
 
-export const useFileUploadFixed = (
-  options: FileUploadOptions = {},
-) => {
+export const useFileUploadFixed = (options: FileUploadOptions = {}) => {
   const {
     maxFiles = Number.POSITIVE_INFINITY,
     maxSize = Number.POSITIVE_INFINITY,
@@ -65,7 +63,9 @@ export const useFileUploadFixed = (
 
         // Check file size
         if (file.size > maxSize) {
-          errors.push(`File "${file.name}" exceeds maximum size of ${formatBytes(maxSize)}.`);
+          errors.push(
+            `File "${file.name}" exceeds maximum size of ${formatBytes(maxSize)}.`,
+          );
           hasError = true;
         }
 
@@ -105,7 +105,7 @@ export const useFileUploadFixed = (
   const handleFiles = useCallback(
     (files: FileList | File[]) => {
       const fileArray = Array.from(files);
-      
+
       if (fileArray.length === 0) return;
 
       // Apply maxFiles limit
@@ -113,12 +113,17 @@ export const useFileUploadFixed = (
       if (maxFiles !== Number.POSITIVE_INFINITY) {
         filesToProcess = fileArray.slice(0, maxFiles);
         if (fileArray.length > maxFiles) {
-          setErrors([`You can only upload a maximum of ${maxFiles} files at once.`]);
-          onError?.([`You can only upload a maximum of ${maxFiles} files at once.`]);
+          setErrors([
+            `You can only upload a maximum of ${maxFiles} files at once.`,
+          ]);
+          onError?.([
+            `You can only upload a maximum of ${maxFiles} files at once.`,
+          ]);
         }
       }
 
-      const { validFiles, errors: validationErrors } = validateFiles(filesToProcess);
+      const { validFiles, errors: validationErrors } =
+        validateFiles(filesToProcess);
 
       if (validationErrors.length > 0) {
         setErrors(validationErrors);
@@ -129,7 +134,9 @@ export const useFileUploadFixed = (
         const fileWithPreviews = validFiles.map((file) => ({
           file,
           id: `${file.name}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-          preview: file.type.startsWith("image/") ? URL.createObjectURL(file) : undefined,
+          preview: file.type.startsWith("image/")
+            ? URL.createObjectURL(file)
+            : undefined,
         }));
 
         onFilesAdded?.(fileWithPreviews);

@@ -18,7 +18,7 @@ import {
   removeStateDir,
   resourceNames,
 } from "./lib/preview-env.mjs";
-import { destroySupabase, findProjectByName } from "./lib/preview-supabase.mjs";
+import { destroySupabase, findBranchByName } from "./lib/preview-supabase.mjs";
 
 async function destroyPreview(envName) {
   const names = resourceNames(assertPreviewEnvName(envName));
@@ -31,8 +31,10 @@ async function destroyPreview(envName) {
   );
   console.log(`  R2       ${names.avatarsBucket}, ${names.libraryBucket}`);
   console.log(`  App URL  ${names.appUrl}`);
-  if (state?.supabaseProjectRef) {
-    console.log(`  Supabase ${state.supabaseProjectRef}`);
+  if (state?.supabaseBranchId || state?.supabaseProjectRef) {
+    console.log(
+      `  Supabase branch ${state.supabaseBranchId ?? state.supabaseProjectRef}`,
+    );
   }
 
   if (dryRun) {
@@ -47,14 +49,20 @@ async function destroyPreview(envName) {
     state?.hyperdriveId || (await findHyperdriveId(names.hyperdriveName));
   await deleteHyperdrive(hyperdriveId);
 
-  const project =
-    state?.supabaseProjectRef ||
-    (await findProjectByName(names.supabaseName))?.id ||
-    (await findProjectByName(names.supabaseName))?.ref;
-  if (project) {
-    await destroySupabase(project);
+  const branchId = state?.supabaseBranchId;
+  const projectRef = state?.supabaseProjectRef;
+  if (branchId || projectRef) {
+    await destroySupabase({ branchId, projectRef });
   } else {
-    console.log("→ No Supabase project found to delete");
+    const branch = await findBranchByName(names.supabaseBranchName);
+    if (branch) {
+      await destroySupabase({
+        branchId: branch.id,
+        projectRef: branch.project_ref,
+      });
+    } else {
+      console.log("→ No Supabase branch found to delete");
+    }
   }
 
   await removeStateDir(names.label);

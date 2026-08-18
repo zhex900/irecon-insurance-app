@@ -94,7 +94,7 @@ AFTER (Optimized):
 npm run dev:excel-worker
 
 # Deployment
-npm run deploy:excel:staging
+npm run deploy:excel:uat
 
 # Bundle checking
 npm run check:bundle          # Full build + check
@@ -181,7 +181,7 @@ npm run check:bundle
 ### **Step 1: Deploy Excel Worker**
 
 ```bash
-npm run deploy:excel:staging
+npm run deploy:excel:uat
 
 # Note the Worker URL from output
 # Example: https://insurance-excel-worker.YOUR_ACCOUNT.workers.dev

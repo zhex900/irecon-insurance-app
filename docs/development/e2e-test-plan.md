@@ -36,7 +36,7 @@ Existing specs:
 - Always go through `loginAs(page, demoUsers.<role>)` from `e2e/helpers/auth.ts` — never re-implement login.
 - Use `test.skip(condition, reason)` for environment-dependent paths (no seeded data, missing super-admin env vars) — see `policy.spec.ts` for the pattern. Prefer this over failing hard on empty seed data.
 - Mock outbound side effects the same way `mockResendEmailApi` does (`page.route`) — never send real email, never call real Resend/Turnstile/Sentry in CI.
-- Unique, timestamped test data (`E2E Client ${Date.now()}`) so specs are idempotent against a shared/staging DB and safe to re-run without cleanup.
+- Unique, timestamped test data (`E2E Client ${Date.now()}`) so specs are idempotent against a shared/UAT DB and safe to re-run without cleanup.
 - Prefer `getByRole`/`getByLabel` (accessible queries) over CSS selectors, consistent with existing specs and [docs/ui-guidelines.md](ui-guidelines.md) a11y requirements.
 - New fixtures (roles, mocks) go in `e2e/helpers/`, not inline per-spec, so they're reused (`e2e/helpers/documents.ts`, `e2e/helpers/seed.ts` as needed — see §8).
 - Downloads (xlsx exports): use Playwright's `page.waitForEvent("download")`, assert filename/size, don't assert on binary content in E2E (leave cell-level correctness to `tests/unit/premium-excel.test.ts` style unit tests).

@@ -3,13 +3,13 @@
  * Build + deploy insurance-app-production to Cloudflare Workers.
  *
  * By default this deploys code + secrets only (no data changes).
- * Pass --copy-from-staging to replace production Postgres + R2 with staging.
+ * Pass --copy-from-uat to replace production Postgres + R2 with UAT.
  *
  * Usage:
  *   npm run deploy:prod
- *   npm run deploy:prod -- --copy-from-staging
- *   npm run deploy:prod -- --copy-from-staging --skip-db
- *   npm run deploy:prod -- --copy-from-staging --skip-r2
+ *   npm run deploy:prod -- --copy-from-uat
+ *   npm run deploy:prod -- --copy-from-uat --skip-db
+ *   npm run deploy:prod -- --copy-from-uat --skip-r2
  *   node --env-file=.env.production scripts/deploy-production.mjs --secret-only
  */
 import { spawn, execFileSync } from "node:child_process";
@@ -18,7 +18,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
-  copyR2FromStaging,
+  copyR2FromUat,
   deployPreviewWorkers,
   ensureHyperdrive,
   ensureR2Buckets,
@@ -27,10 +27,10 @@ import {
 import { configureAuthUrls, copyPgsodiumKey } from "./lib/preview-supabase.mjs";
 import {
   assertProductionDatabaseUrl,
-  assertSafeStagingCopy,
+  assertSafeUatCopy,
   extractSupabaseProjectRef,
   hasFlag,
-  loadStagingEnv,
+  loadUatEnv,
   loadState,
   productionNames,
   productionAuthExtraOrigins,
@@ -41,7 +41,7 @@ import {
   saveState,
   writeProductionWranglerConfigs,
 } from "./lib/production-env.mjs";
-import { copyDatabaseFromStaging } from "./lib/staging-data-copy.mjs";
+import { copyDatabaseFromUat } from "./lib/uat-data-copy.mjs";
 import {
   toSessionDbUrl,
   toTransactionDbUrl,
@@ -50,7 +50,8 @@ import {
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const copyFromStaging = hasFlag("--copy-from-staging");
+const copyFromUat =
+  hasFlag("--copy-from-uat") || hasFlag("--copy-from-staging");
 const skipDb = hasFlag("--skip-db");
 const skipR2 = hasFlag("--skip-r2");
 const skipBuild = hasFlag("--skip-build");
@@ -243,21 +244,21 @@ async function uploadSentrySourceMaps(appVersion) {
   }
 }
 
-async function copyStagingData(names) {
+async function copyUatData(names) {
   const prodDbUrl = process.env.DATABASE_URL?.trim();
   assertProductionDatabaseUrl(prodDbUrl);
-  const staging = await loadStagingEnv();
+  const uat = await loadUatEnv();
   const prodSupabaseUrl = process.env.SUPABASE_URL?.trim();
-  assertSafeStagingCopy({
-    stagingDbUrl: staging.databaseUrl,
+  assertSafeUatCopy({
+    uatDbUrl: uat.databaseUrl,
     prodDbUrl,
-    stagingSupabaseRef: staging.projectRef,
+    uatSupabaseRef: uat.projectRef,
     prodSupabaseRef: extractSupabaseProjectRef(prodSupabaseUrl),
   });
 
   console.log("");
-  console.log("⚠  --copy-from-staging will REPLACE production database and R2.");
-  console.log(`   Staging DB ref: ${staging.projectRef}`);
+  console.log("⚠  --copy-from-uat will REPLACE production database and R2.");
+  console.log(`   UAT DB ref: ${uat.projectRef}`);
   console.log(
     `   Production DB:  ${extractSupabaseProjectRef(prodSupabaseUrl) ?? "(from SUPABASE_URL)"}`,
   );
@@ -265,8 +266,8 @@ async function copyStagingData(names) {
 
   if (!skipDb) {
     const { sessionUrl, transactionUrl } = productionDbUrls(prodDbUrl);
-    await copyDatabaseFromStaging({
-      stagingDbUrl: staging.databaseUrl,
+    await copyDatabaseFromUat({
+      uatDbUrl: uat.databaseUrl,
       destSessionUrl: sessionUrl,
       destTransactionUrl: transactionUrl,
       workDir: join(productionRoot, "dump"),
@@ -275,7 +276,7 @@ async function copyStagingData(names) {
     const prodRef = extractSupabaseProjectRef(prodSupabaseUrl);
     if (prodRef && process.env.SUPABASE_ACCESS_TOKEN?.trim()) {
       try {
-        await copyPgsodiumKey(staging.projectRef, prodRef);
+        await copyPgsodiumKey(uat.projectRef, prodRef);
       } catch (error) {
         console.warn(
           "Warning: could not copy pgsodium key (ok if Vault is unused).",
@@ -289,7 +290,7 @@ async function copyStagingData(names) {
 
   if (!skipR2) {
     const r2WranglerPath = join(productionRoot, "wrangler.r2.jsonc");
-    await copyR2FromStaging(names, {
+    await copyR2FromUat(names, {
       wranglerPath: r2WranglerPath,
       buildWrangler: (params) => productionR2HelperWrangler(names, params),
     });
@@ -315,7 +316,9 @@ async function main() {
   console.log(`  Excel   ${names.excelWorker}`);
   console.log(`  R2      ${names.avatarsBucket}, ${names.libraryBucket}`);
   console.log(`  Supabase ${supabaseUrl}`);
-  console.log(`  Domains ${productionWranglerCustomDomains().join(", ")} (Worker)`);
+  console.log(
+    `  Domains ${productionWranglerCustomDomains().join(", ")} (Worker)`,
+  );
   console.log(`  Auth hosts ${productionAuthDomains().join(", ")}`);
 
   if (dryRun) {
@@ -329,8 +332,8 @@ async function main() {
     return;
   }
 
-  if (copyFromStaging) {
-    await copyStagingData(names);
+  if (copyFromUat) {
+    await copyUatData(names);
   } else {
     await ensureR2Buckets(names);
   }
@@ -421,7 +424,7 @@ async function main() {
       avatars: names.avatarsBucket,
       library: names.libraryBucket,
     },
-    lastCopyFromStaging: copyFromStaging ? new Date().toISOString() : undefined,
+    lastCopyFromUat: copyFromUat ? new Date().toISOString() : undefined,
     updatedAt: new Date().toISOString(),
   });
 

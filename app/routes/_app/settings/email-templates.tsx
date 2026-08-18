@@ -7,7 +7,7 @@ import {
   PlusIcon,
   UsersIcon,
 } from "lucide-react";
-import { type ComponentType,useRef, useState } from "react";
+import { type ComponentType, useRef, useState } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
 

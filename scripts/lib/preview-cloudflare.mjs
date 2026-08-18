@@ -13,8 +13,8 @@ import {
   r2HelperWrangler,
   randomSecret,
   run,
-  STAGING_AVATARS_BUCKET,
-  STAGING_LIBRARY_BUCKET,
+  UAT_AVATARS_BUCKET,
+  UAT_LIBRARY_BUCKET,
   wranglerEnv,
   writeJsonc,
 } from "./preview-env.mjs";
@@ -103,7 +103,10 @@ async function fetchR2Helper(url, token) {
   throw lastError instanceof Error ? lastError : new Error(String(lastError));
 }
 
-async function runR2Helper(names, { emptyOnly, buckets, buildWrangler, wranglerPath }) {
+async function runR2Helper(
+  names,
+  { emptyOnly, buckets, buildWrangler, wranglerPath },
+) {
   const token = randomSecret(16);
   await writeJsonc(
     wranglerPath,
@@ -131,12 +134,11 @@ async function runR2Helper(names, { emptyOnly, buckets, buildWrangler, wranglerP
   }
 }
 
-export async function copyR2FromStaging(names, options = {}) {
+export async function copyR2FromUat(names, options = {}) {
   const wranglerPath =
     options.wranglerPath ?? configPath(names.label, "wrangler.r2.jsonc");
   const buildWrangler =
-    options.buildWrangler ??
-    ((params) => r2HelperWrangler(names, params));
+    options.buildWrangler ?? ((params) => r2HelperWrangler(names, params));
   await ensureR2Buckets(names);
   console.log("→ Clearing destination R2 buckets…");
   await runR2Helper(names, {
@@ -146,7 +148,7 @@ export async function copyR2FromStaging(names, options = {}) {
     buildWrangler,
   });
   console.log(
-    `→ Copying R2 objects from ${STAGING_AVATARS_BUCKET} + ${STAGING_LIBRARY_BUCKET}…`,
+    `→ Copying R2 objects from ${UAT_AVATARS_BUCKET} + ${UAT_LIBRARY_BUCKET}…`,
   );
   return runR2Helper(names, {
     emptyOnly: false,
@@ -156,12 +158,14 @@ export async function copyR2FromStaging(names, options = {}) {
   });
 }
 
+/** @deprecated Use copyR2FromUat */
+export const copyR2FromStaging = copyR2FromUat;
+
 export async function emptyAndDeleteR2Buckets(names, options = {}) {
   const wranglerPath =
     options.wranglerPath ?? configPath(names.label, "wrangler.r2.jsonc");
   const buildWrangler =
-    options.buildWrangler ??
-    ((params) => r2HelperWrangler(names, params));
+    options.buildWrangler ?? ((params) => r2HelperWrangler(names, params));
   try {
     await runR2Helper(names, {
       emptyOnly: true,

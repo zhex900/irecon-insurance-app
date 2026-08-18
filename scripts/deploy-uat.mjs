@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 /**
- * Build + deploy insurance-app-staging to Cloudflare Workers.
+ * Build + deploy insurance-app-uat to Cloudflare Workers.
  *
- * DATABASE_URL must be set in the environment (staging Supabase pooler URL).
- * VITE_APP_VERSION defaults to staging-<short-commit> when unset.
+ * DATABASE_URL must be set in the environment (UAT Supabase pooler URL).
+ * VITE_APP_VERSION defaults to uat-<short-commit> when unset.
  *
  * Usage:
- *   npm run deploy:staging
- *   node --env-file=.env.staging scripts/deploy-staging.mjs
- *   node --env-file=.env.staging scripts/deploy-staging.mjs --secret-only
+ *   npm run deploy:uat
+ *   node --env-file=.env.uat scripts/deploy-uat.mjs
+ *   node --env-file=.env.uat scripts/deploy-uat.mjs --secret-only
  */
 import { spawn, execFileSync } from "node:child_process";
 import { readdir, unlink, writeFile } from "node:fs/promises";
@@ -17,7 +17,9 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const webRoot = join(__dirname, "..");
-const workerName = "insurance-app-staging";
+const workerName = "insurance-app-uat";
+const uatCustomDomain = "uat.irecon.net";
+const defaultAppUrl = `https://${uatCustomDomain}`;
 const secretOnly = process.argv.includes("--secret-only");
 const skipBuild = process.argv.includes("--skip-build");
 
@@ -40,7 +42,7 @@ function run(command, args, { input, cwd, env } = {}) {
   });
 }
 
-function resolveStagingAppVersion() {
+function resolveUatAppVersion() {
   const explicit = process.env.VITE_APP_VERSION?.trim();
   if (explicit) return explicit;
   try {
@@ -48,26 +50,21 @@ function resolveStagingAppVersion() {
       cwd: webRoot,
       encoding: "utf8",
     }).trim();
-    return `staging-${hash}`;
+    return `uat-${hash}`;
   } catch {
-    return "staging-unknown";
+    return "uat-unknown";
   }
 }
 
-function assertStagingDatabaseUrl(url) {
+function assertUatDatabaseUrl(url) {
   if (!url?.trim()) {
     throw new Error(
-      "DATABASE_URL is not set. Export it or use --env-file=.env.staging (see .env.staging.example).",
+      "DATABASE_URL is not set. Export it or use --env-file=.env.uat (see .env.uat.example).",
     );
   }
   if (url.includes("127.0.0.1") || url.includes("localhost")) {
     throw new Error(
-      "DATABASE_URL points at localhost. Use the staging Supabase pooler URL.",
-    );
-  }
-  if (!url.includes("supabase.com") && !url.includes("tjnsygunohylofihoksl")) {
-    console.warn(
-      "Warning: DATABASE_URL does not look like the insurance-app-staging Supabase project.",
+      "DATABASE_URL points at localhost. Use the UAT Supabase pooler URL.",
     );
   }
 }
@@ -87,16 +84,15 @@ async function putSecret(name, value) {
 
 async function syncWorkerSecrets() {
   const databaseUrl = process.env.DATABASE_URL;
-  assertStagingDatabaseUrl(databaseUrl);
+  assertUatDatabaseUrl(databaseUrl);
 
   await putSecret("DATABASE_URL", databaseUrl);
-  await putSecret("SUPABASE_PUBLISHABLE_KEY", process.env.SUPABASE_PUBLISHABLE_KEY);
-  await putSecret("SUPABASE_SECRET_KEY", process.env.SUPABASE_SECRET_KEY);
   await putSecret(
-    "APP_URL",
-    process.env.APP_URL?.trim() ||
-      "https://insurance-app-staging.zhex900.workers.dev",
+    "SUPABASE_PUBLISHABLE_KEY",
+    process.env.SUPABASE_PUBLISHABLE_KEY,
   );
+  await putSecret("SUPABASE_SECRET_KEY", process.env.SUPABASE_SECRET_KEY);
+  await putSecret("APP_URL", process.env.APP_URL?.trim() || defaultAppUrl);
   await putSecret("RESEND_API_KEY", process.env.RESEND_API_KEY);
   await putSecret("EMAIL_FROM", process.env.EMAIL_FROM);
   await putSecret("AUTH_EMAIL_FROM", process.env.AUTH_EMAIL_FROM);
@@ -106,12 +102,12 @@ async function syncWorkerSecrets() {
 
   if (!process.env.SUPABASE_PUBLISHABLE_KEY?.trim()) {
     throw new Error(
-      "SUPABASE_PUBLISHABLE_KEY is required for staging login. Add it to .env.staging (Supabase → Settings → API Keys → Publishable key).",
+      "SUPABASE_PUBLISHABLE_KEY is required for UAT login. Add it to .env.uat (Supabase → Settings → API Keys → Publishable key).",
     );
   }
   if (!process.env.RESEND_API_KEY?.trim() || !process.env.EMAIL_FROM?.trim()) {
     console.warn(
-      "Warning: RESEND_API_KEY / EMAIL_FROM empty — policy document and password reset email will fail on staging until set.",
+      "Warning: RESEND_API_KEY / EMAIL_FROM empty — policy document and password reset email will fail on UAT until set.",
     );
   }
   if (!process.env.SENTRY_DSN?.trim()) {
@@ -150,10 +146,6 @@ async function deleteSourceMaps(rootDir) {
   return walk(rootDir);
 }
 
-/**
- * Route resource stubs / runtime helpers have no Vite .map. Ignore them so
- * sentry-cli inject/upload stay quiet (gitignore-style patterns).
- */
 async function writeSentrySourcemapIgnoreFile(clientDir) {
   const assetsDir = join(clientDir, "assets");
   let entries = [];
@@ -227,8 +219,6 @@ async function uploadSentrySourceMaps(appVersion) {
     );
     console.log("✓ Sentry source maps uploaded");
   } finally {
-    // Never ship .map files with the Worker (upload may have failed).
-    // Client maps go to Sentry; server maps are build-only and would bloat deploy.
     const removed = await deleteSourceMaps(join(webRoot, "build"));
     if (removed > 0) {
       console.log(`✓ Removed ${removed} source map(s) before deploy`);
@@ -237,7 +227,7 @@ async function uploadSentrySourceMaps(appVersion) {
 }
 
 async function main() {
-  assertStagingDatabaseUrl(process.env.DATABASE_URL);
+  assertUatDatabaseUrl(process.env.DATABASE_URL);
 
   if (secretOnly) {
     await syncWorkerSecrets();
@@ -245,7 +235,7 @@ async function main() {
     return;
   }
 
-  const appVersion = resolveStagingAppVersion();
+  const appVersion = resolveUatAppVersion();
 
   if (!skipBuild) {
     const viteSentryDsn =
@@ -272,17 +262,14 @@ async function main() {
     }
   }
 
-  // The application version references this service binding, so deploy the
-  // private renderer first and only then publish the application Worker.
   console.log("→ Deploying document Worker…");
   await run("npx", ["wrangler", "deploy", "--config", "wrangler.pdf.jsonc"]);
   console.log("✓ PDF Worker deployed");
 
   console.log("→ Deploying application Worker…");
   await run("npx", ["wrangler", "deploy"]);
-  console.log("✓ Deployed https://insurance-app-staging.zhex900.workers.dev");
+  console.log(`✓ Deployed ${defaultAppUrl}`);
 
-  // Sync secrets after deploy so rollbacks / versioned Workers don't block secret put.
   try {
     await syncWorkerSecrets();
   } catch (error) {

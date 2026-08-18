@@ -81,10 +81,10 @@ production:
 ```bash
 # Deploy Documents domain to staging
 cd workers/documents
-npm run deploy:staging
+npm run deploy:uat
 
 # Deploy with specific version
-npm run deploy:staging -- --tag v1.2.0
+npm run deploy:uat -- --tag v1.2.0
 
 # Deploy to production (canary)
 npm run deploy:production -- --canary 10  # 10% of users

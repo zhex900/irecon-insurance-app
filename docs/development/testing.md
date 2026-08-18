@@ -31,6 +31,17 @@ Config: `vitest.config.ts`. Suites under `tests/unit/`:
 
 `tests/integration/` talks to local Supabase via `DATABASE_URL` (loads `.env`). If the DB is down, those tests **skip** rather than fail.
 
+## CI database
+
+GitHub Actions starts local Supabase in Docker before tests:
+
+1. `node scripts/ci-supabase-setup.mjs` — `supabase start`, `db reset` (migrations + SQL seeds)
+2. Vitest runs with the exported `DATABASE_URL` / Supabase keys
+
+Reproduce locally: `npm run ci:db && npm run test`
+
+Full JSON seed (`npm run db:seed`) is separate — not run in CI until seed data matches the UUID schema.
+
 ## E2E (Playwright)
 
 Config: `playwright.config.ts` — `baseURL` from `E2E_BASE_URL` (default `http://127.0.0.1:5173`).
@@ -50,7 +61,7 @@ Resend is mocked in the email dialog path (`mockResendEmailApi`).
 
 ## Smoke
 
-`npm run test:smoke` — login + clients + policies lists. Point `E2E_BASE_URL` at staging/prod for post-deploy checks; never use production credentials in git.
+`npm run test:smoke` — login + clients + policies lists. Point `E2E_BASE_URL` at UAT/prod for post-deploy checks; never use production credentials in git.
 
 ## Full E2E coverage plan
 

@@ -36,9 +36,9 @@ Heavy list routes (`/policies`, `/clients`) used to block the Worker until **all
 
 ### Split critical vs secondary
 
-| Tier | What | When | Example |
-| ---- | ---- | ---- | ------- |
-| **Critical** | Table rows + pagination + filter echo | SSR loader (first paint) | `listPoliciesPageCore()`, `listClientsPage()` |
+| Tier          | What                                    | When                     | Example                                           |
+| ------------- | --------------------------------------- | ------------------------ | ------------------------------------------------- |
+| **Critical**  | Table rows + pagination + filter echo   | SSR loader (first paint) | `listPoliciesPageCore()`, `listClientsPage()`     |
 | **Secondary** | Filter badge counts, live AM/AR lookups | `useFetcher` after mount | `/api/policies/list-stats`, `/api/reference/list` |
 
 Static catalogue fields (`policyStatuses`, `coverTypes`, …) come from `app/lib/reference-data.ts` on the client. Only **live** account managers and ARs need a DB round-trip.
@@ -53,13 +53,13 @@ GET /api/reference/list    → AM + AR (clients list; sessionStorage cache)
 
 Key files:
 
-| Piece | Location |
-| ----- | -------- |
-| Core row fetch | `listPoliciesPageCore()` in `app/lib/services/policies/list.service.ts` |
+| Piece                        | Location                                                                                      |
+| ---------------------------- | --------------------------------------------------------------------------------------------- |
+| Core row fetch               | `listPoliciesPageCore()` in `app/lib/services/policies/list.service.ts`                       |
 | Meta counts + live reference | `getPolicyListMeta()` + `getListReferenceAsync()` in `app/routes/api/policies.list-stats.tsx` |
-| Live reference (clients) | `getListReferenceAsync()` + `app/routes/api/reference.list.tsx` |
-| Client hooks | `usePolicyListStats`, `useListReference`, `useReferenceSessionFetch` in `app/hooks/` |
-| Badge UX while pending | `countsPending` → em dash in column filter headers |
+| Live reference (clients)     | `getListReferenceAsync()` + `app/routes/api/reference.list.tsx`                               |
+| Client hooks                 | `usePolicyListStats`, `useListReference`, `useReferenceSessionFetch` in `app/hooks/`          |
+| Badge UX while pending       | `countsPending` → em dash in column filter headers                                            |
 
 **Hydration:** `useListReference` must not read `sessionStorage` during the initial render — only after mount in `useEffect`. Server and first client paint both use static `referenceData`; live AM/AR replaces it post-hydration.
 
@@ -78,12 +78,12 @@ Keep synchronous loaders for detail pages that need premium totals and meta on f
 
 The policy wizard loader returns **policy + client name only** (~2 queries). Secondary data loads after paint:
 
-| Data | Hook / API | When |
-| ---- | ---------- | ---- |
-| Broker fee lines | `usePolicyFeeNames` → `/api/reference/fee-names` | After mount (session-cached per inception date) |
-| CAR wording | `useCarWording` → `/api/car-wording` | When Premium or Claims section is open |
-| Note authors | `usePolicyNoteAuthors` → `/api/policies/:id/note-authors` | When policy has notes |
-| Email compose | `usePolicyEmailCompose` → `/api/policies/:id/email-compose` | When user opens Send email |
+| Data             | Hook / API                                                  | When                                            |
+| ---------------- | ----------------------------------------------------------- | ----------------------------------------------- |
+| Broker fee lines | `usePolicyFeeNames` → `/api/reference/fee-names`            | After mount (session-cached per inception date) |
+| CAR wording      | `useCarWording` → `/api/car-wording`                        | When Premium or Claims section is open          |
+| Note authors     | `usePolicyNoteAuthors` → `/api/policies/:id/note-authors`   | When policy has notes                           |
+| Email compose    | `usePolicyEmailCompose` → `/api/policies/:id/email-compose` | When user opens Send email                      |
 
 **Save without revalidation:** `intent=save` returns `{ ok, policy, message }`; `shouldRevalidate` skips the loader. Local policy state updates via `usePolicySaveSync` + toast — avoids re-running email directory scans on status change.
 
@@ -104,27 +104,27 @@ Error **1102** (`Worker exceeded resource limits`) means CPU time and/or memory 
 
 ### Signals already in the app
 
-| Signal | Where | Meaning |
-| ------ | ----- | ------- |
-| `request.complete` | `workers/app.ts` | Wall-clock `durationMs` per request (includes I/O wait, not pure CPU) |
-| `request.slow` | `workers/app.ts` | **Warn** ≥ 2 s, **error** ≥ 8 s — refactor before 1102 |
-| `db.query_gate_slow` | `app/lib/db/query-gate.ts` | Query waited ≥ 500 ms for a gate slot — too many parallel queries or slow DB |
-| `SLOW_OPERATION:*` | `app/lib/performance/internal-monitoring.server.ts` | Wrapped operation exceeded its threshold (Sentry message) |
+| Signal               | Where                                               | Meaning                                                                      |
+| -------------------- | --------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `request.complete`   | `workers/app.ts`                                    | Wall-clock `durationMs` per request (includes I/O wait, not pure CPU)        |
+| `request.slow`       | `workers/app.ts`                                    | **Warn** ≥ 2 s, **error** ≥ 8 s — refactor before 1102                       |
+| `db.query_gate_slow` | `app/lib/db/query-gate.ts`                          | Query waited ≥ 500 ms for a gate slot — too many parallel queries or slow DB |
+| `SLOW_OPERATION:*`   | `app/lib/performance/internal-monitoring.server.ts` | Wrapped operation exceeded its threshold (Sentry message)                    |
 
 Cloudflare dashboard: **Metrics → Errors → Exceeded CPU Time Limits** (`exceededCpu`). CPU time ≠ wall clock, but list routes with many queries + large JSON usually climb both.
 
 ### Refactor triggers (code review)
 
-Treat these as **yellow flags** — fix before preview/staging shows 1102:
+Treat these as **yellow flags** — fix before preview/UAT shows 1102:
 
-| Trigger | Action |
-| ------- | ------ |
-| Loader runs **> 4** parallel `getDb()` calls in one wave | Split into waves or combine SQL |
-| Loader runs **> 6** total queries | Move badge counts / reference to `api/*` + `useFetcher` |
-| `getReferenceDataAsync()` on a list page | Static catalogue + `getListReferenceAsync()` or `/api/reference/list` |
-| Unused aggregates (e.g. premium sum on index) | Drop or gate behind `includePremium` |
-| `request.slow` or `durationMs` **> 2 s** on a list route | Profile queries; apply async list pattern |
-| `request.slow` **error** (≥ 8 s) or `exceededCpu` in CF | Urgent — slim loader immediately |
+| Trigger                                                  | Action                                                                |
+| -------------------------------------------------------- | --------------------------------------------------------------------- |
+| Loader runs **> 4** parallel `getDb()` calls in one wave | Split into waves or combine SQL                                       |
+| Loader runs **> 6** total queries                        | Move badge counts / reference to `api/*` + `useFetcher`               |
+| `getReferenceDataAsync()` on a list page                 | Static catalogue + `getListReferenceAsync()` or `/api/reference/list` |
+| Unused aggregates (e.g. premium sum on index)            | Drop or gate behind `includePremium`                                  |
+| `request.slow` or `durationMs` **> 2 s** on a list route | Profile queries; apply async list pattern                             |
+| `request.slow` **error** (≥ 8 s) or `exceededCpu` in CF  | Urgent — slim loader immediately                                      |
 
 ### Query budget worksheet
 
@@ -146,15 +146,19 @@ For routes you are actively tuning, wrap the loader body:
 import { monitorCriticalOperation } from "~/lib/performance/internal-monitoring.server";
 
 export async function loader({ request }: Route.LoaderArgs) {
-  return monitorCriticalOperation("policiesListLoad", async () => {
-    // loader logic
-  }, 1500);
+  return monitorCriticalOperation(
+    "policiesListLoad",
+    async () => {
+      // loader logic
+    },
+    1500,
+  );
 }
 ```
 
 Thresholds live in `OPERATION_TIMEOUTS` (`listPageLoad: 1500`). Exceeding threshold emits `SLOW_OPERATION:…` to Sentry (warning) or error at 2× threshold.
 
-### Alerting (staging / prod)
+### Alerting (UAT / prod)
 
 1. **Cloudflare Workers Observability** — chart p95 CPU time; alert on `exceededCpu` > 0.
 2. **Log filter** — `request.slow` or `request.complete` where `durationMs > 2000` on `/policies`, `/clients`.

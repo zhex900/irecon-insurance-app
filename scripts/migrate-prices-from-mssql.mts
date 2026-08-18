@@ -8,7 +8,7 @@
  * Usage (from repo root):
  *   npm run db:migrate:prices
  *   npx tsx --env-file=.env scripts/migrate-prices-from-mssql.mts
- *   npx tsx --env-file=.env.staging scripts/migrate-prices-from-mssql.mts
+ *   npx tsx --env-file=.env.uat scripts/migrate-prices-from-mssql.mts
  *
  * Options:
  *   --write-json [path]  Also write the export payload (default:

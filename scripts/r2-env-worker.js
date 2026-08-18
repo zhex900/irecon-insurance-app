@@ -1,5 +1,5 @@
 /**
- * One-shot helper Worker: copy staging R2 objects into a preview bucket,
+ * One-shot helper Worker: copy UAT R2 objects into a preview bucket,
  * or empty a preview bucket so it can be deleted.
  *
  * Invoked by scripts/lib/preview-cloudflare.mjs. Not part of the app graph.

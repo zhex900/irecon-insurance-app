@@ -128,9 +128,7 @@ export async function sendEmail(
 ): Promise<SendEmailResult> {
   const resend = createResendClient();
   const replyTo =
-    input.replyTo === null
-      ? undefined
-      : (input.replyTo ?? getEmailReplyTo());
+    input.replyTo === null ? undefined : (input.replyTo ?? getEmailReplyTo());
 
   const inline = input.html?.trim()
     ? convertDataUriImagesToCid(input.html)

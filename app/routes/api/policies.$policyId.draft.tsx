@@ -12,7 +12,7 @@ import {
   savePolicy,
 } from "~/lib/services/policy/data.service";
 import { mergeDraftIntoPolicy } from "~/lib/services/policy/draft-merge";
-import { carPolicyDraftSchema , POLICY_STATUS } from "~/lib/zod/policy-car";
+import { carPolicyDraftSchema, POLICY_STATUS } from "~/lib/zod/policy-car";
 
 import type { Route } from "./+types/policies.$policyId.draft";
 

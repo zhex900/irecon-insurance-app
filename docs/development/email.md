@@ -26,14 +26,14 @@ Env (local `.env` / Worker secrets):
 
 Password **reset** uses a custom Irecon template sent via **Resend** (`send-password-reset.server.ts`). Supabase Auth mints the recovery link only (`auth.admin.generateLink`); Supabase SMTP templates are not used for forgot-password.
 
-| Variable           | Required | Notes                                                                 |
-| ------------------ | -------- | --------------------------------------------------------------------- |
-| `RESEND_API_KEY`   | Yes      | Same as policy document email                                         |
-| `EMAIL_FROM`       | Yes      | Verified Resend sender, e.g. `Irecon Insurance <noreply@domain>`      |
-| `AUTH_EMAIL_FROM`  | No       | Optional override for auth mail; defaults to `EMAIL_FROM`             |
-| `EMAIL_REPLY_TO` | No       | Reply-to on policy / template emails only (not password reset)        |
-| `APP_URL`          | Yes      | Reset links redirect via `/auth/confirm?next=/reset-password`         |
-| `SUPABASE_SECRET_KEY` | Yes   | Admin API to generate recovery links (never expose to client)         |
+| Variable              | Required | Notes                                                            |
+| --------------------- | -------- | ---------------------------------------------------------------- |
+| `RESEND_API_KEY`      | Yes      | Same as policy document email                                    |
+| `EMAIL_FROM`          | Yes      | Verified Resend sender, e.g. `Irecon Insurance <noreply@domain>` |
+| `AUTH_EMAIL_FROM`     | No       | Optional override for auth mail; defaults to `EMAIL_FROM`        |
+| `EMAIL_REPLY_TO`      | No       | Reply-to on policy / template emails only (not password reset)   |
+| `APP_URL`             | Yes      | Reset links redirect via `/auth/confirm?next=/reset-password`    |
+| `SUPABASE_SECRET_KEY` | Yes      | Admin API to generate recovery links (never expose to client)    |
 
 Disable Supabase Auth “Reset password” SMTP in the Supabase dashboard if you no longer want duplicate mail from Supabase.
 

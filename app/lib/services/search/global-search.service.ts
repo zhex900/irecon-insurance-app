@@ -102,10 +102,13 @@ export async function searchGlobal(q: string, limit = 8) {
 
   const [clientsPage, policiesPage] = await Promise.all([
     listClientsPage({ search: trimmed, limit, offset: 0 }),
-    listPoliciesPage({ search: trimmed, limit, offset: 0 }, {
-      includeMeta: false,
-      includePremium: false,
-    }),
+    listPoliciesPage(
+      { search: trimmed, limit, offset: 0 },
+      {
+        includeMeta: false,
+        includePremium: false,
+      },
+    ),
   ]);
 
   const reference = getReferenceData();

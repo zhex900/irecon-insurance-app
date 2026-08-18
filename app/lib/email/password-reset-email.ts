@@ -45,7 +45,8 @@ export function buildPasswordResetEmail(input: PasswordResetEmailInput): {
     ? `<p style="margin:32px 0 0"><img alt="${APP_NAME} logo" src="${footer}" width="${footerWidth}" style="display:block;width:${footerWidth}px;max-width:100%;height:auto" /></p>`
     : "";
 
-  const bodyHtml = wrapEmailDocumentHtml(`
+  const bodyHtml = wrapEmailDocumentHtml(
+    `
 <p style="margin:0 0 16px;font-family:system-ui,-apple-system,Segoe UI,sans-serif;font-size:15px;line-height:1.5;color:#111827">
   ${greetingLine}
 </p>
@@ -65,7 +66,8 @@ export function buildPasswordResetEmail(input: PasswordResetEmailInput): {
   This link expires after a short time. If you did not request a password reset, you can safely ignore this email.
 </p>
 ${footerBlock}
-`.trim());
+`.trim(),
+  );
 
   return {
     subject: `Reset your ${APP_NAME} password`,

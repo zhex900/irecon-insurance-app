@@ -380,7 +380,7 @@ export EXCEL_WORKER_ENABLED=false
 git revert <excel-worker-migration-commit>
 
 # Step 3: Deploy reverted version
-npm run deploy:staging
+npm run deploy:uat
 
 # Step 4: Monitor broker workflows
 # Confirm all Excel reports work with direct ExcelJS

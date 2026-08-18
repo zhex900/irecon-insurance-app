@@ -1,4 +1,4 @@
-import { ArrowRightIcon,FileBarChart2Icon, RefreshCwIcon } from "lucide-react";
+import { ArrowRightIcon, FileBarChart2Icon, RefreshCwIcon } from "lucide-react";
 import { Link } from "react-router";
 
 import { PageHeader } from "~/components/layout/app-layout";

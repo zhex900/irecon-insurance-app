@@ -25,7 +25,7 @@ export function getSupabaseSecretKey() {
 
 /**
  * Public app origin for auth emails / redirects.
- * Prefer APP_URL on staging/prod so reset links don't depend on request host.
+ * Prefer APP_URL on UAT/prod so reset links don't depend on request host.
  */
 export function getAppOrigin(request?: Request) {
   const configured = process.env.APP_URL?.trim().replace(/\/$/, "");

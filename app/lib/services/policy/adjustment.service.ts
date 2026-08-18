@@ -1,4 +1,4 @@
-import type { CarAdjustmentRecord, Policy,PolicyNote } from "~/lib/db/types";
+import type { CarAdjustmentRecord, Policy, PolicyNote } from "~/lib/db/types";
 import { ValidationError } from "~/lib/errors";
 import { collectEndorsementWordings } from "~/lib/pdf/merge-fields";
 import { listPublishedForAdjustment } from "~/lib/services/documents/document-templates";

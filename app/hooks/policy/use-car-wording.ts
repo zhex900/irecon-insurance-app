@@ -1,7 +1,5 @@
 import { useReferenceSessionFetch } from "~/hooks/network/use-reference-session-fetch";
-import {
-  carWordingSessionCacheKey,
-} from "~/lib/client/reference-session-cache";
+import { carWordingSessionCacheKey } from "~/lib/client/reference-session-cache";
 import type { CarWording } from "~/lib/db/types";
 
 const EMPTY_CAR_WORDING: CarWording[] = [];

@@ -105,7 +105,10 @@ function getOrCreateGlobalGate() {
 }
 
 function getGlobalGatedSql(url = getDatabaseUrl()): Sql {
-  if (!globalForDb.__ireconGatedSql || globalForDb.__ireconGatedSqlUrl !== url) {
+  if (
+    !globalForDb.__ireconGatedSql ||
+    globalForDb.__ireconGatedSqlUrl !== url
+  ) {
     globalForDb.__ireconGatedSql = createGatedSql(
       getDevBaseSql(url),
       getOrCreateGlobalGate(),

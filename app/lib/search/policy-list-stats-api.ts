@@ -7,14 +7,10 @@ export function policyListStatsKey(searchParams: URLSearchParams): string {
 }
 
 /** Build `/api/policies/list-stats` URL (pagination omitted). */
-export function buildPolicyListStatsUrl(
-  searchParams: URLSearchParams,
-): string {
+export function buildPolicyListStatsUrl(searchParams: URLSearchParams): string {
   const params = new URLSearchParams(searchParams);
   params.delete("page");
   params.delete("pageSize");
   const qs = params.toString();
-  return qs
-    ? `/api/policies/list-stats?${qs}`
-    : "/api/policies/list-stats";
+  return qs ? `/api/policies/list-stats?${qs}` : "/api/policies/list-stats";
 }

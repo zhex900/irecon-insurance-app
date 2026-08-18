@@ -14,7 +14,10 @@ import {
   wizardModeBadge,
   wizardModeHeaderClass,
 } from "../shared/wizard-shared";
-import type { WizardDraftSlice, WizardSubmitSlice } from "./assemble-wizard-state";
+import type {
+  WizardDraftSlice,
+  WizardSubmitSlice,
+} from "./assemble-wizard-state";
 import { MobileSectionNav } from "./mobile-section-nav";
 
 type HeaderProps = {
@@ -28,9 +31,7 @@ type HeaderProps = {
   requestSubmit: WizardSubmitSlice["requestSubmit"];
   navItems: Array<{ id: string; label: string }>;
   activeSectionId: string;
-  onNavigate: ReturnType<
-    typeof usePolicyWizardNavigation
-  >["navigateToSection"];
+  onNavigate: ReturnType<typeof usePolicyWizardNavigation>["navigateToSection"];
   sectionIssueCounts: ReturnType<
     typeof usePolicyWizardNavigation
   >["sectionIssueCounts"];

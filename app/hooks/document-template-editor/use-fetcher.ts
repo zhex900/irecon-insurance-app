@@ -1,5 +1,5 @@
 import type { Template } from "@pdfme/common";
-import { type RefObject,useEffect } from "react";
+import { type RefObject, useEffect } from "react";
 import { toast } from "sonner";
 
 import type { PdfmeDesignerHandle } from "~/components/documents/pdf/designer";

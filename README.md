@@ -19,6 +19,7 @@ Clients, policies, prices, and users persist in **Supabase Postgres** via Drizzl
 | [docs/testing.md](docs/testing.md)                                                 | Vitest + Playwright                         |
 | [docs/tooling.md](docs/tooling.md)                                                 | ESLint, Prettier, husky, verify             |
 | [docs/REFACTOR_TO_PRODUCTION.md](docs/REFACTOR_TO_PRODUCTION.md)                   | Production hardening plan                   |
+| [docs/domain.md](docs/domain.md)                                                   | Hostnames, environments, DNS                |
 | [docs/deployment/preview-environments.md](docs/deployment/preview-environments.md) | Per-PR Cloudflare + Supabase preview        |
 
 ## Stack
@@ -90,10 +91,10 @@ npm run verify            # lint + format:check + typecheck + unit
 npm run test              # Vitest
 npm run test:e2e          # Playwright (needs `npx playwright install chromium`)
 npm run test:smoke        # Playwright smoke subset
-npm run deploy            # staging (default)
+npm run deploy            # UAT (default)
 npm run deploy --env pr-11
 npm run destroy --env pr-11
-npm run deploy:staging
+npm run deploy:uat
 npm run deploy:secret
 ```
 

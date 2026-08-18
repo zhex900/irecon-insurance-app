@@ -7,12 +7,12 @@ import {
 } from "react-router";
 
 import { DeleteClientDialog } from "~/components/clients/dialogs";
-import { ClientsTable,ClientsTableFilters } from "~/components/clients/list";
+import { ClientsTable, ClientsTableFilters } from "~/components/clients/list";
 import { PageHeader } from "~/components/layout/app-layout";
 import { Button } from "~/components/ui/button";
 import { useListReference } from "~/hooks/list";
 import { useDebouncedSearchQuery } from "~/hooks/search";
-import { useActionSuccessToast,useHandledActionData  } from "~/hooks/utilities";
+import { useActionSuccessToast, useHandledActionData } from "~/hooks/utilities";
 import { requireAuth } from "~/lib/auth/session/server.server";
 import { pageTitle } from "~/lib/brand";
 import { publicErrorMessage } from "~/lib/http/public-error.server";

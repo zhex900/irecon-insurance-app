@@ -11,30 +11,37 @@ const THEME_COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
 /**
  * Parse a cookie string into an object
  */
-export function parseCookies(cookieString: string | null | undefined): Record<string, string> {
+export function parseCookies(
+  cookieString: string | null | undefined,
+): Record<string, string> {
   if (!cookieString) return {};
 
-  return cookieString.split(";").reduce((cookies, cookie) => {
-    const [name, ...valueParts] = cookie.trim().split("=");
-    const value = valueParts.join("="); // Handle cookies with = in value
-    if (name && value !== undefined) {
-      cookies[name] = decodeURIComponent(value);
-    }
-    return cookies;
-  }, {} as Record<string, string>);
+  return cookieString.split(";").reduce(
+    (cookies, cookie) => {
+      const [name, ...valueParts] = cookie.trim().split("=");
+      const value = valueParts.join("="); // Handle cookies with = in value
+      if (name && value !== undefined) {
+        cookies[name] = decodeURIComponent(value);
+      }
+      return cookies;
+    },
+    {} as Record<string, string>,
+  );
 }
 
 /**
  * Get theme from cookies (works on server and client)
  */
-export function getThemeFromCookies(cookieString?: string | null): Theme | null {
+export function getThemeFromCookies(
+  cookieString?: string | null,
+): Theme | null {
   const cookies = parseCookies(cookieString ?? undefined);
   const theme = cookies[THEME_COOKIE_NAME];
-  
+
   if (theme === "light" || theme === "dark" || theme === "system") {
     return theme;
   }
-  
+
   return null;
 }
 
@@ -43,7 +50,7 @@ export function getThemeFromCookies(cookieString?: string | null): Theme | null 
  */
 export function setThemeCookie(theme: Theme): void {
   if (typeof document === "undefined") return;
-  
+
   const cookieValue = `${THEME_COOKIE_NAME}=${encodeURIComponent(theme)}; path=/; max-age=${THEME_COOKIE_MAX_AGE}; SameSite=Lax`;
   document.cookie = cookieValue;
 }
@@ -60,7 +67,7 @@ export function createThemeCookieHeader(theme: Theme): string {
  */
 export function removeThemeCookie(): void {
   if (typeof document === "undefined") return;
-  
+
   // Set max-age to 0 to expire immediately
   document.cookie = `${THEME_COOKIE_NAME}=; path=/; max-age=0; SameSite=Lax`;
 }
@@ -79,17 +86,17 @@ export function isClient(): boolean {
  */
 export function getThemeWithFallback(
   request?: Request,
-  defaultTheme: Theme = "system"
+  defaultTheme: Theme = "system",
 ): Theme {
   // Try to get from cookies first
   const cookieHeader = request?.headers.get("Cookie");
   const themeFromCookie = getThemeFromCookies(cookieHeader);
-  
+
   if (themeFromCookie) {
     // If theme is "system", return it as is - client will handle system preference
     return themeFromCookie;
   }
-  
+
   return defaultTheme;
 }
 

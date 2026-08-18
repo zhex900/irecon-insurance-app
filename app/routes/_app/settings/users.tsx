@@ -11,7 +11,7 @@ import { UserFormDialog } from "~/components/settings/user-form-dialog";
 import { UsersTable } from "~/components/settings/users-table";
 import { Button } from "~/components/ui/button";
 import { useDebouncedSearchQuery } from "~/hooks/search";
-import { useActionSuccessToast,useHandledActionData  } from "~/hooks/utilities";
+import { useActionSuccessToast, useHandledActionData } from "~/hooks/utilities";
 import { requireAdminPage } from "~/lib/auth/authorize.server";
 import { requireAuth } from "~/lib/auth/session/server.server";
 import { pageTitle } from "~/lib/brand";

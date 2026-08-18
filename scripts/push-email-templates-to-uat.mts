@@ -1,12 +1,12 @@
 /**
- * Push local app_email_template (+ footer image) rows to staging.
+ * Push local app_email_template (+ footer image) rows to uat.
  *
  * Usage:
- *   STAGING_DATABASE_URL='postgresql://...' npm run db:push:email-templates:staging
+ *   UAT_DATABASE_URL='postgresql://...' npm run db:push:email-templates:uat
  *   # or
- *   node --env-file=.env --import tsx scripts/push-email-templates-to-staging.mts
+ *   node --env-file=.env --import tsx scripts/push-email-templates-to-uat.mts
  *
- * Reads LOCAL from DATABASE_URL (.env) and writes to STAGING_DATABASE_URL.
+ * Reads LOCAL from DATABASE_URL (.env) and writes to UAT_DATABASE_URL.
  *
  * Flags:
  *   --templates-only  Skip app_email_footer_image
@@ -15,7 +15,7 @@
 import postgres from "postgres";
 
 const localUrl = process.env.DATABASE_URL?.trim();
-const stagingUrl = process.env.STAGING_DATABASE_URL?.trim();
+const uatUrl = process.env.UAT_DATABASE_URL?.trim();
 const args = new Set(process.argv.slice(2));
 const templatesOnly = args.has("--templates-only");
 const footerOnly = args.has("--footer-only");
@@ -25,29 +25,27 @@ if (templatesOnly && footerOnly) {
 }
 
 if (!localUrl) throw new Error("DATABASE_URL is required (local)");
-if (!stagingUrl) {
-  throw new Error(
-    "STAGING_DATABASE_URL is required (staging pooler URL, port 6543)",
-  );
+if (!uatUrl) {
+  throw new Error("UAT_DATABASE_URL is required (uat pooler URL, port 6543)");
 }
-if (/127\.0\.0\.1|localhost/.test(stagingUrl)) {
-  throw new Error("STAGING_DATABASE_URL still points at localhost");
+if (/127\.0\.0\.1|localhost/.test(uatUrl)) {
+  throw new Error("UAT_DATABASE_URL still points at localhost");
 }
 
 const local = postgres(localUrl, { max: 1 });
-const staging = postgres(stagingUrl, { max: 1, prepare: false });
+const uat = postgres(uatUrl, { max: 1, prepare: false });
 
 try {
   const result: {
     templatesPushed: number;
     footerPushed: boolean;
-    stagingTemplates: unknown[];
-    stagingFooter: unknown;
+    uatTemplates: unknown[];
+    uatFooter: unknown;
   } = {
     templatesPushed: 0,
     footerPushed: false,
-    stagingTemplates: [],
-    stagingFooter: null,
+    uatTemplates: [],
+    uatFooter: null,
   };
 
   if (!footerOnly) {
@@ -61,7 +59,7 @@ try {
     }
 
     for (const row of rows) {
-      await staging`
+      await uat`
         insert into app_email_template (
           recipient_type,
           subject,
@@ -124,9 +122,9 @@ try {
       console.log("skip footer — no local app_email_footer_image row");
     } else {
       const displayWidth = footer.display_width ?? 520;
-      // display_width may be missing on older staging DBs — try full upsert, then fallback.
+      // display_width may be missing on older uat DBs — try full upsert, then fallback.
       try {
-        await staging`
+        await uat`
           insert into app_email_footer_image (
             id,
             content_type,
@@ -153,9 +151,9 @@ try {
         const message = error instanceof Error ? error.message : String(error);
         if (!/display_width/i.test(message)) throw error;
         console.warn(
-          "staging missing display_width — pushing footer without it (run migration)",
+          "uat missing display_width — pushing footer without it (run migration)",
         );
-        await staging`
+        await uat`
           insert into app_email_footer_image (
             id,
             content_type,
@@ -185,7 +183,7 @@ try {
   }
 
   if (!footerOnly) {
-    result.stagingTemplates = await staging`
+    result.uatTemplates = await uat`
       select recipient_type,
              length(subject) as subject_len,
              length(body) as body_len,
@@ -197,7 +195,7 @@ try {
   }
 
   if (!templatesOnly) {
-    const [footerCheck] = await staging`
+    const [footerCheck] = await uat`
       select id,
              content_type,
              length(data_uri) as data_uri_len,
@@ -206,11 +204,11 @@ try {
       where id = 1
       limit 1
     `;
-    result.stagingFooter = footerCheck ?? null;
+    result.uatFooter = footerCheck ?? null;
   }
 
   console.log(JSON.stringify(result, null, 2));
 } finally {
   await local.end({ timeout: 5 });
-  await staging.end({ timeout: 5 });
+  await uat.end({ timeout: 5 });
 }

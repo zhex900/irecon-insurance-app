@@ -14,14 +14,22 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export const webRoot = join(__dirname, "../..");
 export const previewRoot = join(webRoot, ".preview-envs");
 
-export const STAGING_PROJECT_REF = "tjnsygunohylofihoksl";
-export const STAGING_AVATARS_BUCKET = "insurance-app-avatars";
-export const STAGING_LIBRARY_BUCKET = "insurance-app-library-documents";
+export const UAT_PROJECT_REF = "tjnsygunohylofihoksl";
+export const UAT_AVATARS_BUCKET = "insurance-app-avatars";
+export const UAT_LIBRARY_BUCKET = "insurance-app-library-documents";
+export const PREVIEW_DOMAIN_ZONE = "irecon.net";
 export const WORKERS_DEV_SUBDOMAIN = "zhex900";
 export const DEFAULT_REGION = "ap-southeast-2";
 
+/** @deprecated Use UAT_* constants */
+export const STAGING_PROJECT_REF = UAT_PROJECT_REF;
+/** @deprecated Use UAT_* constants */
+export const STAGING_AVATARS_BUCKET = UAT_AVATARS_BUCKET;
+/** @deprecated Use UAT_* constants */
+export const STAGING_LIBRARY_BUCKET = UAT_LIBRARY_BUCKET;
+
 const RESERVED_ENVS = new Set([
-  "staging",
+  "uat",
   "production",
   "prod",
   "local",
@@ -41,8 +49,7 @@ const SCRIPT_FLAGS = new Set([
 ]);
 
 /** Longest preview R2 bucket: `insurance-app-library-documents-<slug>` (63 char max). */
-const R2_SLUG_MAX_LEN =
-  63 - "insurance-app-library-documents-".length;
+const R2_SLUG_MAX_LEN = 63 - "insurance-app-library-documents-".length;
 
 export function parseEnvName(argv = process.argv.slice(2)) {
   const eq = argv.find((arg) => arg.startsWith("--env="));
@@ -58,8 +65,13 @@ export function parseEnvName(argv = process.argv.slice(2)) {
     (arg) => !arg.startsWith("-") && !SCRIPT_FLAGS.has(arg),
   );
 
-  return (fromArg || process.env.PREVIEW_ENV?.trim() || npmSlug || positional || "")
-    .trim();
+  return (
+    fromArg ||
+    process.env.PREVIEW_ENV?.trim() ||
+    npmSlug ||
+    positional ||
+    ""
+  ).trim();
 }
 
 /** Normalize a user-provided env label into a lowercase slug for CF / Supabase names. */
@@ -72,7 +84,9 @@ export function toResourceSlug(name) {
     .replace(/^-+|-+$/g, "");
 
   if (!slug) {
-    throw new Error(`Environment name "${name}" does not contain any usable characters.`);
+    throw new Error(
+      `Environment name "${name}" does not contain any usable characters.`,
+    );
   }
 
   if (slug.length <= R2_SLUG_MAX_LEN) return slug;
@@ -121,12 +135,36 @@ export function hasFlag(flag, argv = process.argv.slice(2)) {
   return Boolean(npmVal) && npmVal !== "false";
 }
 
+/** PR previews use pr-<n>.irecon.net; other slugs fall back to workers.dev. */
+export function previewAppUrl(slug) {
+  const prMatch = slug.match(/^pr-(\d+)$/);
+  if (prMatch) {
+    return `https://pr-${prMatch[1]}.${PREVIEW_DOMAIN_ZONE}`;
+  }
+  const subdomain =
+    process.env.WORKERS_DEV_SUBDOMAIN?.trim() || WORKERS_DEV_SUBDOMAIN;
+  return `https://insurance-app-${slug}.${subdomain}.workers.dev`;
+}
+
+export function previewCustomDomainRoutes(appUrl) {
+  try {
+    const host = new URL(appUrl).hostname;
+    if (host.endsWith(`.${PREVIEW_DOMAIN_ZONE}`)) {
+      return [{ pattern: host, custom_domain: true }];
+    }
+  } catch {
+    // ignore invalid URL
+  }
+  return [];
+}
+
 export function resourceNames(envName) {
   const label = assertPreviewEnvName(envName);
   const slug = toResourceSlug(label);
   const app = `insurance-app-${slug}`;
   const subdomain =
     process.env.WORKERS_DEV_SUBDOMAIN?.trim() || WORKERS_DEV_SUBDOMAIN;
+  const appUrl = previewAppUrl(slug);
   return {
     label,
     slug,
@@ -137,8 +175,8 @@ export function resourceNames(envName) {
     avatarsBucket: `insurance-app-avatars-${slug}`,
     libraryBucket: `insurance-app-library-documents-${slug}`,
     hyperdriveName: app,
-    supabaseName: app,
-    appUrl: `https://${app}.${subdomain}.workers.dev`,
+    supabaseBranchName: slug,
+    appUrl,
     r2HelperUrl: `https://insurance-r2-copy-${slug}.${subdomain}.workers.dev`,
   };
 }
@@ -376,6 +414,7 @@ const fromPreviewDir = {
 };
 
 export function previewAppWrangler({ names, supabaseUrl, hyperdriveId }) {
+  const customRoutes = previewCustomDomainRoutes(names.appUrl);
   return {
     $schema: fromPreviewDir.schema,
     name: names.appWorker,
@@ -386,6 +425,9 @@ export function previewAppWrangler({ names, supabaseUrl, hyperdriveId }) {
     base_dir: fromPreviewDir.appBaseDir,
     rules: [{ type: "ESModule", globs: ["**/*.js", "**/*.mjs"] }],
     assets: { directory: fromPreviewDir.appAssets },
+    ...(customRoutes.length > 0
+      ? { workers_dev: false, routes: customRoutes }
+      : {}),
     observability,
     upload_source_maps: true,
     placement: { mode: "smart" },
@@ -451,9 +493,9 @@ export function r2HelperWrangler(names, { emptyOnly = false, copyToken } = {}) {
         { binding: "LIBRARY_DEST", bucket_name: names.libraryBucket },
       ]
     : [
-        { binding: "AVATARS_SRC", bucket_name: STAGING_AVATARS_BUCKET },
+        { binding: "AVATARS_SRC", bucket_name: UAT_AVATARS_BUCKET },
         { binding: "AVATARS_DEST", bucket_name: names.avatarsBucket },
-        { binding: "LIBRARY_SRC", bucket_name: STAGING_LIBRARY_BUCKET },
+        { binding: "LIBRARY_SRC", bucket_name: UAT_LIBRARY_BUCKET },
         { binding: "LIBRARY_DEST", bucket_name: names.libraryBucket },
       ];
   return {

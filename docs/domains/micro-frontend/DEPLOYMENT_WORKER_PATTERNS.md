@@ -9,12 +9,12 @@
 
 ```bash
 # 1. Deploy Domain Workers (RPC APIs)
-npm run deploy:excel:staging       # Excel worker first (independent)
-npm run deploy:documents:staging    # Documents worker (heavy PDFME)
-npm run deploy:pdf:staging         # PDF generation worker
+npm run deploy:excel:uat       # Excel worker first (independent)
+npm run deploy:documents:uat    # Documents worker (heavy PDFME)
+npm run deploy:pdf:uat         # PDF generation worker
 
 # 2. Deploy Portal with Updated Federation Config
-npm run deploy:staging             # Portal with federated imports
+npm run deploy:uat             # Portal with federated imports
 
 # 3. Verify Cross-Worker Communication
 ./scripts/verify-worker-communication.sh --env staging

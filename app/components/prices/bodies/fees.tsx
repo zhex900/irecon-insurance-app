@@ -1,4 +1,4 @@
-import { type FeesScheduleView,NumInput } from "~/components/prices/shared";
+import { type FeesScheduleView, NumInput } from "~/components/prices/shared";
 import { Input } from "~/components/ui/input";
 import {
   Table,

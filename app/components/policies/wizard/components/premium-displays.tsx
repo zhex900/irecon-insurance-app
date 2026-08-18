@@ -25,9 +25,7 @@ const PremiumDisplay = memo(function PremiumDisplay({
       {...premiumPanelProps}
       policyNumber={livePolicyNumber}
       documentsOnly={documentsOnly}
-      adjustment={
-        policy.car.adjusted ? policy.car.adjustment : undefined
-      }
+      adjustment={policy.car.adjusted ? policy.car.adjustment : undefined}
     />
   );
 });

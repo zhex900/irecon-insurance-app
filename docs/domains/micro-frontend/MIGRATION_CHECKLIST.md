@@ -231,7 +231,7 @@ DOCUMENTS_WORKER_URL=https://documents-worker-staging.irecon.com
 DOCUMENTS_FEDERATION_URL=https://documents-staging.irecon.com
 
 # Deploy portal to staging
-npm run deploy:staging
+npm run deploy:uat
 ```
 
 ### Step 2: Staging Verification

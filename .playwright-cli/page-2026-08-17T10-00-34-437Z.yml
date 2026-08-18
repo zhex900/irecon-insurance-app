@@ -1,35 +1,35 @@
 - main [ref=e2]:
-  - generic [ref=e4]:
-    - generic [ref=e5]:
-      - img "IRECON" [ref=e6]
-      - generic [ref=e7]: Insurance Services Pty Ltd
-    - heading "Manage Clients & Policies with Confidence." [level=1] [ref=e8]
-    - paragraph [ref=e9]: The broker workspace for CAR insurance — quote, bind, adjust, and renew in one place.
-    - list [ref=e10]:
-      - listitem [ref=e11]:
-        - generic [ref=e12]: ✓
-        - text: Review portfolio activity
-      - listitem [ref=e13]:
-        - generic [ref=e14]: ✓
-        - text: Create & manage clients
-      - listitem [ref=e15]:
-        - generic [ref=e16]: ✓
-        - text: Adjust policies instantly
-  - generic [ref=e18]:
-    - heading "Welcome back" [level=2] [ref=e19]
-    - paragraph [ref=e20]: Sign in to your broker account.
-    - generic [ref=e22]:
-      - group [ref=e23]:
-        - generic [ref=e24]: Email
-        - textbox "Email" [ref=e25]:
-          - /placeholder: Email address
-      - group [ref=e26]:
-        - generic [ref=e27]:
-          - generic [ref=e28]: Password
-          - link "Forgot password?" [ref=e29] [cursor=pointer]:
-            - /url: /forgot-password
-        - textbox "Password" [ref=e30]
-      - button "Sign in" [ref=e31]
-    - paragraph [ref=e32]:
-      - link "2026 © Copyright Irecon Insurance Services Pty Ltd" [ref=e33] [cursor=pointer]:
-        - /url: https://www.irecon.com.au/
+    - generic [ref=e4]:
+        - generic [ref=e5]:
+            - img "IRECON" [ref=e6]
+            - generic [ref=e7]: Insurance Services Pty Ltd
+        - heading "Manage Clients & Policies with Confidence." [level=1] [ref=e8]
+        - paragraph [ref=e9]: The broker workspace for CAR insurance — quote, bind, adjust, and renew in one place.
+        - list [ref=e10]:
+            - listitem [ref=e11]:
+                - generic [ref=e12]: ✓
+                - text: Review portfolio activity
+            - listitem [ref=e13]:
+                - generic [ref=e14]: ✓
+                - text: Create & manage clients
+            - listitem [ref=e15]:
+                - generic [ref=e16]: ✓
+                - text: Adjust policies instantly
+    - generic [ref=e18]:
+        - heading "Welcome back" [level=2] [ref=e19]
+        - paragraph [ref=e20]: Sign in to your broker account.
+        - generic [ref=e22]:
+            - group [ref=e23]:
+                - generic [ref=e24]: Email
+                - textbox "Email" [ref=e25]:
+                    - /placeholder: Email address
+            - group [ref=e26]:
+                - generic [ref=e27]:
+                    - generic [ref=e28]: Password
+                    - link "Forgot password?" [ref=e29] [cursor=pointer]:
+                        - /url: /forgot-password
+                - textbox "Password" [ref=e30]
+            - button "Sign in" [ref=e31]
+        - paragraph [ref=e32]:
+            - link "2026 © Copyright Irecon Insurance Services Pty Ltd" [ref=e33] [cursor=pointer]:
+                - /url: https://www.irecon.com.au/

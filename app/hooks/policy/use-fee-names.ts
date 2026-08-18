@@ -1,7 +1,5 @@
 import { useReferenceSessionFetch } from "~/hooks/network/use-reference-session-fetch";
-import {
-  policyFeeNamesSessionCacheKey,
-} from "~/lib/client/reference-session-cache";
+import { policyFeeNamesSessionCacheKey } from "~/lib/client/reference-session-cache";
 import type { ReferenceData } from "~/lib/db/types";
 
 /** Live broker fee lines for premium breakdown (session-cached per inception date). */

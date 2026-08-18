@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { type UseFormReturn,useWatch } from "react-hook-form";
+import { type UseFormReturn, useWatch } from "react-hook-form";
 
 import type { Policy } from "~/lib/db/types";
 import {

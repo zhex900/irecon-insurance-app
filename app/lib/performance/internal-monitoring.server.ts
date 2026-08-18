@@ -7,7 +7,10 @@
  * Using Sentry Free Plan (no performance monitoring, only error tracking).
  */
 
-import { Sentry, setSentryRequestTags } from "~/lib/observability/sentry.server";
+import {
+  Sentry,
+  setSentryRequestTags,
+} from "~/lib/observability/sentry.server";
 
 /**
  * Operation timeout thresholds for internal apps

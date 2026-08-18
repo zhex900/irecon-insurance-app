@@ -15,7 +15,7 @@ export default defineConfig({
     reactRouter(),
   ],
   // Emit .map for Sentry; omit //# sourceMappingURL so maps are not public.
-  // deploy-staging deletes *.map after upload (before wrangler deploy).
+  // deploy-uat deletes *.map after upload (before wrangler deploy).
   build: {
     sourcemap: "hidden",
   },

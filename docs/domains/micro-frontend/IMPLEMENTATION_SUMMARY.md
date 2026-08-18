@@ -107,8 +107,8 @@ npm run dev                           # Starts portal
 npm run test:integration:workers
 
 # 3. Deploy to staging
-npm run deploy:documents:staging
-npm run deploy:staging
+npm run deploy:documents:uat
+npm run deploy:uat
 
 # 4. Monitor performance
 # Check bundle size reduction

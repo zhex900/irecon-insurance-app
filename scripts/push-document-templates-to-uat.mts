@@ -1,30 +1,28 @@
 /**
- * Push local app_document_template_version rows to staging.
+ * Push local app_document_template_version rows to uat.
  *
  * Usage:
- *   STAGING_DATABASE_URL='postgresql://...' npm run db:push:templates:staging
+ *   UAT_DATABASE_URL='postgresql://...' npm run db:push:templates:uat
  *   # or
- *   node --env-file=.env --import tsx scripts/push-document-templates-to-staging.mts
+ *   node --env-file=.env --import tsx scripts/push-document-templates-to-uat.mts
  *
- * Reads LOCAL from DATABASE_URL (.env) and writes to STAGING_DATABASE_URL.
+ * Reads LOCAL from DATABASE_URL (.env) and writes to UAT_DATABASE_URL.
  */
 import postgres from "postgres";
 
 const localUrl = process.env.DATABASE_URL?.trim();
-const stagingUrl = process.env.STAGING_DATABASE_URL?.trim();
+const uatUrl = process.env.UAT_DATABASE_URL?.trim();
 
 if (!localUrl) throw new Error("DATABASE_URL is required (local)");
-if (!stagingUrl) {
-  throw new Error(
-    "STAGING_DATABASE_URL is required (staging pooler URL, port 6543)",
-  );
+if (!uatUrl) {
+  throw new Error("UAT_DATABASE_URL is required (uat pooler URL, port 6543)");
 }
-if (/127\.0\.0\.1|localhost/.test(stagingUrl)) {
-  throw new Error("STAGING_DATABASE_URL still points at localhost");
+if (/127\.0\.0\.1|localhost/.test(uatUrl)) {
+  throw new Error("UAT_DATABASE_URL still points at localhost");
 }
 
 const local = postgres(localUrl, { max: 1 });
-const staging = postgres(stagingUrl, { max: 1, prepare: false });
+const uat = postgres(uatUrl, { max: 1, prepare: false });
 
 try {
   const rows = await local`
@@ -36,7 +34,7 @@ try {
   if (rows.length === 0) throw new Error("No local templates to push");
 
   for (const row of rows) {
-    await staging.begin(async (tx) => {
+    await uat.begin(async (tx) => {
       await tx`
         delete from app_document_template_version
         where document_template_key = ${row.document_template_key}
@@ -76,13 +74,13 @@ try {
     );
   }
 
-  const check = await staging`
+  const check = await uat`
     select document_template_key, label, cover_type_id, is_published, version_number
     from app_document_template_version
     order by document_template_key
   `;
-  console.log(JSON.stringify({ pushed: rows.length, staging: check }, null, 2));
+  console.log(JSON.stringify({ pushed: rows.length, uat: check }, null, 2));
 } finally {
   await local.end({ timeout: 5 });
-  await staging.end({ timeout: 5 });
+  await uat.end({ timeout: 5 });
 }

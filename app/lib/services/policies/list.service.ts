@@ -424,10 +424,7 @@ export async function getPolicyListMeta(
 async function countAllFacetGroups(
   input: ListPoliciesPageInput,
 ): Promise<
-  Pick<
-    PolicyListMeta,
-    "statusCounts" | "coverCounts" | "categoryCounts"
-  >
+  Pick<PolicyListMeta, "statusCounts" | "coverCounts" | "categoryCounts">
 > {
   const statusCounts = await countByGroup(
     input,
@@ -498,9 +495,10 @@ async function countDatePresets(
     const range = rangeForPreset(preset.id);
     const key = presetResultKey(preset.id);
     const bounds = dateRangeSqlBounds(range.from, range.to);
-    selectShape[key] = sql<number>`count(*) filter (where ${dateColumn} >= ${bounds.from} and ${dateColumn} <= ${bounds.to})::int`.as(
-      key,
-    );
+    selectShape[key] =
+      sql<number>`count(*) filter (where ${dateColumn} >= ${bounds.from} and ${dateColumn} <= ${bounds.to})::int`.as(
+        key,
+      );
   }
 
   const [row] = await db
@@ -562,7 +560,9 @@ export async function listPoliciesPage(
 
   const [core, premiumTotals, meta] = await Promise.all([
     listPoliciesPageCore(input),
-    includePremium ? sumPolicyListPremiums(input) : Promise.resolve(EMPTY_PREMIUM),
+    includePremium
+      ? sumPolicyListPremiums(input)
+      : Promise.resolve(EMPTY_PREMIUM),
     includeMeta ? getPolicyListMeta(input) : Promise.resolve(EMPTY_META),
   ]);
 

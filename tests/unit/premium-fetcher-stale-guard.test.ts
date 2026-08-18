@@ -67,9 +67,9 @@ describe("hasPolicyChanged", () => {
   const premiumB = { contractWorksBasePremium: 1 } as never;
 
   it("treats a missing previous snapshot as a change", () => {
-    expect(
-      hasPolicyChanged({ policyId: "a", premium: premiumA }, null),
-    ).toBe(true);
+    expect(hasPolicyChanged({ policyId: "a", premium: premiumA }, null)).toBe(
+      true,
+    );
   });
 
   it("treats a new loader premium object as a change so reset can apply", () => {

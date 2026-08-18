@@ -5,7 +5,7 @@
 
 import type { PolicyDocument } from "~/lib/db/types";
 
-import { EXCEL_CONTENT_TYPE,PREMIUM_EXCEL_TEMPLATE_KEY } from "./constants";
+import { EXCEL_CONTENT_TYPE, PREMIUM_EXCEL_TEMPLATE_KEY } from "./constants";
 
 export function isPremiumExcelDocument(doc: PolicyDocument): boolean {
   return (

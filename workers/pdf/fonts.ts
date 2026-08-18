@@ -1,4 +1,4 @@
-import { type Font,getDefaultFont } from "@pdfme/common";
+import { type Font, getDefaultFont } from "@pdfme/common";
 
 export type DocumentAssetBinding = {
   fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>;

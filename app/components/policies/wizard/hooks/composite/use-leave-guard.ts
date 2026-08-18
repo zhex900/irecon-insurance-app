@@ -1,4 +1,4 @@
-import { type RefObject,useEffect } from "react";
+import { type RefObject, useEffect } from "react";
 import { type useFetcher, useNavigate } from "react-router";
 
 import type { Policy } from "~/lib/db/types";

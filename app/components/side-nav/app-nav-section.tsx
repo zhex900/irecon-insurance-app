@@ -1,7 +1,4 @@
-import {
-  type SectionId,
-  TOP_LINKS,
-} from "~/components/side-nav/constants";
+import { type SectionId, TOP_LINKS } from "~/components/side-nav/constants";
 import { NavLinkRow } from "~/components/side-nav/nav-link-row";
 import { NavSectionRow } from "~/components/side-nav/nav-section-row";
 import type { SideNavData } from "~/lib/services/navigation/side-nav.service";

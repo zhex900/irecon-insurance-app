@@ -38,9 +38,7 @@ export function useWizardState(
   const claimsSectionOpen = navigation.openMap.claims ?? false;
   const hasSelectedWording =
     (props.policy.car.selectedWordingIds?.length ?? 0) > 0;
-  const { carWording } = useCarWording(
-    claimsSectionOpen || hasSelectedWording,
-  );
+  const { carWording } = useCarWording(claimsSectionOpen || hasSelectedWording);
   const premiumCalc = usePolicyPremiumCalc(
     premiumInput(core, navigation, props),
   );
@@ -71,7 +69,17 @@ export function useWizardState(
       leave,
       gate,
     }),
-    [props, core, navigation, premiumCalc, documents, draftSave, submit, leave, gate],
+    [
+      props,
+      core,
+      navigation,
+      premiumCalc,
+      documents,
+      draftSave,
+      submit,
+      leave,
+      gate,
+    ],
   );
 
   const borderClassName = wizardBorderClassName(parts);

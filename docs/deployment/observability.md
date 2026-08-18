@@ -20,13 +20,13 @@ Production debugging stack for the Irecon CAR broker portal.
 | `SENTRY_AUTH_TOKEN`             | Deploy machine / CI | Source map upload        |
 | `SENTRY_ORG` / `SENTRY_PROJECT` | Deploy machine / CI | Source map upload        |
 
-Staging: add values to `.env.staging` (see `.env.staging.example`). `npm run deploy:staging` syncs `SENTRY_DSN` and uploads client source maps when the auth token is present.
+UAT and production use the **same Sentry project and DSN**. Add values to `.env.uat` / `.env.production` (see `.env.uat.example`). `npm run deploy:uat` and `npm run deploy:prod` sync `SENTRY_DSN` and upload client source maps when the auth token is present.
 
-Builds use Vite `build.sourcemap: "hidden"` (maps on disk, no public `sourceMappingURL` on app chunks). `deploy-staging` uploads `build/client` maps to Sentry (skipping empty route stubs / helpers that have no `.map`), then deletes all `build/**/*.map` so maps are never shipped on the Worker.
+Builds use Vite `build.sourcemap: "hidden"` (maps on disk, no public `sourceMappingURL` on app chunks). Deploy scripts upload `build/client` maps to Sentry (skipping empty route stubs / helpers that have no `.map`), then delete all `build/**/*.map` so maps are never shipped on the Worker.
 
 ## Cloudflare dashboard setup
 
-1. **Workers Observability** — enabled in `[wrangler.jsonc](../wrangler.jsonc)` and `[wrangler.pdf.jsonc](../wrangler.pdf.jsonc)` (`logs` + `traces`, staging sample rate `1`).
+1. **Workers Observability** — enabled in `[wrangler.jsonc](../wrangler.jsonc)` and `[wrangler.pdf.jsonc](../wrangler.pdf.jsonc)` (`logs` + `traces`, sample rate `1`).
 2. **OTLP → Sentry** (required for CF export):
 
 - Follow [Export to Sentry](https://developers.cloudflare.com/workers/observability/exporting-opentelemetry-data/sentry/)
@@ -124,12 +124,12 @@ Temporarily raise rates in Sentry project settings or env-specific init when inv
 
 ### List-route performance alerts
 
-| Alert | Source | Suggested action |
-| ----- | ------ | ---------------- |
-| `exceededCpu` > 0 | Cloudflare Metrics | Urgent — slim loader / async secondary ([performance.md](../architecture/performance.md)) |
-| `message:request.slow` | Workers Logs | Investigate query count on that route |
-| `message:SLOW_OPERATION:listPageLoad` | Sentry | Same; threshold 1.5 s |
-| `message:db.query_gate_slow` | Workers Logs | Reduce parallel queries or combine SQL |
+| Alert                                 | Source             | Suggested action                                                                          |
+| ------------------------------------- | ------------------ | ----------------------------------------------------------------------------------------- |
+| `exceededCpu` > 0                     | Cloudflare Metrics | Urgent — slim loader / async secondary ([performance.md](../architecture/performance.md)) |
+| `message:request.slow`                | Workers Logs       | Investigate query count on that route                                                     |
+| `message:SLOW_OPERATION:listPageLoad` | Sentry             | Same; threshold 1.5 s                                                                     |
+| `message:db.query_gate_slow`          | Workers Logs       | Reduce parallel queries or combine SQL                                                    |
 
 ## Key files
 

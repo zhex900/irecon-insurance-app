@@ -2,14 +2,19 @@ import { and, desc, eq, inArray, ne, sql } from "drizzle-orm";
 
 import { getDb } from "~/lib/db/client";
 import { policyToRows, rowsToPolicy } from "~/lib/db/policy-mapper";
-import { appUserRecentRoute, policy, policyCar, policyCarAdjustment } from "~/lib/db/schema";
+import {
+  appUserRecentRoute,
+  policy,
+  policyCar,
+  policyCarAdjustment,
+} from "~/lib/db/schema";
 import type { Policy, PolicySummary } from "~/lib/db/types";
 import { trackUsage } from "~/lib/observability/metrics.server";
 import { normalizeExcesses } from "~/lib/policies/excesses";
 import { createInformationalNote } from "~/lib/policies/policy-notes";
 import { formatPolicyNumberFromSeq } from "~/lib/policies/policy-number";
 import { normalizeSubLimits } from "~/lib/policies/sub-limits";
-import { getClient , listClients } from "~/lib/services/clients/service";
+import { getClient, listClients } from "~/lib/services/clients/service";
 import {
   getDefaultExcesses,
   getReferenceData,
@@ -60,8 +65,8 @@ export async function deletePolicyDraft(policyId: string, userId?: string) {
       .where(
         and(
           eq(appUserRecentRoute.userId, userId),
-          eq(appUserRecentRoute.path, policyPath)
-        )
+          eq(appUserRecentRoute.path, policyPath),
+        ),
       );
   }
 
@@ -116,14 +121,14 @@ export async function deletePolicies(
 
   // Clean up recent navigation entries for deleted policies
   if (options?.userId) {
-    const policyPaths = ids.map(id => `/policies/${id}`);
+    const policyPaths = ids.map((id) => `/policies/${id}`);
     await db
       .delete(appUserRecentRoute)
       .where(
         and(
           eq(appUserRecentRoute.userId, options.userId),
-          inArray(appUserRecentRoute.path, policyPaths)
-        )
+          inArray(appUserRecentRoute.path, policyPaths),
+        ),
       );
   }
 

@@ -3,7 +3,7 @@
  * This provides a simplified interface for components to access session data
  */
 
-import { useEffect,useState } from "react";
+import { useEffect, useState } from "react";
 
 export interface SessionData {
   accessToken?: string;

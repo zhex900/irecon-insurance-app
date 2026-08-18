@@ -1,9 +1,7 @@
 import { getAppVersion } from "~/lib/app-version";
 
 export type ReferenceSessionCacheKind =
-  | "list-reference"
-  | "car-wording"
-  | "policy-fee-names";
+  "list-reference" | "car-wording" | "policy-fee-names";
 
 export const listReferenceSessionCacheKey = () =>
   `list-reference:${getAppVersion()}`;

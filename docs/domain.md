@@ -1,42 +1,89 @@
-# Production domains
+# Domains & environments
 
-Production app Worker: `insurance-app-production`.
+All non-production hostnames live on the **irecon.net** Cloudflare zone. Production is served on **app.irecon.net** with **app.irecon.com.au** as a client custom hostname (Cloudflare for SaaS).
 
-## Custom domains (Wrangler)
+## Environment overview
 
-Deploy registers **Worker** custom domains (`PRODUCTION_WRANGLER_DOMAINS`, default `app.irecon.net` only — must be a zone on your Cloudflare account).
+| Environment    | URL                                                                | Worker                      | Database                                      |
+| -------------- | ------------------------------------------------------------------ | --------------------------- | --------------------------------------------- |
+| **Production** | `https://app.irecon.net` (canonical) · `https://app.irecon.com.au` | `insurance-app-production`  | Dedicated Supabase project                    |
+| **UAT**        | `https://uat.irecon.net`                                           | `insurance-app-uat`         | Dedicated Supabase project (formerly staging) |
+| **PR preview** | `https://pr-<number>.irecon.net`                                   | `insurance-app-pr-<number>` | Supabase **branch** off the UAT project       |
 
-**Auth redirect allow list** uses `PRODUCTION_AUTH_DOMAINS` (default includes `app.irecon.com.au`) when `SUPABASE_ACCESS_TOKEN` is set during deploy.
+**Shared across all environments:** Sentry (DSN + source maps) and Resend (API key + sender addresses). Use the same values in `.env.uat` and `.env.production`.
 
-## Canonical URL (`APP_URL`)
+## Production
 
-Set `APP_URL` in `.env.production` to the primary origin used in:
+Worker: `insurance-app-production`.
+
+### Custom domains (Wrangler)
+
+Deploy registers Worker custom domains from `PRODUCTION_WRANGLER_DOMAINS` (default `app.irecon.net` — must be a zone on your Cloudflare account).
+
+**Auth redirect allow list** uses `PRODUCTION_AUTH_DOMAINS` (default `app.irecon.net,app.irecon.com.au`) when `SUPABASE_ACCESS_TOKEN` is set during deploy.
+
+### Canonical URL (`APP_URL`)
+
+Set `APP_URL` in `.env.production` to the primary origin:
 
 - Password-reset / auth emails
 - Supabase Auth `site_url`
 - Excel Worker `APP_URL` secret
 
-Both domains are allowed for auth redirects on deploy (when `SUPABASE_ACCESS_TOKEN` is set).
-
 Default: `https://app.irecon.net`
 
-## DNS checklist
+Both production hostnames are allowed for auth redirects on deploy (when `SUPABASE_ACCESS_TOKEN` is set).
 
-### `app.irecon.net` (your Cloudflare zone)
+### `app.irecon.com.au` (client zone → your Worker)
 
-- Proxied `CNAME` or `A` record pointing at the Worker custom domain target Cloudflare shows after first deploy.
+Traffic arrives via Cloudflare for SaaS custom hostnames. You also need a **Workers Route** on the `irecon.net` zone:
 
-### `app.irecon.com.au` (client zone)
+1. **Fallback origin** (if not already set): proxied `AAAA` `100::` record (e.g. `fallback.irecon.net`) → set as fallback origin under **SSL/TLS → Custom Hostnames**.
+2. **Workers Route**: `app.irecon.com.au/*` → `insurance-app-production`.
 
-Ask their DNS admin for:
+Client DNS admin points `app.irecon.com.au` CNAME at your Cloudflare entry hostname and `_acme-challenge.app.irecon.com.au` at the DCV target from Custom Hostnames.
 
-1. `app.irecon.com.au` → CNAME → your Cloudflare entry hostname (or `app.irecon.net` if using Custom Hostnames fallback origin).
-2. `_acme-challenge.app.irecon.com.au` → CNAME → DCV target from **SSL/TLS → Custom Hostnames** (if using Cloudflare for SaaS).
-
-## Deploy
+Deploy:
 
 ```bash
 npm run deploy:prod
 ```
 
-Re-deploy after DNS is live so Wrangler registers custom domains and Supabase auth allow list is updated.
+## UAT
+
+Worker: `insurance-app-uat` · URL: `https://uat.irecon.net`.
+
+Secrets and vars: `.env.uat` (see `.env.uat.example`). Deploy:
+
+```bash
+npm run deploy:uat
+# or default when no --env:
+npm run deploy
+```
+
+Configure Supabase Auth Site URL after first deploy:
+
+```bash
+node --env-file=.env.uat scripts/configure-uat-auth-urls.mjs
+```
+
+## PR preview environments
+
+Per-PR Workers at `https://pr-<number>.irecon.net`. Database is a **Supabase branch** of the UAT project (not a full project clone).
+
+```bash
+npm run deploy --env pr-11
+npm run destroy --env pr-11
+```
+
+See [deployment/preview-environments.md](deployment/preview-environments.md) for provisioning details, CI, and secrets.
+
+## DNS checklist (`irecon.net` zone)
+
+| Hostname          | Type            | Target                                                              |
+| ----------------- | --------------- | ------------------------------------------------------------------- |
+| `app.irecon.net`  | Proxied CNAME/A | Worker custom domain (from first prod deploy)                       |
+| `uat.irecon.net`  | Proxied CNAME/A | Worker custom domain (from first UAT deploy)                        |
+| `pr-*.irecon.net` | Proxied CNAME/A | Worker custom domain per preview deploy (or wildcard if configured) |
+
+Enable **Always Use HTTPS** on the zone.

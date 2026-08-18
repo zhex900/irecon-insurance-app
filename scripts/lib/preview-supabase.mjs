@@ -1,5 +1,5 @@
 /**
- * Create a Supabase project cloned from staging (logical dump/restore).
+ * Provision a Supabase database branch off the UAT project for PR previews.
  */
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -11,11 +11,10 @@ import {
   randomSecret,
   run,
   sleep,
-  STAGING_PROJECT_REF,
+  UAT_PROJECT_REF,
   supabaseUrls,
   webRoot,
 } from "./preview-env.mjs";
-import { copyDatabaseFromStaging } from "./staging-data-copy.mjs";
 
 const SUPABASE_API = "https://api.supabase.com/v1";
 
@@ -29,12 +28,25 @@ function accessToken() {
   return token;
 }
 
-function stagingProjectRef() {
-  return process.env.STAGING_SUPABASE_REF?.trim() || STAGING_PROJECT_REF;
+function uatProjectRef() {
+  return process.env.UAT_SUPABASE_REF?.trim() || UAT_PROJECT_REF;
 }
 
 function previewRegion() {
   return process.env.PREVIEW_REGION?.trim() || DEFAULT_REGION;
+}
+
+function branchWithData() {
+  return process.env.PREVIEW_BRANCH_WITH_DATA?.trim() !== "false";
+}
+
+function extractDbPassword(dbUrl) {
+  if (!dbUrl?.trim()) return null;
+  try {
+    return decodeURIComponent(new URL(dbUrl).password || "");
+  } catch {
+    return null;
+  }
 }
 
 async function supabaseApi(path, { method = "GET", body } = {}) {
@@ -83,42 +95,45 @@ export async function resolveOrgId() {
     .map((org) => `${org.name ?? "?"} (${org.id ?? org.slug})`)
     .join(", ");
   throw new Error(
-    `Multiple Supabase orgs found. Set SUPABASE_ORG_ID in .env.staging. Orgs: ${names || "(none)"}`,
+    `Multiple Supabase orgs found. Set SUPABASE_ORG_ID in .env.uat. Orgs: ${names || "(none)"}`,
   );
 }
 
-export async function findProjectByName(name) {
-  const projects = await captureJson("npx", [
-    "supabase",
-    "projects",
-    "list",
-    "--output",
-    "json",
-  ]);
-  const list = Array.isArray(projects) ? projects : [];
-  return list.find((project) => project.name === name) ?? null;
+export async function listBranches(parentRef = uatProjectRef()) {
+  const branches = await supabaseApi(`/projects/${parentRef}/branches`);
+  return Array.isArray(branches) ? branches : [];
 }
 
-async function waitUntilHealthy(
-  projectRef,
+export async function findBranchByName(
+  branchName,
+  parentRef = uatProjectRef(),
+) {
+  const branches = await listBranches(parentRef);
+  return branches.find((branch) => branch.name === branchName) ?? null;
+}
+
+async function waitUntilBranchHealthy(
+  branchName,
+  parentRef = uatProjectRef(),
   { timeoutMs = 10 * 60 * 1000 } = {},
 ) {
   const started = Date.now();
   while (Date.now() - started < timeoutMs) {
-    try {
-      const project = await supabaseApi(`/projects/${projectRef}`);
-      const status = project?.status ?? "";
-      if (status === "ACTIVE_HEALTHY") return project;
-      console.log(`  … project ${projectRef} status ${status || "unknown"}`);
-    } catch (error) {
-      console.log(
-        `  … waiting for project ${projectRef}: ${error instanceof Error ? error.message : error}`,
-      );
+    const branch = await findBranchByName(branchName, parentRef);
+    if (!branch) {
+      throw new Error(`Branch "${branchName}" disappeared while provisioning.`);
     }
+    const status = branch.status ?? "";
+    if (status === "ACTIVE_HEALTHY" && branch.project_ref) {
+      return branch;
+    }
+    console.log(
+      `  … branch ${branchName} status ${status || "unknown"} (ref ${branch.project_ref ?? "pending"})`,
+    );
     await sleep(10_000);
   }
   throw new Error(
-    `Timed out waiting for Supabase project ${projectRef} to become ACTIVE_HEALTHY`,
+    `Timed out waiting for Supabase branch ${branchName} to become ACTIVE_HEALTHY`,
   );
 }
 
@@ -161,7 +176,7 @@ export async function copyPgsodiumKey(sourceRef, destRef) {
       method: "PUT",
       body: key,
     });
-    console.log("✓ Copied pgsodium/Vault root key from staging");
+    console.log("✓ Copied pgsodium/Vault root key from UAT");
   } catch (error) {
     console.warn(
       "Warning: could not copy pgsodium key (ok if Vault is unused).",
@@ -202,12 +217,12 @@ export async function configureAuthUrls({
   console.log("✓ Auth Site URL + redirect allow list →", origins.join(", "));
 }
 
-async function loadSavedPassword(slug) {
+async function loadSavedPassword(label) {
   const fromEnv = process.env.PREVIEW_DB_PASSWORD?.trim();
   if (fromEnv) return fromEnv;
   try {
     const saved = (
-      await readFile(join(previewRoot, slug, ".db-password"), "utf8")
+      await readFile(join(previewRoot, label, ".db-password"), "utf8")
     ).trim();
     return saved || null;
   } catch {
@@ -215,113 +230,77 @@ async function loadSavedPassword(slug) {
   }
 }
 
-async function savePassword(slug, password) {
-  await mkdir(join(previewRoot, slug), { recursive: true });
+async function savePassword(label, password) {
+  await mkdir(join(previewRoot, label), { recursive: true });
   await writeFile(
-    join(previewRoot, slug, ".db-password"),
+    join(previewRoot, label, ".db-password"),
     `${password}\n`,
     "utf8",
   );
 }
 
-async function createSupabaseProject({ names, password, region }) {
-  const orgId = await resolveOrgId();
-  const size = process.env.PREVIEW_DB_SIZE?.trim();
+async function createBranch({ branchName, parentRef }) {
   console.log(
-    `→ Creating Supabase project ${names.supabaseName} (${region}${size ? `, ${size}` : ", default compute"})…`,
+    `→ Creating Supabase branch ${branchName} from UAT project ${parentRef}${branchWithData() ? " (with data)" : ""}…`,
   );
-  const createArgs = [
-    "supabase",
-    "projects",
-    "create",
-    names.supabaseName,
-    "--org-id",
-    orgId,
-    "--db-password",
-    password,
-    "--region",
-    region,
-    "--output",
-    "json",
-  ];
-  if (size) {
-    createArgs.push("--size", size);
-  }
-  const createdProject = await captureJson("npx", createArgs);
-  const projectRef = createdProject.id ?? createdProject.ref;
-  if (!projectRef) {
-    throw new Error(
-      `Could not read project ref from create response: ${JSON.stringify(createdProject)}`,
-    );
-  }
-  console.log(`✓ Created Supabase project ${projectRef}`);
-  return projectRef;
+  const created = await supabaseApi(`/projects/${parentRef}/branches`, {
+    method: "POST",
+    body: {
+      branch_name: branchName,
+      with_data: branchWithData(),
+    },
+  });
+  console.log(`✓ Branch create requested (${created.id ?? branchName})`);
+  return created;
 }
 
 export async function provisionSupabase({ names }) {
+  const parentRef = uatProjectRef();
+  const branchName = names.supabaseBranchName;
   const region = previewRegion();
-  const existing = await findProjectByName(names.supabaseName);
-  let projectRef;
-  let password;
+  let branch = await findBranchByName(branchName, parentRef);
   let created = false;
 
-  if (existing?.id || existing?.ref) {
-    projectRef = existing.id ?? existing.ref;
-    password = await loadSavedPassword(names.label);
-    if (!password) {
-      throw new Error(
-        `Supabase project "${names.supabaseName}" already exists (${projectRef}). ` +
-          "Re-run with PREVIEW_DB_PASSWORD set to that project's DB password, or destroy the env first.",
-      );
-    }
+  if (branch) {
     console.log(
-      `→ Reusing Supabase project ${projectRef} (${names.supabaseName})`,
+      `→ Reusing Supabase branch ${branchName} (${branch.project_ref})`,
     );
   } else {
-    password = process.env.PREVIEW_DB_PASSWORD?.trim() || randomSecret(24);
-    projectRef = await createSupabaseProject({ names, password, region });
+    branch = await createBranch({ branchName, parentRef });
     created = true;
   }
 
-  await savePassword(names.label, password);
-  await waitUntilHealthy(projectRef);
-  const urls = supabaseUrls({ projectRef, password, region });
-
-  const stagingDbUrl = process.env.DATABASE_URL?.trim();
-  if (!stagingDbUrl) {
+  branch = await waitUntilBranchHealthy(branchName, parentRef);
+  const projectRef = branch.project_ref;
+  if (!projectRef) {
     throw new Error(
-      "DATABASE_URL (staging pooler/direct URL) is required to copy the database.",
+      `Branch ${branchName} has no project_ref after provisioning.`,
     );
   }
-  const dumpDir = join(previewRoot, names.label, "dump");
-  console.log(
-    created
-      ? "→ Copying staging database into new preview project…"
-      : "→ Refreshing preview database from staging…",
-  );
-  if (created) {
-    await copyDatabaseFromStaging({
-      stagingDbUrl,
-      destSessionUrl: urls.sessionUrl,
-      destTransactionUrl: urls.transactionUrl,
-      workDir: dumpDir,
-      skipRoles: false,
-    });
-  } else {
-    await copyDatabaseFromStaging({
-      stagingDbUrl,
-      destSessionUrl: urls.sessionUrl,
-      destTransactionUrl: urls.transactionUrl,
-      workDir: dumpDir,
-      skipRoles: true,
-    });
-  }
-  await copyPgsodiumKey(stagingProjectRef(), projectRef);
 
+  let password =
+    (await loadSavedPassword(names.label)) ||
+    extractDbPassword(process.env.DATABASE_URL) ||
+    process.env.PREVIEW_DB_PASSWORD?.trim();
+  if (!password) {
+    throw new Error(
+      "Could not determine UAT database password. Set DATABASE_URL in .env.uat or PREVIEW_DB_PASSWORD.",
+    );
+  }
+  await savePassword(names.label, password);
+
+  const urls = supabaseUrls({ projectRef, password, region });
   const keys = await getProjectApiKeys(projectRef);
   await configureAuthUrls({ projectRef, appUrl: names.appUrl });
 
+  if (created) {
+    console.log("✓ Supabase branch ready (schema cloned from UAT parent)");
+  }
+
   return {
+    branchId: branch.id,
+    branchName,
+    parentProjectRef: parentRef,
     projectRef,
     password,
     region,
@@ -333,24 +312,32 @@ export async function provisionSupabase({ names }) {
 }
 
 export async function loadExistingSupabase(names) {
-  const region = previewRegion();
-  const existing = await findProjectByName(names.supabaseName);
-  const projectRef = existing?.id ?? existing?.ref;
-  if (!projectRef) {
+  const parentRef = uatProjectRef();
+  const branchName = names.supabaseBranchName;
+  const branch = await findBranchByName(branchName, parentRef);
+  if (!branch?.project_ref) {
     throw new Error(
-      `No Supabase project named "${names.supabaseName}". Run a full deploy first (omit --skip-db).`,
+      `No Supabase branch named "${branchName}" on UAT project ${parentRef}. Run a full deploy first (omit --skip-db).`,
     );
   }
+  const region = previewRegion();
   const password = await loadSavedPassword(names.label);
   if (!password) {
     throw new Error(
-      `Missing DB password for ${projectRef}. Set PREVIEW_DB_PASSWORD or re-run a full deploy.`,
+      `Missing DB password for branch ${branchName}. Set PREVIEW_DB_PASSWORD or re-run a full deploy.`,
     );
   }
-  const urls = supabaseUrls({ projectRef, password, region });
-  const keys = await getProjectApiKeys(projectRef);
+  const urls = supabaseUrls({
+    projectRef: branch.project_ref,
+    password,
+    region,
+  });
+  const keys = await getProjectApiKeys(branch.project_ref);
   return {
-    projectRef,
+    branchId: branch.id,
+    branchName,
+    parentProjectRef: parentRef,
+    projectRef: branch.project_ref,
     password,
     region,
     created: false,
@@ -360,14 +347,19 @@ export async function loadExistingSupabase(names) {
   };
 }
 
-export async function destroySupabase(projectRef) {
-  if (!projectRef) return;
-  if (projectRef === stagingProjectRef()) {
-    throw new Error("Refusing to delete the staging Supabase project.");
+export async function destroySupabase({ branchId, projectRef } = {}) {
+  const parentRef = uatProjectRef();
+  if (projectRef && projectRef === parentRef) {
+    throw new Error("Refusing to delete the UAT Supabase project.");
   }
-  console.log(`→ Deleting Supabase project ${projectRef}…`);
-  await run("npx", ["supabase", "projects", "delete", projectRef, "--yes"], {
-    cwd: webRoot,
-  });
-  console.log("✓ Supabase project deleted");
+  const target = branchId || projectRef;
+  if (!target) return;
+  console.log(`→ Deleting Supabase branch ${target}…`);
+  await supabaseApi(`/branches/${target}`, { method: "DELETE" });
+  console.log("✓ Supabase branch deleted");
+}
+
+/** @deprecated PR previews use branches, not standalone projects. */
+export async function findProjectByName() {
+  return null;
 }

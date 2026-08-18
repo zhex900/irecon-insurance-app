@@ -58,19 +58,22 @@ export async function loader({ params, request }: Route.LoaderArgs) {
   const [client, reference, page, policyCount] = await Promise.all([
     getClient(clientId),
     getReferenceDataAsync(),
-    listPoliciesPage({
-      clientId,
-      search: filters.q,
-      policyStatusIds: filters.statusIds,
-      coverTypeIds: filters.coverTypeIds,
-      policyCategoryIds: filters.policyCategoryIds,
-      inceptionFrom: filters.inception.from,
-      inceptionTo: filters.inception.to,
-      expiryFrom: filters.expiry.from,
-      expiryTo: filters.expiry.to,
-      limit: pagination.limit,
-      offset: pagination.offset,
-    }, { includePremium: true, includeMeta: true }),
+    listPoliciesPage(
+      {
+        clientId,
+        search: filters.q,
+        policyStatusIds: filters.statusIds,
+        coverTypeIds: filters.coverTypeIds,
+        policyCategoryIds: filters.policyCategoryIds,
+        inceptionFrom: filters.inception.from,
+        inceptionTo: filters.inception.to,
+        expiryFrom: filters.expiry.from,
+        expiryTo: filters.expiry.to,
+        limit: pagination.limit,
+        offset: pagination.offset,
+      },
+      { includePremium: true, includeMeta: true },
+    ),
     countClientPolicies(clientId),
   ]);
   if (!client) throw clientNotFoundResponse();
@@ -122,7 +125,10 @@ export async function action({ request, params }: Route.ActionArgs) {
     }
 
     try {
-      const deleted = await deletePolicies(ids, { clientId, userId: actor.userId });
+      const deleted = await deletePolicies(ids, {
+        clientId,
+        userId: actor.userId,
+      });
       await writeAuditLog({
         actor,
         action: "policy.delete",

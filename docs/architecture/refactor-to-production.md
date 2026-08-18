@@ -14,7 +14,7 @@ Use this as the checklist and decision log. Prefer **small, mergeable PRs** over
 4. **Real data** — runtime data from Postgres; JSON only for seeds/fixtures/templates where justified.
 5. **Real email** — Resend (or chosen provider) for transactional and document emails.
 6. **Confidence** — lint/format, unit/domain tests, Playwright e2e, smoke tests.
-7. **Safe delivery** — PR preview DB + e2e, staging on merge, prod on tag/release.
+7. **Safe delivery** — PR preview DB + e2e, UAT on merge, prod on tag/release.
 
 ---
 
@@ -30,7 +30,7 @@ Use this as the checklist and decision log. Prefer **small, mergeable PRs** over
 | Data    | `_archive/data/*.json` seeds only; `car_wording` from DB; `reference-data.ts` static lookups; document templates in Postgres (`app_document_template_version`) |
 | Email   | Resend for policy document send; Supabase Auth for password reset/invite emails                                                                                |
 | Quality | Vitest + Playwright; ESLint/Prettier/`npm run verify` (CI still Phase 9)                                                                                       |
-| Deploy  | Manual staging script (`npm run deploy:staging`); no PR/prod automation                                                                                        |
+| Deploy  | Manual UAT script (`npm run deploy:uat`); no PR/prod automation                                                                                                |
 
 Large files (all under ~500-line gate after Phase 3 follow-ups):
 
@@ -93,7 +93,7 @@ After reorganisation (names can vary; structure should not):
 **Outcome:** Safe starting point; agreement on conventions.
 
 - [x] Freeze a short “definition of done for production” (below).
-- [x] Inventory secrets and environments: local / PR / staging / prod.
+- [x] Inventory secrets and environments: local / PR / UAT / prod.
 - [x] List every `~/data/*` import and classify: **runtime** | **seed** | **delete**. (Done: moved off `app/data`; seeds under `_archive/data`.)
 - [x] Curate `docs/`; link this plan from root README.
 - [x] Decide package manager lockfile policy (keep npm unless team wants pnpm).
@@ -136,7 +136,7 @@ Suggested order (historical):
 - Keep `supabase/` at root (already correct); fix any `cd ..` assumptions in npm scripts.
 
 1. **Update README** for new layout; fold old `web/README.md` into root README.
-2. **Fix CI/local scripts** until `npm run dev`, `db:reset`, `typecheck`, `deploy:staging` work from root.
+2. **Fix CI/local scripts** until `npm run dev`, `db:reset`, `typecheck`, `deploy:uat` work from root.
 
 **Risks:** broken relative imports, Wrangler root, Supabase path, Cursor skills pointing at `web/`.
 
@@ -305,7 +305,7 @@ Optional: Storybook later—not required for v1 prod if Playwright covers critic
 
 **Status: done (2026-07-28)**
 
-- [x] Env: `RESEND_API_KEY`, `EMAIL_FROM`, optional `EMAIL_REPLY_TO` (`.env.example`, staging secrets).
+- [x] Env: `RESEND_API_KEY`, `EMAIL_FROM`, optional `EMAIL_REPLY_TO` (`.env.example`, UAT secrets).
 - [x] Implement `app/lib/services/email/resend.server.ts` (thin wrapper).
 - [x] Wire document email dialog → `POST /api/policies/:policyId/email-documents` → Resend (PDF attachments; library docs from R2).
 - [x] Password invite / reset: **Supabase Auth templates** (admin creates users with password; forgot/reset via `resetPasswordForEmail`). Document email delivery stays on Resend.
@@ -327,7 +327,7 @@ Optional: Storybook later—not required for v1 prod if Playwright covers critic
 | Unit        | Vitest                            | Zod schemas, pricing math, merge helpers, pure domain |
 | Integration | Vitest + local/ephemeral DB       | Services against Postgres (skip if DB down)           |
 | E2E         | Playwright                        | Critical user journeys                                |
-| Smoke       | Playwright `smoke` project        | Prod/staging after deploy                             |
+| Smoke       | Playwright `smoke` project        | Prod/UAT after deploy                                 |
 
 #### Playwright critical paths (minimum)
 
@@ -381,32 +381,32 @@ Note: TypeScript 7 + typescript-eslint uses side-by-side `@typescript/typescript
 
 ### Phase 9 — CI/CD & environments
 
-**Outcome:** PR isolation, staging continuous, prod gated.
+**Outcome:** PR isolation, UAT continuous, prod gated.
 
 #### Environments
 
-| Env        | App                                             | Database                          | Who              |
-| ---------- | ----------------------------------------------- | --------------------------------- | ---------------- |
-| Local      | `localhost`                                     | Local Supabase                    | Devs             |
-| PR         | Cloudflare Workers preview **or** ephemeral URL | **New Supabase branch/DB per PR** | CI + reviewers   |
-| Staging    | staging hostname                                | Staging Supabase project          | Auto on `main`   |
-| Production | prod hostname                                   | Prod Supabase project             | Tag/release only |
+| Env        | App                                              | Database                | Who              |
+| ---------- | ------------------------------------------------ | ----------------------- | ---------------- |
+| Local      | `localhost`                                      | Local Supabase          | Devs             |
+| PR         | `https://pr-<n>.irecon.net`                      | Supabase branch off UAT | CI + reviewers   |
+| UAT        | `https://uat.irecon.net`                         | UAT Supabase project    | Auto on `main`   |
+| Production | `https://app.irecon.net` (+ `app.irecon.com.au`) | Prod Supabase project   | Tag/release only |
 
 #### Pipeline design
 
 ```text
 PR opened / updated
   → lint + format:check + typecheck + unit
-  → provision Supabase preview (branch) + migrate + seed synthetic data
-  → deploy Workers preview (if used) OR run Playwright against preview URL
+  → provision Supabase branch (off UAT) + migrate + seed synthetic data
+  → deploy Workers preview at pr-<n>.irecon.net
   → comment on PR: preview URL + e2e summary
-  → on PR close: destroy preview DB/infra
+  → on PR close: destroy preview branch/infra
 
 merge to main
   → destroy PR infra (if still present)
-  → deploy staging Worker
-  → migrate staging DB (forward-only)
-  → run full e2e against staging
+  → deploy UAT Worker
+  → migrate UAT DB (forward-only)
+  → run full e2e against UAT
   → notify (Slack/email) on failure; block “promote” if desired
 
 tag vX.Y.Z / GitHub Release
@@ -421,7 +421,7 @@ tag vX.Y.Z / GitHub Release
 - **Supabase:** use [Branching](https://supabase.com/docs/guides/platform/branching) or Management API to create DB per PR; store connection string in CI job env.
 - **Cloudflare:** Workers preview deployments + wrangler; secrets via Cloudflare/GitHub OIDC where possible.
 - **Migrations:** only `supabase/migrations` (or Drizzle-generated SQL committed); never `drizzle-kit push` in prod CI.
-- **Seeds:** synthetic faker seed for PR/staging; **separate** controlled prod migration playbook for real broker data.
+- **Seeds:** synthetic faker seed for PR/UAT; **separate** controlled prod migration playbook for real broker data.
 - **Comment trigger:** optional `ops/e2e` PR comment to re-run expensive suite.
 - **Concurrency:** cancel older PR runs on the same PR.
 
@@ -437,7 +437,7 @@ tag vX.Y.Z / GitHub Release
 ### Phase 10 — Data & go-live (from your notes)
 
 - [ ] Test / UAT datasets: anonymised; no production PII in git or PR DBs.
-- [ ] Prod data migration plan from legacy MSSQL (scripts live under `_archive/mssql`); dry-run on staging.
+- [ ] Prod data migration plan from legacy MSSQL (scripts live under `_archive/mssql`); dry-run on UAT.
 - [ ] Domain + email DNS (Resend + app hostname).
 - [ ] PDF generation sign-off (ROA, Schedule) against golden PDFs.
 - [ ] UI copy polish pass.

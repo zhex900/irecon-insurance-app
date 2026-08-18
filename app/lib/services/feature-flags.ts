@@ -105,7 +105,9 @@ async function loadFeatureFlagByKey(): Promise<Map<FeatureKey, boolean>> {
 }
 
 /** All feature on/off states in one cached read (one DB query per TTL window). */
-export async function getFeatureFlagStates(): Promise<Record<FeatureKey, boolean>> {
+export async function getFeatureFlagStates(): Promise<
+  Record<FeatureKey, boolean>
+> {
   const byKey = await loadFeatureFlagByKey();
   return Object.fromEntries(
     FEATURE_KEYS.map((key) => [key, byKey.get(key)!]),

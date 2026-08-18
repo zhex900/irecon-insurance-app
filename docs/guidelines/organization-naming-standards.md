@@ -771,17 +771,20 @@ _Maintained by: Architecture Working Group_
 The directory standardization plan has been partially implemented with the following accomplishments:
 
 #### ✅ Completed
+
 1. **ESLint Rules Configuration**: Basic naming rules configured
 2. **Hook Organization**: Standardized hook file grouping
 3. **Automated Checking**: `check-organization.sh` script for compliance
 4. **CI/CD Integration**: `npm run check:organization` command added
 5. **Documentation**: Updated with enforcement mechanisms
 
-#### 🔄 Partially Completed  
+#### 🔄 Partially Completed
+
 1. **Naming Violation Fixes**: Example fixes applied (clients directory)
 2. **Import Updates**: Hook imports standardized
 
 #### ⏳ Pending (Future Work)
+
 1. **Policies/Wizard Restructure**: Complex domain restructuring
 2. **Comprehensive ESLint Rules**: Advanced custom rules for domain redundancy
 3. **Git Hooks Integration**: Pre-commit organization checks
@@ -789,10 +792,11 @@ The directory standardization plan has been partially implemented with the follo
 ### Enforcement Mechanisms in Place
 
 #### 1. Organization Check Script (`scripts/check-organization.sh`)
+
 ```bash
 # Runs comprehensive checks:
 # - Single-word component files
-# - Files with 4+ words  
+# - Files with 4+ words
 # - Domain redundancy patterns
 # - Hook organization status
 # - ESLint compliance
@@ -800,6 +804,7 @@ npm run check:organization
 ```
 
 #### 2. ESLint Configuration
+
 ```javascript
 // Current rules in eslint.config.js
 rules: {
@@ -813,6 +818,7 @@ rules: {
 ```
 
 #### 3. Development Workflow Integration
+
 - **Local Development**: Manual checks via npm script
 - **Code Review**: Organization compliance as checklist item
 - **CI/CD Pipeline**: Can be added as required check
@@ -821,16 +827,18 @@ rules: {
 ### Example Fixes Applied
 
 #### Single-Word File Renaming
+
 - `app/components/clients/list/table.tsx` → `clients-table.tsx`
 - `app/components/clients/summary/policies.tsx` → `client-policies.tsx`
 
 #### Hook Organization
+
 ```bash
 # Before: Flat structure
 app/hooks/use-api-search.ts
 app/hooks/use-debounced-search-query.ts
 
-# After: Grouped structure  
+# After: Grouped structure
 app/hooks/search/use-api.ts
 app/hooks/search/use-debounced-query.ts
 app/hooks/search/index.ts
@@ -854,12 +862,14 @@ app/hooks/search/index.ts
 ### Getting Help
 
 For questions or issues with organization standards:
+
 1. Review `docs/guidelines/file-organization-standards.md`
 2. Run `npm run check:organization` to identify issues
 3. Check recent changes in git history for examples
 4. Contact Architecture Working Group for guidance
 
 ---
+
 _Document Version: 2.2 (Updated with Enforcement Mechanisms)_  
 _Last Updated: August 16, 2026_  
 _Directory Standardization: Phase 1 Implemented_  

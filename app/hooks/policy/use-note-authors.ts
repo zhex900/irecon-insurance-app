@@ -18,7 +18,8 @@ export function usePolicyNoteAuthors(policyId: string, hasNotes: boolean) {
   });
 
   useEffect(() => {
-    if (!hasNotes || !hydrated || fetcher.data || fetcher.state !== "idle") return;
+    if (!hasNotes || !hydrated || fetcher.data || fetcher.state !== "idle")
+      return;
     loadRef.current(`/api/policies/${policyId}/note-authors`);
   }, [hasNotes, hydrated, fetcher.data, fetcher.state, policyId]);
 

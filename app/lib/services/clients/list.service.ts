@@ -1,16 +1,7 @@
 /**
  * Backend-driven client list queries: SQL filters + limit/offset + counts.
  */
-import {
-  and,
-  asc,
-  eq,
-  ilike,
-  not,
-  or,
-  type SQL,
-  sql,
-} from "drizzle-orm";
+import { and, asc, eq, ilike, not, or, type SQL, sql } from "drizzle-orm";
 
 import { getDb } from "~/lib/db/client";
 import {
@@ -105,7 +96,11 @@ function clientHasPolicies() {
 
 async function countClientsSummary(
   whereForCounts: SQL | undefined,
-): Promise<{ allTotal: number; withPolicies: number; withoutPolicies: number }> {
+): Promise<{
+  allTotal: number;
+  withPolicies: number;
+  withoutPolicies: number;
+}> {
   const db = getDb();
   const [row] = await db
     .select({
@@ -170,9 +165,10 @@ export async function listClientsPage(
       db
         .select({
           client,
-          policyCount: sql<number>`coalesce(${policyCountByClient.count}, 0)::int`.as(
-            "policy_count",
-          ),
+          policyCount:
+            sql<number>`coalesce(${policyCountByClient.count}, 0)::int`.as(
+              "policy_count",
+            ),
         })
         .from(client)
         .leftJoin(

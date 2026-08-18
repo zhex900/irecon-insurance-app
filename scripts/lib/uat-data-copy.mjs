@@ -1,6 +1,6 @@
 /**
- * Dump staging Postgres and restore into another Supabase project.
- * Used by preview provisioning and production `--copy-from-staging`.
+ * Dump UAT Postgres and restore into another Supabase project.
+ * Used by production `--copy-from-uat`.
  */
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
@@ -62,7 +62,10 @@ async function runPsqlScriptWithRetry(dbUrl, file, { attempts = 6 } = {}) {
       return;
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
-      if (!/EMAXCONNSESSION|max clients reached/i.test(msg) || i === attempts - 1) {
+      if (
+        !/EMAXCONNSESSION|max clients reached/i.test(msg) ||
+        i === attempts - 1
+      ) {
         throw error;
       }
       const waitMs = 10_000 * (i + 1);
@@ -82,12 +85,12 @@ export async function resetTargetDatabase(dbUrl, workDir) {
   await runPsqlScriptWithRetry(dbUrl, sqlPath);
 }
 
-export async function restoreWithPsql(destUrl, dumpDir, { skipRoles = false } = {}) {
-  const localArgs = [
-    "--single-transaction",
-    "--variable",
-    "ON_ERROR_STOP=1",
-  ];
+export async function restoreWithPsql(
+  destUrl,
+  dumpDir,
+  { skipRoles = false } = {},
+) {
+  const localArgs = ["--single-transaction", "--variable", "ON_ERROR_STOP=1"];
   if (!skipRoles) {
     localArgs.push("--file", join(dumpDir, "roles.sql"));
   }
@@ -130,10 +133,10 @@ export async function restoreWithPsql(destUrl, dumpDir, { skipRoles = false } = 
   ]);
 }
 
-export async function dumpStagingDatabase(dumpDir, stagingDbUrl) {
-  const dbUrl = toSessionDbUrl(stagingDbUrl);
+export async function dumpUatDatabase(dumpDir, uatDbUrl) {
+  const dbUrl = toSessionDbUrl(uatDbUrl);
   await mkdir(dumpDir, { recursive: true });
-  console.log("→ Dumping staging database (roles, schema, data)…");
+  console.log("→ Dumping UAT database (roles, schema, data)…");
   await run("npx", [
     "supabase",
     "db",
@@ -168,28 +171,22 @@ export async function dumpStagingDatabase(dumpDir, stagingDbUrl) {
     "-x",
     "storage.vector_indexes",
   ]);
-  console.log("✓ Staging dump written to", dumpDir);
+  console.log("✓ UAT dump written to", dumpDir);
 }
 
 /**
- * Replace target DB contents with a logical copy of staging.
- * @param {object} options
- * @param {string} options.stagingDbUrl
- * @param {string} options.destSessionUrl — session pooler (5432) for reset
- * @param {string} options.destTransactionUrl — transaction pooler (6543) for restore
- * @param {string} options.workDir — dump + reset SQL directory
- * @param {boolean} [options.skipRoles=true] — skip roles.sql on existing projects
+ * Replace target DB contents with a logical copy of UAT.
  */
-export async function copyDatabaseFromStaging({
-  stagingDbUrl,
+export async function copyDatabaseFromUat({
+  uatDbUrl,
   destSessionUrl,
   destTransactionUrl,
   workDir,
   skipRoles = true,
 }) {
-  await dumpStagingDatabase(workDir, stagingDbUrl);
+  await dumpUatDatabase(workDir, uatDbUrl);
   await resetTargetDatabase(destSessionUrl, workDir);
-  console.log("→ Restoring staging dump into target project…");
+  console.log("→ Restoring UAT dump into target project…");
   await restoreWithPsql(destTransactionUrl, workDir, { skipRoles });
-  console.log("✓ Database copied from staging");
+  console.log("✓ Database copied from UAT");
 }

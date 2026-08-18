@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Deploy staging (default) or a per-PR preview environment.
+ * Deploy UAT (default) or a per-PR preview environment.
  *
  *   npm run deploy
  *   npm run deploy --env pr-11
@@ -8,7 +8,7 @@
 import { execFileSync } from "node:child_process";
 
 import {
-  copyR2FromStaging,
+  copyR2FromUat,
   deployPreviewWorkers,
   ensureHyperdrive,
   ensureR2Buckets,
@@ -71,7 +71,7 @@ async function deployPreview(envName) {
   console.log(`  PDF     ${names.pdfWorker}`);
   console.log(`  Excel   ${names.excelWorker}`);
   console.log(`  R2      ${names.avatarsBucket}, ${names.libraryBucket}`);
-  console.log(`  Supabase ${names.supabaseName}`);
+  console.log(`  Supabase branch ${names.supabaseBranchName} (off UAT)`);
 
   if (dryRun) {
     console.log("Dry run — no resources created.");
@@ -130,6 +130,8 @@ async function deployPreview(envName) {
   await saveState(names.label, {
     env: names.label,
     appUrl: names.appUrl,
+    supabaseBranchId: supabase.branchId,
+    supabaseBranchName: supabase.branchName,
     supabaseProjectRef: supabase.projectRef,
     supabaseUrl: supabase.supabaseUrl,
     hyperdriveId,
@@ -151,8 +153,8 @@ async function deployPreview(envName) {
 }
 
 const envName = parseEnvName();
-if (!envName || envName === "staging") {
-  await import("./deploy-staging.mjs");
+if (!envName || envName === "uat") {
+  await import("./deploy-uat.mjs");
 } else {
   deployPreview(envName).catch((error) => {
     console.error(error instanceof Error ? error.message : error);

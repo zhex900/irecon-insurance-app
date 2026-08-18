@@ -9,7 +9,7 @@
  *   npm run db:seed:clients
  *   npm run db:seed:clients -- --file _archive/seeds-source/Client.csv
  *   npm run db:seed:clients -- --default-ar 1179
- *   npx tsx --env-file=.env.staging scripts/seed-clients-from-csv.mts
+ *   npx tsx --env-file=.env.uat scripts/seed-clients-from-csv.mts
  */
 import "dotenv/config";
 import { readFileSync } from "node:fs";

@@ -24,10 +24,7 @@ function mergeRecentRouteLabels(
   });
 }
 
-export function useRecentRoutes(
-  loaderRoutes: SideNavLink[],
-  pathname: string,
-) {
+export function useRecentRoutes(loaderRoutes: SideNavLink[], pathname: string) {
   const initialRecentRoutes = excludeRecentRoute(loaderRoutes, pathname);
   const lastRecordedPathRef = React.useRef("");
   const recentRoutesRef = React.useRef(initialRecentRoutes);

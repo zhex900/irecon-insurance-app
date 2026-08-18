@@ -1,17 +1,11 @@
 import { useMemo } from "react";
-import {
-  type ShouldRevalidateFunctionArgs,
-  useActionData,
-} from "react-router";
+import { type ShouldRevalidateFunctionArgs, useActionData } from "react-router";
 
 import { ListSearchField } from "~/components/forms/list-search-field";
 import { PageHeader } from "~/components/layout/app-layout";
 import { NewPolicyClientDialog } from "~/components/policies/new-policy-client-dialog";
 import { PolicyListTable } from "~/components/policies/policy-list-table";
-import {
-  usePolicyListPage,
-  usePolicyListStats,
-} from "~/hooks/policy-list";
+import { usePolicyListPage, usePolicyListStats } from "~/hooks/policy-list";
 import { useActionSuccessToast } from "~/hooks/utilities";
 import { requireAuth } from "~/lib/auth/session/server.server";
 import { pageTitle } from "~/lib/brand";

@@ -11,7 +11,7 @@ jobs:
   quality:
     name: Typecheck, lint, test
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
 
     steps:
       - name: Checkout
@@ -25,6 +25,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Start Supabase and seed database
+        run: node scripts/ci-supabase-setup.mjs
 
       - name: Typecheck
         run: npm run typecheck

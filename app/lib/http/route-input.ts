@@ -3,9 +3,7 @@ import { z } from "zod";
 export const queryTextSchema = z.string().trim().max(200).catch("");
 
 /** Strict `YYYY-MM-DD` for API boundaries — invalid input fails validation. */
-export const isoDateStringSchema = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/);
+export const isoDateStringSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
 /** Optional strict ISO date; absent or empty query values become `undefined`. */
 export const optionalStrictIsoDateSchema = z.preprocess(

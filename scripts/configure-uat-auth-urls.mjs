@@ -1,16 +1,17 @@
 #!/usr/bin/env node
 /**
- * Point staging Supabase Auth Site URL + redirect allow list at the Worker.
+ * Point UAT Supabase Auth Site URL + redirect allow list at the Worker.
  *
  * Requires SUPABASE_ACCESS_TOKEN (https://supabase.com/dashboard/account/tokens)
- * or a logged-in `supabase` CLI session via env SUPABASE_ACCESS_TOKEN.
  *
- *   SUPABASE_ACCESS_TOKEN=... node scripts/configure-staging-auth-urls.mjs
+ *   SUPABASE_ACCESS_TOKEN=... node --env-file=.env.uat scripts/configure-uat-auth-urls.mjs
  */
-const PROJECT_REF = "tjnsygunohylofihoksl";
-const APP_URL = (
-  process.env.APP_URL ?? "https://insurance-app-staging.zhex900.workers.dev"
-).replace(/\/$/, "");
+const PROJECT_REF =
+  process.env.UAT_SUPABASE_REF?.trim() || "tjnsygunohylofihoksl";
+const APP_URL = (process.env.APP_URL ?? "https://uat.irecon.net").replace(
+  /\/$/,
+  "",
+);
 
 const allowList = [
   APP_URL,
@@ -57,7 +58,6 @@ async function main() {
       body: JSON.stringify({
         site_url: APP_URL,
         uri_allow_list: allowList,
-        // Ensure recovery emails use ConfirmationURL (includes redirect_to=APP_URL/...).
         mailer_subjects_recovery: "Reset your password",
         mailer_templates_recovery_content:
           '<h2>Reset your password</h2><p>We received a request to reset your password. Follow the link below to choose a new one.</p><p><a href="{{ .ConfirmationURL }}">Reset password</a></p><p>If you didn\'t request this, you can safely ignore this email.</p>',
@@ -73,7 +73,7 @@ async function main() {
   console.log("After:");
   console.log("  site_url =", after.site_url);
   console.log("  uri_allow_list =", after.uri_allow_list);
-  console.log("✓ Staging Auth URLs configured for", APP_URL);
+  console.log("✓ UAT Auth URLs configured for", APP_URL);
 }
 
 main().catch((error) => {
