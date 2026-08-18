@@ -351,7 +351,7 @@ describe("Premium Calculation Integration Tests", () => {
   });
 
   describe("referral notes integration", () => {
-    it.only("handles claims history referrals", async () => {
+    it("handles claims history referrals", async () => {
       // Arrange
       const policyWithClaims = createTestPolicyValues({
         claimsCountLast3Years: 3,

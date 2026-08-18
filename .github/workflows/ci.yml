@@ -9,7 +9,7 @@ concurrency:
 
 jobs:
   quality:
-    name: Typecheck, lint, test
+    name: Typecheck, lint, format, test
     runs-on: ubuntu-latest
     timeout-minutes: 25
 
@@ -34,6 +34,9 @@ jobs:
 
       - name: ESLint
         run: npm run lint
+
+      - name: Prettier
+        run: npm run format:check
 
       - name: Unit and integration tests
         run: npm run test
