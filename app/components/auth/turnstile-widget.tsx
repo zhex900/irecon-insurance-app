@@ -5,6 +5,7 @@ const SCRIPT_BASE = "https://challenges.cloudflare.com/turnstile/v0/api.js";
 type TurnstileRenderOptions = {
   sitekey: string;
   action?: string;
+  size?: "normal" | "flexible" | "compact";
   callback?: (token: string) => void;
   "error-callback"?: () => void;
   "expired-callback"?: () => void;
@@ -73,6 +74,7 @@ export function TurnstileWidget({
         widgetIdRef.current = window.turnstile.render(containerRef.current, {
           sitekey: siteKey,
           action: "login",
+          size: "flexible",
           callback: (token) => onTokenChangeRef.current(token),
           "error-callback": () => onTokenChangeRef.current(null),
           "expired-callback": () => onTokenChangeRef.current(null),
@@ -91,6 +93,10 @@ export function TurnstileWidget({
   }, [siteKey]);
 
   return (
-    <div ref={containerRef} data-turnstile-widget="" className="min-h-[65px]" />
+    <div
+      ref={containerRef}
+      data-turnstile-widget=""
+      className="min-h-[65px] w-full"
+    />
   );
 }
