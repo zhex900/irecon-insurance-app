@@ -145,7 +145,14 @@ function AppVersionBadge() {
   const appCommit = getAppCommit();
   const appEnv = getAppEnvironment(appVersion);
   const release = getAppRelease();
-  const copyCommit = React.useCallback(async () => {
+
+  const badgeClassName = cn(
+    "max-w-full truncate font-mono text-[10px] tabular-nums group-data-[collapsible=icon]:hidden",
+    getAppEnvironmentBadgeClass(appEnv),
+    appCommit && "cursor-pointer",
+  );
+
+  async function copyCommit() {
     if (!appCommit) return;
     try {
       await navigator.clipboard.writeText(appCommit);
@@ -153,13 +160,7 @@ function AppVersionBadge() {
     } catch {
       toast.error("Could not copy commit");
     }
-  }, [appCommit]);
-
-  const badgeClassName = cn(
-    "max-w-full truncate font-mono text-[10px] tabular-nums group-data-[collapsible=icon]:hidden",
-    getAppEnvironmentBadgeClass(appEnv),
-    appCommit && "cursor-pointer",
-  );
+  }
 
   if (!appCommit) {
     return (
