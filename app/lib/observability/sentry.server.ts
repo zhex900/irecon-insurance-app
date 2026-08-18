@@ -4,7 +4,11 @@
 import type { CloudflareOptions } from "@sentry/cloudflare";
 import * as Sentry from "@sentry/cloudflare";
 
-import { getAppEnvironment, getAppRelease, getAppVersion } from "~/lib/app-version";
+import {
+  getAppEnvironment,
+  getAppRelease,
+  getAppVersion,
+} from "~/lib/app-version";
 import type { CloudflareEnv } from "~/lib/cloudflare.server";
 import { getRequestContext } from "~/lib/observability/request-context.server";
 

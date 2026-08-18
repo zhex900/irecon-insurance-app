@@ -273,8 +273,13 @@ export function repairSupabaseDatabaseUrl(databaseUrl, supabaseUrl) {
     ),
   );
   if (passwordFirst) {
-    const [, password, port = "5432", path = "/postgres", query = "?sslmode=require"] =
-      passwordFirst;
+    const [
+      ,
+      password,
+      port = "5432",
+      path = "/postgres",
+      query = "?sslmode=require",
+    ] = passwordFirst;
     const fixed = `postgresql://postgres:${encodeDbPassword(password)}@db.${ref}.supabase.co:${port}${path}${query || "?sslmode=require"}`;
     return normalizeSupabasePoolerUrl(fixed);
   }
@@ -286,8 +291,13 @@ export function repairSupabaseDatabaseUrl(databaseUrl, supabaseUrl) {
     ),
   );
   if (refFirst) {
-    const [, password, port = "5432", path = "/postgres", query = "?sslmode=require"] =
-      refFirst;
+    const [
+      ,
+      password,
+      port = "5432",
+      path = "/postgres",
+      query = "?sslmode=require",
+    ] = refFirst;
     const fixed = `postgresql://postgres:${encodeDbPassword(password)}@db.${ref}.supabase.co:${port}${path}${query || "?sslmode=require"}`;
     return normalizeSupabasePoolerUrl(fixed);
   }

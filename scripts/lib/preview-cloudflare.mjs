@@ -207,8 +207,7 @@ export async function ensureHyperdrive({
   existingId,
   forceUpdate = false,
 }) {
-  const existing =
-    existingId || (await findHyperdriveId(names.hyperdriveName));
+  const existing = existingId || (await findHyperdriveId(names.hyperdriveName));
 
   if (existing && forceUpdate) {
     console.log(`→ Updating Hyperdrive ${existing} connection…`);

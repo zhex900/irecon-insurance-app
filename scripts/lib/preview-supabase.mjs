@@ -4,7 +4,13 @@
 import { join } from "node:path";
 
 import { copyDatabaseFromUat } from "./uat-data-copy.mjs";
-import { extractProjectRefFromDbUrl, previewRoot, run, toSessionDbUrl, UAT_PROJECT_REF } from "./preview-env.mjs";
+import {
+  extractProjectRefFromDbUrl,
+  previewRoot,
+  run,
+  toSessionDbUrl,
+  UAT_PROJECT_REF,
+} from "./preview-env.mjs";
 import { prSupabaseFromEnv } from "./pr-env.mjs";
 
 const SUPABASE_API = "https://api.supabase.com/v1";
@@ -146,7 +152,10 @@ export async function syncPrDatabaseFromUat({ names }) {
 export async function loadPrSupabase({ names, configureAuth = true } = {}) {
   const supabase = prSupabaseFromEnv();
   if (configureAuth && accessToken()) {
-    await configureAuthUrls({ projectRef: supabase.projectRef, appUrl: names.appUrl });
+    await configureAuthUrls({
+      projectRef: supabase.projectRef,
+      appUrl: names.appUrl,
+    });
   } else if (configureAuth) {
     console.warn(
       "Warning: SUPABASE_ACCESS_TOKEN not set — skipping PR Auth URL configuration.",
@@ -167,7 +176,9 @@ export async function findBranchByName() {
 
 /** @deprecated Use syncPrDatabaseFromUat + loadPrSupabase. */
 export async function provisionSupabase() {
-  throw new Error("Use syncPrDatabaseFromUat() — PR previews use .env.pr, not branching.");
+  throw new Error(
+    "Use syncPrDatabaseFromUat() — PR previews use .env.pr, not branching.",
+  );
 }
 
 /** @deprecated Use loadPrSupabase. */

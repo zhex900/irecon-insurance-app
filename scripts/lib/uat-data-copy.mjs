@@ -250,7 +250,9 @@ export async function syncMigrationHistoryFromUat({
     ]);
   }
 
-  console.log(`✓ Migration history synced from UAT (${versions.length} versions)`);
+  console.log(
+    `✓ Migration history synced from UAT (${versions.length} versions)`,
+  );
 }
 
 /**

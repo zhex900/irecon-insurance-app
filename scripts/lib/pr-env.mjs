@@ -58,7 +58,9 @@ export async function loadPrDeployEnv() {
   const prEnv = parseEnvFile(prText);
 
   if (!prEnv.DATABASE_URL?.trim()) {
-    throw new Error("DATABASE_URL is required in .env.pr (shared PR database).");
+    throw new Error(
+      "DATABASE_URL is required in .env.pr (shared PR database).",
+    );
   }
   if (!prEnv.UAT_DATABASE_URL?.trim()) {
     throw new Error(
@@ -125,7 +127,9 @@ export function prSupabaseFromEnv() {
 
   const projectRef = extractProjectRefFromDbUrl(supabaseUrl);
   if (!projectRef) {
-    throw new Error(`Could not parse project ref from SUPABASE_URL: ${supabaseUrl}`);
+    throw new Error(
+      `Could not parse project ref from SUPABASE_URL: ${supabaseUrl}`,
+    );
   }
   if (projectRef === UAT_PROJECT_REF) {
     throw new Error(

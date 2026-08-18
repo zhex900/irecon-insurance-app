@@ -299,9 +299,7 @@ export function assertSafeUatCopy({
   prodSupabaseRef,
 }) {
   if (!uatDbUrl?.trim()) {
-    throw new Error(
-      "UAT DATABASE_URL is missing. Add it to .env.uat.",
-    );
+    throw new Error("UAT DATABASE_URL is missing. Add it to .env.uat.");
   }
   if (uatDbUrl.trim() === prodDbUrl.trim()) {
     throw new Error(
@@ -329,9 +327,7 @@ export async function loadUatEnv() {
   try {
     text = await readFile(uatPath, "utf8");
   } catch {
-    throw new Error(
-      `.env.uat not found at ${uatPath}.`,
-    );
+    throw new Error(`.env.uat not found at ${uatPath}.`);
   }
   const vars = {};
   for (const line of text.split("\n")) {

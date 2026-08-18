@@ -4,10 +4,10 @@ All non-production hostnames live on the **irecon.net** Cloudflare zone. Product
 
 ## Environment overview
 
-| Environment    | URL                                                                | Worker                      | Database                                      |
-| -------------- | ------------------------------------------------------------------ | --------------------------- | --------------------------------------------- |
-| **Production** | `https://app.irecon.net` (canonical) · `https://app.irecon.com.au` | `insurance-app-production`  | Dedicated Supabase project                    |
-| **UAT**        | `https://uat.irecon.net`                                           | `insurance-app-uat`         | Dedicated Supabase project (formerly staging) |
+| Environment    | URL                                                                | Worker                      | Database                                                         |
+| -------------- | ------------------------------------------------------------------ | --------------------------- | ---------------------------------------------------------------- |
+| **Production** | `https://app.irecon.net` (canonical) · `https://app.irecon.com.au` | `insurance-app-production`  | Dedicated Supabase project                                       |
+| **UAT**        | `https://uat.irecon.net`                                           | `insurance-app-uat`         | Dedicated Supabase project (formerly staging)                    |
 | **PR preview** | `https://pr-<number>.irecon.net`                                   | `insurance-app-pr-<number>` | Shared Supabase project (`.env.pr`), copied from UAT each deploy |
 
 **Shared across all environments:** Sentry (DSN + source maps) and Resend (API key + sender addresses). Use the same values in `.env.uat` and `.env.production`.

@@ -3,7 +3,11 @@ import { startTransition, StrictMode } from "react";
 import { hydrateRoot } from "react-dom/client";
 import { HydratedRouter } from "react-router/dom";
 
-import { getAppEnvironment, getAppRelease, getAppVersion } from "~/lib/app-version";
+import {
+  getAppEnvironment,
+  getAppRelease,
+  getAppVersion,
+} from "~/lib/app-version";
 
 const dsn = import.meta.env.VITE_SENTRY_DSN?.trim();
 const release = getAppRelease();
