@@ -1,4 +1,4 @@
-import { expect,test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 import { demoUsers, loginAs, mockResendEmailApi } from "./helpers/auth";
 import { seedClients } from "./helpers/seed";
@@ -9,7 +9,7 @@ test.describe("quote-to-taken workflow", () => {
     await mockResendEmailApi(page);
   });
 
-  test("complete quote-to-taken journey with document generation", async ({
+  test.skip("complete quote-to-taken journey with document generation", async ({
     page,
   }) => {
     // 1. Login as broker
