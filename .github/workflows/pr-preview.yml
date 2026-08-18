@@ -66,9 +66,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Setup AWS CLI
-        uses: aws-actions/setup-aws-cli@v4
-
       - name: Write .env.pr from GitHub secrets
         env:
           BASE_URL: ${{ vars.BASE_URL }}
