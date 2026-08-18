@@ -94,9 +94,7 @@ function clientHasPolicies() {
   return clientPolicyExistsSql();
 }
 
-async function countClientsSummary(
-  whereForCounts: SQL | undefined,
-): Promise<{
+async function countClientsSummary(whereForCounts: SQL | undefined): Promise<{
   allTotal: number;
   withPolicies: number;
   withoutPolicies: number;
