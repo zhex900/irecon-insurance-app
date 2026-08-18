@@ -103,12 +103,11 @@ async function fetchR2Helper(url, token) {
   throw lastError instanceof Error ? lastError : new Error(String(lastError));
 }
 
-async function runR2Helper(names, { emptyOnly, buckets }) {
+async function runR2Helper(names, { emptyOnly, buckets, buildWrangler, wranglerPath }) {
   const token = randomSecret(16);
-  const wranglerPath = configPath(names.label, "wrangler.r2.jsonc");
   await writeJsonc(
     wranglerPath,
-    r2HelperWrangler(names, { emptyOnly, copyToken: token }),
+    buildWrangler({ emptyOnly, copyToken: token }),
   );
   console.log(
     `→ Deploying R2 helper Worker ${names.r2HelperWorker} (${emptyOnly ? "empty" : "copy"})…`,
@@ -132,12 +131,19 @@ async function runR2Helper(names, { emptyOnly, buckets }) {
   }
 }
 
-export async function copyR2FromStaging(names) {
+export async function copyR2FromStaging(names, options = {}) {
+  const wranglerPath =
+    options.wranglerPath ?? configPath(names.label, "wrangler.r2.jsonc");
+  const buildWrangler =
+    options.buildWrangler ??
+    ((params) => r2HelperWrangler(names, params));
   await ensureR2Buckets(names);
-  console.log("→ Clearing preview R2 buckets…");
+  console.log("→ Clearing destination R2 buckets…");
   await runR2Helper(names, {
     emptyOnly: true,
     buckets: ["avatars", "library"],
+    wranglerPath,
+    buildWrangler,
   });
   console.log(
     `→ Copying R2 objects from ${STAGING_AVATARS_BUCKET} + ${STAGING_LIBRARY_BUCKET}…`,
@@ -145,14 +151,23 @@ export async function copyR2FromStaging(names) {
   return runR2Helper(names, {
     emptyOnly: false,
     buckets: ["avatars", "library"],
+    wranglerPath,
+    buildWrangler,
   });
 }
 
-export async function emptyAndDeleteR2Buckets(names) {
+export async function emptyAndDeleteR2Buckets(names, options = {}) {
+  const wranglerPath =
+    options.wranglerPath ?? configPath(names.label, "wrangler.r2.jsonc");
+  const buildWrangler =
+    options.buildWrangler ??
+    ((params) => r2HelperWrangler(names, params));
   try {
     await runR2Helper(names, {
       emptyOnly: true,
       buckets: ["avatars", "library"],
+      wranglerPath,
+      buildWrangler,
     });
   } catch (error) {
     console.warn(
@@ -288,8 +303,8 @@ export async function putWorkerSecret(workerName, name, value) {
 export async function syncPreviewSecrets({ names, supabase, appUrl }) {
   const secrets = {
     DATABASE_URL: supabase.transactionUrl,
-    SUPABASE_ANON_KEY: supabase.anonKey,
-    SUPABASE_SERVICE_ROLE_KEY: supabase.serviceRoleKey,
+    SUPABASE_PUBLISHABLE_KEY: supabase.publishableKey,
+    SUPABASE_SECRET_KEY: supabase.secretKey,
     APP_URL: appUrl,
     RESEND_API_KEY: process.env.RESEND_API_KEY,
     EMAIL_FROM: process.env.EMAIL_FROM,

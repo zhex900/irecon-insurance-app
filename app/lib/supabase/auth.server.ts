@@ -2,7 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 
 import type { SessionTiming } from "~/lib/auth/session";
 import {
-  getSupabaseAnonKey,
+  getSupabasePublishableKey,
   getSupabaseUrl,
 } from "~/lib/supabase/env.server";
 
@@ -14,8 +14,8 @@ const LAST_ACTIVITY_COOKIE = "sb-last-activity";
 /** Refresh cookie lifetime (browser). Absolute/inactivity still enforced server-side. */
 const REFRESH_COOKIE_MAX_AGE_SEC = 60 * 60 * 24 * 30;
 
-function createAnonClient() {
-  return createClient(getSupabaseUrl(), getSupabaseAnonKey(), {
+function createPublishableClient() {
+  return createClient(getSupabaseUrl(), getSupabasePublishableKey(), {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
@@ -182,7 +182,7 @@ export function appendClearAuthSessionCookies(
 }
 
 export async function signInWithPassword(email: string, password: string) {
-  const supabase = createAnonClient();
+  const supabase = createPublishableClient();
   return supabase.auth.signInWithPassword({
     email: email.trim().toLowerCase(),
     password,
@@ -190,14 +190,14 @@ export async function signInWithPassword(email: string, password: string) {
 }
 
 export async function resetPasswordForEmail(email: string, redirectTo: string) {
-  const supabase = createAnonClient();
+  const supabase = createPublishableClient();
   return supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
     redirectTo,
   });
 }
 
 export async function exchangeCodeForSession(code: string) {
-  const supabase = createAnonClient();
+  const supabase = createPublishableClient();
   return supabase.auth.exchangeCodeForSession(code);
 }
 
@@ -205,7 +205,7 @@ export async function setSessionFromTokens(session: {
   access_token: string;
   refresh_token: string;
 }) {
-  const supabase = createAnonClient();
+  const supabase = createPublishableClient();
   return supabase.auth.setSession(session);
 }
 
@@ -214,7 +214,7 @@ export async function updatePassword(
   refreshToken: string,
   password: string,
 ) {
-  const supabase = createAnonClient();
+  const supabase = createPublishableClient();
   const { error: sessionError } = await supabase.auth.setSession({
     access_token: accessToken,
     refresh_token: refreshToken,
@@ -230,7 +230,7 @@ export async function getAuthUser(request: Request) {
   const access = cookies[ACCESS_COOKIE];
   if (!access) return null;
 
-  const supabase = createAnonClient();
+  const supabase = createPublishableClient();
   const { data, error } = await supabase.auth.getUser(access);
   if (!error && data.user) return data.user;
 
@@ -250,7 +250,7 @@ export async function getAuthUserWithSession(request: Request) {
   const refresh = cookies[REFRESH_COOKIE];
   if (!access && !refresh) return { user: null, session: null };
 
-  const supabase = createAnonClient();
+  const supabase = createPublishableClient();
   if (access) {
     const { data, error } = await supabase.auth.getUser(access);
     if (!error && data.user) {

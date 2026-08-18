@@ -185,9 +185,43 @@ export function poolerHost(region = DEFAULT_REGION) {
   return `aws-0-${region}.pooler.supabase.com`;
 }
 
+/**
+ * Rewrite direct `db.{ref}.supabase.co` URLs to the Supabase pooler hostname.
+ * Direct hosts are often IPv6-only and fail from Docker psql ("Name has no usable address").
+ */
+export function normalizeSupabasePoolerUrl(
+  url,
+  region = process.env.PREVIEW_REGION?.trim() || DEFAULT_REGION,
+) {
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return url;
+  }
+  const match = parsed.hostname.match(/^db\.([a-z0-9]+)\.supabase\.co$/i);
+  if (!match) return url;
+
+  const projectRef = match[1];
+  const encoded = encodeDbPassword(decodeURIComponent(parsed.password || ""));
+  const host = poolerHost(region);
+  const port = parsed.port || "5432";
+  const dbName = parsed.pathname.replace(/^\//, "") || "postgres";
+  const query = parsed.search || "?sslmode=require";
+  return `postgresql://postgres.${projectRef}:${encoded}@${host}:${port}/${dbName}${query}`;
+}
+
 /** Prefer session-mode (5432) over transaction pooler (6543) for dump / Hyperdrive. */
 export function toSessionDbUrl(url) {
-  return url.replace(/:6543(\/|$)/, ":5432$1");
+  return normalizeSupabasePoolerUrl(url).replace(/:6543(\/|$)/, ":5432$1");
+}
+
+/** Transaction pooler (6543) for bulk restore. */
+export function toTransactionDbUrl(url) {
+  const normalized = normalizeSupabasePoolerUrl(url);
+  return normalized.includes(":6543")
+    ? normalized
+    : normalized.replace(/:5432(\/|$)/, ":6543$1");
 }
 
 export function supabaseUrls({ projectRef, password, region }) {

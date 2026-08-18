@@ -2,7 +2,7 @@
  * Create a Supabase project cloned from staging (logical dump/restore).
  */
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 
 import {
   captureJson,
@@ -13,9 +13,9 @@ import {
   sleep,
   STAGING_PROJECT_REF,
   supabaseUrls,
-  toSessionDbUrl,
   webRoot,
 } from "./preview-env.mjs";
+import { copyDatabaseFromStaging } from "./staging-data-copy.mjs";
 
 const SUPABASE_API = "https://api.supabase.com/v1";
 
@@ -141,22 +141,20 @@ export async function getProjectApiKeys(projectRef) {
       ?.apiKey ??
     null;
 
-  const anon = pick("anon", "publishable");
-  const serviceRole = pick("service_role", "secret");
-  if (!anon) {
+  const publishableKey = pick("publishable");
+  const secretKey = pick("secret");
+  if (!publishableKey) {
     throw new Error(
-      `Could not read anon/publishable key for ${projectRef}. Got: ${JSON.stringify(list.map((k) => k.name ?? k.type))}`,
+      `Could not read publishable key for ${projectRef}. Got: ${JSON.stringify(list.map((k) => k.name ?? k.type))}`,
     );
   }
-  if (!serviceRole) {
-    throw new Error(
-      `Could not read service_role/secret key for ${projectRef}.`,
-    );
+  if (!secretKey) {
+    throw new Error(`Could not read secret key for ${projectRef}.`);
   }
-  return { anon, serviceRole };
+  return { publishableKey, secretKey };
 }
 
-async function copyPgsodiumKey(sourceRef, destRef) {
+export async function copyPgsodiumKey(sourceRef, destRef) {
   try {
     const key = await supabaseApi(`/projects/${sourceRef}/pgsodium`);
     await supabaseApi(`/projects/${destRef}/pgsodium`, {
@@ -172,189 +170,36 @@ async function copyPgsodiumKey(sourceRef, destRef) {
   }
 }
 
-export async function configureAuthUrls({ projectRef, appUrl }) {
-  const origin = appUrl.replace(/\/$/, "");
+export async function configureAuthUrls({
+  projectRef,
+  appUrl,
+  extraOrigins = [],
+}) {
+  const origins = [
+    ...new Set([
+      appUrl.replace(/\/$/, ""),
+      ...extraOrigins.map((origin) => origin.replace(/\/$/, "")),
+    ]),
+  ];
   const allowList = [
-    origin,
-    `${origin}/**`,
-    `${origin}/auth/confirm`,
-    `${origin}/auth/confirm/**`,
-    `${origin}/reset-password`,
+    ...origins.flatMap((origin) => [
+      origin,
+      `${origin}/**`,
+      `${origin}/auth/confirm`,
+      `${origin}/auth/confirm/**`,
+      `${origin}/reset-password`,
+    ]),
     "http://127.0.0.1:5173/**",
     "http://localhost:5173/**",
   ].join(",");
   await supabaseApi(`/projects/${projectRef}/config/auth`, {
     method: "PATCH",
     body: {
-      site_url: origin,
+      site_url: origins[0],
       uri_allow_list: allowList,
     },
   });
-  console.log("✓ Auth Site URL + redirect allow list →", origin);
-}
-
-async function runPsqlScript(dbUrl, file) {
-  const args = [
-    "--variable",
-    "ON_ERROR_STOP=1",
-    "--file",
-    file,
-    "--dbname",
-    dbUrl,
-  ];
-  try {
-    await run("psql", args);
-    return;
-  } catch (error) {
-    if (error instanceof Error && !/psql/.test(error.message)) throw error;
-    console.log("psql not on PATH — running via Docker postgres:17-alpine…");
-  }
-
-  const mountDir = dirname(file);
-  const dockerFile = `/sql/${file.slice(mountDir.length + 1)}`;
-  await run("docker", [
-    "run",
-    "--rm",
-    "-v",
-    `${mountDir}:/sql:ro`,
-    "postgres:17-alpine",
-    "psql",
-    "--variable",
-    "ON_ERROR_STOP=1",
-    "--file",
-    dockerFile,
-    "--dbname",
-    dbUrl,
-  ]);
-}
-
-async function runPsqlScriptWithRetry(dbUrl, file, { attempts = 6 } = {}) {
-  for (let i = 0; i < attempts; i++) {
-    try {
-      await runPsqlScript(dbUrl, file);
-      return;
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      if (!/EMAXCONNSESSION|max clients reached/i.test(msg) || i === attempts - 1) {
-        throw error;
-      }
-      const waitMs = 10_000 * (i + 1);
-      console.log(`  … session pooler full, retrying in ${waitMs / 1000}s…`);
-      await sleep(waitMs);
-    }
-  }
-}
-
-const RESET_PREVIEW_DB_SQL = `
-SET statement_timeout = 0;
-SET lock_timeout = 0;
-DROP SCHEMA IF EXISTS public CASCADE;
-CREATE SCHEMA public;
-GRANT ALL ON SCHEMA public TO postgres;
-GRANT ALL ON SCHEMA public TO public;
-GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
-GRANT ALL ON SCHEMA public TO service_role;
-TRUNCATE auth.users CASCADE;
-TRUNCATE storage.objects CASCADE;
-`.trim();
-
-async function resetPreviewDatabase(dbUrl, workDir) {
-  await mkdir(workDir, { recursive: true });
-  const sqlPath = join(workDir, "reset.sql");
-  await writeFile(sqlPath, `${RESET_PREVIEW_DB_SQL}\n`, "utf8");
-  console.log(
-    "→ Resetting preview database (drop public schema, truncate auth/storage)…",
-  );
-  await runPsqlScriptWithRetry(dbUrl, sqlPath);
-}
-
-async function restoreWithPsql(destUrl, dumpDir, { skipRoles = false } = {}) {
-  const localArgs = [
-    "--single-transaction",
-    "--variable",
-    "ON_ERROR_STOP=1",
-  ];
-  if (!skipRoles) {
-    localArgs.push("--file", join(dumpDir, "roles.sql"));
-  }
-  localArgs.push(
-    "--file",
-    join(dumpDir, "schema.sql"),
-    "--command",
-    "SET session_replication_role = replica",
-    "--file",
-    join(dumpDir, "data.sql"),
-    "--dbname",
-    destUrl,
-  );
-  try {
-    await run("psql", localArgs);
-    return;
-  } catch (error) {
-    if (error instanceof Error && !/psql/.test(error.message)) throw error;
-    console.log("psql not on PATH — restoring via Docker postgres:17-alpine…");
-  }
-  await run("docker", [
-    "run",
-    "--rm",
-    "-v",
-    `${dumpDir}:/dump`,
-    "postgres:17-alpine",
-    "psql",
-    "--single-transaction",
-    "--variable",
-    "ON_ERROR_STOP=1",
-    ...(skipRoles ? [] : ["--file", "/dump/roles.sql"]),
-    "--file",
-    "/dump/schema.sql",
-    "--command",
-    "SET session_replication_role = replica",
-    "--file",
-    "/dump/data.sql",
-    "--dbname",
-    destUrl,
-  ]);
-}
-
-async function dumpStaging(dumpDir, stagingDbUrl) {
-  const dbUrl = toSessionDbUrl(stagingDbUrl);
-  await mkdir(dumpDir, { recursive: true });
-  console.log("→ Dumping staging database (roles, schema, data)…");
-  await run("npx", [
-    "supabase",
-    "db",
-    "dump",
-    "--db-url",
-    dbUrl,
-    "-f",
-    join(dumpDir, "roles.sql"),
-    "--role-only",
-  ]);
-  await run("npx", [
-    "supabase",
-    "db",
-    "dump",
-    "--db-url",
-    dbUrl,
-    "-f",
-    join(dumpDir, "schema.sql"),
-  ]);
-  await run("npx", [
-    "supabase",
-    "db",
-    "dump",
-    "--db-url",
-    dbUrl,
-    "-f",
-    join(dumpDir, "data.sql"),
-    "--use-copy",
-    "--data-only",
-    "-x",
-    "storage.buckets_vectors",
-    "-x",
-    "storage.vector_indexes",
-  ]);
-  console.log("✓ Staging dump written to", dumpDir);
+  console.log("✓ Auth Site URL + redirect allow list →", origins.join(", "));
 }
 
 async function loadSavedPassword(slug) {
@@ -454,16 +299,23 @@ export async function provisionSupabase({ names }) {
       ? "→ Copying staging database into new preview project…"
       : "→ Refreshing preview database from staging…",
   );
-  await dumpStaging(dumpDir, stagingDbUrl);
-  if (!created) {
-    await resetPreviewDatabase(urls.sessionUrl, dumpDir);
+  if (created) {
+    await copyDatabaseFromStaging({
+      stagingDbUrl,
+      destSessionUrl: urls.sessionUrl,
+      destTransactionUrl: urls.transactionUrl,
+      workDir: dumpDir,
+      skipRoles: false,
+    });
+  } else {
+    await copyDatabaseFromStaging({
+      stagingDbUrl,
+      destSessionUrl: urls.sessionUrl,
+      destTransactionUrl: urls.transactionUrl,
+      workDir: dumpDir,
+      skipRoles: true,
+    });
   }
-  // Restore via transaction pooler (6543): session pooler is capped (~15) and Hyperdrive
-  // holds those slots; direct (db.*.supabase.co) is IPv6-only and fails from Docker on macOS.
-  const adminDbUrl = urls.transactionUrl;
-  console.log("→ Restoring dump into preview project…");
-  await restoreWithPsql(adminDbUrl, dumpDir, { skipRoles: !created });
-  console.log("✓ Database copied from staging");
   await copyPgsodiumKey(stagingProjectRef(), projectRef);
 
   const keys = await getProjectApiKeys(projectRef);
@@ -475,8 +327,8 @@ export async function provisionSupabase({ names }) {
     region,
     created,
     ...urls,
-    anonKey: keys.anon,
-    serviceRoleKey: keys.serviceRole,
+    publishableKey: keys.publishableKey,
+    secretKey: keys.secretKey,
   };
 }
 
@@ -503,8 +355,8 @@ export async function loadExistingSupabase(names) {
     region,
     created: false,
     ...urls,
-    anonKey: keys.anon,
-    serviceRoleKey: keys.serviceRole,
+    publishableKey: keys.publishableKey,
+    secretKey: keys.secretKey,
   };
 }
 

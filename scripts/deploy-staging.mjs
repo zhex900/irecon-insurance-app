@@ -90,11 +90,8 @@ async function syncWorkerSecrets() {
   assertStagingDatabaseUrl(databaseUrl);
 
   await putSecret("DATABASE_URL", databaseUrl);
-  await putSecret("SUPABASE_ANON_KEY", process.env.SUPABASE_ANON_KEY);
-  await putSecret(
-    "SUPABASE_SERVICE_ROLE_KEY",
-    process.env.SUPABASE_SERVICE_ROLE_KEY,
-  );
+  await putSecret("SUPABASE_PUBLISHABLE_KEY", process.env.SUPABASE_PUBLISHABLE_KEY);
+  await putSecret("SUPABASE_SECRET_KEY", process.env.SUPABASE_SECRET_KEY);
   await putSecret(
     "APP_URL",
     process.env.APP_URL?.trim() ||
@@ -106,9 +103,9 @@ async function syncWorkerSecrets() {
   await putSecret("SENTRY_DSN", process.env.SENTRY_DSN);
   await putSecret("TURNSTILE_SECRET_KEY", process.env.TURNSTILE_SECRET_KEY);
 
-  if (!process.env.SUPABASE_ANON_KEY?.trim()) {
+  if (!process.env.SUPABASE_PUBLISHABLE_KEY?.trim()) {
     throw new Error(
-      "SUPABASE_ANON_KEY is required for staging login. Add it to .env.staging (Supabase → Project Settings → API).",
+      "SUPABASE_PUBLISHABLE_KEY is required for staging login. Add it to .env.staging (Supabase → Settings → API Keys → Publishable key).",
     );
   }
   if (!process.env.RESEND_API_KEY?.trim() || !process.env.EMAIL_FROM?.trim()) {

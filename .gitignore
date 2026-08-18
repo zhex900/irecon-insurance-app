@@ -4,6 +4,7 @@ node_modules/
 .env.*
 !.env.example
 !.env.staging.example
+!.env.production.example
 .dev.vars
 workers/excel-local.env
 *.backup
@@ -18,6 +19,7 @@ logs/
 .tmp/
 .wrangler/
 .preview-envs/
+.production-env/
 .react-router/
 /build/
 .vscode/

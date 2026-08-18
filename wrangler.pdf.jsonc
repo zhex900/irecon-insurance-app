@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "insurance-pdf-worker-staging",
+  "name": "insurance-pdf-worker",
   "main": "./workers/pdf/index.ts",
   "compatibility_date": "2026-07-20",
   "compatibility_flags": ["nodejs_compat"],

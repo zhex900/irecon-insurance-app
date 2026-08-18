@@ -31,10 +31,11 @@ function applyDatabaseEnv(env: Env) {
     process.env.DATABASE_URL = env.DATABASE_URL;
   }
   if (env.SUPABASE_URL) process.env.SUPABASE_URL = env.SUPABASE_URL;
-  if (env.SUPABASE_ANON_KEY)
-    process.env.SUPABASE_ANON_KEY = env.SUPABASE_ANON_KEY;
-  if (env.SUPABASE_SERVICE_ROLE_KEY) {
-    process.env.SUPABASE_SERVICE_ROLE_KEY = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (env.SUPABASE_PUBLISHABLE_KEY) {
+    process.env.SUPABASE_PUBLISHABLE_KEY = env.SUPABASE_PUBLISHABLE_KEY;
+  }
+  if (env.SUPABASE_SECRET_KEY) {
+    process.env.SUPABASE_SECRET_KEY = env.SUPABASE_SECRET_KEY;
   }
   if (env.APP_URL) process.env.APP_URL = env.APP_URL;
   if (env.RESEND_API_KEY) process.env.RESEND_API_KEY = env.RESEND_API_KEY;

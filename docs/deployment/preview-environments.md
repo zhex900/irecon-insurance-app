@@ -86,6 +86,27 @@ PREVIEW_ENV=pr-11 npm run deploy
 - R2 copy runs in a short-lived helper Worker so objects never download through your laptop.
 - Re-running `deploy` for the same env reuses the Supabase project, Hyperdrive, and R2 buckets, clears preview DB + R2, refreshes from staging, and redeploys Workers.
 
-## Follow-up (CI)
+## CI (GitHub Actions)
 
-Wire `deploy` / `destroy` to GitHub Actions on `pull_request` opened/closed once these commands are proven locally. Suggested env name: `pr-${{ github.event.number }}`.
+Workflows under `.github/workflows/`:
+
+| Workflow | Trigger | What runs |
+| -------- | ------- | --------- |
+| `ci.yml` | Push to any branch | `npm run typecheck`, `npm run lint`, `npm run test` |
+| `pr-preview.yml` | Pull request opened, updated, reopened | Same quality checks → deploy → E2E → sticky PR comment |
+| `pr-cleanup.yml` | Pull request closed | `npm run destroy --env pr-<number>` |
+
+Preview env name: `pr-${{ github.event.pull_request.number }}` (e.g. `pr-42` → `https://insurance-app-pr-42.zhex900.workers.dev`).
+
+### Required repository secrets
+
+Configure in **Settings → Secrets and variables → Actions**:
+
+| Secret | Purpose |
+| ------ | ------- |
+| `STAGING_ENV_FILE` | Full contents of `.env.staging` (same as local staging deploy) |
+| `CLOUDFLARE_API_TOKEN` | Wrangler deploy/destroy ([API token](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/) with Workers + R2 + Hyperdrive edit) |
+
+`STAGING_ENV_FILE` must include at least `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, and `SUPABASE_ACCESS_TOKEN` for preview provisioning. See `.env.staging.example`.
+
+Fork PRs skip deploy/E2E/destroy (no secrets on forks). Quality checks still run via `ci.yml`.
