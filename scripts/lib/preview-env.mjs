@@ -5,7 +5,7 @@
  *   npm run destroy --env pr-11
  */
 import { spawn } from "node:child_process";
-import { createHash, randomBytes } from "node:crypto";
+import { createHash } from "node:crypto";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -172,8 +172,6 @@ export function resourceNames(envName) {
   const label = assertPreviewEnvName(envName);
   const slug = toResourceSlug(label);
   const app = `insurance-app-${slug}`;
-  const subdomain =
-    process.env.WORKERS_DEV_SUBDOMAIN?.trim() || WORKERS_DEV_SUBDOMAIN;
   const appUrl = previewAppUrl(slug);
   return {
     label,
@@ -181,13 +179,11 @@ export function resourceNames(envName) {
     appWorker: app,
     pdfWorker: `insurance-pdf-worker-${slug}`,
     excelWorker: `insurance-excel-worker-${slug}`,
-    r2HelperWorker: `insurance-r2-copy-${slug}`,
     avatarsBucket: `insurance-app-avatars-${slug}`,
     libraryBucket: `insurance-app-library-documents-${slug}`,
     hyperdriveName: app,
     supabaseBranchName: slug,
     appUrl,
-    r2HelperUrl: `https://insurance-r2-copy-${slug}.${subdomain}.workers.dev`,
   };
 }
 
@@ -219,10 +215,6 @@ export async function removeStateDir(envName) {
     recursive: true,
     force: true,
   });
-}
-
-export function randomSecret(bytes = 24) {
-  return randomBytes(bytes).toString("base64url");
 }
 
 export function encodeDbPassword(password) {
@@ -491,7 +483,6 @@ const fromPreviewDir = {
   appAssets: "../../build/client",
   pdfMain: "../../workers/pdf/index.ts",
   excelMain: "../../workers/excel/index.ts",
-  r2HelperMain: "../../scripts/r2-env-worker.js",
   fonts: "../../public/fonts",
 };
 
@@ -565,31 +556,6 @@ export function previewExcelWrangler(names) {
     },
     placement: { mode: "smart" },
     upload_source_maps: true,
-  };
-}
-
-export function r2HelperWrangler(names, { emptyOnly = false, copyToken } = {}) {
-  const r2_buckets = emptyOnly
-    ? [
-        { binding: "AVATARS_DEST", bucket_name: names.avatarsBucket },
-        { binding: "LIBRARY_DEST", bucket_name: names.libraryBucket },
-      ]
-    : [
-        { binding: "AVATARS_SRC", bucket_name: UAT_AVATARS_BUCKET },
-        { binding: "AVATARS_DEST", bucket_name: names.avatarsBucket },
-        { binding: "LIBRARY_SRC", bucket_name: UAT_LIBRARY_BUCKET },
-        { binding: "LIBRARY_DEST", bucket_name: names.libraryBucket },
-      ];
-  return {
-    $schema: fromPreviewDir.schema,
-    name: names.r2HelperWorker,
-    main: fromPreviewDir.r2HelperMain,
-    compatibility_date: "2026-07-20",
-    workers_dev: true,
-    vars: {
-      COPY_TOKEN: copyToken,
-    },
-    r2_buckets,
   };
 }
 

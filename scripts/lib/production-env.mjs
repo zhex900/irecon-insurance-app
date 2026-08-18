@@ -6,8 +6,6 @@ import { join } from "node:path";
 
 import {
   observability,
-  UAT_AVATARS_BUCKET,
-  UAT_LIBRARY_BUCKET,
   UAT_PROJECT_REF,
   webRoot,
   writeJsonc,
@@ -18,7 +16,6 @@ export const productionRoot = join(webRoot, ".production-env");
 export const PRODUCTION_APP_WORKER = "insurance-app-production";
 export const PRODUCTION_PDF_WORKER = "insurance-pdf-worker-production";
 export const PRODUCTION_EXCEL_WORKER = "insurance-excel-worker-production";
-export const PRODUCTION_R2_HELPER_WORKER = "insurance-r2-copy-production";
 export const PRODUCTION_AVATARS_BUCKET = "insurance-app-avatars-production";
 export const PRODUCTION_LIBRARY_BUCKET =
   "insurance-app-library-documents-production";
@@ -89,7 +86,6 @@ const fromProductionDir = {
   appAssets: "../build/client",
   pdfMain: "../workers/pdf/index.ts",
   excelMain: "../workers/excel/index.ts",
-  r2HelperMain: "../scripts/r2-env-worker.js",
   fonts: "../public/fonts",
 };
 
@@ -112,19 +108,16 @@ export function hasFlag(flag, argv = process.argv.slice(2)) {
 }
 
 export function productionNames() {
-  const subdomain = process.env.WORKERS_DEV_SUBDOMAIN?.trim() || "zhex900";
   const appUrl = process.env.APP_URL?.trim() || DEFAULT_PRODUCTION_APP_URL;
   return {
     label: "production",
     appWorker: PRODUCTION_APP_WORKER,
     pdfWorker: PRODUCTION_PDF_WORKER,
     excelWorker: PRODUCTION_EXCEL_WORKER,
-    r2HelperWorker: PRODUCTION_R2_HELPER_WORKER,
     avatarsBucket: PRODUCTION_AVATARS_BUCKET,
     libraryBucket: PRODUCTION_LIBRARY_BUCKET,
     hyperdriveName: PRODUCTION_APP_WORKER,
     appUrl,
-    r2HelperUrl: `https://${PRODUCTION_R2_HELPER_WORKER}.${subdomain}.workers.dev`,
   };
 }
 
@@ -218,31 +211,6 @@ export function productionExcelWrangler(names) {
     },
     placement: { mode: "smart" },
     upload_source_maps: true,
-  };
-}
-
-export function productionR2HelperWrangler(names, { emptyOnly, copyToken }) {
-  const r2_buckets = emptyOnly
-    ? [
-        { binding: "AVATARS_DEST", bucket_name: names.avatarsBucket },
-        { binding: "LIBRARY_DEST", bucket_name: names.libraryBucket },
-      ]
-    : [
-        { binding: "AVATARS_SRC", bucket_name: UAT_AVATARS_BUCKET },
-        { binding: "AVATARS_DEST", bucket_name: names.avatarsBucket },
-        { binding: "LIBRARY_SRC", bucket_name: UAT_LIBRARY_BUCKET },
-        { binding: "LIBRARY_DEST", bucket_name: names.libraryBucket },
-      ];
-  return {
-    $schema: fromProductionDir.schema,
-    name: names.r2HelperWorker,
-    main: fromProductionDir.r2HelperMain,
-    compatibility_date: "2026-07-20",
-    workers_dev: true,
-    vars: {
-      COPY_TOKEN: copyToken,
-    },
-    r2_buckets,
   };
 }
 

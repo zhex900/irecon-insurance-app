@@ -10,8 +10,6 @@ import {
   previewExcelWrangler,
   previewPdfWrangler,
   previewRoot,
-  r2HelperWrangler,
-  randomSecret,
   run,
   UAT_AVATARS_BUCKET,
   UAT_LIBRARY_BUCKET,
@@ -19,6 +17,7 @@ import {
   wranglerEnv,
   writeJsonc,
 } from "./preview-env.mjs";
+import { emptyR2Bucket, syncR2Bucket } from "./r2-s3-sync.mjs";
 
 function configPath(envName, file) {
   return join(previewRoot, envName, file);
@@ -68,137 +67,73 @@ export async function ensureR2Buckets(names) {
   }
 }
 
-async function invokeR2Helper(names, { token, mode, bucket }) {
-  let cursor = "";
-  let total = 0;
-  const field = mode === "empty" ? "deleted" : "copied";
-  for (;;) {
-    const url = new URL(names.r2HelperUrl);
-    url.searchParams.set("token", token);
-    url.searchParams.set("mode", mode);
-    url.searchParams.set("bucket", bucket);
-    if (cursor) url.searchParams.set("cursor", cursor);
-    const body = await fetchR2Helper(url, token);
-    total += Number(body[field] ?? 0);
-    if (body.done) break;
-    cursor = body.cursor;
-    if (!cursor) break;
-  }
-  return total;
-}
-
-async function fetchR2Helper(url, token) {
-  let lastError;
-  for (let attempt = 1; attempt <= 12; attempt += 1) {
-    try {
-      const res = await fetch(url, {
-        headers: { "x-copy-token": token },
-      });
-      const body = await res.json().catch(() => ({}));
-      if (res.status === 523 || res.status === 530 || res.status === 404) {
-        throw new Error(`DNS/not ready (${res.status})`);
-      }
-      if (!res.ok) {
-        throw new Error(
-          `R2 helper failed (${res.status}): ${JSON.stringify(body)}`,
-        );
-      }
-      return body;
-    } catch (error) {
-      lastError = error;
-      await new Promise((resolve) => setTimeout(resolve, 2500));
-    }
-  }
-  throw lastError instanceof Error ? lastError : new Error(String(lastError));
-}
-
-async function runR2Helper(
-  names,
-  { emptyOnly, buckets, buildWrangler, wranglerPath },
-) {
-  const token = randomSecret(16);
-  await writeJsonc(
-    wranglerPath,
-    buildWrangler({ emptyOnly, copyToken: token }),
-  );
-  console.log(
-    `→ Deploying R2 helper Worker ${names.r2HelperWorker} (${emptyOnly ? "empty" : "copy"})…`,
-  );
-  await wrangler(["deploy", "--config", wranglerPath]);
-  try {
-    const result = {};
-    for (const bucket of buckets) {
-      result[bucket] = await invokeR2Helper(names, {
-        token,
-        mode: emptyOnly ? "empty" : "copy",
-        bucket,
-      });
-      console.log(
-        `✓ R2 ${emptyOnly ? "emptied" : "copied"} ${bucket}: ${result[bucket]} object(s)`,
-      );
-    }
-    return result;
-  } finally {
-    await deleteWorker(names.r2HelperWorker);
-  }
-}
-
-export async function copyR2FromUat(names, options = {}) {
-  const wranglerPath =
-    options.wranglerPath ?? configPath(names.label, "wrangler.r2.jsonc");
-  const buildWrangler =
-    options.buildWrangler ?? ((params) => r2HelperWrangler(names, params));
+export async function copyR2FromUat(names) {
   await ensureR2Buckets(names);
   console.log("→ Clearing destination R2 buckets…");
-  await runR2Helper(names, {
-    emptyOnly: true,
-    buckets: ["avatars", "library"],
-    wranglerPath,
-    buildWrangler,
-  });
+  await emptyR2Bucket(names.avatarsBucket);
+  await emptyR2Bucket(names.libraryBucket);
   console.log(
     `→ Copying R2 objects from ${UAT_AVATARS_BUCKET} + ${UAT_LIBRARY_BUCKET}…`,
   );
-  return runR2Helper(names, {
-    emptyOnly: false,
-    buckets: ["avatars", "library"],
-    wranglerPath,
-    buildWrangler,
-  });
+  await syncR2Bucket(UAT_AVATARS_BUCKET, names.avatarsBucket);
+  await syncR2Bucket(UAT_LIBRARY_BUCKET, names.libraryBucket);
+  return {
+    avatars: names.avatarsBucket,
+    library: names.libraryBucket,
+  };
 }
 
 /** @deprecated Use copyR2FromUat */
 export const copyR2FromStaging = copyR2FromUat;
 
-export async function emptyAndDeleteR2Buckets(names, options = {}) {
-  const wranglerPath =
-    options.wranglerPath ?? configPath(names.label, "wrangler.r2.jsonc");
-  const buildWrangler =
-    options.buildWrangler ?? ((params) => r2HelperWrangler(names, params));
-  try {
-    await runR2Helper(names, {
-      emptyOnly: true,
-      buckets: ["avatars", "library"],
-      wranglerPath,
-      buildWrangler,
-    });
-  } catch (error) {
-    console.warn(
-      "Warning: could not empty R2 buckets via helper.",
-      error instanceof Error ? error.message : error,
-    );
+export async function emptyAndDeleteR2Buckets(names) {
+  const targets = [names.avatarsBucket, names.libraryBucket];
+  const existing = [];
+  for (const bucket of targets) {
+    if (await r2BucketExists(bucket)) existing.push(bucket);
   }
-  for (const bucket of [names.avatarsBucket, names.libraryBucket]) {
-    try {
-      await wrangler(["r2", "bucket", "delete", bucket]);
-      console.log(`✓ Deleted R2 bucket ${bucket}`);
-    } catch (error) {
-      console.warn(
-        `Warning: could not delete R2 bucket ${bucket}.`,
-        error instanceof Error ? error.message : error,
-      );
+
+  if (existing.length === 0) {
+    console.log("→ No preview R2 buckets found — skipping empty step");
+  } else {
+    const pendingDelete = [];
+    for (const bucket of existing) {
+      try {
+        await wrangler(["r2", "bucket", "delete", bucket]);
+        console.log(`✓ Deleted R2 bucket ${bucket}`);
+      } catch {
+        pendingDelete.push(bucket);
+      }
+    }
+
+    if (pendingDelete.length > 0) {
+      console.log("→ Emptying R2 buckets before delete…");
+      try {
+        for (const bucket of pendingDelete) {
+          await emptyR2Bucket(bucket);
+        }
+      } catch (error) {
+        console.warn(
+          "Warning: could not empty R2 buckets via S3 API.",
+          error instanceof Error ? error.message : error,
+        );
+      }
+      for (const bucket of pendingDelete) {
+        try {
+          await wrangler(["r2", "bucket", "delete", bucket]);
+          console.log(`✓ Deleted R2 bucket ${bucket}`);
+        } catch (error) {
+          console.warn(
+            `Warning: could not delete R2 bucket ${bucket}.`,
+            error instanceof Error ? error.message : error,
+          );
+        }
+      }
     }
   }
+
+  // Legacy helper worker from older deploys (no longer deployed).
+  await deleteWorker(`insurance-r2-copy-${names.slug}`);
 }
 
 export async function ensureHyperdrive({
@@ -343,13 +278,12 @@ export async function syncPreviewSecrets({ names, supabase, appUrl }) {
 
 export async function deleteWorker(name) {
   try {
-    await wrangler(["delete", name, "--force"]);
+    await wranglerCapture(["delete", name, "--force"], { silent: true });
     console.log(`✓ Deleted Worker ${name}`);
   } catch (error) {
-    console.warn(
-      `Warning: could not delete Worker ${name}.`,
-      error instanceof Error ? error.message : error,
-    );
+    const message = error instanceof Error ? error.message : String(error);
+    if (/10090|does not exist/i.test(message)) return;
+    console.warn(`Warning: could not delete Worker ${name}.`, message);
   }
 }
 
@@ -358,5 +292,4 @@ export async function deletePreviewWorkers(names) {
   await deleteWorker(names.appWorker);
   await deleteWorker(names.pdfWorker);
   await deleteWorker(names.excelWorker);
-  await deleteWorker(names.r2HelperWorker);
 }

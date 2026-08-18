@@ -52,6 +52,7 @@ PREVIEW_ENV=pr-11 npm run deploy
 
 - Wrangler logged in or `CLOUDFLARE_API_TOKEN` in `.env.pr`
 - `.env.pr` only for PR deploy — includes PR Supabase, `UAT_DATABASE_URL` copy source, and Cloudflare ([`.env.pr.example`](../.env.pr.example))
+- R2 S3 API credentials (`R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_S3_ENDPOINT`) and [AWS CLI](https://aws.amazon.com/cli/) for UAT → preview R2 copy
 - Docker or local `psql` (for UAT → PR database copy)
 - `SUPABASE_ACCESS_TOKEN` in `.env.pr` (optional — Auth redirect URLs on PR project)
 
@@ -118,7 +119,7 @@ Workflows write `.env.pr` / `.env.uat` at runtime via `scripts/ci-write-env.mjs`
 
 ### Repository secrets (shared)
 
-`RESEND_API_KEY`, `SENTRY_AUTH_TOKEN`, `VITE_SENTRY_DSN`, `SENTRY_DSN`, `VITE_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`, `SUPABASE_ACCESS_TOKEN`
+`RESEND_API_KEY`, `SENTRY_AUTH_TOKEN`, `VITE_SENTRY_DSN`, `SENTRY_DSN`, `VITE_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`, `SUPABASE_ACCESS_TOKEN`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_S3_ENDPOINT`
 
 ### Repository variables (shared)
 
