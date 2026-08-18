@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 /**
- * Tear down a per-PR preview environment.
+ * Tear down a per-PR preview environment (Workers, R2, Hyperdrive).
+ * The shared PR Supabase database (.env.pr) is not deleted.
  *
- *   npm run destroy --env pr-11
+ *   npm run destroy -- pr-11
  */
 import {
   deleteHyperdrive,
@@ -18,9 +19,11 @@ import {
   removeStateDir,
   resourceNames,
 } from "./lib/preview-env.mjs";
-import { destroySupabase, findBranchByName } from "./lib/preview-supabase.mjs";
+import { loadPrDeployEnv } from "./lib/pr-env.mjs";
 
 async function destroyPreview(envName) {
+  await loadPrDeployEnv();
+
   const names = resourceNames(assertPreviewEnvName(envName));
   const dryRun = hasFlag("--dry-run");
   const state = await loadState(names.label);
@@ -31,11 +34,7 @@ async function destroyPreview(envName) {
   );
   console.log(`  R2       ${names.avatarsBucket}, ${names.libraryBucket}`);
   console.log(`  App URL  ${names.appUrl}`);
-  if (state?.supabaseBranchId || state?.supabaseProjectRef) {
-    console.log(
-      `  Supabase branch ${state.supabaseBranchId ?? state.supabaseProjectRef}`,
-    );
-  }
+  console.log("  Database shared PR Supabase (.env.pr) — left intact");
 
   if (dryRun) {
     console.log("Dry run — no resources deleted.");
@@ -49,29 +48,13 @@ async function destroyPreview(envName) {
     state?.hyperdriveId || (await findHyperdriveId(names.hyperdriveName));
   await deleteHyperdrive(hyperdriveId);
 
-  const branchId = state?.supabaseBranchId;
-  const projectRef = state?.supabaseProjectRef;
-  if (branchId || projectRef) {
-    await destroySupabase({ branchId, projectRef });
-  } else {
-    const branch = await findBranchByName(names.supabaseBranchName);
-    if (branch) {
-      await destroySupabase({
-        branchId: branch.id,
-        projectRef: branch.project_ref,
-      });
-    } else {
-      console.log("→ No Supabase branch found to delete");
-    }
-  }
-
   await removeStateDir(names.label);
   console.log(`✓ Destroyed ${names.label}`);
 }
 
 const envName = parseEnvName();
 if (!envName) {
-  console.error("Missing --env. Example: npm run destroy --env pr-11");
+  console.error("Missing env name. Example: npm run destroy -- pr-11");
   process.exit(1);
 }
 

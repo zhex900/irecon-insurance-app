@@ -1,18 +1,18 @@
-import { getAppVersion } from "~/lib/app-version";
+import { getAppRelease } from "~/lib/app-version";
 
 export type ReferenceSessionCacheKind =
   "list-reference" | "car-wording" | "policy-fee-names";
 
 export const listReferenceSessionCacheKey = () =>
-  `list-reference:${getAppVersion()}`;
+  `list-reference:${getAppRelease()}`;
 
-export const carWordingSessionCacheKey = () => `car-wording:${getAppVersion()}`;
+export const carWordingSessionCacheKey = () => `car-wording:${getAppRelease()}`;
 
 export const policyFeeNamesSessionCacheKey = (asOf: string) =>
-  `policy-fee-names:${getAppVersion()}:${asOf}`;
+  `policy-fee-names:${getAppRelease()}:${asOf}`;
 
 const policyFeeNamesSessionCachePrefix = () =>
-  `policy-fee-names:${getAppVersion()}:`;
+  `policy-fee-names:${getAppRelease()}:`;
 
 const generations: Record<ReferenceSessionCacheKind, number> = {
   "list-reference": 0,

@@ -3,11 +3,11 @@ import { startTransition, StrictMode } from "react";
 import { hydrateRoot } from "react-dom/client";
 import { HydratedRouter } from "react-router/dom";
 
-import { getAppEnvironment, getAppVersion } from "~/lib/app-version";
+import { getAppEnvironment, getAppRelease, getAppVersion } from "~/lib/app-version";
 
 const dsn = import.meta.env.VITE_SENTRY_DSN?.trim();
-const release = getAppVersion();
-const environment = getAppEnvironment(release);
+const release = getAppRelease();
+const environment = getAppEnvironment(getAppVersion());
 const isProd = environment === "prod";
 
 if (dsn) {

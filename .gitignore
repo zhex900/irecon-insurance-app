@@ -5,6 +5,7 @@ node_modules/
 !.env.example
 !.env.uat.example
 !.env.production.example
+!.env.pr.example
 .dev.vars
 workers/excel-local.env
 *.backup

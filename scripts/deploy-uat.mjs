@@ -3,7 +3,7 @@
  * Build + deploy insurance-app-uat to Cloudflare Workers.
  *
  * DATABASE_URL must be set in the environment (UAT Supabase pooler URL).
- * VITE_APP_VERSION defaults to uat-<short-commit> when unset.
+ * VITE_APP_VERSION defaults to uat; VITE_APP_COMMIT is the short git SHA.
  *
  * Usage:
  *   npm run deploy:uat
@@ -17,11 +17,17 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const webRoot = join(__dirname, "..");
+const uatEnvFile = join(webRoot, ".env.uat");
+process.env.WRANGLER_ENV_FILE = uatEnvFile;
 const workerName = "insurance-app-uat";
 const uatCustomDomain = "uat.irecon.net";
 const defaultAppUrl = `https://${uatCustomDomain}`;
 const secretOnly = process.argv.includes("--secret-only");
 const skipBuild = process.argv.includes("--skip-build");
+
+function wranglerArgs(...args) {
+  return ["wrangler", ...args, "--env-file", uatEnvFile];
+}
 
 function run(command, args, { input, cwd, env } = {}) {
   return new Promise((resolve, reject) => {
@@ -42,18 +48,21 @@ function run(command, args, { input, cwd, env } = {}) {
   });
 }
 
-function resolveUatAppVersion() {
-  const explicit = process.env.VITE_APP_VERSION?.trim();
-  if (explicit) return explicit;
+function gitShortHash() {
   try {
-    const hash = execFileSync("git", ["rev-parse", "--short", "HEAD"], {
+    return execFileSync("git", ["rev-parse", "--short", "HEAD"], {
       cwd: webRoot,
       encoding: "utf8",
     }).trim();
-    return `uat-${hash}`;
   } catch {
-    return "uat-unknown";
+    return "unknown";
   }
+}
+
+function resolveUatBuildVersion() {
+  const version = process.env.VITE_APP_VERSION?.trim() || "uat";
+  const commit = process.env.VITE_APP_COMMIT?.trim() || gitShortHash();
+  return { version, commit, release: `${version}-${commit}` };
 }
 
 function assertUatDatabaseUrl(url) {
@@ -75,7 +84,7 @@ async function putSecret(name, value) {
     return false;
   }
   console.log(`→ Syncing ${name} secret for Worker "${workerName}"…`);
-  await run("npx", ["wrangler", "secret", "put", name, "--name", workerName], {
+  await run("npx", wranglerArgs("secret", "put", name, "--name", workerName), {
     input: value,
   });
   console.log(`✓ ${name} secret updated`);
@@ -185,17 +194,17 @@ async function uploadSentrySourceMaps(appVersion) {
     const ignoreArgs = ignoreFile ? ["--ignore-file", ignoreFile] : [];
 
     console.log(`→ Uploading Sentry source maps for release ${appVersion}…`);
+    const sentryEnv = {
+      ...process.env,
+      SENTRY_LOAD_DOTENV: "0",
+      SENTRY_AUTH_TOKEN: authToken,
+      SENTRY_ORG: org,
+      SENTRY_PROJECT: project,
+    };
     await run(
       "npx",
       ["sentry-cli", "sourcemaps", "inject", ...ignoreArgs, clientDir],
-      {
-        env: {
-          ...process.env,
-          SENTRY_AUTH_TOKEN: authToken,
-          SENTRY_ORG: org,
-          SENTRY_PROJECT: project,
-        },
-      },
+      { env: sentryEnv },
     );
     await run(
       "npx",
@@ -208,14 +217,7 @@ async function uploadSentrySourceMaps(appVersion) {
         ...ignoreArgs,
         clientDir,
       ],
-      {
-        env: {
-          ...process.env,
-          SENTRY_AUTH_TOKEN: authToken,
-          SENTRY_ORG: org,
-          SENTRY_PROJECT: project,
-        },
-      },
+      { env: sentryEnv },
     );
     console.log("✓ Sentry source maps uploaded");
   } finally {
@@ -235,25 +237,28 @@ async function main() {
     return;
   }
 
-  const appVersion = resolveUatAppVersion();
+  const { version, commit, release } = resolveUatBuildVersion();
 
   if (!skipBuild) {
     const viteSentryDsn =
       process.env.VITE_SENTRY_DSN?.trim() ||
       process.env.SENTRY_DSN?.trim() ||
       "";
-    console.log(`→ Building Cloudflare Workers app (version ${appVersion})…`);
+    console.log(
+      `→ Building Cloudflare Workers app (version ${version}, commit ${commit})…`,
+    );
     await run("npm", ["run", "build"], {
       env: {
         ...process.env,
-        VITE_APP_VERSION: appVersion,
+        VITE_APP_VERSION: version,
+        VITE_APP_COMMIT: commit,
         ...(viteSentryDsn ? { VITE_SENTRY_DSN: viteSentryDsn } : {}),
       },
     });
     console.log("✓ Build complete");
 
     try {
-      await uploadSentrySourceMaps(appVersion);
+      await uploadSentrySourceMaps(release);
     } catch (error) {
       console.warn(
         "Warning: Sentry source map upload failed.",
@@ -262,12 +267,16 @@ async function main() {
     }
   }
 
+  console.log("→ Deploying Excel Worker…");
+  await run("npx", wranglerArgs("deploy", "--config", "wrangler.excel.jsonc"));
+  console.log("✓ Excel Worker deployed");
+
   console.log("→ Deploying document Worker…");
-  await run("npx", ["wrangler", "deploy", "--config", "wrangler.pdf.jsonc"]);
+  await run("npx", wranglerArgs("deploy", "--config", "wrangler.pdf.jsonc"));
   console.log("✓ PDF Worker deployed");
 
   console.log("→ Deploying application Worker…");
-  await run("npx", ["wrangler", "deploy"]);
+  await run("npx", wranglerArgs("deploy"));
   console.log(`✓ Deployed ${defaultAppUrl}`);
 
   try {

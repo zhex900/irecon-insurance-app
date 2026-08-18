@@ -49,6 +49,7 @@ jobs:
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    environment: pr
     outputs:
       url: ${{ steps.deploy.outputs.url }}
 
@@ -65,15 +66,26 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Write UAT env file
+      - name: Write .env.pr from GitHub secrets
         env:
-          UAT_ENV_FILE: ${{ secrets.UAT_ENV_FILE }}
-        run: |
-          if [ -z "$UAT_ENV_FILE" ]; then
-            echo "UAT_ENV_FILE secret is not configured."
-            exit 1
-          fi
-          printf '%s\n' "$UAT_ENV_FILE" > .env.uat
+          BASE_URL: ${{ vars.BASE_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          UAT_DATABASE_URL: ${{ secrets.UAT_DATABASE_URL }}
+          UAT_SUPABASE_URL: ${{ secrets.UAT_SUPABASE_URL }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          EMAIL_FROM: ${{ vars.EMAIL_FROM }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          VITE_TURNSTILE_SITE_KEY: ${{ secrets.VITE_TURNSTILE_SITE_KEY }}
+          TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
+        run: node scripts/ci-write-env.mjs pr
 
       - name: Deploy preview environment
         id: deploy
@@ -82,7 +94,7 @@ jobs:
           PREVIEW_ENV: ${{ env.PREVIEW_ENV }}
         run: |
           set -o pipefail
-          PREVIEW_ENV="$PREVIEW_ENV" npm run deploy 2>&1 | tee deploy.log
+          npm run deploy:pr -- "$PREVIEW_ENV" 2>&1 | tee deploy.log
           url="$(grep -o 'Preview ready: https://[^ ]*' deploy.log | sed 's/Preview ready: //' | tail -n1)"
           if [ -z "$url" ]; then
             echo "Could not determine preview URL from deploy output."

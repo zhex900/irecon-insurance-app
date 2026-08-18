@@ -1,11 +1,11 @@
 /**
  * Dump UAT Postgres and restore into another Supabase project.
- * Used by production `--copy-from-uat`.
+ * Manual / one-off tooling — not part of `npm run deploy:prod`.
  */
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
-import { run, sleep, toSessionDbUrl } from "./preview-env.mjs";
+import { capture, run, sleep, toSessionDbUrl } from "./preview-env.mjs";
 
 const RESET_TARGET_DB_SQL = `
 SET statement_timeout = 0;
@@ -174,6 +174,85 @@ export async function dumpUatDatabase(dumpDir, uatDbUrl) {
   console.log("✓ UAT dump written to", dumpDir);
 }
 
+async function querySql(dbUrl, sql) {
+  const args = ["-t", "-A", "--dbname", dbUrl, "-c", sql];
+  try {
+    const { stdout } = await capture("psql", args, { silent: true });
+    return stdout.trim();
+  } catch (error) {
+    if (error instanceof Error && !/psql/.test(error.message)) throw error;
+  }
+  const { stdout } = await capture(
+    "docker",
+    ["run", "--rm", "postgres:17-alpine", "psql", ...args],
+    { silent: true },
+  );
+  return stdout.trim();
+}
+
+/**
+ * Copy UAT migration history so `supabase db push` only runs migrations newer than UAT.
+ * Uses version IDs + `supabase migration repair` because UAT/PR schema_migrations columns differ.
+ */
+export async function syncMigrationHistoryFromUat({
+  uatDbUrl,
+  destSessionUrl,
+  workDir,
+}) {
+  const uatSession = toSessionDbUrl(uatDbUrl);
+  const destSession = toSessionDbUrl(destSessionUrl);
+  const truncateFile = join(workDir, "truncate_migrations.sql");
+
+  console.log("→ Syncing Supabase migration history from UAT…");
+
+  let versions;
+  try {
+    const raw = await querySql(
+      uatSession,
+      "SELECT version FROM supabase_migrations.schema_migrations ORDER BY version;",
+    );
+    versions = raw
+      .split("\n")
+      .map((version) => version.trim())
+      .filter(Boolean);
+  } catch (error) {
+    console.warn(
+      "Warning: could not read UAT migration history — PR db push may re-apply UAT migrations.",
+      error instanceof Error ? error.message : error,
+    );
+    return;
+  }
+
+  if (versions.length === 0) {
+    console.warn("Warning: UAT migration history is empty.");
+    return;
+  }
+
+  await writeFile(
+    truncateFile,
+    "TRUNCATE supabase_migrations.schema_migrations;\n",
+    "utf8",
+  );
+  await runPsqlScriptWithRetry(destSession, truncateFile);
+
+  const chunkSize = 20;
+  for (let i = 0; i < versions.length; i += chunkSize) {
+    const chunk = versions.slice(i, i + chunkSize);
+    await run("npx", [
+      "supabase",
+      "migration",
+      "repair",
+      "--status",
+      "applied",
+      "--db-url",
+      destSession,
+      ...chunk,
+    ]);
+  }
+
+  console.log(`✓ Migration history synced from UAT (${versions.length} versions)`);
+}
+
 /**
  * Replace target DB contents with a logical copy of UAT.
  */
@@ -188,5 +267,10 @@ export async function copyDatabaseFromUat({
   await resetTargetDatabase(destSessionUrl, workDir);
   console.log("→ Restoring UAT dump into target project…");
   await restoreWithPsql(destTransactionUrl, workDir, { skipRoles });
+  await syncMigrationHistoryFromUat({
+    uatDbUrl,
+    destSessionUrl,
+    workDir,
+  });
   console.log("✓ Database copied from UAT");
 }

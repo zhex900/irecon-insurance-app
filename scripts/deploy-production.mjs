@@ -2,14 +2,12 @@
 /**
  * Build + deploy insurance-app-production to Cloudflare Workers.
  *
- * By default this deploys code + secrets only (no data changes).
- * Pass --copy-from-uat to replace production Postgres + R2 with UAT.
+ * Applies pending Supabase migrations to production, then builds and deploys Workers.
  *
  * Usage:
  *   npm run deploy:prod
- *   npm run deploy:prod -- --copy-from-uat
- *   npm run deploy:prod -- --copy-from-uat --skip-db
- *   npm run deploy:prod -- --copy-from-uat --skip-r2
+ *   npm run deploy:prod -- --skip-build
+ *   npm run deploy:prod -- --skip-migrate
  *   node --env-file=.env.production scripts/deploy-production.mjs --secret-only
  */
 import { spawn, execFileSync } from "node:child_process";
@@ -18,43 +16,33 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
-  copyR2FromUat,
   deployPreviewWorkers,
   ensureHyperdrive,
   ensureR2Buckets,
   putWorkerSecret,
 } from "./lib/preview-cloudflare.mjs";
-import { configureAuthUrls, copyPgsodiumKey } from "./lib/preview-supabase.mjs";
+import { configureAuthUrls } from "./lib/preview-supabase.mjs";
 import {
   assertProductionDatabaseUrl,
-  assertSafeUatCopy,
   extractSupabaseProjectRef,
   hasFlag,
-  loadUatEnv,
   loadState,
   productionNames,
   productionAuthExtraOrigins,
   productionAuthDomains,
   productionWranglerCustomDomains,
-  productionR2HelperWrangler,
-  productionRoot,
   saveState,
   writeProductionWranglerConfigs,
 } from "./lib/production-env.mjs";
-import { copyDatabaseFromUat } from "./lib/uat-data-copy.mjs";
-import {
-  toSessionDbUrl,
-  toTransactionDbUrl,
-  webRoot,
-} from "./lib/preview-env.mjs";
+import { toSessionDbUrl, webRoot } from "./lib/preview-env.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const copyFromUat =
-  hasFlag("--copy-from-uat") || hasFlag("--copy-from-staging");
-const skipDb = hasFlag("--skip-db");
-const skipR2 = hasFlag("--skip-r2");
+const productionEnvFile = join(webRoot, ".env.production");
+process.env.WRANGLER_ENV_FILE = productionEnvFile;
+
 const skipBuild = hasFlag("--skip-build");
+const skipMigrate = hasFlag("--skip-migrate");
 const secretOnly = hasFlag("--secret-only");
 const dryRun = hasFlag("--dry-run");
 
@@ -91,11 +79,20 @@ function resolveProductionAppVersion() {
   }
 }
 
-function productionDbUrls(databaseUrl) {
-  return {
-    sessionUrl: toSessionDbUrl(databaseUrl),
-    transactionUrl: toTransactionDbUrl(databaseUrl),
-  };
+async function runProductionMigrations() {
+  const databaseUrl = process.env.DATABASE_URL;
+  assertProductionDatabaseUrl(databaseUrl);
+
+  console.log("→ Applying Supabase migrations to production…");
+  await run("npx", [
+    "supabase",
+    "db",
+    "push",
+    "--yes",
+    "--db-url",
+    toSessionDbUrl(databaseUrl),
+  ]);
+  console.log("✓ Production migrations applied");
 }
 
 async function syncProductionSecrets(names) {
@@ -203,17 +200,17 @@ async function uploadSentrySourceMaps(appVersion) {
     const ignoreArgs = ignoreFile ? ["--ignore-file", ignoreFile] : [];
 
     console.log(`→ Uploading Sentry source maps for release ${appVersion}…`);
+    const sentryEnv = {
+      ...process.env,
+      SENTRY_LOAD_DOTENV: "0",
+      SENTRY_AUTH_TOKEN: authToken,
+      SENTRY_ORG: org,
+      SENTRY_PROJECT: project,
+    };
     await run(
       "npx",
       ["sentry-cli", "sourcemaps", "inject", ...ignoreArgs, clientDir],
-      {
-        env: {
-          ...process.env,
-          SENTRY_AUTH_TOKEN: authToken,
-          SENTRY_ORG: org,
-          SENTRY_PROJECT: project,
-        },
-      },
+      { env: sentryEnv },
     );
     await run(
       "npx",
@@ -226,14 +223,7 @@ async function uploadSentrySourceMaps(appVersion) {
         ...ignoreArgs,
         clientDir,
       ],
-      {
-        env: {
-          ...process.env,
-          SENTRY_AUTH_TOKEN: authToken,
-          SENTRY_ORG: org,
-          SENTRY_PROJECT: project,
-        },
-      },
+      { env: sentryEnv },
     );
     console.log("✓ Sentry source maps uploaded");
   } finally {
@@ -241,62 +231,6 @@ async function uploadSentrySourceMaps(appVersion) {
     if (removed > 0) {
       console.log(`✓ Removed ${removed} source map(s) before deploy`);
     }
-  }
-}
-
-async function copyUatData(names) {
-  const prodDbUrl = process.env.DATABASE_URL?.trim();
-  assertProductionDatabaseUrl(prodDbUrl);
-  const uat = await loadUatEnv();
-  const prodSupabaseUrl = process.env.SUPABASE_URL?.trim();
-  assertSafeUatCopy({
-    uatDbUrl: uat.databaseUrl,
-    prodDbUrl,
-    uatSupabaseRef: uat.projectRef,
-    prodSupabaseRef: extractSupabaseProjectRef(prodSupabaseUrl),
-  });
-
-  console.log("");
-  console.log("⚠  --copy-from-uat will REPLACE production database and R2.");
-  console.log(`   UAT DB ref: ${uat.projectRef}`);
-  console.log(
-    `   Production DB:  ${extractSupabaseProjectRef(prodSupabaseUrl) ?? "(from SUPABASE_URL)"}`,
-  );
-  console.log("");
-
-  if (!skipDb) {
-    const { sessionUrl, transactionUrl } = productionDbUrls(prodDbUrl);
-    await copyDatabaseFromUat({
-      uatDbUrl: uat.databaseUrl,
-      destSessionUrl: sessionUrl,
-      destTransactionUrl: transactionUrl,
-      workDir: join(productionRoot, "dump"),
-      skipRoles: true,
-    });
-    const prodRef = extractSupabaseProjectRef(prodSupabaseUrl);
-    if (prodRef && process.env.SUPABASE_ACCESS_TOKEN?.trim()) {
-      try {
-        await copyPgsodiumKey(uat.projectRef, prodRef);
-      } catch (error) {
-        console.warn(
-          "Warning: could not copy pgsodium key (ok if Vault is unused).",
-          error instanceof Error ? error.message : error,
-        );
-      }
-    }
-  } else {
-    console.log("→ Skipping database copy (--skip-db)");
-  }
-
-  if (!skipR2) {
-    const r2WranglerPath = join(productionRoot, "wrangler.r2.jsonc");
-    await copyR2FromUat(names, {
-      wranglerPath: r2WranglerPath,
-      buildWrangler: (params) => productionR2HelperWrangler(names, params),
-    });
-  } else {
-    console.log("→ Skipping R2 copy (--skip-r2); ensuring buckets exist");
-    await ensureR2Buckets(names);
   }
 }
 
@@ -332,10 +266,12 @@ async function main() {
     return;
   }
 
-  if (copyFromUat) {
-    await copyUatData(names);
+  await ensureR2Buckets(names);
+
+  if (!skipMigrate) {
+    await runProductionMigrations();
   } else {
-    await ensureR2Buckets(names);
+    console.log("→ Skipping database migrations (--skip-migrate)");
   }
 
   const state = await loadState();
@@ -424,7 +360,6 @@ async function main() {
       avatars: names.avatarsBucket,
       library: names.libraryBucket,
     },
-    lastCopyFromUat: copyFromUat ? new Date().toISOString() : undefined,
     updatedAt: new Date().toISOString(),
   });
 

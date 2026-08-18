@@ -94,11 +94,8 @@ const fromProductionDir = {
 };
 
 const PRODUCTION_FLAGS = new Set([
-  "--copy-from-uat",
-  "--copy-from-staging",
-  "--skip-db",
-  "--skip-r2",
   "--skip-build",
+  "--skip-migrate",
   "--secret-only",
   "--dry-run",
 ]);
@@ -303,7 +300,7 @@ export function assertSafeUatCopy({
 }) {
   if (!uatDbUrl?.trim()) {
     throw new Error(
-      "UAT DATABASE_URL is missing. Add it to .env.uat for --copy-from-uat.",
+      "UAT DATABASE_URL is missing. Add it to .env.uat.",
     );
   }
   if (uatDbUrl.trim() === prodDbUrl.trim()) {
@@ -333,7 +330,7 @@ export async function loadUatEnv() {
     text = await readFile(uatPath, "utf8");
   } catch {
     throw new Error(
-      `.env.uat not found at ${uatPath} — required for --copy-from-uat.`,
+      `.env.uat not found at ${uatPath}.`,
     );
   }
   const vars = {};

@@ -1,11 +1,11 @@
 /**
  * App version label shown in the sidebar footer.
  *
- * Set at build time via VITE_APP_VERSION:
- * - local        → "local" (default in `npm run dev`)
- * - PR preview   → "PR-<number>"
- * - uat          → "uat-<short-commit>"
- * - production   → release tag (e.g. "v1.2.3")
+ * Set at build time:
+ * - VITE_APP_VERSION — env label (pr-1, uat, …)
+ * - VITE_APP_COMMIT   — short git SHA
+ *
+ * Sidebar badge shows the release (e.g. pr-1-abc1234); click copies the commit.
  */
 
 export type AppEnvironment = "local" | "pr" | "uat" | "prod" | "unknown";
@@ -15,6 +15,21 @@ export function getAppVersion(): string {
   if (fromEnv) return fromEnv;
   if (import.meta.env.DEV) return "local";
   return "unknown";
+}
+
+export function getAppCommit(): string | undefined {
+  const commit = import.meta.env.VITE_APP_COMMIT?.trim();
+  return commit || undefined;
+}
+
+/** Full release id for Sentry, caches, etc. (e.g. pr-1-a1b2c3d, uat-a1b2c3d). */
+export function getAppRelease(): string {
+  const version = getAppVersion();
+  const commit = getAppCommit();
+  if (commit && version !== "local" && version !== "unknown") {
+    return `${version}-${commit}`;
+  }
+  return version;
 }
 
 export function getAppEnvironment(version = getAppVersion()): AppEnvironment {

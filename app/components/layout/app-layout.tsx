@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import { Link, Outlet, useFetcher, useNavigation } from "react-router";
+import { toast } from "sonner";
 
 import { SessionTimeoutDialog } from "~/components/auth/session-timeout-dialog";
 import {
@@ -49,8 +50,10 @@ import { UserAvatar } from "~/components/ui/user-avatar";
 import { useHydrated } from "~/hooks/network";
 import { useSuccessToastFromSearch } from "~/hooks/utilities";
 import {
+  getAppCommit,
   getAppEnvironment,
   getAppEnvironmentBadgeClass,
+  getAppRelease,
   getAppVersion,
 } from "~/lib/app-version";
 import type { SessionTimeoutClientState } from "~/lib/auth/session";
@@ -137,6 +140,48 @@ function SidebarCollapseToggle() {
   );
 }
 
+function AppVersionBadge() {
+  const appVersion = getAppVersion();
+  const appCommit = getAppCommit();
+  const appEnv = getAppEnvironment(appVersion);
+  const release = getAppRelease();
+  const copyCommit = React.useCallback(async () => {
+    if (!appCommit) return;
+    try {
+      await navigator.clipboard.writeText(appCommit);
+      toast.success(`Copied ${appCommit}`);
+    } catch {
+      toast.error("Could not copy commit");
+    }
+  }, [appCommit]);
+
+  const badgeClassName = cn(
+    "max-w-full truncate font-mono text-[10px] tabular-nums group-data-[collapsible=icon]:hidden",
+    getAppEnvironmentBadgeClass(appEnv),
+    appCommit && "cursor-pointer",
+  );
+
+  if (!appCommit) {
+    return (
+      <Badge variant="outline" className={badgeClassName}>
+        {release}
+      </Badge>
+    );
+  }
+
+  return (
+    <Badge
+      variant="outline"
+      className={badgeClassName}
+      render={<button type="button" />}
+      aria-label={`Copy commit ${appCommit}`}
+      onClick={() => void copyCommit()}
+    >
+      {release}
+    </Badge>
+  );
+}
+
 export function AppLayout({
   broker,
   sideNav,
@@ -169,8 +214,6 @@ export function AppLayout({
     navSectionsExpanded,
   });
   useSuccessToastFromSearch();
-  const appVersion = getAppVersion();
-  const appEnv = getAppEnvironment(appVersion);
 
   const handleSidebarOpenChange = React.useCallback((open: boolean) => {
     setShellNav((prev) => ({
@@ -233,16 +276,7 @@ export function AppLayout({
 
             <SidebarFooter className="border-t border-sidebar-border">
               <div className="flex items-center justify-between gap-2 px-2 py-1 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    "max-w-full truncate font-mono text-[10px] tabular-nums group-data-[collapsible=icon]:hidden",
-                    getAppEnvironmentBadgeClass(appEnv),
-                  )}
-                  title={`App version ${appVersion}`}
-                >
-                  {appVersion}
-                </Badge>
+                <AppVersionBadge />
                 <SidebarCollapseToggle />
               </div>
             </SidebarFooter>

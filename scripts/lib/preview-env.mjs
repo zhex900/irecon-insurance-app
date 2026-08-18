@@ -21,6 +21,15 @@ export const PREVIEW_DOMAIN_ZONE = "irecon.net";
 export const WORKERS_DEV_SUBDOMAIN = "zhex900";
 export const DEFAULT_REGION = "ap-southeast-2";
 
+/** Hostname for PR preview URLs — from `.env.pr` `BASE_URL`, default `irecon.net`. */
+export function previewBaseDomain() {
+  const raw =
+    process.env.BASE_URL?.trim() ||
+    process.env.PREVIEW_DOMAIN?.trim() ||
+    PREVIEW_DOMAIN_ZONE;
+  return raw.replace(/^https?:\/\//, "").replace(/\/$/, "");
+}
+
 /** @deprecated Use UAT_* constants */
 export const STAGING_PROJECT_REF = UAT_PROJECT_REF;
 /** @deprecated Use UAT_* constants */
@@ -44,6 +53,7 @@ const SCRIPT_FLAGS = new Set([
   "--skip-db",
   "--skip-r2",
   "--skip-build",
+  "--skip-migrate",
   "--refresh-data",
   "--secret-only",
 ]);
@@ -135,11 +145,10 @@ export function hasFlag(flag, argv = process.argv.slice(2)) {
   return Boolean(npmVal) && npmVal !== "false";
 }
 
-/** PR previews use pr-<n>.irecon.net; other slugs fall back to workers.dev. */
+/** PR previews: `https://<env-slug>.<BASE_URL>` (e.g. pr-1 → https://pr-1.irecon.net). */
 export function previewAppUrl(slug) {
-  const prMatch = slug.match(/^pr-(\d+)$/);
-  if (prMatch) {
-    return `https://pr-${prMatch[1]}.${PREVIEW_DOMAIN_ZONE}`;
+  if (/^pr-.+/.test(slug)) {
+    return `https://${slug}.${previewBaseDomain()}`;
   }
   const subdomain =
     process.env.WORKERS_DEV_SUBDOMAIN?.trim() || WORKERS_DEV_SUBDOMAIN;
@@ -149,7 +158,8 @@ export function previewAppUrl(slug) {
 export function previewCustomDomainRoutes(appUrl) {
   try {
     const host = new URL(appUrl).hostname;
-    if (host.endsWith(`.${PREVIEW_DOMAIN_ZONE}`)) {
+    const base = previewBaseDomain();
+    if (host === base || host.endsWith(`.${base}`)) {
       return [{ pattern: host, custom_domain: true }];
     }
   } catch {
@@ -221,6 +231,68 @@ export function encodeDbPassword(password) {
 
 export function poolerHost(region = DEFAULT_REGION) {
   return `aws-0-${region}.pooler.supabase.com`;
+}
+
+/** Extract project ref from a Supabase URL or pooler/direct Postgres URL. */
+export function extractProjectRefFromDbUrl(url) {
+  if (!url?.trim()) return null;
+  const supabaseMatch = url.match(/https:\/\/([a-z0-9]+)\.supabase\.co/i);
+  if (supabaseMatch) return supabaseMatch[1];
+  const dbHostMatch = url.match(/db\.([a-z0-9]+)\.supabase\.co/i);
+  if (dbHostMatch) return dbHostMatch[1];
+  const poolerUserMatch = url.match(/postgres\.([a-z0-9]+):/i);
+  if (poolerUserMatch) return poolerUserMatch[1];
+  const missingAtMatch = url.match(
+    /postgresql:\/\/postgres:(?:([a-z0-9]+)\.([^.@/]+)|([^.@/]+)\.([a-z0-9]+))\.supabase\.co/i,
+  );
+  if (missingAtMatch) {
+    return missingAtMatch[1] || missingAtMatch[4] || null;
+  }
+  return null;
+}
+
+/**
+ * Fix common Supabase URL typos (missing `@db.` between password and host).
+ * Example: postgres:pass.ref.supabase.co → postgres:pass@db.ref.supabase.co
+ */
+export function repairSupabaseDatabaseUrl(databaseUrl, supabaseUrl) {
+  const raw = databaseUrl?.trim();
+  if (!raw) return raw;
+  if (raw.includes("@")) {
+    return normalizeSupabasePoolerUrl(raw);
+  }
+
+  const ref =
+    extractProjectRefFromDbUrl(supabaseUrl) || extractProjectRefFromDbUrl(raw);
+  if (!ref) return raw;
+
+  const passwordFirst = raw.match(
+    new RegExp(
+      `^postgresql://postgres:([^.@/]+)\\.${ref}\\.supabase\\.co(?::(\\d+))?(\\/[^?]*)?(\\?.*)?$`,
+      "i",
+    ),
+  );
+  if (passwordFirst) {
+    const [, password, port = "5432", path = "/postgres", query = "?sslmode=require"] =
+      passwordFirst;
+    const fixed = `postgresql://postgres:${encodeDbPassword(password)}@db.${ref}.supabase.co:${port}${path}${query || "?sslmode=require"}`;
+    return normalizeSupabasePoolerUrl(fixed);
+  }
+
+  const refFirst = raw.match(
+    new RegExp(
+      `^postgresql://postgres:${ref}\\.([^.@/]+)\\.supabase\\.co(?::(\\d+))?(\\/[^?]*)?(\\?.*)?$`,
+      "i",
+    ),
+  );
+  if (refFirst) {
+    const [, password, port = "5432", path = "/postgres", query = "?sslmode=require"] =
+      refFirst;
+    const fixed = `postgresql://postgres:${encodeDbPassword(password)}@db.${ref}.supabase.co:${port}${path}${query || "?sslmode=require"}`;
+    return normalizeSupabasePoolerUrl(fixed);
+  }
+
+  return normalizeSupabasePoolerUrl(raw);
 }
 
 /**

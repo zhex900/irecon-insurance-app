@@ -4,7 +4,7 @@
 import type { CloudflareOptions } from "@sentry/cloudflare";
 import * as Sentry from "@sentry/cloudflare";
 
-import { getAppEnvironment, getAppVersion } from "~/lib/app-version";
+import { getAppEnvironment, getAppRelease, getAppVersion } from "~/lib/app-version";
 import type { CloudflareEnv } from "~/lib/cloudflare.server";
 import { getRequestContext } from "~/lib/observability/request-context.server";
 
@@ -14,8 +14,8 @@ export function sentryOptionsFromEnv(
   const dsn = env.SENTRY_DSN?.trim();
   if (!dsn) return undefined;
 
-  const release = getAppVersion();
-  const environment = getAppEnvironment(release);
+  const release = getAppRelease();
+  const environment = getAppEnvironment(getAppVersion());
 
   return {
     dsn,

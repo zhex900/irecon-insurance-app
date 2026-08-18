@@ -8,7 +8,7 @@ All non-production hostnames live on the **irecon.net** Cloudflare zone. Product
 | -------------- | ------------------------------------------------------------------ | --------------------------- | --------------------------------------------- |
 | **Production** | `https://app.irecon.net` (canonical) · `https://app.irecon.com.au` | `insurance-app-production`  | Dedicated Supabase project                    |
 | **UAT**        | `https://uat.irecon.net`                                           | `insurance-app-uat`         | Dedicated Supabase project (formerly staging) |
-| **PR preview** | `https://pr-<number>.irecon.net`                                   | `insurance-app-pr-<number>` | Supabase **branch** off the UAT project       |
+| **PR preview** | `https://pr-<number>.irecon.net`                                   | `insurance-app-pr-<number>` | Shared Supabase project (`.env.pr`), copied from UAT each deploy |
 
 **Shared across all environments:** Sentry (DSN + source maps) and Resend (API key + sender addresses). Use the same values in `.env.uat` and `.env.production`.
 
@@ -43,7 +43,7 @@ Traffic arrives via Cloudflare for SaaS custom hostnames. You also need a **Work
 
 Client DNS admin points `app.irecon.com.au` CNAME at your Cloudflare entry hostname and `_acme-challenge.app.irecon.com.au` at the DCV target from Custom Hostnames.
 
-Deploy:
+Deploy applies pending `supabase/migrations` to production, then deploys Workers:
 
 ```bash
 npm run deploy:prod
@@ -69,11 +69,11 @@ node --env-file=.env.uat scripts/configure-uat-auth-urls.mjs
 
 ## PR preview environments
 
-Per-PR Workers at `https://pr-<number>.irecon.net`. Database is a **Supabase branch** of the UAT project (not a full project clone).
+Per-PR Workers at `https://pr-<number>.irecon.net`. All PRs share one Supabase project (`.env.pr`); each deploy copies UAT into that database.
 
 ```bash
-npm run deploy --env pr-11
-npm run destroy --env pr-11
+npm run deploy -- pr-11
+npm run destroy -- pr-11
 ```
 
 See [deployment/preview-environments.md](deployment/preview-environments.md) for provisioning details, CI, and secrets.

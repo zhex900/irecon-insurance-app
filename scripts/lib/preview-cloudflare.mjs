@@ -15,6 +15,7 @@ import {
   run,
   UAT_AVATARS_BUCKET,
   UAT_LIBRARY_BUCKET,
+  webRoot,
   wranglerEnv,
   writeJsonc,
 } from "./preview-env.mjs";
@@ -23,18 +24,26 @@ function configPath(envName, file) {
   return join(previewRoot, envName, file);
 }
 
+function wranglerEnvFile() {
+  return process.env.WRANGLER_ENV_FILE?.trim() || join(webRoot, ".env.uat");
+}
+
 async function wrangler(args, { input } = {}) {
-  await run("npx", ["wrangler", ...args], {
+  await run("npx", ["wrangler", ...args, "--env-file", wranglerEnvFile()], {
     env: wranglerEnv(),
     input,
   });
 }
 
 async function wranglerCapture(args, { verbose = false, silent = false } = {}) {
-  return capture("npx", ["wrangler", ...args], {
-    env: verbose ? wranglerEnv({ WRANGLER_LOG: "log" }) : wranglerEnv(),
-    silent,
-  });
+  return capture(
+    "npx",
+    ["wrangler", ...args, "--env-file", wranglerEnvFile()],
+    {
+      env: verbose ? wranglerEnv({ WRANGLER_LOG: "log" }) : wranglerEnv(),
+      silent,
+    },
+  );
 }
 
 async function r2BucketExists(bucket) {
@@ -196,13 +205,24 @@ export async function ensureHyperdrive({
   names,
   connectionString,
   existingId,
+  forceUpdate = false,
 }) {
-  if (existingId) {
-    console.log(`→ Reusing Hyperdrive ${existingId}`);
-    return existingId;
+  const existing =
+    existingId || (await findHyperdriveId(names.hyperdriveName));
+
+  if (existing && forceUpdate) {
+    console.log(`→ Updating Hyperdrive ${existing} connection…`);
+    await wrangler([
+      "hyperdrive",
+      "update",
+      existing,
+      "--connection-string",
+      connectionString,
+    ]);
+    console.log(`✓ Hyperdrive ${existing} updated`);
+    return existing;
   }
 
-  const existing = await findHyperdriveId(names.hyperdriveName);
   if (existing) {
     console.log(`→ Reusing Hyperdrive ${existing}`);
     return existing;
