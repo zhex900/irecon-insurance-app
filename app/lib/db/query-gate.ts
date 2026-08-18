@@ -2,11 +2,14 @@ import type postgres from "postgres";
 
 import { logger } from "~/lib/observability/logger.server";
 
-/** In-flight query cap per request (Workers postgres pool max is 2). */
+/** Worker postgres pool size (request-scoped, one pool per Worker request). */
+export const WORKER_POOL_MAX = 5;
+/** In-flight query cap — one below pool max to avoid postgres.js pool queueing. */
 export const WORKER_QUERY_GATE_MAX = 4;
 export const DEV_QUERY_GATE_MAX = 3;
 
-const TRANSIENT_RETRY_ATTEMPTS = 1;
+/** Initial attempt + one retry after pool reset. */
+const TRANSIENT_RETRY_ATTEMPTS = 2;
 const TRANSIENT_RETRY_BASE_MS = 50;
 const SLOW_QUEUE_WAIT_MS = 500;
 
@@ -107,7 +110,7 @@ export function isTransientDbError(error: unknown): boolean {
 
   if (!(error instanceof Error)) return false;
 
-  const message = error.message.toLowerCase();
+  const message = error.message.toLowerCase().replaceAll("_", " ");
   const code = (error as { code?: string }).code?.toUpperCase();
   if (
     code === "ECONNRESET" ||

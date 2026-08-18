@@ -1,38 +1,54 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useFetcher } from "react-router";
 
 /**
- * Optional client fetch that never throws — failures stay local (no React Router onError).
- * Use for secondary UI data (badge counts, reference lookups) where the page works without it.
+ * Secondary data via `useFetcher` that fails silently — optional UI (badge counts,
+ * reference lookups) keeps working when the request fails or returns no data.
+ *
+ * Fetcher loader errors do not bubble to the route error boundary; we treat a
+ * settled idle fetch with no data as unavailable rather than surfacing an error.
  */
 export function useOptionalApi<T>(url: string | null) {
-  const [data, setData] = useState<T | null>(null);
-  const [prevUrl, setPrevUrl] = useState<string | null>(url);
-  const [pending, setPending] = useState(url != null);
+  const fetcher = useFetcher<T>();
+  const loadRef = useRef(fetcher.load);
+  const pendingUrlRef = useRef<string | null>(null);
+  const prevFetcherStateRef = useRef(fetcher.state);
+  const [settledUrl, setSettledUrl] = useState<string | null>(null);
+  const [trackedUrl, setTrackedUrl] = useState<string | null>(url);
 
-  if (url !== prevUrl) {
-    setPrevUrl(url);
-    setPending(url != null);
-    setData(null);
+  useEffect(() => {
+    loadRef.current = fetcher.load;
+  });
+
+  if (url !== trackedUrl) {
+    setTrackedUrl(url);
+    setSettledUrl(null);
   }
 
   useEffect(() => {
-    if (!url) return;
-
-    let cancelled = false;
-
-    void fetch(url, { credentials: "same-origin" })
-      .then(async (response) => (response.ok ? response.json() : null))
-      .catch(() => null)
-      .then((json: T | null) => {
-        if (cancelled) return;
-        setData(json);
-        setPending(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
+    pendingUrlRef.current = null;
   }, [url]);
+
+  useEffect(() => {
+    if (!url || fetcher.state !== "idle") return;
+    if (settledUrl === url) return;
+    pendingUrlRef.current = url;
+    loadRef.current(url);
+  }, [url, fetcher.state, settledUrl]);
+
+  useEffect(() => {
+    const wasLoading = prevFetcherStateRef.current === "loading";
+    prevFetcherStateRef.current = fetcher.state;
+    if (!wasLoading || fetcher.state !== "idle") return;
+    const pending = pendingUrlRef.current;
+    if (!pending) return;
+    setSettledUrl(pending);
+    pendingUrlRef.current = null;
+  }, [fetcher.state, fetcher.data]);
+
+  const pending = url != null && settledUrl !== url;
+  const data =
+    url != null && settledUrl === url ? (fetcher.data ?? null) : null;
 
   return { data, pending };
 }

@@ -7,6 +7,7 @@ import {
   DEV_QUERY_GATE_MAX,
   QueryGate,
   registerPoolResetHandler,
+  WORKER_POOL_MAX,
   WORKER_QUERY_GATE_MAX,
   wrapPostgresWithGate,
 } from "~/lib/db/query-gate";
@@ -53,8 +54,7 @@ function queryGateLimit() {
 }
 
 function workerPoolMax() {
-  // One request-scoped pool; gate caps concurrency — fewer Hyperdrive connections.
-  return 2;
+  return WORKER_POOL_MAX;
 }
 
 function createSql(url: string) {

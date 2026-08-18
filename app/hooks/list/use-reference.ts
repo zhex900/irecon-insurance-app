@@ -1,76 +1,19 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { useFetcher } from "react-router";
-
-import { useHydrated } from "~/hooks/network";
+import { useReferenceSessionFetch } from "~/hooks/network/use-reference-session-fetch";
 import {
-  getReferenceSessionCacheGeneration,
   listReferenceSessionCacheKey,
-  subscribeReferenceSessionCacheInvalidation,
 } from "~/lib/client/reference-session-cache";
 import type { ListReferenceData } from "~/lib/services/reference.service";
 
-function readCachedReference(): ListReferenceData | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = sessionStorage.getItem(listReferenceSessionCacheKey());
-    if (!raw) return null;
-    return JSON.parse(raw) as ListReferenceData;
-  } catch {
-    return null;
-  }
-}
-
 /** Load live AM + AR for list filters via `/api/reference/list` (session-cached). */
 export function useListReference() {
-  const hydrated = useHydrated();
-  const fetcher = useFetcher<ListReferenceData>();
-  const loadRef = useRef(fetcher.load);
-  const cacheGeneration = useSyncExternalStore(
-    subscribeReferenceSessionCacheInvalidation.bind(null, "list-reference"),
-    () => getReferenceSessionCacheGeneration("list-reference"),
-    () => 0,
-  );
-  const [loadedGeneration, setLoadedGeneration] = useState(cacheGeneration);
-  const prevFetcherStateRef = useRef(fetcher.state);
-
-  useEffect(() => {
-    loadRef.current = fetcher.load;
-  });
-
-  useEffect(() => {
-    const wasLoading = prevFetcherStateRef.current === "loading";
-    prevFetcherStateRef.current = fetcher.state;
-    if (wasLoading && fetcher.state === "idle" && fetcher.data) {
-      setLoadedGeneration(cacheGeneration);
-    }
-  }, [fetcher.state, fetcher.data, cacheGeneration]);
-
-  const cached = hydrated ? readCachedReference() : null;
-  const fetched =
-    fetcher.state === "idle" &&
-    fetcher.data &&
-    loadedGeneration === cacheGeneration
-      ? fetcher.data
-      : null;
-  const reference = cached ?? fetched ?? null;
-  const pending = reference == null && fetcher.state === "loading";
-
-  useEffect(() => {
-    if (!hydrated || cached || fetcher.state !== "idle") return;
-    loadRef.current("/api/reference/list");
-  }, [hydrated, cached, fetcher.state, cacheGeneration]);
-
-  useEffect(() => {
-    if (fetcher.state !== "idle" || !fetcher.data) return;
-    try {
-      sessionStorage.setItem(
-        listReferenceSessionCacheKey(),
-        JSON.stringify(fetcher.data),
-      );
-    } catch {
-      // Private browsing / quota — ignore.
-    }
-  }, [fetcher.data, fetcher.state]);
+  const { data: reference, pending } =
+    useReferenceSessionFetch<ListReferenceData | null>({
+      kind: "list-reference",
+      cacheKey: listReferenceSessionCacheKey(),
+      url: "/api/reference/list",
+      fallback: null,
+      isEmpty: (value) => value == null,
+    });
 
   return { reference, pending };
 }

@@ -39,7 +39,7 @@ Heavy list routes (`/policies`, `/clients`) used to block the Worker until **all
 | Tier | What | When | Example |
 | ---- | ---- | ---- | ------- |
 | **Critical** | Table rows + pagination + filter echo | SSR loader (first paint) | `listPoliciesPageCore()`, `listClientsPage()` |
-| **Secondary** | Filter badge counts, live AM/AR lookups | `useFetcher` after mount | `/api/policies/list-meta`, `/api/reference/list` |
+| **Secondary** | Filter badge counts, live AM/AR lookups | `useFetcher` after mount | `/api/policies/list-secondary`, `/api/reference/list` |
 
 Static catalogue fields (`policyStatuses`, `coverTypes`, …) come from `app/lib/reference-data.ts` on the client. Only **live** account managers and ARs need a DB round-trip.
 
@@ -48,7 +48,6 @@ Static catalogue fields (`policyStatuses`, `coverTypes`, …) come from `app/lib
 ```
 GET /policies (loader)     → count + page rows (~2 queries)
 GET /api/policies/list-secondary → facet counts + live AM/AR (one Worker request)
-GET /api/policies/list-meta → facet counts only (legacy; prefer list-secondary)
 GET /api/reference/list    → AM + AR (clients list; sessionStorage cache)
 ```
 
@@ -57,9 +56,9 @@ Key files:
 | Piece | Location |
 | ----- | -------- |
 | Core row fetch | `listPoliciesPageCore()` in `app/lib/services/policies/list.service.ts` |
-| Meta counts | `getPolicyListMeta()` + `app/routes/api/policies.list-meta.tsx` |
-| Live reference | `getListReferenceAsync()` + `app/routes/api/reference.list.tsx` |
-| Client hooks | `usePolicyListMeta`, `useListReference` in `app/hooks/` |
+| Meta counts + live reference | `getPolicyListMeta()` + `getListReferenceAsync()` in `app/routes/api/policies.list-secondary.tsx` |
+| Live reference (clients) | `getListReferenceAsync()` + `app/routes/api/reference.list.tsx` |
+| Client hooks | `usePolicyListSecondary`, `useListReference`, `useReferenceSessionFetch` in `app/hooks/` |
 | Badge UX while pending | `countsPending` → em dash in column filter headers |
 
 **Hydration:** `useListReference` must not read `sessionStorage` during the initial render — only after mount in `useEffect`. Server and first client paint both use static `referenceData`; live AM/AR replaces it post-hydration.

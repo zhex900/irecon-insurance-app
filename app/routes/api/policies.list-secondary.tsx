@@ -20,18 +20,20 @@ export async function loader({ request }: Route.LoaderArgs) {
   const filters = parsePolicyListFiltersFromUrl(url);
   parsePagination(url, { defaultSize: 25 });
 
-  const meta = await getPolicyListMeta({
-    search: filters.q,
-    policyStatusIds: filters.statusIds,
-    coverTypeIds: filters.coverTypeIds,
-    policyCategoryIds: filters.policyCategoryIds,
-    clientIds: filters.clientIds,
-    inceptionFrom: filters.inception.from,
-    inceptionTo: filters.inception.to,
-    expiryFrom: filters.expiry.from,
-    expiryTo: filters.expiry.to,
-  });
-  const reference = await getListReferenceAsync();
+  const [meta, reference] = await Promise.all([
+    getPolicyListMeta({
+      search: filters.q,
+      policyStatusIds: filters.statusIds,
+      coverTypeIds: filters.coverTypeIds,
+      policyCategoryIds: filters.policyCategoryIds,
+      clientIds: filters.clientIds,
+      inceptionFrom: filters.inception.from,
+      inceptionTo: filters.inception.to,
+      expiryFrom: filters.expiry.from,
+      expiryTo: filters.expiry.to,
+    }),
+    getListReferenceAsync(),
+  ]);
 
   const allCount = Object.values(meta.statusCounts).reduce(
     (sum, count) => sum + count,
