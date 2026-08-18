@@ -420,7 +420,9 @@ export default function PolicyDetailRoute({
   const actionData = useActionData<typeof action>();
   const [deleteOpen, setDeleteOpen] = useState(false);
 
-  const { feeNames } = usePolicyFeeNames(policy.dateStart);
+  const { feeNames, pending: feeNamesPending } = usePolicyFeeNames(
+    policy.dateStart,
+  );
   const reference = useMemo(
     () => ({
       ...referenceData,
@@ -518,6 +520,7 @@ export default function PolicyDetailRoute({
         policy={policy}
         onPolicyUpdated={setPolicy}
         reference={reference}
+        referenceFeeNamesPending={feeNamesPending}
         readOnly={readOnly}
         freshSteps={wasCloned}
         isNew={isNew}

@@ -38,6 +38,7 @@ function PremiumTableHead() {
 export function PremiumBreakdownTable({
   premium,
   reference,
+  referenceFeeNamesPending = false,
   canEdit,
   manualKeys,
   onChange,
@@ -46,6 +47,7 @@ export function PremiumBreakdownTable({
 }: {
   premium: PremiumBreakdown;
   reference: ReferenceData;
+  referenceFeeNamesPending?: boolean;
   canEdit: boolean;
   manualKeys: ReadonlySet<string>;
   onChange: (key: keyof PremiumBreakdown, value: number) => void;
@@ -75,6 +77,7 @@ export function PremiumBreakdownTable({
         ))}
         <PremiumFeeRows
           feeNames={reference.feeNames}
+          feeNamesPending={referenceFeeNamesPending}
           onExplainFee={onExplainFee}
         />
         {totalRow ? (

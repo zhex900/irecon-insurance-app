@@ -16,6 +16,7 @@ import { WizardDefault } from "./wizard-default";
 export function PolicyWizard({
   policy,
   reference,
+  referenceFeeNamesPending = false,
   readOnly = false,
   freshSteps = false,
   isNew = false,
@@ -64,6 +65,7 @@ export function PolicyWizard({
           <WizardDefault
             policy={policy}
             reference={reference}
+            referenceFeeNamesPending={referenceFeeNamesPending}
             clientName={clientName}
             noteAuthors={initialNoteAuthors}
             onPolicyUpdated={onPolicyUpdated}

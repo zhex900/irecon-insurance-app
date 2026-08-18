@@ -146,6 +146,7 @@ export function WizardDefault(props: WizardStateProps) {
             borderClassName={wizard.borderClassName}
             handleFieldBlur={draftSave.handleFieldBlur}
             reference={props.reference}
+            referenceFeeNamesPending={props.referenceFeeNamesPending}
             carWording={wizard.carWording}
             rating={rating}
             premiumSectionProps={premiumSectionProps}

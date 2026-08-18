@@ -20,6 +20,7 @@ type SectionStackProps = {
   borderClassName: string;
   handleFieldBlur: () => void;
   reference: ReferenceData;
+  referenceFeeNamesPending?: boolean;
   carWording: CarWording[];
   rating: RatingSnapshot | undefined;
   premiumSectionProps: Omit<
@@ -39,6 +40,7 @@ export const SectionStack = memo(function SectionStack({
   borderClassName,
   handleFieldBlur,
   reference,
+  referenceFeeNamesPending = false,
   carWording,
   rating,
   premiumSectionProps,
@@ -53,6 +55,7 @@ export const SectionStack = memo(function SectionStack({
       }
       borderClassName={borderClassName}
       reference={reference}
+      referenceFeeNamesPending={referenceFeeNamesPending}
       rating={rating}
       fieldsLocked={fieldsLocked}
       {...premiumSectionProps}

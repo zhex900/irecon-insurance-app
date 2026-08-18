@@ -33,6 +33,8 @@ export function usePolicyEmailCompose(policyId: string, enabled: boolean) {
 
   if (policyId !== prevPolicyId) {
     setPrevPolicyId(policyId);
+    setLoadedPolicyId(null);
+    setPrevFetcherSnapshot(null);
   }
 
   const snapshot = { data: fetcher.data, state: fetcher.state };

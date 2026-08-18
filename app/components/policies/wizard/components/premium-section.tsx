@@ -29,6 +29,7 @@ export type PremiumSectionProps = {
   }) => Promise<boolean>;
   fieldsLocked: boolean;
   reference: ReferenceData;
+  referenceFeeNamesPending?: boolean;
   rating: RatingSnapshot | undefined;
   initialManualKeys: string[] | undefined;
   resetManualPremium: () => void;
@@ -53,6 +54,7 @@ export const PremiumSection = memo(function PremiumSection({
   persistDraft,
   fieldsLocked,
   reference,
+  referenceFeeNamesPending = false,
   rating,
   initialManualKeys,
   resetManualPremium,
@@ -100,6 +102,7 @@ export const PremiumSection = memo(function PremiumSection({
       <PremiumDeclaration
         premium={premium}
         reference={reference}
+        referenceFeeNamesPending={referenceFeeNamesPending}
         rating={rating}
         initialManualKeys={initialManualKeys}
         premiumEditable={!fieldsLocked}

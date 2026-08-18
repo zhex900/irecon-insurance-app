@@ -51,6 +51,8 @@ export function wizardModeCardBorderClass(mode: WizardMode) {
 export type WizardProps = {
   policy: Policy;
   reference: ReferenceData;
+  /** Live broker fee schedule still loading (`usePolicyFeeNames`). */
+  referenceFeeNamesPending?: boolean;
   readOnly?: boolean;
   freshSteps?: boolean;
   isNew?: boolean;

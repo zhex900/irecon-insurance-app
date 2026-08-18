@@ -3,20 +3,20 @@ import { useMemo } from "react";
 import { useOptionalApi } from "~/hooks/network/use-optional-api";
 import {
   buildPolicyListSecondaryUrl,
-  policyListMetaKey,
+  policyListSecondaryKey,
 } from "~/lib/search/policy-list-secondary-api";
 import type { PolicyListSecondaryResponse } from "~/lib/services/policies/list.service";
 import type { ListReferenceData } from "~/lib/services/reference.service";
 
 /** Load filter badge counts + live AM/AR in one `/api/policies/list-secondary` request. */
 export function usePolicyListSecondary(searchParams: URLSearchParams) {
-  const metaKey = useMemo(
-    () => policyListMetaKey(searchParams),
+  const secondaryKey = useMemo(
+    () => policyListSecondaryKey(searchParams),
     [searchParams],
   );
   const url = useMemo(
-    () => buildPolicyListSecondaryUrl(new URLSearchParams(metaKey)),
-    [metaKey],
+    () => buildPolicyListSecondaryUrl(new URLSearchParams(secondaryKey)),
+    [secondaryKey],
   );
 
   const { data, pending } = useOptionalApi<PolicyListSecondaryResponse>(url);

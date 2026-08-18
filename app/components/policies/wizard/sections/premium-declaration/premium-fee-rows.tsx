@@ -1,5 +1,6 @@
 import { InfoIcon } from "lucide-react";
 
+import { Skeleton } from "~/components/ui/skeleton";
 import { TableCell, TableRow } from "~/components/ui/table";
 import type { ReferenceData } from "~/lib/db/types";
 import type { PremiumLineWorking } from "~/lib/pricing/premium-workings";
@@ -26,11 +27,32 @@ function feeLineWorking(
 
 export function PremiumFeeRows({
   feeNames,
+  feeNamesPending = false,
   onExplainFee,
 }: {
   feeNames: ReferenceData["feeNames"];
+  feeNamesPending?: boolean;
   onExplainFee: (working: PremiumLineWorking) => void;
 }) {
+  if (feeNamesPending && feeNames.length === 0) {
+    return (
+      <>
+        {[0, 1].map((index) => (
+          <TableRow key={`fee-skeleton-${index}`}>
+            <TableCell className="py-2 pr-2">
+              <Skeleton className="h-4 w-40" aria-hidden />
+            </TableCell>
+            <TableCell className="py-2 pl-4" />
+            <TableCell className="py-2 pl-4" />
+            <TableCell className="py-2 pl-4 text-right">
+              <Skeleton className="ml-auto h-4 w-16" aria-hidden />
+            </TableCell>
+          </TableRow>
+        ))}
+      </>
+    );
+  }
+
   return (
     <>
       {feeNames.map((fee) => (

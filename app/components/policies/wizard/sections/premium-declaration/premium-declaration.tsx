@@ -15,6 +15,7 @@ import { usePremiumDeclarationEditing } from "./use-premium-declaration-editing"
 type PremiumDeclarationProps = {
   premium?: PremiumBreakdown;
   reference: ReferenceData;
+  referenceFeeNamesPending?: boolean;
   rating?: RatingSnapshot;
   adjustmentBreakdown?: AdjustmentBreakdown;
   premiumEditable?: boolean;
@@ -44,6 +45,7 @@ export function PremiumDeclaration(props: PremiumDeclarationProps) {
 function PremiumBreakdownCard({
   premium,
   reference,
+  referenceFeeNamesPending = false,
   canEdit,
   editing,
   isCalculating,
@@ -53,6 +55,7 @@ function PremiumBreakdownCard({
 }: {
   premium: PremiumBreakdown;
   reference: ReferenceData;
+  referenceFeeNamesPending?: boolean;
   canEdit: boolean;
   editing: ReturnType<typeof usePremiumDeclarationEditing>;
   isCalculating: boolean;
@@ -82,6 +85,7 @@ function PremiumBreakdownCard({
         <PremiumBreakdownTable
           premium={premium}
           reference={reference}
+          referenceFeeNamesPending={referenceFeeNamesPending}
           canEdit={canEdit}
           manualKeys={editing.manualKeys}
           onChange={editing.patchPremium}
@@ -96,6 +100,7 @@ function PremiumBreakdownCard({
 function PremiumDeclarationReady({
   premium,
   reference,
+  referenceFeeNamesPending = false,
   rating,
   adjustmentBreakdown,
   premiumEditable,
@@ -120,6 +125,7 @@ function PremiumDeclarationReady({
       <PremiumBreakdownCard
         premium={premium}
         reference={reference}
+        referenceFeeNamesPending={referenceFeeNamesPending}
         canEdit={Boolean(premiumEditable && onPremiumChange)}
         editing={editing}
         isCalculating={isCalculating ?? false}

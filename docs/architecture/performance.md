@@ -10,7 +10,7 @@ Measure before optimizing. Readability wins over micro-optimizations without evi
 - **Index** filters you actually use; verify slow paths with `EXPLAIN`.
 - **Transactions** for multi-table writes — correct first, then fast.
 - Prefer request-scoped `getDb()` / Hyperdrive pooling — don’t open ad-hoc pools per call.
-- **Workers query concurrency:** cap at **≤3 parallel** `getDb()` queries per loader/action. Each Worker request gets its **own postgres pool** (`max: 2`, closed after the request) plus a **per-request query gate** in `app/lib/db/client.ts` — pools must not be shared across requests (Workers I/O isolation). Use **waves** of `Promise.all`, **combined SQL** (`count(*) FILTER (WHERE …)` for badge counts), and **one query for feature flags** (`getFeatureFlagStates()`). See `app/lib/services/price/snapshot.ts` and `app/lib/services/policies/list.service.ts`.
+- **Workers query concurrency:** cap at **≤4 parallel** in-flight queries per loader/action (`WORKER_QUERY_GATE_MAX` in `app/lib/db/query-gate.ts`). Each Worker request gets its **own postgres pool** (`WORKER_POOL_MAX = 5`, closed after the request) plus a **per-request query gate** set one below pool max — pools must not be shared across requests (Workers I/O isolation). Use **waves** of `Promise.all`, **combined SQL** (`count(*) FILTER (WHERE …)` for badge counts), and **one query for feature flags** (`getFeatureFlagStates()`). See `app/lib/services/price/snapshot.ts` and `app/lib/services/policies/list.service.ts`.
 
 ## HTTP & payloads
 
@@ -87,14 +87,14 @@ The policy wizard loader returns **policy + client name only** (~2 queries). Sec
 
 **Save without revalidation:** `intent=save` returns `{ ok, policy, message }`; `shouldRevalidate` skips the loader. Local policy state updates via `usePolicySaveSync` + toast — avoids re-running email directory scans on status change.
 
-Static reference fields (`coverTypes`, `states`, …) come from `referenceData` on the client; only `feeNames` is merged from the async hook.
+Static reference fields (`coverTypes`, `states`, …) come from `referenceData` on the client; only `feeNames` is merged from the async hook. While fee names load, the premium breakdown shows skeleton rows (`referenceFeeNamesPending`).
 
 ### Adding a new async list route
 
 1. Split service into **core** (rows) and **meta** (counts/options).
 2. Slim the route loader to core + pagination only.
-3. Add `GET /api/<domain>/list-meta` with `requireAuth` + Zod (mirror list URL params).
-4. Add a `useFetcher` hook; reload when filter search params change (omit `page` / `pageSize` for meta).
+3. Add `GET /api/<domain>/list-secondary` (or split meta + reference endpoints) with `requireAuth` + Zod (mirror list URL params).
+4. Add a `useFetcher` hook; reload when filter search params change (omit `page` / `pageSize` for secondary data).
 5. Show rows immediately; badges/options fill in with `—` or skeleton while pending.
 6. Tighten `shouldRevalidate` — revalidate on mutations, not `return true` always.
 
@@ -119,7 +119,7 @@ Treat these as **yellow flags** — fix before preview/staging shows 1102:
 
 | Trigger | Action |
 | ------- | ------ |
-| Loader runs **> 3** parallel `getDb()` calls in one wave | Split into waves or combine SQL |
+| Loader runs **> 4** parallel `getDb()` calls in one wave | Split into waves or combine SQL |
 | Loader runs **> 6** total queries | Move badge counts / reference to `api/*` + `useFetcher` |
 | `getReferenceDataAsync()` on a list page | Static catalogue + `getListReferenceAsync()` or `/api/reference/list` |
 | Unused aggregates (e.g. premium sum on index) | Drop or gate behind `includePremium` |
@@ -131,12 +131,12 @@ Treat these as **yellow flags** — fix before preview/staging shows 1102:
 Before merging a list loader, count queries:
 
 ```
-Wave 1 (≤3 parallel): count + rows + ?
-Wave 2 (≤3 parallel): meta group counts + ?
+Wave 1 (≤4 parallel): count + rows + ?
+Wave 2 (≤4 parallel): meta group counts + ?
 Wave 3: ...
 ```
 
-Target for index loaders: **one wave of ≤3** (e.g. count + rows + optional small lookup). Push everything else to secondary `api/*` fetchers.
+Target for index loaders: **one wave of ≤4** (gate max; pool allows 5 connections). Push badge counts and live reference to secondary `api/*` fetchers.
 
 ### Optional: wrap hot loaders
 
