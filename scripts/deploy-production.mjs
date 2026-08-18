@@ -108,6 +108,7 @@ async function syncProductionSecrets(names) {
     APP_URL: names.appUrl,
     RESEND_API_KEY: process.env.RESEND_API_KEY,
     EMAIL_FROM: process.env.EMAIL_FROM,
+    AUTH_EMAIL_FROM: process.env.AUTH_EMAIL_FROM,
     EMAIL_REPLY_TO: process.env.EMAIL_REPLY_TO,
     SENTRY_DSN: process.env.SENTRY_DSN,
     TURNSTILE_SECRET_KEY: process.env.TURNSTILE_SECRET_KEY,
@@ -124,7 +125,7 @@ async function syncProductionSecrets(names) {
   }
   if (!process.env.RESEND_API_KEY?.trim() || !process.env.EMAIL_FROM?.trim()) {
     console.warn(
-      "Warning: RESEND_API_KEY / EMAIL_FROM empty — policy document email will fail until set.",
+      "Warning: RESEND_API_KEY / EMAIL_FROM empty — policy document and password reset email will fail until set.",
     );
   }
   if (!process.env.SENTRY_DSN?.trim()) {

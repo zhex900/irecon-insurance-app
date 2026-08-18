@@ -40,6 +40,7 @@ function applyDatabaseEnv(env: Env) {
   if (env.APP_URL) process.env.APP_URL = env.APP_URL;
   if (env.RESEND_API_KEY) process.env.RESEND_API_KEY = env.RESEND_API_KEY;
   if (env.EMAIL_FROM) process.env.EMAIL_FROM = env.EMAIL_FROM;
+  if (env.AUTH_EMAIL_FROM) process.env.AUTH_EMAIL_FROM = env.AUTH_EMAIL_FROM;
   if (env.EMAIL_REPLY_TO) process.env.EMAIL_REPLY_TO = env.EMAIL_REPLY_TO;
   if (env.SENTRY_DSN) process.env.SENTRY_DSN = env.SENTRY_DSN;
   if (env.TURNSTILE_SECRET_KEY) {

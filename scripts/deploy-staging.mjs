@@ -99,6 +99,7 @@ async function syncWorkerSecrets() {
   );
   await putSecret("RESEND_API_KEY", process.env.RESEND_API_KEY);
   await putSecret("EMAIL_FROM", process.env.EMAIL_FROM);
+  await putSecret("AUTH_EMAIL_FROM", process.env.AUTH_EMAIL_FROM);
   await putSecret("EMAIL_REPLY_TO", process.env.EMAIL_REPLY_TO);
   await putSecret("SENTRY_DSN", process.env.SENTRY_DSN);
   await putSecret("TURNSTILE_SECRET_KEY", process.env.TURNSTILE_SECRET_KEY);
@@ -110,7 +111,7 @@ async function syncWorkerSecrets() {
   }
   if (!process.env.RESEND_API_KEY?.trim() || !process.env.EMAIL_FROM?.trim()) {
     console.warn(
-      "Warning: RESEND_API_KEY / EMAIL_FROM empty — policy document email will fail on staging until set.",
+      "Warning: RESEND_API_KEY / EMAIL_FROM empty — policy document and password reset email will fail on staging until set.",
     );
   }
   if (!process.env.SENTRY_DSN?.trim()) {

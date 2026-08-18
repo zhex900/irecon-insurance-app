@@ -22,8 +22,29 @@ Env (local `.env` / Worker secrets):
 | `EMAIL_REPLY_TO` | No            | Optional reply-to                                          |
 | `APP_URL`        | Recommended   | Public origin for footer logo URL in outbound HTML emails  |
 
-## Auth emails — Supabase Auth
+## Auth emails — Resend
 
-Password **reset** and confirmation links use **Supabase Auth email templates** (`resetPasswordForEmail`, Auth dashboard templates). Admin user create sets a password and confirms email via the Admin API — no invite email via Resend.
+Password **reset** uses a custom Irecon template sent via **Resend** (`send-password-reset.server.ts`). Supabase Auth mints the recovery link only (`auth.admin.generateLink`); Supabase SMTP templates are not used for forgot-password.
 
-Do not duplicate auth mail through Resend unless product explicitly switches later.
+| Variable           | Required | Notes                                                                 |
+| ------------------ | -------- | --------------------------------------------------------------------- |
+| `RESEND_API_KEY`   | Yes      | Same as policy document email                                         |
+| `EMAIL_FROM`       | Yes      | Verified Resend sender, e.g. `Irecon Insurance <noreply@domain>`      |
+| `AUTH_EMAIL_FROM`  | No       | Optional override for auth mail; defaults to `EMAIL_FROM`             |
+| `EMAIL_REPLY_TO` | No       | Reply-to on policy / template emails only (not password reset)        |
+| `APP_URL`          | Yes      | Reset links redirect via `/auth/confirm?next=/reset-password`         |
+| `SUPABASE_SECRET_KEY` | Yes   | Admin API to generate recovery links (never expose to client)         |
+
+Disable Supabase Auth “Reset password” SMTP in the Supabase dashboard if you no longer want duplicate mail from Supabase.
+
+### Preview password reset email (local)
+
+```bash
+npm run db:start    # optional — loads footer logo from DB
+npm run preview:password-reset-email
+open .preview/password-reset-email.html
+```
+
+Uses a fake reset link (`code=preview-only`). To test delivery, use `/forgot-password` with your email (requires `RESEND_API_KEY` + `EMAIL_FROM` in `.env`).
+
+Admin user create sets a password and confirms email via the Admin API — no invite email via Resend.

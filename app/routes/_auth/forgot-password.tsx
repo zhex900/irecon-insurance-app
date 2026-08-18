@@ -11,9 +11,12 @@ import {
 import { Input } from "~/components/ui/input";
 import { LoadingButton } from "~/components/ui/loading-button";
 import { pageTitle } from "~/lib/brand";
+import { ExternalServiceError } from "~/lib/errors";
 import { logger } from "~/lib/observability/logger.server";
-import { resetPasswordForEmail } from "~/lib/supabase/auth.server";
+import { sendPasswordResetEmail } from "~/lib/services/email/send-password-reset.server";
+import { getUserByEmail } from "~/lib/services/users/service";
 import { getAppOrigin } from "~/lib/supabase/env.server";
+import { generatePasswordRecoveryLink } from "~/lib/supabase/password-reset.server";
 import { cn } from "~/lib/utils";
 
 import type { Route } from "./+types/forgot-password";
@@ -31,29 +34,51 @@ export async function action({ request }: Route.ActionArgs) {
 
   const origin = getAppOrigin(request);
   const redirectTo = `${origin}/auth/confirm?next=/reset-password`;
-  const { error } = await resetPasswordForEmail(email, redirectTo);
 
-  if (error) {
-    const msg = error.message.toLowerCase();
-    logger.warn("Password reset email failed", {
-      operation: "auth_password_reset_email",
-      errorType: error.name,
-    });
-    if (
-      msg.includes("rate limit") ||
-      msg.includes("over_email_send_rate_limit") ||
-      (error as { code?: string }).code === "over_email_send_rate_limit"
-    ) {
+  const profile = await getUserByEmail(email);
+  if (!profile) {
+    return {
+      success:
+        "If an account exists for that email, we sent a password reset link. Check your inbox (and spam).",
+    };
+  }
+
+  const linkResult = await generatePasswordRecoveryLink(email, redirectTo);
+  if (!linkResult.ok) {
+    if (linkResult.reason === "not_found") {
       return {
-        error:
-          "Too many password reset emails were sent recently. Wait about an hour and try again, or ask an admin to reset your password.",
+        success:
+          "If an account exists for that email, we sent a password reset link. Check your inbox (and spam).",
       };
     }
-    // Other delivery failures — don't claim success.
+    logger.warn("Password reset link generation failed", {
+      operation: "auth_password_reset_link",
+      errorType: linkResult.reason,
+    });
     return {
       error:
         "We couldn't send a reset email right now. Try again shortly, or contact an admin.",
     };
+  }
+
+  try {
+    await sendPasswordResetEmail({
+      to: email,
+      resetLink: linkResult.actionLink,
+      recipientName: profile.fullName,
+    });
+  } catch (error) {
+    logger.warn("Password reset email failed", {
+      operation: "auth_password_reset_email",
+      errorType: error instanceof Error ? error.name : "unknown",
+    });
+    if (error instanceof ExternalServiceError) {
+      return {
+        error:
+          "We couldn't send a reset email right now. Try again shortly, or contact an admin.",
+      };
+    }
+    throw error;
   }
 
   return {

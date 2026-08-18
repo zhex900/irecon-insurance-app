@@ -189,6 +189,7 @@ export async function signInWithPassword(email: string, password: string) {
   });
 }
 
+/** @deprecated Prefer generatePasswordRecoveryLink + Resend (forgot-password). */
 export async function resetPasswordForEmail(email: string, redirectTo: string) {
   const supabase = createPublishableClient();
   return supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {

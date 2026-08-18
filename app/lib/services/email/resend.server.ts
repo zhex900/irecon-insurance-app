@@ -16,8 +16,11 @@ export type SendEmailInput = {
   subject: string;
   text: string;
   html?: string;
+  /** Override default EMAIL_FROM (e.g. AUTH_EMAIL_FROM for auth mail). */
+  from?: string;
   cc?: string | string[];
-  replyTo?: string | string[];
+  /** Set `null` to omit reply-to (e.g. password reset). Default uses EMAIL_REPLY_TO. */
+  replyTo?: string | string[] | null;
   attachments?: SendEmailAttachment[];
   tags?: Array<{ name: string; value: string }>;
 };
@@ -44,6 +47,15 @@ export function getEmailFrom() {
     "EMAIL_FROM",
     process.env.EMAIL_FROM ?? process.env.RESEND_FROM_ADDRESS,
   );
+}
+
+/** Auth mail sender — defaults to EMAIL_FROM when AUTH_EMAIL_FROM is unset. */
+export function getAuthEmailFrom() {
+  const from =
+    process.env.AUTH_EMAIL_FROM?.trim() ||
+    process.env.EMAIL_FROM?.trim() ||
+    process.env.RESEND_FROM_ADDRESS?.trim();
+  return required("AUTH_EMAIL_FROM or EMAIL_FROM", from);
 }
 
 export function getEmailReplyTo() {
@@ -115,7 +127,10 @@ export async function sendEmail(
   input: SendEmailInput,
 ): Promise<SendEmailResult> {
   const resend = createResendClient();
-  const replyTo = input.replyTo ?? getEmailReplyTo();
+  const replyTo =
+    input.replyTo === null
+      ? undefined
+      : (input.replyTo ?? getEmailReplyTo());
 
   const inline = input.html?.trim()
     ? convertDataUriImagesToCid(input.html)
@@ -124,13 +139,13 @@ export async function sendEmail(
   const attachments = [...(input.attachments ?? []), ...inline.attachments];
 
   const { data, error } = await resend.emails.send({
-    from: getEmailFrom(),
+    from: input.from?.trim() || getEmailFrom(),
     to: input.to,
     subject: input.subject,
     text: stripDataUrisFromText(input.text),
     html: inline.html,
     cc: input.cc,
-    replyTo,
+    ...(replyTo ? { replyTo } : {}),
     attachments: attachments.map((file) => ({
       filename: file.filename,
       content: file.content,

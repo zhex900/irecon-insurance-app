@@ -31,6 +31,7 @@
     "deploy": "node --env-file=.env.staging scripts/deploy.mjs",
     "deploy:staging": "node --env-file=.env.staging scripts/deploy-staging.mjs",
     "deploy:prod": "node --env-file=.env.production scripts/deploy-production.mjs",
+    "preview:password-reset-email": "tsx --env-file=.env scripts/preview-password-reset-email.mts",
     "destroy": "node --env-file=.env.staging scripts/destroy-preview.mjs",
     "deploy:pdf:staging": "wrangler deploy --config wrangler.pdf.jsonc",
     "deploy:excel:staging": "wrangler deploy --config wrangler.excel.jsonc",
