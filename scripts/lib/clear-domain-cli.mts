@@ -15,7 +15,7 @@ import {
 export type ClearTargetEnv = "local" | "uat" | "prod";
 
 export type ClearScriptAction =
-  "policies" | "clients" | "account-managers" | "ar";
+  "policies" | "clients" | "account-managers" | "ar" | "legacy-domain";
 
 const ENV_FILES: Record<ClearTargetEnv, string> = {
   local: ".env",
@@ -146,6 +146,20 @@ function formatClearSummary(
     return `${scope}, ${typed.clientsRemoved} client(s), and ${typed.policiesRemoved} polic(y/ies)`;
   }
 
+  if (action === "legacy-domain") {
+    const typed = summary as {
+      policies: { policiesRemoved: number; clientsRemoved: number };
+      accountManagers: { accountManagersRemoved: number };
+      ar: { authorisedRepresentativesRemoved: number };
+    };
+    return (
+      `${typed.policies.policiesRemoved} polic(y/ies), ` +
+      `${typed.policies.clientsRemoved} client(s), ` +
+      `${typed.accountManagers.accountManagersRemoved} account manager(s), ` +
+      `${typed.ar.authorisedRepresentativesRemoved} AR(s)`
+    );
+  }
+
   const typed = summary as {
     authorisedRepresentativesRemoved: number;
     appUsersUnlinked: number;
@@ -170,6 +184,7 @@ function missingEnvHelp(action: ClearScriptAction): string {
     "account-managers":
       "npm run db:clear:account-managers -- --env=local --dry-run",
     ar: "npm run db:clear:ar -- --env=local",
+    "legacy-domain": "npm run db:clear:legacy:local",
   };
   return "Missing required --env=local|uat|prod.\n" + `  ${examples[action]}`;
 }
@@ -217,6 +232,12 @@ export async function runClearDomainScript<TSummary>(options: {
   if (options.action === "ar" && !runOptions.id) {
     console.warn(
       "⚠️  Clients keep stale authorised_representative_id values until re-seeded.",
+    );
+  }
+
+  if (options.action === "legacy-domain") {
+    console.warn(
+      "⚠️  Full legacy domain wipe: policies, clients, account managers, and AR.",
     );
   }
 

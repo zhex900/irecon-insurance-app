@@ -592,9 +592,39 @@ export function normaliseLegacyPolicyRow(
 
 /**
  * Legacy MSSQL reuses policy numbers across renewals; Postgres enforces
- * case-insensitive uniqueness. Suffix duplicates like 20260806120000 migration:
- * ATCCWI0487 → ATCCWI0487-1d45cdac (first 8 chars of deterministic UUID).
+ * case-insensitive uniqueness. Keep the earliest row's number; suffix later
+ * renewals with inception date parts, then UUID hash if all are taken:
+ * ATCCWI0487-2024 → ATCCWI0487-2024-06 → ATCCWI0487-2024-06-15 → hash.
  */
+function renewalPolicyNumberCandidates(
+  base: string,
+  dateStart: string,
+  policyId: number,
+): string[] {
+  const inception = dateOnly(dateStart);
+  const year = inception.slice(0, 4);
+  const month = inception.slice(5, 7);
+  const uuid = legacyPolicyUuid(policyId);
+
+  return [
+    `${base}-${year}`,
+    `${base}-${year}-${month}`,
+    `${base}-${inception}`,
+    `${base}-${uuid.slice(0, 8)}`,
+    `${base}-${uuid.replace(/-/g, "").slice(0, 12)}`,
+  ];
+}
+
+function pickUniquePolicyNumber(
+  candidates: string[],
+  usedKeys: Set<string>,
+): string {
+  for (const candidate of candidates) {
+    if (!usedKeys.has(candidate.toLowerCase())) return candidate;
+  }
+  return candidates.at(-1)!;
+}
+
 export function dedupeLegacyPolicyNumbers(rows: LegacyPolicyRow[]): {
   rows: LegacyPolicyRow[];
   suffixed: number;
@@ -621,16 +651,45 @@ export function dedupeLegacyPolicyNumbers(rows: LegacyPolicyRow[]): {
     });
   }
 
+  const usedKeys = new Set<string>();
+  const assigned = new Map<number, string>();
+
+  for (const row of rows) {
+    if (rankByPolicyId.get(row.policyId) !== 0) continue;
+    const base = row.policyNumber.trim();
+    usedKeys.add(base.toLowerCase());
+    assigned.set(row.policyId, base);
+  }
+
+  const duplicates = rows
+    .filter((row) => (rankByPolicyId.get(row.policyId) ?? 0) > 0)
+    .sort((a, b) => {
+      const keyA = a.policyNumber.trim().toLowerCase();
+      const keyB = b.policyNumber.trim().toLowerCase();
+      if (keyA !== keyB) return keyA.localeCompare(keyB);
+      return (
+        (rankByPolicyId.get(a.policyId) ?? 0) -
+        (rankByPolicyId.get(b.policyId) ?? 0)
+      );
+    });
+
   let suffixed = 0;
-  const deduped = rows.map((row) => {
-    const rank = rankByPolicyId.get(row.policyId)!;
-    if (rank === 0) return row;
+  for (const row of duplicates) {
     suffixed += 1;
-    const uuid = legacyPolicyUuid(row.policyId);
-    return {
-      ...row,
-      policyNumber: `${row.policyNumber}-${uuid.slice(0, 8)}`,
-    };
+    const base = row.policyNumber.trim();
+    const finalNumber = pickUniquePolicyNumber(
+      renewalPolicyNumberCandidates(base, row.dateStart, row.policyId),
+      usedKeys,
+    );
+
+    usedKeys.add(finalNumber.toLowerCase());
+    assigned.set(row.policyId, finalNumber);
+  }
+
+  const deduped = rows.map((row) => {
+    const finalNumber = assigned.get(row.policyId);
+    if (!finalNumber || finalNumber === row.policyNumber.trim()) return row;
+    return { ...row, policyNumber: finalNumber };
   });
 
   return { rows: deduped, suffixed };

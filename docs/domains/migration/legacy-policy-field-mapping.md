@@ -127,22 +127,22 @@ Legacy-only period fix (superseded): `npm run db:repair:policy-periods`
 
 ### `Policy` → `policy`
 
-| Legacy (`dbo.Policy`) | Export alias     | Postgres `policy`    | Transform                     |
-| --------------------- | ---------------- | -------------------- | ----------------------------- |
-| `PolicyId`            | `policyId`       | —                    | UUID via `legacyPolicyUuid()` |
-| `ClientId`            | `clientId`       | `client_id`          | UUID via `legacyClientUuid()` |
-| `PolicyNumber`        | `policyNumber`   | `policy_number`      | Deduped suffix on collision   |
-| `PolicyAction`        | `policyAction`   | `policy_category_id` | `RWL` → 2, else 1             |
-| —                     | —                | `policy_type_id`     | Always `1` (CAR)              |
-| —                     | `policyStatusId` | `policy_status_id`   | From `PolicyCAR.Status`       |
-| —                     | `postcode`       | `postcode`           |                               |
-| —                     | `stateCode`      | `state_id`           | Code → integer 1–8            |
-| `InceptionDate`       | `dateStart`      | `date_start`         | Date only                     |
-| `ExpiryDate`          | `dateEnd`        | `date_end`           | Date only                     |
-| `UnderwriterCode`     | `insurerCode`    | `insurer_code`       | Default `ATC`                 |
-| `CreatedDate`         | `createdWhen`    | `created_when`       |                               |
-| —                     | —                | `created_by`         | `migrate:mssql`               |
-| —                     | —                | `is_draft`           | `false` when premium present  |
+| Legacy (`dbo.Policy`) | Export alias     | Postgres `policy`    | Transform                                 |
+| --------------------- | ---------------- | -------------------- | ----------------------------------------- |
+| `PolicyId`            | `policyId`       | —                    | UUID via `legacyPolicyUuid()`             |
+| `ClientId`            | `clientId`       | `client_id`          | UUID via `legacyClientUuid()`             |
+| `PolicyNumber`        | `policyNumber`   | `policy_number`      | Renewal dupes: year → month → date → hash |
+| `PolicyAction`        | `policyAction`   | `policy_category_id` | `RWL` → 2, else 1                         |
+| —                     | —                | `policy_type_id`     | Always `1` (CAR)                          |
+| —                     | `policyStatusId` | `policy_status_id`   | From `PolicyCAR.Status`                   |
+| —                     | `postcode`       | `postcode`           |                                           |
+| —                     | `stateCode`      | `state_id`           | Code → integer 1–8                        |
+| `InceptionDate`       | `dateStart`      | `date_start`         | Date only                                 |
+| `ExpiryDate`          | `dateEnd`        | `date_end`           | Date only                                 |
+| `UnderwriterCode`     | `insurerCode`    | `insurer_code`       | Default `ATC`                             |
+| `CreatedDate`         | `createdWhen`    | `created_when`       |                                           |
+| —                     | —                | `created_by`         | `migrate:mssql`                           |
+| —                     | —                | `is_draft`           | `false` when premium present              |
 
 ### `PolicyCAR` → `policy_car` (risk & limits)
 

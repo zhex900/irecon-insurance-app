@@ -136,6 +136,12 @@ export type ArClearSummary = {
   clientsWithOrphanedAr: number;
 };
 
+export type LegacyDomainClearSummary = {
+  policies: ClearSummary;
+  accountManagers: AccountManagersClearSummary;
+  ar: ArClearSummary;
+};
+
 export type ClearRunOptions = {
   dryRun?: boolean;
   clientId?: string;
@@ -439,5 +445,24 @@ export async function clearAuthorisedRepresentatives(
     authorisedRepresentativesRemoved: arCount,
     appUsersUnlinked,
     clientsWithOrphanedAr,
+  };
+}
+
+/** Wipe legacy-migrated domain data (policies → clients → account managers → AR). */
+export async function clearLegacyDomain(options?: {
+  dryRun?: boolean;
+}): Promise<LegacyDomainClearSummary> {
+  const clients = await clearClients({ dryRun: options?.dryRun });
+  const accountManagers = await clearAccountManagers({
+    dryRun: options?.dryRun,
+  });
+  const ar = await clearAuthorisedRepresentatives({ dryRun: options?.dryRun });
+  return {
+    policies: {
+      policiesRemoved: clients.policiesRemoved,
+      clientsRemoved: clients.clientsRemoved,
+    },
+    accountManagers,
+    ar,
   };
 }
