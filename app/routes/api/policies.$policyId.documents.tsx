@@ -31,6 +31,7 @@ const policyDocumentSchema = z
     generatedWhen: z.string().max(100),
     generatedBy: z.string().max(500),
     documentTypeCode: z.string().trim().max(50).optional(),
+    r2Key: z.string().trim().min(1).max(512).optional(),
   })
   .strict();
 

@@ -25,6 +25,10 @@ export default [
     "routes/api/policies.$policyId.documents.tsx",
   ),
   route(
+    "api/policies/:policyId/documents/r2",
+    "routes/api/policies.$policyId.documents.r2.tsx",
+  ),
+  route(
     "api/policies/:policyId/email-documents",
     "routes/api/policies.$policyId.email-documents.tsx",
   ),

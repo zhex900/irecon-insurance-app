@@ -248,6 +248,8 @@ export type PolicyDocument = {
   generatedBy: string;
   /** Document type code (CARSCHED, CARRATING, CARADJUST, CARADDIT) */
   documentTypeCode?: string;
+  /** R2 object key when PDF is stored in object storage (legacy migration). */
+  r2Key?: string;
 };
 
 export type Policy = {

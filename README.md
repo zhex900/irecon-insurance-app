@@ -35,8 +35,9 @@ Clients, policies, prices, and users persist in **Supabase Postgres** via Drizzl
 
 ```text
 app/           React Router application
+infra/         Deploy, preview envs, Cloudflare/Supabase ops
 public/        Static assets
-scripts/       Seed, deploy, MCP helpers
+scripts/       DB seed, dev tooling, MCP helpers
 supabase/      Migrations + local Supabase config
 docs/          Living docs (incl. production refactor plan)
 _archive/      Legacy app, specs, CSVs, MSSQL dumps (not deployed)

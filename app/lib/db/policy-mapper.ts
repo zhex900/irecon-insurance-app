@@ -14,6 +14,7 @@ import {
   flatCustomWordings,
   normalizeCustomWordings,
 } from "~/lib/policies/custom-wordings";
+import { normalizeExcesses } from "~/lib/policies/excesses";
 
 type PolicyRow = typeof policy.$inferSelect;
 type PolicyCarRow = typeof policyCar.$inferSelect;
@@ -233,7 +234,10 @@ export function rowsToPolicy(
         car.contractWorksDisplayHomesPremium,
       ),
       subLimits: (car.subLimits ?? {}) as CarSubLimits,
-      excesses: extras.excesses as CarExcesses,
+      excesses: normalizeExcesses(
+        (extras.excesses ?? {}) as CarExcesses,
+        num(car.estimatedTurnover),
+      ),
       excludedContracts1: extras.excludedContracts1 ?? "",
       excludedContracts2: extras.excludedContracts2 ?? "",
       excludedContracts3: extras.excludedContracts3 ?? "",

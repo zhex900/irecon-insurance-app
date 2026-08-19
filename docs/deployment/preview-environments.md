@@ -30,7 +30,7 @@ Supabase branching is **not** used (requires Pro). Copy `.env.pr.example` → `.
 | Hyperdrive           | `insurance-app-pr-11` → shared PR Postgres              |
 | Database             | Shared PR Supabase project (same for every PR number)   |
 
-Infra targets (Hyperdrive limits, Supabase pool size, Worker CPU) live in [`scripts/lib/infra-settings.mjs`](../scripts/lib/infra-settings.mjs). Deploy applies Hyperdrive limits automatically; Supabase pool size is set manually in each project's dashboard.
+Infra targets (Hyperdrive limits, Supabase pool size, Worker CPU) live in [`infra/lib/infra-settings.mjs`](../infra/lib/infra-settings.mjs). Deploy applies Hyperdrive limits automatically; Supabase pool size is set manually in each project's dashboard.
 
 Generated wrangler configs live in `.preview-envs/<env>/` (gitignored).
 
@@ -88,12 +88,13 @@ npm run destroy -- pr-11
 
 ## CI (GitHub Actions)
 
-| Workflow         | Trigger             | What runs                                                |
-| ---------------- | ------------------- | -------------------------------------------------------- |
-| `pr-preview.yml` | PR opened / updated | Quality → `npm run deploy:pr` → E2E → PR comment         |
-| `pr-cleanup.yml` | PR closed           | `npm run destroy:pr`; on **merge**, `npm run deploy:uat` |
+| Workflow         | Trigger                      | What runs                                                |
+| ---------------- | ---------------------------- | -------------------------------------------------------- |
+| `pr-preview.yml` | PR opened / updated          | Quality → `npm run deploy:pr` → E2E → PR comment         |
+| `pr-cleanup.yml` | PR closed                    | `npm run destroy:pr`; on **merge**, `npm run deploy:uat` |
+| `release.yml`    | GitHub Release **published** | `npm run deploy:prod` (non-prerelease only)              |
 
-Workflows write `.env.pr` / `.env.uat` at runtime via `scripts/ci-write-env.mjs` from GitHub **environments** + **repository** secrets (no monolithic env-file secret).
+Workflows write `.env.pr` / `.env.uat` at runtime via `infra/ci-write-env.mjs` from GitHub **environments** + **repository** secrets (no monolithic env-file secret).
 
 ### GitHub environment: `uat`
 
@@ -104,6 +105,21 @@ Workflows write `.env.pr` / `.env.uat` at runtime via `scripts/ci-write-env.mjs`
 | `SUPABASE_URL`             | secret   | UAT deploy |
 | `SUPABASE_PUBLISHABLE_KEY` | secret   | UAT deploy |
 | `SUPABASE_SECRET_KEY`      | secret   | UAT deploy |
+
+### GitHub environment: `production`
+
+Configure **required reviewers** on this environment before first use.
+
+| Name                       | Kind     | Used by                  |
+| -------------------------- | -------- | ------------------------ |
+| `APP_URL`                  | variable | Production deploy        |
+| `DATABASE_URL`             | secret   | Production deploy        |
+| `SUPABASE_URL`             | secret   | Production deploy        |
+| `SUPABASE_PUBLISHABLE_KEY` | secret   | Production deploy        |
+| `SUPABASE_SECRET_KEY`      | secret   | Production deploy        |
+| `CLOUDFLARE_API_TOKEN`     | secret   | Wrangler deploy          |
+| `VITE_TURNSTILE_SITE_KEY`  | secret   | optional — login captcha |
+| `TURNSTILE_SECRET_KEY`     | secret   | optional — login captcha |
 
 ### GitHub environment: `pr`
 
