@@ -53,7 +53,9 @@ async function loadEnv() {
     throw new Error("DATABASE_URL is required in .env.production.");
   }
   if (isLocalDbUrl(uatDatabaseUrl)) {
-    throw new Error("UAT database URL in .env.uat must not point at localhost.");
+    throw new Error(
+      "UAT database URL in .env.uat must not point at localhost.",
+    );
   }
   if (isLocalDbUrl(prodDatabaseUrl)) {
     throw new Error(
@@ -93,9 +95,8 @@ async function main() {
   const { uatDatabaseUrl, prodDatabaseUrl, prodSupabaseUrl } = await loadEnv();
   const workDir = join(webRoot, ".production-env", "uat-dump");
 
-  const prodHost = new URL(
-    prodDatabaseUrl.replace(/^postgres:/, "postgresql:"),
-  ).host;
+  const prodHost = new URL(prodDatabaseUrl.replace(/^postgres:/, "postgresql:"))
+    .host;
 
   console.log("UAT → production database copy");
   console.log("  Source: UAT (.env.uat)");
