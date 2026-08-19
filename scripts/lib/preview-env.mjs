@@ -476,7 +476,7 @@ export const observability = {
   },
 };
 
-export {
+import {
   HYPERDRIVE_ORIGIN_CONNECTION_LIMIT,
   SUPABASE_POOL_SIZE,
   WORKER_CPU_MS,
@@ -484,6 +484,15 @@ export {
   WORKER_DB_QUERY_GATE_MAX,
   workerCpuLimits,
 } from "./infra-settings.mjs";
+
+export {
+  HYPERDRIVE_ORIGIN_CONNECTION_LIMIT,
+  SUPABASE_POOL_SIZE,
+  WORKER_CPU_MS,
+  WORKER_DB_POOL_MAX,
+  WORKER_DB_QUERY_GATE_MAX,
+  workerCpuLimits,
+};
 
 /** Paths are relative to `.preview-envs/<label>/` where generated wrangler files live. */
 const fromPreviewDir = {
