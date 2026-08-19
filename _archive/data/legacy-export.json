@@ -1,7 +1,7 @@
 {
   "meta": {
     "source": "mssql:legacy-domain",
-    "exportedAt": "2026-08-19T23:30:11.949Z",
+    "exportedAt": "2026-08-19T23:41:19.022Z",
     "database": "vs434253_1"
   },
   "accountManagers": [
