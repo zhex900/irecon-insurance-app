@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
+
+import type { CarExcesses } from "~/lib/db/types";
 import {
-  CONTRACT_VALUE_BAND_LABEL,
   activeBandExcessAmounts,
+  CONTRACT_VALUE_BAND_LABEL,
   contractValueBandLabel,
 } from "~/lib/policies/excesses";
-import type { CarExcesses } from "~/lib/db/types";
 
 const excesses: Pick<
   CarExcesses,

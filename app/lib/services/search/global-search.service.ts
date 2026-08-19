@@ -2,13 +2,14 @@
  * Global search across clients and policies.
  */
 import { inArray } from "drizzle-orm";
+
 import { getDb } from "~/lib/db/client";
 import { authorisedRepresentative } from "~/lib/db/schema";
 import { listAccountManagers } from "~/lib/services/account-managers/service";
+import { normalizeAuthorisedRepresentative } from "~/lib/services/authorised-representatives/normalize";
 import { listClientsPage } from "~/lib/services/clients/list.service";
 import { listPoliciesPage } from "~/lib/services/policies/list.service";
 import { getReferenceData } from "~/lib/services/reference.service";
-import { normalizeAuthorisedRepresentative } from "~/lib/services/authorised-representatives/normalize";
 
 export type GlobalSearchClientHit = {
   clientId: string;
@@ -101,7 +102,13 @@ export async function searchGlobal(q: string, limit = 8) {
 
   const [clientsPage, policiesPage] = await Promise.all([
     listClientsPage({ search: trimmed, limit, offset: 0 }),
-    listPoliciesPage({ search: trimmed, limit, offset: 0 }),
+    listPoliciesPage(
+      { search: trimmed, limit, offset: 0 },
+      {
+        includeMeta: false,
+        includePremium: false,
+      },
+    ),
   ]);
 
   const reference = getReferenceData();

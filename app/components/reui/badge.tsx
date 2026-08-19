@@ -1,7 +1,7 @@
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
-import { cva } from "class-variance-authority";
 import type { VariantProps } from "class-variance-authority";
+import { cva } from "class-variance-authority";
 
 import { cn } from "~/lib/utils";
 
@@ -50,7 +50,7 @@ const badgeVariants = cva(
         "invert-outline":
           "border-border bg-background text-invert-foreground dark:bg-input/30",
         "focus-outline":
-          "text-focus-foreground border-border bg-background dark:bg-input/30",
+          "border-border bg-background text-focus-foreground dark:bg-input/30",
       },
       size: {
         xs: "h-4 min-w-4 gap-1 px-1 py-0.25 text-[0.6rem] leading-none",
@@ -99,4 +99,4 @@ function Badge({
   });
 }
 
-export { Badge, badgeVariants, type BadgeProps };
+export { Badge, type BadgeProps, badgeVariants };

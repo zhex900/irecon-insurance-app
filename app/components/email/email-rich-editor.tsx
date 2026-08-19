@@ -1,14 +1,16 @@
+import "@react-email/editor/themes/default.css";
+
 import {
+  type ComponentType,
   forwardRef,
+  type ReactNode,
   useEffect,
   useImperativeHandle,
   useMemo,
   useRef,
   useState,
-  type ComponentType,
-  type ReactNode,
 } from "react";
-import "@react-email/editor/themes/default.css";
+
 import { cn } from "~/lib/utils";
 
 export type EmailRichEditorHandle = {

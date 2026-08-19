@@ -1,4 +1,4 @@
-import { createElement, type ComponentType, type ReactNode } from "react";
+import { type ComponentType, createElement, type ReactNode } from "react";
 
 /** Subset of `@react-email/editor/ui` SlashCommandItem (avoid SSR import). */
 type SlashCommandItem = {

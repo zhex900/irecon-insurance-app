@@ -1,21 +1,22 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { CopyIcon, SlidersHorizontalIcon, Trash2Icon } from "lucide-react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import {
-  redirect,
   Link,
+  redirect,
+  type ShouldRevalidateFunctionArgs,
   useActionData,
   useNavigation,
   useSearchParams,
   useSubmit,
-  type ShouldRevalidateFunctionArgs,
 } from "react-router";
 import { toast } from "sonner";
-import { CopyIcon, SlidersHorizontalIcon, Trash2Icon } from "lucide-react";
-import { CarPolicyWizard } from "~/components/policies/wizard/car-policy-wizard";
+
+import { DeletePoliciesDialog } from "~/components/policies/delete-policies-dialog";
+import { PolicyWizard } from "~/components/policies/wizard/wizard";
 import {
   allowWizardLeave,
   clearWizardStepState,
-} from "~/components/policies/wizard/step-memory";
-import { DeletePoliciesDialog } from "~/components/policies/delete-policies-dialog";
+} from "~/components/policies/wizard/wizard-step-memory";
 import { Button } from "~/components/ui/button";
 import { LoadingButton } from "~/components/ui/loading-button";
 import {
@@ -23,29 +24,25 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "~/components/ui/tooltip";
-import { withSuccessToast } from "~/hooks/use-success-toast";
+import { usePolicyFeeNames, usePolicyNoteAuthors } from "~/hooks/policy";
+import { withSuccessToast } from "~/hooks/utilities";
+import { requireAuth } from "~/lib/auth/session/server.server";
+import { pageTitle } from "~/lib/brand";
+import { publicErrorMessage } from "~/lib/http/public-error.server";
 import {
-  carPolicyDraftSchema,
-  carPolicyPricingSchema,
-  carPolicySchema,
-  isTerminalStatus,
-  parsePremiumOverride,
-  POLICY_STATUS,
-  type CarPolicyFormValues,
-} from "~/lib/zod/policy-car";
-import { requireAuth } from "~/lib/auth/session.server";
+  clientNotFoundResponse,
+  policyNotFoundResponse,
+} from "~/lib/http/resource-not-found";
 import {
   parseFormIntent,
   parsePositiveInteger,
   parseUuid,
 } from "~/lib/http/route-input";
-import {
-  clientNotFoundResponse,
-  policyNotFoundResponse,
-} from "~/lib/http/resource-not-found";
-import { publicErrorMessage } from "~/lib/http/public-error.server";
 import { trackUsage } from "~/lib/observability/metrics.server";
+import { referenceData } from "~/lib/reference-data";
 import { writeAuditLog } from "~/lib/services/audit/service";
+import { getClient } from "~/lib/services/clients/service";
+import { deletePolicies, getPolicy } from "~/lib/services/policy/data.service";
 import {
   addPolicyNote,
   applyPremiumCalculation,
@@ -55,20 +52,18 @@ import {
   updatePolicyNote,
   upsertPolicyFromForm,
 } from "~/lib/services/policy/orchestration.service";
-import { deletePolicies, getPolicy } from "~/lib/services/policy/data.service";
-import { getAuthorisedRepresentative } from "~/lib/services/authorised-representatives/service";
-import {
-  getCarWording,
-  getReferenceDataAsync,
-} from "~/lib/services/reference.service";
-import { getClient } from "~/lib/services/clients/service";
-import { listEmailTemplates } from "~/lib/services/email/templates.server";
-import { getEmailFooterImage } from "~/lib/services/email/footer-image.server";
-import { listEmailDirectory } from "~/lib/services/email/directory.server";
-import { emailVarsFromAccountManager } from "~/lib/email/templates";
 import { resolveNoteAuthors } from "~/lib/services/users/service";
+import {
+  carPolicyDraftSchema,
+  type CarPolicyFormValues,
+  carPolicyPricingSchema,
+  carPolicySchema,
+  isTerminalStatus,
+  parsePremiumOverride,
+  POLICY_STATUS,
+} from "~/lib/zod/policy-car";
+
 import type { Route } from "./+types/$policyId";
-import { pageTitle } from "~/lib/brand";
 
 export function meta({ loaderData }: Route.MetaArgs) {
   return [{ title: pageTitle(`${loaderData.policy.policyNumber}`) }];
@@ -82,35 +77,10 @@ export async function loader({ params, request }: Route.LoaderArgs) {
   if (!policy) throw policyNotFoundResponse();
   const client = await getClient(policy.clientId);
   if (!client) throw clientNotFoundResponse();
-  const [
-    broker,
-    emailTemplates,
-    noteAuthors,
-    reference,
-    carWording,
-    footerImage,
-    emailDirectory,
-  ] = await Promise.all([
-    getAuthorisedRepresentative(client.authorisedRepresentativeId),
-    listEmailTemplates(),
-    resolveNoteAuthors((policy.notes ?? []).map((note) => note.createdBy)),
-    getReferenceDataAsync(policy.dateStart),
-    getCarWording(),
-    getEmailFooterImage(),
-    listEmailDirectory(),
-  ]);
 
   return {
     policy,
-    client,
-    broker,
-    emailTemplates,
-    noteAuthors,
-    reference,
-    carWording,
-    footerImageDataUri: footerImage.dataUri,
-    footerImageWidth: footerImage.displayWidth,
-    emailDirectory,
+    clientName: client.name,
   };
 }
 
@@ -174,7 +144,9 @@ export async function action({ request, params }: Route.ActionArgs) {
 
   if (intent === "delete") {
     try {
-      const [deleted] = await deletePolicies([policyId]);
+      const [deleted] = await deletePolicies([policyId], {
+        userId: actor.userId,
+      });
       await writeAuditLog({
         actor,
         action: "policy.delete",
@@ -300,9 +272,13 @@ export async function action({ request, params }: Route.ActionArgs) {
   }
 
   if (intent === "recalculate" || intent === "calculate") {
+    const requestId = parsePositiveInteger(formData.get("requestId"));
     const parsed = carPolicyPricingSchema.safeParse(payload);
     if (!parsed.success) {
-      return { errors: parsed.error.flatten().fieldErrors };
+      return {
+        errors: parsed.error.flatten().fieldErrors,
+        ...(requestId != null ? { requestId } : {}),
+      };
     }
     const policy = await applyPremiumCalculation(
       policyId,
@@ -314,6 +290,7 @@ export async function action({ request, params }: Route.ActionArgs) {
       referralReasons: policy.car.referralReasons,
       rating: policy.car.rating,
       notes: policy.notes,
+      ...(requestId != null ? { requestId } : {}),
     };
   }
 
@@ -326,8 +303,9 @@ export async function action({ request, params }: Route.ActionArgs) {
   const premiumOverride = parsePremiumOverride(payload);
 
   const before = await getPolicy(policyId);
+  let saved;
   try {
-    await upsertPolicyFromForm(
+    saved = await upsertPolicyFromForm(
       policyId,
       {
         ...parsed.data,
@@ -342,10 +320,11 @@ export async function action({ request, params }: Route.ActionArgs) {
     throw error;
   }
 
-  if (
+  const statusChanged =
     before != null &&
-    Number(before.policyStatusId) !== Number(parsed.data.policyStatusId)
-  ) {
+    Number(before.policyStatusId) !== Number(parsed.data.policyStatusId);
+
+  if (statusChanged) {
     trackUsage("policy.submit", {
       result: "success",
       status_changed: true,
@@ -364,35 +343,31 @@ export async function action({ request, params }: Route.ActionArgs) {
       },
       request,
     });
-    return redirect(
-      withSuccessToast(
-        `/policies/${policyId}`,
-        `Policy ${before?.policyNumber ?? policyId} status saved`,
-      ),
-    );
+  } else {
+    trackUsage("policy.submit", {
+      result: "success",
+      status_changed: false,
+      to_status: statusLabel(parsed.data.policyStatusId),
+    });
+    await writeAuditLog({
+      actor,
+      action: "policy.save",
+      entityType: "policy",
+      entityId: policyId,
+      summary: `Saved policy ${before?.policyNumber ?? policyId}`,
+      metadata: { policyNumber: before?.policyNumber },
+      request,
+    });
   }
 
-  trackUsage("policy.submit", {
-    result: "success",
-    status_changed: false,
-    to_status: statusLabel(parsed.data.policyStatusId),
-  });
-  await writeAuditLog({
-    actor,
-    action: "policy.save",
-    entityType: "policy",
-    entityId: policyId,
-    summary: `Saved policy ${before?.policyNumber ?? policyId}`,
-    metadata: { policyNumber: before?.policyNumber },
-    request,
-  });
-
-  return redirect(
-    withSuccessToast(
-      `/policies/${policyId}`,
-      `Policy ${before?.policyNumber ?? policyId} saved`,
-    ),
-  );
+  return {
+    ok: true as const,
+    intent: "save" as const,
+    policy: saved,
+    message: statusChanged
+      ? `Policy ${saved.policyNumber} status saved`
+      : `Policy ${saved.policyNumber} saved`,
+  };
 }
 
 function statusLabel(statusId: number): string {
@@ -407,7 +382,17 @@ export function shouldRevalidate({
   actionResult,
   defaultShouldRevalidate,
 }: ShouldRevalidateFunctionArgs) {
-  if (formData?.get("intent") === "draft") return false;
+  const intent = formData?.get("intent");
+  if (
+    intent === "draft" ||
+    intent === "save" ||
+    intent === "add-note" ||
+    intent === "update-note" ||
+    intent === "recalculate" ||
+    intent === "calculate"
+  ) {
+    return false;
+  }
   if (
     actionResult &&
     typeof actionResult === "object" &&
@@ -422,15 +407,35 @@ export function shouldRevalidate({
 export default function PolicyDetailRoute({
   loaderData,
 }: Route.ComponentProps) {
+  const [policy, setPolicy] = useState(loaderData.policy);
+  const [prevLoaderPolicy, setPrevLoaderPolicy] = useState(loaderData.policy);
+  if (prevLoaderPolicy !== loaderData.policy) {
+    setPrevLoaderPolicy(loaderData.policy);
+    setPolicy(loaderData.policy);
+  }
   const [searchParams] = useSearchParams();
   const submit = useSubmit();
   const navigation = useNavigation();
   const actionData = useActionData<typeof action>();
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const readOnly = isTerminalStatus(loaderData.policy.policyStatusId);
+
+  const { feeNames, pending: feeNamesPending } = usePolicyFeeNames(
+    policy.dateStart,
+  );
+  const reference = useMemo(
+    () => ({
+      ...referenceData,
+      feeNames: feeNames ?? [],
+    }),
+    [feeNames],
+  );
+  const hasNotes = (policy.notes ?? []).length > 0;
+  const { noteAuthors } = usePolicyNoteAuthors(policy.policyId, hasNotes);
+
+  const readOnly = isTerminalStatus(policy.policyStatusId);
   const canAdjust =
-    loaderData.policy.policyStatusId === POLICY_STATUS.Taken &&
-    Boolean(loaderData.policy.car.premium);
+    policy.policyStatusId === POLICY_STATUS.Taken &&
+    Boolean(policy.car.premium);
   const canClone = readOnly;
   const canDelete = !readOnly;
   const isCloning =
@@ -447,10 +452,10 @@ export default function PolicyDetailRoute({
 
   useEffect(() => {
     if (!wasCloned) return;
-    if (clearedCloneForPolicyId.current === loaderData.policy.policyId) return;
-    clearWizardStepState(loaderData.policy.policyId);
-    clearedCloneForPolicyId.current = loaderData.policy.policyId;
-  }, [wasCloned, loaderData.policy.policyId]);
+    if (clearedCloneForPolicyId.current === policy.policyId) return;
+    clearWizardStepState(policy.policyId);
+    clearedCloneForPolicyId.current = policy.policyId;
+  }, [wasCloned, policy.policyId]);
 
   const lastDeleteErrorRef = useRef<string | null>(null);
   useEffect(() => {
@@ -476,10 +481,10 @@ export default function PolicyDetailRoute({
           </Button>
         ) : null}
         {canAdjust ? (
-          <Link to={`/policies/${loaderData.policy.policyId}/adjust`}>
+          <Link to={`/policies/${policy.policyId}/adjust`}>
             <Button size="sm">
               <SlidersHorizontalIcon data-icon="inline-start" />
-              {loaderData.policy.car.adjusted ? "Re-adjust" : "Adjust"}
+              {policy.car.adjusted ? "Re-adjust" : "Adjust"}
             </Button>
           </Link>
         ) : null}
@@ -509,43 +514,24 @@ export default function PolicyDetailRoute({
 
   return (
     <div>
-      <CarPolicyWizard
-        key={`${loaderData.policy.policyId}-${wasCloned ? "cloned" : "view"}`}
-        policy={loaderData.policy}
-        reference={loaderData.reference}
-        carWording={loaderData.carWording}
+      <PolicyWizard
+        key={`${policy.policyId}-${wasCloned ? "cloned" : "view"}`}
+        policy={policy}
+        onPolicyUpdated={setPolicy}
+        reference={reference}
+        referenceFeeNamesPending={feeNamesPending}
         readOnly={readOnly}
         freshSteps={wasCloned}
         isNew={isNew}
-        clientName={loaderData.client.name}
-        brokerName={loaderData.broker?.fullName ?? ""}
-        brokerEmail={loaderData.broker?.email ?? ""}
-        noteAuthors={loaderData.noteAuthors}
-        emailTemplates={loaderData.emailTemplates}
-        emailDirectory={loaderData.emailDirectory}
-        emailTemplateVars={{
-          coverType:
-            loaderData.reference.coverTypes.find(
-              (item) => item.coverTypeId === loaderData.policy.car.coverTypeId,
-            )?.name ?? "",
-          insuredName: loaderData.policy.car.insuredName,
-          siteAddress: loaderData.policy.car.siteAddress,
-          ...emailVarsFromAccountManager(
-            loaderData.reference.accountManagers.find(
-              (item) =>
-                item.accountManagerId === loaderData.client.accountManagerId,
-            ),
-          ),
-          footerImage: loaderData.footerImageDataUri,
-        }}
-        footerImageWidth={loaderData.footerImageWidth}
+        clientName={loaderData.clientName}
+        noteAuthors={noteAuthors}
         headerActions={headerActions}
       />
       <DeletePoliciesDialog
         policies={[
           {
-            policyId: loaderData.policy.policyId,
-            policyNumber: loaderData.policy.policyNumber,
+            policyId: policy.policyId,
+            policyNumber: policy.policyNumber,
           },
         ]}
         open={deleteOpen}
@@ -553,8 +539,8 @@ export default function PolicyDetailRoute({
         loading={isDeleting}
         error={deleteOpen ? deleteError : null}
         onBeforeSubmit={() => {
-          clearWizardStepState(loaderData.policy.policyId);
-          allowWizardLeave(loaderData.policy.policyId);
+          clearWizardStepState(policy.policyId);
+          allowWizardLeave(policy.policyId);
         }}
       />
     </div>

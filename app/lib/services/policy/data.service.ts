@@ -1,20 +1,25 @@
 import { and, desc, eq, inArray, ne, sql } from "drizzle-orm";
-import { getClient } from "~/lib/services/clients/service";
+
+import { getDb } from "~/lib/db/client";
+import { policyToRows, rowsToPolicy } from "~/lib/db/policy-mapper";
+import {
+  appUserRecentRoute,
+  policy,
+  policyCar,
+  policyCarAdjustment,
+} from "~/lib/db/schema";
+import type { Policy, PolicySummary } from "~/lib/db/types";
+import { trackUsage } from "~/lib/observability/metrics.server";
+import { normalizeExcesses } from "~/lib/policies/excesses";
+import { createInformationalNote } from "~/lib/policies/policy-notes";
+import { formatPolicyNumberFromSeq } from "~/lib/policies/policy-number";
+import { normalizeSubLimits } from "~/lib/policies/sub-limits";
+import { getClient, listClients } from "~/lib/services/clients/service";
 import {
   getDefaultExcesses,
   getReferenceData,
 } from "~/lib/services/reference.service";
-import { getDb } from "~/lib/db/client";
-import { policy, policyCar, policyCarAdjustment } from "~/lib/db/schema";
-import { policyToRows, rowsToPolicy } from "~/lib/db/policy-mapper";
-import { normalizeExcesses } from "~/lib/policies/excesses";
-import { formatPolicyNumberFromSeq } from "~/lib/policies/policy-number";
-import { normalizeSubLimits } from "~/lib/policies/sub-limits";
-import type { Policy, PolicySummary } from "~/lib/db/types";
-import { trackUsage } from "~/lib/observability/metrics.server";
 import { POLICY_STATUS } from "~/lib/zod/policy-car";
-import { listClients } from "~/lib/services/clients/service";
-import { createInformationalNote } from "~/lib/policies/policy-notes";
 
 /**
  * True when another policy already holds this number (case-insensitive).
@@ -42,7 +47,7 @@ export async function isPolicyNumberTaken(
 }
 
 /** Delete an unsaved new-policy draft (Pending + isDraft only). */
-export async function deletePolicyDraft(policyId: string) {
+export async function deletePolicyDraft(policyId: string, userId?: string) {
   const existing = await getPolicy(policyId);
   if (!existing) throw new Error("Policy not found");
   if (existing.policyStatusId !== 1 || !existing.isDraft) {
@@ -51,6 +56,20 @@ export async function deletePolicyDraft(policyId: string) {
 
   const db = getDb();
   await db.delete(policy).where(eq(policy.policyId, policyId));
+
+  // Clean up recent navigation entry for deleted draft policy
+  if (userId) {
+    const policyPath = `/policies/${policyId}`;
+    await db
+      .delete(appUserRecentRoute)
+      .where(
+        and(
+          eq(appUserRecentRoute.userId, userId),
+          eq(appUserRecentRoute.path, policyPath),
+        ),
+      );
+  }
+
   return existing;
 }
 
@@ -58,10 +77,11 @@ export async function deletePolicyDraft(policyId: string) {
  * Delete one or more non-terminal (Pending) policies.
  * Taken / Not taken policies are rejected.
  * Pass `clientId` to require all policies belong to that client.
+ * Pass `userId` to also clean up recent navigation entries for deleted policies.
  */
 export async function deletePolicies(
   policyIds: string[],
-  options?: { clientId?: string },
+  options?: { clientId?: string; userId?: string },
 ) {
   const ids = [...new Set(policyIds.map((id) => id.trim()).filter(Boolean))];
   if (ids.length === 0) throw new Error("No policies selected");
@@ -94,9 +114,23 @@ export async function deletePolicies(
     throw new Error("Taken and not taken policies cannot be deleted");
   }
 
+  // Delete the policies
   await db
     .delete(policy)
     .where(and(inArray(policy.policyId, ids), eq(policy.policyStatusId, 1)));
+
+  // Clean up recent navigation entries for deleted policies
+  if (options?.userId) {
+    const policyPaths = ids.map((id) => `/policies/${id}`);
+    await db
+      .delete(appUserRecentRoute)
+      .where(
+        and(
+          eq(appUserRecentRoute.userId, options.userId),
+          inArray(appUserRecentRoute.path, policyPaths),
+        ),
+      );
+  }
 
   return rows;
 }

@@ -1,5 +1,5 @@
-import geistLatin from "@fontsource-variable/geist/files/geist-latin-wght-normal.woff2?url";
 import geistLatinExt from "@fontsource-variable/geist/files/geist-latin-ext-wght-normal.woff2?url";
+import geistLatin from "@fontsource-variable/geist/files/geist-latin-wght-normal.woff2?url";
 
 /** Same hashed URLs used for preload + @font-face so the font is cached before paint. */
 export const geistFontFaces = [
@@ -30,6 +30,3 @@ export function geistFontFaceCss() {
     )
     .join("\n");
 }
-
-/** Apply saved/system theme before paint to avoid light→dark text reflow. */
-export const themeInitScript = `(function(){try{var t=localStorage.getItem("theme");var d=t==="dark"||((t==null||t==="system")&&window.matchMedia("(prefers-color-scheme: dark)").matches);if(d)document.documentElement.classList.add("dark");}catch(e){}})();`;

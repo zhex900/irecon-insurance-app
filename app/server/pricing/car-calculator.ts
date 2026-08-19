@@ -1,15 +1,15 @@
-import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
 import {
   GST_RATE,
   PLANT_CERTIFICATE_TURNOVER_LIMIT,
   TERROR_START_DATE,
   VERSION_21_START_DATE,
 } from "~/constants";
+import { rollupPremiumTotals } from "~/lib/pricing/premium-totals";
 import {
   buildReferralReasons,
   liabilityLimitLabel,
 } from "~/lib/pricing/referral-reasons";
-import { rollupPremiumTotals } from "~/lib/pricing/premium-totals";
+import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
 import {
   resolveEsl,
   resolvePlantRate,
@@ -19,8 +19,8 @@ import {
 } from "~/server/pricing/rate-resolver";
 import type {
   CarCalculatorResult,
-  RatingSnapshot,
   LiabilityLimitBand,
+  RatingSnapshot,
   ResolvedPlant,
   ResolvedPrice,
 } from "~/server/pricing/types";
@@ -64,6 +64,7 @@ export async function calculateCarPremium(
   );
   // Legacy CARCalculator: Terrorism Levy = True Base Premium × τ only.
   // Display Homes / Existing Structure are manual premium lines (not SI → premium).
+  // Reset / recalculate must emit 0 — undefined is treated as "keep existing" on save.
   const contractWorksDisplayHomesPremium = 0;
   const contractWorksExistingStructurePremium = 0;
   const contractWorksTerrorismPremium = round(

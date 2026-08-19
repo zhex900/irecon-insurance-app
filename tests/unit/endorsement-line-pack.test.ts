@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
+
 import {
   countLinesFittingInBandMm,
   endorsementDrawBoxBottomMm,
   endorsementPaintHeightForLinesMm,
   endorsementReserveHeightForLinesMm,
   splitLineCountsIntoPages,
-} from "~/lib/pdf/html-rich-text-lines";
+} from "~/lib/pdf/html-rich-text-geometry";
 
 describe("endorsement line packing", () => {
   const font = 9.5;
@@ -39,14 +40,14 @@ describe("endorsement line packing", () => {
   it("stops short last chunks above the next endorsement (no top-line overlap)", () => {
     const pageFloor = 285;
     const step = 4.2;
-    // Full-page continuation — may use the page floor.
+    // Full-page continuation — stops one line step above the floor.
     expect(
       endorsementDrawBoxBottomMm({
         pageFloorMm: pageFloor,
         reservedBottomMm: pageFloor - 1,
         lineStepMm: step,
       }),
-    ).toBe(pageFloor);
+    ).toBe(pageFloor - 1 - step);
     // Short last chunk with Heritage packed below — must not paint to the floor.
     expect(
       endorsementDrawBoxBottomMm({
@@ -54,7 +55,7 @@ describe("endorsement line packing", () => {
         reservedBottomMm: 40,
         lineStepMm: step,
       }),
-    ).toBe(40);
+    ).toBe(40 - step);
   });
 
   it("reserve height still fits the line count after 0.01mm rounding", () => {

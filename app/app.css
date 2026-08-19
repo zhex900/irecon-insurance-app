@@ -2,7 +2,7 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-/* Geist @font-face is inlined in root.tsx (same URL as preload) so first paint is stable. */
+/* Geist @font-face is injected via style tag in root.tsx (same URL as preload) so first paint is stable. */
 
 @custom-variant dark (&:is(.dark *));
 
@@ -357,8 +357,8 @@ body > div:has(> [data-re-slash-command]) {
 }
 
 /*
- * Side nav Recents insert: expand the new top row so the list only pushes down.
- * (Keep the spilled bottom row mounted + clipped so nothing jumps up first.)
+ * Side nav Recents insert: expand the new top row so the list pushes down.
+ * Keep the spilled bottom row mounted + clipped so nothing jumps up first.
  */
 @keyframes recents-expand-row {
   from {
@@ -378,6 +378,25 @@ body > div:has(> [data-re-slash-command]) {
 .recents-expand-row > * {
   min-height: 0;
   overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .recents-expand-row {
+    animation: none;
+  }
+}
+
+/* Additional Wording TipTap — @react-email/editor theme sets global
+   `.tiptap { color: var(--re-text) }` from OS prefers-color-scheme. Re-bind
+   to app theme tokens inside this shell. */
+.wording-rich-editor {
+  --re-text: var(--foreground);
+  --re-text-muted: var(--muted-foreground);
+}
+
+.wording-rich-editor .wording-rich-editor-prose.tiptap {
+  color: var(--foreground);
+  caret-color: var(--foreground);
 }
 
 /* Additional Wording TipTap / HTML view — list marker styles */

@@ -12,11 +12,11 @@ import {
 import { POLICY_NUMBER_PREFIX } from "~/lib/policies/policy-number";
 
 export {
-  EMAIL_FOOTER_DISPLAY_WIDTH_DEFAULT,
-  EMAIL_FOOTER_DISPLAY_WIDTH_MIN,
-  EMAIL_FOOTER_DISPLAY_WIDTH_MAX,
-  EMAIL_FOOTER_DISPLAY_WIDTH_STEP,
   clampEmailFooterDisplayWidth,
+  EMAIL_FOOTER_DISPLAY_WIDTH_DEFAULT,
+  EMAIL_FOOTER_DISPLAY_WIDTH_MAX,
+  EMAIL_FOOTER_DISPLAY_WIDTH_MIN,
+  EMAIL_FOOTER_DISPLAY_WIDTH_STEP,
 } from "~/lib/email/footer-display";
 
 /** Who the email is sent to (compose dialog / Resend tags). */

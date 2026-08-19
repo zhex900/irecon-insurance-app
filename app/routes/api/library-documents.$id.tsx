@@ -1,4 +1,4 @@
-import { requireAuth } from "~/lib/auth/session.server";
+import { requireAuth } from "~/lib/auth/session/server.server";
 import { getLibraryDocumentsBucket } from "~/lib/cloudflare.server";
 import { parsePositiveInteger } from "~/lib/http/route-input";
 import { getLibraryDocumentById } from "~/lib/services/documents/library-documents";
@@ -6,6 +6,7 @@ import {
   applyPrivatePdfResponseHeaders,
   getLibraryDocumentObject,
 } from "~/lib/storage/library-documents.server";
+
 import type { Route } from "./+types/library-documents.$id";
 
 export async function loader({ request, params, context }: Route.LoaderArgs) {

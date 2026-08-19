@@ -1,4 +1,5 @@
 import { z } from "zod";
+
 import { stripAmountCommas } from "~/lib/amount-input";
 
 export const carAdjustmentInputSchema = z.object({

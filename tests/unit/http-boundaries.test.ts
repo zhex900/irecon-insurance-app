@@ -1,13 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
+
 import { ConflictError, ValidationError } from "~/lib/errors";
+import { publicErrorMessage } from "~/lib/http/public-error.server";
 import {
   booleanFlagSchema,
+  optionalStrictIsoDateSchema,
   positiveIntegerSchema,
   queryTextSchema,
   searchParamsObject,
 } from "~/lib/http/route-input";
-import { publicErrorMessage } from "~/lib/http/public-error.server";
 import { logger } from "~/lib/observability/logger.server";
 
 vi.mock("~/lib/observability/logger.server", () => ({
@@ -30,6 +32,19 @@ describe("route input schemas", () => {
   it("accepts only explicit boolean query flags", () => {
     expect(booleanFlagSchema.parse("1")).toBe("1");
     expect(booleanFlagSchema.parse("true")).toBe("0");
+  });
+
+  it("validates strict optional ISO dates for API query params", () => {
+    expect(optionalStrictIsoDateSchema.parse(undefined)).toBeUndefined();
+    expect(optionalStrictIsoDateSchema.parse(null)).toBeUndefined();
+    expect(optionalStrictIsoDateSchema.parse("")).toBeUndefined();
+    expect(optionalStrictIsoDateSchema.parse("2026-07-01")).toBe("2026-07-01");
+    expect(optionalStrictIsoDateSchema.safeParse("01/07/2026").success).toBe(
+      false,
+    );
+    expect(optionalStrictIsoDateSchema.safeParse("2026-7-1").success).toBe(
+      false,
+    );
   });
 
   it("converts URL search parameters into a schema input", () => {

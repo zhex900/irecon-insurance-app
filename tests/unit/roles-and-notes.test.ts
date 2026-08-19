@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import {
   formatRoleLabel,
   isAdminRole,
@@ -73,7 +74,10 @@ describe("premium note helpers", () => {
         createdBy: "a@demo.local",
       },
     ]);
-    expect(sorted.map((n: PolicyNote) => n.description)).toEqual(["newer", "older"]);
+    expect(sorted.map((n: PolicyNote) => n.description)).toEqual([
+      "newer",
+      "older",
+    ]);
   });
 });
 

@@ -1,7 +1,11 @@
-import { describe, expect, it } from "vitest";
 import postgres from "postgres";
+import { describe, expect, it } from "vitest";
+
 import { FEATURE_KEYS, listFeatureFlags } from "~/lib/services/feature-flags";
-import { getReferenceData, getReferenceDataAsync } from "~/lib/services/reference.service";
+import {
+  getReferenceData,
+  getReferenceDataAsync,
+} from "~/lib/services/reference.service";
 import { listUsers } from "~/lib/services/users/service";
 
 const databaseUrl =

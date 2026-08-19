@@ -40,7 +40,7 @@ const CLIENT_ONLY_PREFIXES = [
 
 const CLIENT_ONLY_MODULE_SUFFIXES = [
   "/app/lib/pdf/generate.ts",
-  "/app/lib/pdf/plugins.ts",
+  "/app/lib/pdf/pdf-plugins.ts",
 ] as const;
 
 function isClientOnlyPackage(id: string): boolean {
@@ -54,7 +54,7 @@ function isClientOnlyPackage(id: string): boolean {
 function isClientOnlyModule(id: string): boolean {
   return (
     id === "~/lib/pdf/generate" ||
-    id === "~/lib/pdf/plugins" ||
+    id === "~/lib/pdf/pdf-plugins" ||
     CLIENT_ONLY_MODULE_SUFFIXES.some((suffix) => id.endsWith(suffix))
   );
 }

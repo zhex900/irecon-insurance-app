@@ -1,7 +1,8 @@
-import { requireAuth } from "~/lib/auth/session.server";
+import { requireAuth } from "~/lib/auth/session/server.server";
 import { getAvatarsBucket } from "~/lib/cloudflare.server";
 import { getUser } from "~/lib/services/users/service";
 import { getUserAvatarObject } from "~/lib/storage/avatars.server";
+
 import type { Route } from "./+types/avatars.$userId";
 
 export async function loader({ request, params, context }: Route.LoaderArgs) {

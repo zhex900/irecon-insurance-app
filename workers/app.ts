@@ -1,10 +1,11 @@
-import { createRequestHandler, RouterContextProvider } from "react-router";
 import * as Sentry from "@sentry/cloudflare";
-import { withRequestDb } from "../app/lib/db/client";
+import { createRequestHandler, RouterContextProvider } from "react-router";
+
 import {
   cloudflareContext,
   type CloudflareEnv,
 } from "../app/lib/cloudflare.server";
+import { withRequestDb } from "../app/lib/db/client";
 import { logger } from "../app/lib/observability/logger.server";
 import {
   resolveRequestId,
@@ -30,15 +31,15 @@ function applyDatabaseEnv(env: Env) {
     process.env.DATABASE_URL = env.DATABASE_URL;
   }
   if (env.SUPABASE_URL) process.env.SUPABASE_URL = env.SUPABASE_URL;
-  if (env.SUPABASE_ANON_KEY)
-    process.env.SUPABASE_ANON_KEY = env.SUPABASE_ANON_KEY;
-  if (env.SUPABASE_SERVICE_ROLE_KEY) {
-    process.env.SUPABASE_SERVICE_ROLE_KEY = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (env.SUPABASE_PUBLISHABLE_KEY) {
+    process.env.SUPABASE_PUBLISHABLE_KEY = env.SUPABASE_PUBLISHABLE_KEY;
+  }
+  if (env.SUPABASE_SECRET_KEY) {
+    process.env.SUPABASE_SECRET_KEY = env.SUPABASE_SECRET_KEY;
   }
   if (env.APP_URL) process.env.APP_URL = env.APP_URL;
   if (env.RESEND_API_KEY) process.env.RESEND_API_KEY = env.RESEND_API_KEY;
   if (env.EMAIL_FROM) process.env.EMAIL_FROM = env.EMAIL_FROM;
-  if (env.EMAIL_REPLY_TO) process.env.EMAIL_REPLY_TO = env.EMAIL_REPLY_TO;
   if (env.SENTRY_DSN) process.env.SENTRY_DSN = env.SENTRY_DSN;
   if (env.TURNSTILE_SECRET_KEY) {
     process.env.TURNSTILE_SECRET_KEY = env.TURNSTILE_SECRET_KEY;
@@ -78,11 +79,29 @@ const handler = {
           headers.append("Set-Cookie", setCookie);
         }
 
+        const durationMs = Date.now() - started;
+
         logger.info("request.complete", {
           status: response.status,
-          durationMs: Date.now() - started,
+          durationMs,
           method: request.method,
         });
+
+        if (durationMs >= 8_000) {
+          logger.error("request.slow", {
+            durationMs,
+            method: request.method,
+            status: response.status,
+            level: "error",
+          });
+        } else if (durationMs >= 2_000) {
+          logger.warn("request.slow", {
+            durationMs,
+            method: request.method,
+            status: response.status,
+            level: "warn",
+          });
+        }
 
         return new Response(response.body, {
           status: response.status,

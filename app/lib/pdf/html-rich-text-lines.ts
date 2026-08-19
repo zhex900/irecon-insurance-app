@@ -4,6 +4,10 @@
  */
 import type { PdfmeFontFamily } from "~/lib/pdf/font-config";
 import {
+  endorsementReserveHeightForLinesMm,
+  heuristicTextWidthPt,
+} from "~/lib/pdf/html-rich-text-geometry";
+import {
   defaultListStyleForTag,
   formatWordingListMarker,
   isWordingListStyle,
@@ -13,6 +17,13 @@ import {
   sanitizeWordingHtml,
   type WordingListStyle,
 } from "~/lib/policies/wording/html";
+
+import {
+  cloneStyle,
+  decodeEntities,
+  parseStyleDecls,
+  readAttr,
+} from "./html-utils";
 
 const MM_TO_PT = 72 / 25.4;
 
@@ -36,40 +47,6 @@ export type DrawLine = {
   /** Same <ol>/<ul> instance — used to size/align the shared marker column. */
   listGroupId?: number;
 };
-
-function decodeEntities(text: string): string {
-  return text
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'");
-}
-
-function readAttr(attrs: string, name: string): string | null {
-  const re = new RegExp(
-    `${name}\\s*=\\s*("([^"]*)"|'([^']*)'|([^\\s>]+))`,
-    "i",
-  );
-  const m = re.exec(attrs);
-  if (!m) return null;
-  return m[2] ?? m[3] ?? m[4] ?? null;
-}
-
-function parseStyleDecls(style: string): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const decl of style.split(";")) {
-    const [prop, ...rest] = decl.split(":");
-    if (!prop || rest.length === 0) continue;
-    out[prop.trim().toLowerCase()] = rest.join(":").trim();
-  }
-  return out;
-}
-
-function cloneStyle(style: RichTextRunStyle): RichTextRunStyle {
-  return { ...style };
-}
 
 export type HtmlToDrawLinesOptions = {
   /**
@@ -473,100 +450,6 @@ export function lineHasInk(line: DrawLine): boolean {
   return Boolean(line.marker) || line.runs.some((r) => r.text.trim());
 }
 
-const PT_TO_MM = 25.4 / 72;
-
-/** Average glyph width heuristic (pt) matching pdf draw packing closely. */
-export function heuristicTextWidthPt(text: string, fontSizePt: number): number {
-  return Math.max(0, String(text).length) * Math.max(1, fontSizePt) * 0.5;
-}
-
-/** First-baseline inset from the box top (mm) — matches html-rich-text-draw. */
-export function endorsementPaintTopInsetMm(fontSizePt: number): number {
-  return Math.max(1, fontSizePt) * 0.85 * PT_TO_MM;
-}
-
-export function endorsementLineStepMm(
-  fontSizePt: number,
-  lineHeight: number,
-): number {
-  return Math.max(1, fontSizePt) * Math.max(0.5, lineHeight) * PT_TO_MM;
-}
-
-/**
- * Minimum schema height (mm) so one painted baseline fits in the band.
- */
-export function minEndorsementPaintBandMm(
-  fontSizePt: number,
-  _lineHeight: number,
-): number {
-  return endorsementPaintTopInsetMm(fontSizePt);
-}
-
-/** Painted band height for exactly `lineCount` baselines. */
-export function endorsementPaintHeightForLinesMm(
-  lineCount: number,
-  fontSizePt: number,
-  lineHeight: number,
-): number {
-  if (lineCount <= 0) return 0;
-  const insetMm = endorsementPaintTopInsetMm(fontSizePt);
-  const stepMm = endorsementLineStepMm(fontSizePt, lineHeight);
-  return insetMm + (lineCount - 1) * stepMm;
-}
-
-/**
- * Schema / draw reserve height for `lineCount` baselines.
- * Rounds up so `countLinesFittingInBandMm(h)` never drops a line after
- * `toFixed(2)` — that off-by-one spilled the last line onto the next page
- * top (overlapping the following endorsement).
- */
-export function endorsementReserveHeightForLinesMm(
-  lineCount: number,
-  fontSizePt: number,
-  lineHeight: number,
-): number {
-  if (lineCount <= 0) return 0;
-  const need = endorsementPaintHeightForLinesMm(
-    lineCount,
-    fontSizePt,
-    lineHeight,
-  );
-  // Round UP to 0.01mm, then confirm; pad 0.01 if float still under-fits.
-  let h = Math.ceil(need * 100 - 1e-9) / 100;
-  if (countLinesFittingInBandMm(h, fontSizePt, lineHeight) < lineCount) {
-    h = Number((h + 0.01).toFixed(2));
-  }
-  return h;
-}
-
-/**
- * Lowest Y (mm from page top) where endorsement ink may still be painted.
- * Full-page chunks may use the page floor; short last chunks must stop at the
- * reserved bottom so the next subject on that page is not overpainted.
- */
-export function endorsementDrawBoxBottomMm(opts: {
-  pageFloorMm: number;
-  reservedBottomMm: number;
-  lineStepMm: number;
-}): number {
-  const { pageFloorMm, reservedBottomMm, lineStepMm } = opts;
-  const step = Math.max(0.5, lineStepMm);
-  const fillsPage = reservedBottomMm >= pageFloorMm - step * 0.5;
-  return fillsPage ? pageFloorMm : Math.min(pageFloorMm, reservedBottomMm);
-}
-
-/** How many baselines fit in a band of `bandHeightMm` (pack to the floor). */
-export function countLinesFittingInBandMm(
-  bandHeightMm: number,
-  fontSizePt: number,
-  lineHeight: number,
-): number {
-  const insetMm = endorsementPaintTopInsetMm(fontSizePt);
-  const stepMm = endorsementLineStepMm(fontSizePt, lineHeight);
-  if (bandHeightMm < insetMm - 0.01) return 0;
-  return Math.floor((bandHeightMm - insetMm) / stepMm + 1e-6) + 1;
-}
-
 export function wordingHtmlLineCount(
   html: string,
   widthMm: number,
@@ -597,45 +480,17 @@ export function estimateWordingHtmlHeightMm(
  * Split a line count across pages by how many lines actually fit in each band.
  * Never opens a page for a fractional leftover millimetre.
  */
-export function splitLineCountsIntoPages(
-  totalLines: number,
-  firstMaxMm: number,
-  pageMaxMm: number,
-  fontSizePt: number,
-  lineHeight: number,
-): number[] {
-  const total = Math.max(0, Math.floor(totalLines));
-  if (total <= 0) return [0];
-  const chunks: number[] = [];
-  let remaining = total;
-  let limitMm = Math.max(1, firstMaxMm);
-  while (remaining > 0) {
-    let fit = countLinesFittingInBandMm(limitMm, fontSizePt, lineHeight);
-    if (fit < 1) fit = 1;
-    const take = Math.min(remaining, fit);
-    chunks.push(take);
-    remaining -= take;
-    limitMm = Math.max(1, pageMaxMm);
-  }
-  return chunks;
-}
 
-/** @deprecated Prefer splitLineCountsIntoPages — mm splits orphan last lines. */
-export function splitHeightIntoPageChunks(
-  totalHeightMm: number,
-  firstMaxMm: number,
-  pageMaxMm: number,
-): number[] {
-  const total = Math.max(0, totalHeightMm);
-  if (total <= 0) return [0];
-  const chunks: number[] = [];
-  let remaining = total;
-  let limit = Math.max(1, firstMaxMm);
-  while (remaining > 0.05) {
-    const take = Math.min(remaining, limit);
-    chunks.push(Number(take.toFixed(2)));
-    remaining -= take;
-    limit = Math.max(1, pageMaxMm);
-  }
-  return chunks.length > 0 ? chunks : [0];
-}
+// Re-export geometry functions for backward compatibility
+// Re-export geometry functions for backward compatibility
+export {
+  countLinesFittingInBandMm,
+  endorsementDrawBoxBottomMm,
+  endorsementLineStepMm,
+  endorsementPaintHeightForLinesMm,
+  endorsementPaintTopInsetMm,
+  endorsementReserveHeightForLinesMm,
+  minEndorsementPaintBandMm,
+  splitHeightIntoPageChunks,
+  splitLineCountsIntoPages,
+} from "~/lib/pdf/html-rich-text-geometry";

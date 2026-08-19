@@ -20,7 +20,7 @@ import { policyToRows } from "../app/lib/db/policy-mapper";
 import type { Policy } from "../app/lib/db/types";
 import { createUser } from "../app/lib/services/users/service";
 import { getSupabaseAdmin } from "../app/lib/supabase/admin.server";
-import { seedAuthorisedRepresentativesFromCsv } from "./seed-ar-from-csv";
+import { seedAuthorisedRepresentativesFromCsv } from "./seed-ar-from-csv.mts";
 import { seedPrices } from "./seed-prices";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");

@@ -1,10 +1,10 @@
+import { GST_RATE } from "~/constants";
 import type {
   AdjustmentBreakdown,
   AdjustmentSectionRow,
   PremiumBreakdown,
   RatingSnapshot,
 } from "~/lib/db/types";
-import { GST_RATE } from "~/constants";
 
 /**
  * End-of-term adjustment (legacy CARAdjust.aspx).
@@ -142,10 +142,23 @@ export function validateAdjustmentFinish(
   return null;
 }
 
-/** @internal exported for unit tests */
+/** Fields `resolveAdjustmentRates` reads — Excel's slimmer snapshot is enough. */
+export type AdjustmentRateSource = Pick<
+  RatingSnapshot,
+  | "contractWorksAppliedRate"
+  | "liabilityAppliedRate"
+  | "contractWorksMinPremium"
+  | "liabilityMinPremium"
+  | "terrorismRate"
+  | "eslRate"
+  | "contractWorksStampDutyRate"
+  | "liabilityStampDutyRate"
+>;
+
+/** @internal exported for unit tests and the Excel worker (display rates only). */
 export function resolveAdjustmentRates(
   premium: PremiumBreakdown,
-  rating: RatingSnapshot,
+  rating: AdjustmentRateSource,
   originalTurnover: number,
 ) {
   const s1Base = premium.contractWorksBasePremium;

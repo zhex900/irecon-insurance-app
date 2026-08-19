@@ -1,16 +1,13 @@
-import { useMemo, useState } from "react";
-import { Form, useActionData, useNavigation, useSubmit } from "react-router";
-import { useForm } from "react-hook-form";
-import { flattenFieldErrors, focusFormIssue } from "~/lib/form-validation-ui";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { BadgeCheckIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import { useMemo, useState } from "react";
+import { useForm } from "react-hook-form";
+import { Form, useActionData, useNavigation, useSubmit } from "react-router";
+
 import { ListSearchField } from "~/components/forms/list-search-field";
-import { useHandledActionData } from "~/hooks/use-handled-action-data";
-import { useActionSuccessToast } from "~/hooks/use-success-toast";
-import { useDebouncedSearchQuery } from "~/hooks/use-debounced-search-query";
 import { PageHeader } from "~/components/layout/app-layout";
+import { SearchHighlight } from "~/components/search/highlight-cell";
 import { Button } from "~/components/ui/button";
-import { LoadingButton } from "~/components/ui/loading-button";
 import {
   Dialog,
   DialogContent,
@@ -32,6 +29,7 @@ import {
   InteractiveTableActionsCell,
   InteractiveTableRow,
 } from "~/components/ui/interactive-table-row";
+import { LoadingButton } from "~/components/ui/loading-button";
 import {
   Table,
   TableBody,
@@ -40,23 +38,27 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table";
-import { requireAuth } from "~/lib/auth/session.server";
+import { TablePagination } from "~/components/ui/table-pagination";
+import { useDebouncedSearchQuery } from "~/hooks/search";
+import { useActionSuccessToast, useHandledActionData } from "~/hooks/utilities";
 import { requireAdminPage } from "~/lib/auth/authorize.server";
+import { requireAuth } from "~/lib/auth/session/server.server";
+import { pageTitle } from "~/lib/brand";
+import { invalidateListReferenceSessionCache } from "~/lib/client/reference-session-cache";
+import type { WholesaleBroker } from "~/lib/db/types";
+import { flattenFieldErrors, focusFormIssue } from "~/lib/form-validation-ui";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
 import {
   parseFormIntent,
   parsePositiveInteger,
   queryTextSchema,
 } from "~/lib/http/route-input";
-import type { WholesaleBroker } from "~/lib/db/types";
-import { writeAuditLog } from "~/lib/services/audit/service";
-import { SearchHighlight } from "~/components/search/highlight-cell";
-import { TablePagination } from "~/components/ui/table-pagination";
 import {
   pageSearchHref,
   pageSizeSearchHref,
   parsePagination,
 } from "~/lib/pagination";
+import { writeAuditLog } from "~/lib/services/audit/service";
 import { listAuthorisedRepresentativesPage } from "~/lib/services/authorised-representatives/list.service";
 import {
   createAuthorisedRepresentative,
@@ -65,11 +67,11 @@ import {
   updateAuthorisedRepresentative,
 } from "~/lib/services/authorised-representatives/service";
 import {
-  authorisedRepresentativeSchema,
   type AuthorisedRepresentativeFormValues,
+  authorisedRepresentativeSchema,
 } from "~/lib/zod/authorised-representative";
+
 import type { Route } from "./+types/ar-brokers";
-import { pageTitle } from "~/lib/brand";
 
 export function meta() {
   return [{ title: pageTitle("Authorised Representatives") }];
@@ -251,7 +253,10 @@ function ArFormDialog({
   useHandledActionData(actionData, {
     enabled: open,
     intents: ["create", "update"],
-    onSuccess: () => onOpenChange(false),
+    onSuccess: () => {
+      invalidateListReferenceSessionCache();
+      onOpenChange(false);
+    },
   });
 
   return (
@@ -380,7 +385,10 @@ export default function SettingsArBrokersRoute({
 
   useHandledActionData(actionData, {
     intents: "delete",
-    onSuccess: () => setDeleting(null),
+    onSuccess: () => {
+      invalidateListReferenceSessionCache();
+      setDeleting(null);
+    },
   });
 
   function openCreate() {

@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
-import {
-  evaluateSessionTimeout,
-  readSessionTimeoutConfig,
-} from "~/lib/auth/session-timeout.server";
+
+import { evaluateSessionTimeout } from "~/lib/auth/session";
+import { readSessionTimeoutConfig } from "~/lib/auth/session/timeout.server";
 
 describe("readSessionTimeoutConfig", () => {
   it("uses defaults when env is empty", () => {

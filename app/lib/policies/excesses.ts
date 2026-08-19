@@ -1,5 +1,5 @@
-import type { CarExcesses } from "~/lib/db/types";
 import { stripAmountCommas } from "~/lib/amount-input";
+import type { CarExcesses } from "~/lib/db/types";
 
 export type ExcessFieldKey = Exclude<
   keyof CarExcesses,

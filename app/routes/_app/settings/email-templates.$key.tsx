@@ -1,10 +1,12 @@
 import { lazy, Suspense } from "react";
+
 import { EmailTemplateEditorShell } from "~/components/email/email-template-editor-loading";
 import { pageTitle } from "~/lib/brand";
 import {
   emailTemplateAction,
   loadEmailTemplateEditor,
 } from "~/lib/services/email/email-template-editor.server";
+
 import type { Route } from "./+types/email-templates.$key";
 
 const EmailTemplateEditor = lazy(() =>

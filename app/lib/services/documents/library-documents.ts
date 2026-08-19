@@ -1,5 +1,6 @@
 import { asc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
+
 import type { R2BucketLike } from "~/lib/cloudflare.server";
 import { getDb } from "~/lib/db/client";
 import { libraryDocument, libraryDocumentCoverType } from "~/lib/db/schema";
@@ -87,7 +88,7 @@ export async function listLibraryDocuments(): Promise<LibraryDocumentRecord[]> {
   const rows = await db
     .select()
     .from(libraryDocument)
-    .orderBy(asc(libraryDocument.filename));
+    .orderBy(asc(libraryDocument.createdWhen));
   const coverMap = await coverTypeIdsByDocumentIds(
     rows.map((row) => row.libraryDocumentId),
   );

@@ -1,13 +1,15 @@
 import { useState } from "react";
+
 import { PageHeader } from "~/components/layout/app-layout";
 import { Button, buttonVariants } from "~/components/ui/button";
 import { getAppEnvironment, getAppVersion } from "~/lib/app-version";
 import { requireSuperAdminPage } from "~/lib/auth/authorize.server";
-import { requireAuth } from "~/lib/auth/session.server";
+import { requireAuth } from "~/lib/auth/session/server.server";
 import { pageTitle } from "~/lib/brand";
 import { trackClientUsage } from "~/lib/observability/metrics.client";
 import { trackUsage } from "~/lib/observability/metrics.server";
 import { cn } from "~/lib/utils";
+
 import type { Route } from "./+types/sentry-test";
 
 export function meta() {
@@ -20,7 +22,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 
   const url = new URL(request.url);
   if (url.searchParams.get("throw") === "1") {
-    throw new Error("Sentry staging smoke test (server)");
+    throw new Error("Sentry UAT smoke test (server)");
   }
   if (url.searchParams.get("metric") === "1") {
     trackUsage("sentry.smoke_metric", { surface: "server" });
@@ -41,7 +43,7 @@ export default function SentryTestRoute({ loaderData }: Route.ComponentProps) {
       : "",
   );
   if (boom) {
-    throw new Error("Sentry staging smoke test (client)");
+    throw new Error("Sentry UAT smoke test (client)");
   }
 
   return (

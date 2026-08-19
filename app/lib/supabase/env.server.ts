@@ -12,23 +12,20 @@ export function getSupabaseUrl() {
   return required("SUPABASE_URL", process.env.SUPABASE_URL);
 }
 
-export function getSupabaseAnonKey() {
+export function getSupabasePublishableKey() {
   return required(
-    "SUPABASE_ANON_KEY",
-    process.env.SUPABASE_ANON_KEY ?? process.env.SUPABASE_PUBLISHABLE_KEY,
+    "SUPABASE_PUBLISHABLE_KEY",
+    process.env.SUPABASE_PUBLISHABLE_KEY,
   );
 }
 
-export function getSupabaseServiceRoleKey() {
-  return required(
-    "SUPABASE_SERVICE_ROLE_KEY",
-    process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SECRET_KEY,
-  );
+export function getSupabaseSecretKey() {
+  return required("SUPABASE_SECRET_KEY", process.env.SUPABASE_SECRET_KEY);
 }
 
 /**
  * Public app origin for auth emails / redirects.
- * Prefer APP_URL on staging/prod so reset links don't depend on request host.
+ * Prefer APP_URL on UAT/prod so reset links don't depend on request host.
  */
 export function getAppOrigin(request?: Request) {
   const configured = process.env.APP_URL?.trim().replace(/\/$/, "");

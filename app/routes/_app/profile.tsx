@@ -1,8 +1,10 @@
 import { useActionData } from "react-router";
+
 import { PageHeader } from "~/components/layout/app-layout";
 import { ProfileForm } from "~/components/profile/profile-form";
-import { requireAuth } from "~/lib/auth/session.server";
+import { useActionSuccessToast } from "~/hooks/utilities";
 import { isAdminRole } from "~/lib/auth/roles";
+import { requireAuth } from "~/lib/auth/session/server.server";
 import { pageTitle } from "~/lib/brand";
 import { getAvatarsBucket } from "~/lib/cloudflare.server";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
@@ -15,7 +17,7 @@ import {
 } from "~/lib/services/users/service";
 import { deleteUserAvatar, putUserAvatar } from "~/lib/storage/avatars.server";
 import { parseProfileFormData } from "~/lib/zod/app-user";
-import { useActionSuccessToast } from "~/hooks/use-success-toast";
+
 import type { Route } from "./+types/profile";
 
 export function meta() {

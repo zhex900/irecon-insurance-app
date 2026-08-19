@@ -1,4 +1,6 @@
+import type { Template } from "@pdfme/common";
 import { describe, expect, it } from "vitest";
+
 import {
   DEFAULT_ENDORSEMENT_BLOCK_GAP_MM,
   ENDORSEMENT_BLOCK_GAP_KEY,
@@ -10,14 +12,13 @@ import {
   setEndorsementBlockGapMm,
 } from "~/lib/pdf/endorsement-expand";
 import { endorsementsTableContent } from "~/lib/pdf/merge-fields";
-import type { Template } from "@pdfme/common";
 
 function blankTemplate(schemas: Template["schemas"]): Template {
   return {
     basePdf: {
       width: 210,
       height: 297,
-      padding: [10, 10, 10, 10],
+      padding: [10, 10, 10, 10] as [number, number, number, number],
     },
     schemas,
   };

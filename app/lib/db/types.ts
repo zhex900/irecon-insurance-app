@@ -82,8 +82,8 @@ export type PremiumBreakdown = {
   contractWorksStampDuty: number;
   contractWorksTerrorismPremium: number;
   contractWorksPlantTerrorismPremium: number;
-  contractWorksDisplayHomesPremium: number;
-  contractWorksExistingStructurePremium: number;
+  contractWorksDisplayHomesPremium?: number;
+  contractWorksExistingStructurePremium?: number;
   contractWorksTotalPremium: number;
   liabilityCalculatedBasePremium: number;
   liabilityBasePremium: number;
@@ -246,6 +246,8 @@ export type PolicyDocument = {
   pdfBase64?: string;
   generatedWhen: string;
   generatedBy: string;
+  /** Document type code (CARSCHED, CARRATING, CARADJUST, CARADDIT) */
+  documentTypeCode?: string;
 };
 
 export type Policy = {

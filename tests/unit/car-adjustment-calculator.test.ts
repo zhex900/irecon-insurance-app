@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
+
+import type { PremiumBreakdown, RatingSnapshot } from "~/lib/db/types";
 import {
   calculateCarAdjustment,
   resolveAdjustmentRates,
   validateAdjustmentFinish,
 } from "~/server/pricing/car-adjustment-calculator";
-import type { PremiumBreakdown, RatingSnapshot } from "~/lib/db/types";
 
 /** Minimal snapshotted premium for adjustment math (section bases only matter). */
 function premium(partial: Partial<PremiumBreakdown> = {}): PremiumBreakdown {

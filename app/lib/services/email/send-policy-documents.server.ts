@@ -2,24 +2,29 @@ import type { R2BucketLike } from "~/lib/cloudflare.server";
 import type { CarWording, Policy, PolicyDocument } from "~/lib/db/types";
 import type { EmailSendRecipient } from "~/lib/email/templates";
 import {
-  renderPolicyPdf,
-  type DocumentServiceBinding,
-} from "~/lib/pdf/document-worker.client.server";
+  trackDistribution,
+  trackUsage,
+} from "~/lib/observability/metrics.server";
+import { getRequestContext } from "~/lib/observability/request-context.server";
 import { buildLegacyTextPdfBlob } from "~/lib/pdf/legacy-text-pdf";
 import type { BrokerFeeLineInput } from "~/lib/pdf/merge-fields";
-import { getRequestContext } from "~/lib/observability/request-context.server";
-import { trackDistribution, trackUsage } from "~/lib/observability/metrics.server";
+import {
+  type PdfWorkerBinding,
+  renderPolicyPdf,
+} from "~/lib/pdf/pdf-worker.server";
+import { getAccountManager } from "~/lib/services/account-managers/service";
+import { getClient } from "~/lib/services/clients/service";
 import { resolvePublishedPdfTemplate } from "~/lib/services/documents/document-templates";
 import {
   getLibraryDocumentByFilename,
   getLibraryDocumentById,
 } from "~/lib/services/documents/library-documents";
-import { getLibraryDocumentObject } from "~/lib/storage/library-documents.server";
 import {
   sendEmail,
   type SendEmailAttachment,
 } from "~/lib/services/email/resend.server";
 import { getCarWording } from "~/lib/services/reference.service";
+import { getLibraryDocumentObject } from "~/lib/storage/library-documents.server";
 import { resolveBrokerFeeLines } from "~/server/pricing/rate-resolver";
 
 /** Soft cap before we refuse oversized packs (Resend limit is 40MB encoded). */
@@ -46,13 +51,14 @@ export type SendPolicyDocumentsInput = {
   html?: string;
   recipientType: EmailSendRecipient;
   libraryBucket?: R2BucketLike | null;
-  documentService: DocumentServiceBinding;
+  pdfService: PdfWorkerBinding;
 };
 
 export type SendPolicyDocumentsResult = {
   resendId: string;
   attachmentNames: string[];
   attachmentBytes: number;
+  replyTo: string;
 };
 
 function splitEmails(raw: string): string[] {
@@ -95,7 +101,7 @@ type ResolveDocumentPdfInput = {
   libraryBucket?: R2BucketLike | null;
   wordingCatalogue?: CarWording[];
   brokerFeeLines?: BrokerFeeLineInput[];
-  documentService: DocumentServiceBinding;
+  pdfService: PdfWorkerBinding;
   requestId: string;
 };
 
@@ -105,7 +111,7 @@ async function resolveDocumentPdfBytes({
   libraryBucket,
   wordingCatalogue,
   brokerFeeLines,
-  documentService,
+  pdfService,
   requestId,
 }: ResolveDocumentPdfInput): Promise<Uint8Array> {
   if (!doc.templateKey) {
@@ -139,7 +145,7 @@ async function resolveDocumentPdfBytes({
     return blobToUint8(await buildLegacyTextPdfBlob(doc.name, doc.content));
   }
 
-  return renderPolicyPdf(documentService, {
+  return renderPolicyPdf(pdfService, {
     contractVersion: 1,
     requestId,
     templateKey: doc.templateKey,
@@ -165,6 +171,26 @@ function decodeBase64Bytes(contentBase64: string): Uint8Array {
   } catch {
     throw new Error("One of the extra attachments could not be read.");
   }
+}
+
+/** Reply-To must be the client's assigned account manager (not a global inbox). */
+export async function resolvePolicyEmailReplyTo(
+  clientId: string,
+): Promise<string> {
+  const client = await getClient(clientId);
+  if (!client) {
+    throw new Error("Client not found for this policy.");
+  }
+
+  const manager = await getAccountManager(client.accountManagerId);
+  const email = manager?.email?.trim();
+  if (!email) {
+    throw new Error(
+      "This client's account manager does not have an email address. Add one in Settings → Account Managers before sending.",
+    );
+  }
+
+  return email;
 }
 
 /**
@@ -198,7 +224,7 @@ export async function sendPolicyDocumentsEmail(
       libraryBucket: input.libraryBucket,
       wordingCatalogue,
       brokerFeeLines,
-      documentService: input.documentService,
+      pdfService: input.pdfService,
       requestId,
     });
     totalBytes += bytes.byteLength;
@@ -244,12 +270,15 @@ export async function sendPolicyDocumentsEmail(
         .trim() || input.body
     : input.body;
 
+  const replyTo = await resolvePolicyEmailReplyTo(input.policy.clientId);
+
   const result = await sendEmail({
     to: toList,
     cc: ccList.length > 0 ? ccList : undefined,
     subject: input.subject.trim(),
     text,
     html,
+    replyTo,
     attachments,
     tags: [
       { name: "policy_id", value: String(input.policy.policyId) },
@@ -270,5 +299,6 @@ export async function sendPolicyDocumentsEmail(
     resendId: result.id,
     attachmentNames: attachments.map((file) => file.filename),
     attachmentBytes: totalBytes,
+    replyTo,
   };
 }

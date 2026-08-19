@@ -1,35 +1,35 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- ReUI tree wraps untyped headless-tree instances */
-import { createContext, useContext } from "react";
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
-import type { ItemInstance } from "@headless-tree/core";
+import type { ItemInstance, TreeInstance } from "@headless-tree/core";
+import { ChevronDownIcon, MinusIcon, PlusIcon } from "lucide-react";
+import { createContext, useContext } from "react";
 
 import { cn } from "~/lib/utils";
-import { MinusIcon, PlusIcon, ChevronDownIcon } from "lucide-react";
 
 type ToggleIconType = "chevron" | "plus-minus";
 
-interface TreeContextValue<T = any> {
+interface TreeContextValue<T = unknown> {
   indent: number;
   currentItem?: ItemInstance<T>;
-  tree?: any;
+  tree?: TreeInstance<unknown>;
   toggleIconType?: ToggleIconType;
 }
 
-const TreeContext = createContext<TreeContextValue>({
+const TreeContext = createContext<TreeContextValue<unknown>>({
   indent: 20,
   currentItem: undefined,
   tree: undefined,
   toggleIconType: "plus-minus",
 });
 
-function useTreeContext<T = any>() {
+function useTreeContext<T = unknown>() {
+  // Use type assertion since TreeContext is created with unknown but components use their own T
   return useContext(TreeContext) as TreeContextValue<T>;
 }
 
 interface TreeProps extends React.HTMLAttributes<HTMLDivElement> {
   indent?: number;
-  tree?: any;
+  tree?: TreeInstance<unknown>;
   toggleIconType?: ToggleIconType;
 }
 
@@ -56,7 +56,9 @@ function Tree({
   } as React.CSSProperties;
 
   return (
-    <TreeContext.Provider value={{ indent, tree, toggleIconType }}>
+    <TreeContext.Provider
+      value={{ indent, tree, toggleIconType } as TreeContextValue<unknown>}
+    >
       <div
         data-slot="tree"
         style={mergedStyle}
@@ -67,7 +69,7 @@ function Tree({
   );
 }
 
-interface TreeItemProps<T = any> extends Omit<
+interface TreeItemProps<T = unknown> extends Omit<
   useRender.ComponentProps<"button">,
   "indent"
 > {
@@ -75,7 +77,7 @@ interface TreeItemProps<T = any> extends Omit<
   indent?: number;
 }
 
-function TreeItem<T = any>({
+function TreeItem<T = unknown>({
   item,
   className,
   render,
@@ -128,7 +130,11 @@ function TreeItem<T = any>({
   };
 
   return (
-    <TreeContext.Provider value={{ ...parentContext, currentItem: item }}>
+    <TreeContext.Provider
+      value={
+        { ...parentContext, currentItem: item } as TreeContextValue<unknown>
+      }
+    >
       {useRender({
         defaultTagName: "button",
         render,
@@ -139,14 +145,14 @@ function TreeItem<T = any>({
 }
 
 interface TreeItemLabelProps<
-  T = any,
+  T = unknown,
 > extends React.HTMLAttributes<HTMLSpanElement> {
   item?: ItemInstance<T>;
   /** When false, skips the leading expand/collapse icon (e.g. sidebar nav). */
   showToggleIcon?: boolean;
 }
 
-function TreeItemLabel<T = any>({
+function TreeItemLabel<T = unknown>({
   item: propItem,
   children,
   className,
@@ -229,4 +235,4 @@ function TreeDragLine({
   );
 }
 
-export { Tree, TreeItem, TreeItemLabel, TreeDragLine };
+export { Tree, TreeDragLine, TreeItem, TreeItemLabel };

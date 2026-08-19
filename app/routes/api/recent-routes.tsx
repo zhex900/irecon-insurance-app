@@ -1,9 +1,11 @@
 import { z } from "zod";
-import { requireAuth } from "~/lib/auth/session.server";
+
+import { requireAuth } from "~/lib/auth/session/server.server";
 import {
   listRecentRoutes,
   pushRecentRoute,
 } from "~/lib/services/navigation/recent-routes.server";
+
 import type { Route } from "./+types/recent-routes";
 
 const postSchema = z.object({

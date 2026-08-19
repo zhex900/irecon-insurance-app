@@ -1,8 +1,9 @@
 import { asc, eq, ilike, or } from "drizzle-orm";
+
 import { getDb } from "~/lib/db/client";
 import { authorisedRepresentative } from "~/lib/db/schema";
-import { NotFoundError } from "~/lib/errors";
 import type { WholesaleBroker } from "~/lib/db/types";
+import { NotFoundError } from "~/lib/errors";
 import { normalizeAuthorisedRepresentative } from "~/lib/services/authorised-representatives/normalize";
 
 export { normalizeAuthorisedRepresentative };

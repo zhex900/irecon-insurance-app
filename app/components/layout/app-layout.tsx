@@ -1,25 +1,27 @@
-import * as React from "react";
-import { Link, Outlet, useFetcher, useNavigation } from "react-router";
 import {
   LogOutIcon,
   PanelLeftCloseIcon,
   PanelLeftOpenIcon,
   UserIcon,
 } from "lucide-react";
-import { Logo } from "~/components/logo";
-import { UserAvatar } from "~/components/ui/user-avatar";
-import { Toaster } from "~/components/ui/sonner";
-import { useSuccessToastFromSearch } from "~/hooks/use-success-toast";
+import * as React from "react";
+import { Link, Outlet, useFetcher, useNavigation } from "react-router";
+import { toast } from "sonner";
+
+import { SessionTimeoutDialog } from "~/components/auth/session-timeout-dialog";
 import {
   AppBreadcrumb,
   type AppBreadcrumbItem,
 } from "~/components/layout/app-breadcrumb";
-import { AppSideNav } from "~/components/layout/app-side-nav";
 import { GlobalSearch } from "~/components/layout/global-search";
 import { NavigationProgress } from "~/components/layout/navigation-progress";
 import { OfflineDialog } from "~/components/layout/offline-dialog";
-import { SessionTimeoutDialog } from "~/components/layout/session-timeout-dialog";
-import type { SessionTimeoutClientState } from "~/lib/auth/session-timeout";
+import { Logo } from "~/components/logo";
+import { Badge } from "~/components/reui/badge";
+import { AppSideNav } from "~/components/side-nav";
+import { ThemeProvider } from "~/components/theme/theme-provider";
+import { ThemeToggle } from "~/components/theme/theme-toggle";
+import { Button } from "~/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,26 +43,30 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "~/components/ui/sidebar";
-import { ThemeToggle } from "~/components/theme-toggle";
-import { Badge } from "~/components/reui/badge";
-import { Button } from "~/components/ui/button";
+import { Toaster } from "~/components/ui/sonner";
 import { Spinner } from "~/components/ui/spinner";
 import { TooltipProvider } from "~/components/ui/tooltip";
-import { useHydrated } from "~/hooks/use-hydrated";
+import { UserAvatar } from "~/components/ui/user-avatar";
+import { useHydrated } from "~/hooks/network";
+import { useSuccessToastFromSearch } from "~/hooks/utilities";
 import {
+  getAppCommit,
   getAppEnvironment,
   getAppEnvironmentBadgeClass,
+  getAppRelease,
   getAppVersion,
 } from "~/lib/app-version";
+import type { SessionTimeoutClientState } from "~/lib/auth/session";
 import { APP_NAME } from "~/lib/brand";
+import type { Theme } from "~/lib/cookies";
 import type { BrokerSession } from "~/lib/db/types";
 import { SentryUserSync } from "~/lib/observability/sentry-user-sync";
 import type { SideNavData } from "~/lib/services/navigation/side-nav.service";
 import {
+  type NavSectionId,
   writeNavSectionsCookie,
   writeRecentsOpenCookie,
   writeSidebarOpenCookie,
-  type NavSectionId,
 } from "~/lib/services/navigation/sidebar-state";
 import { cn } from "~/lib/utils";
 
@@ -134,6 +140,49 @@ function SidebarCollapseToggle() {
   );
 }
 
+function AppVersionBadge() {
+  const appVersion = getAppVersion();
+  const appCommit = getAppCommit();
+  const appEnv = getAppEnvironment(appVersion);
+  const release = getAppRelease();
+
+  const badgeClassName = cn(
+    "max-w-full truncate font-mono text-[10px] tabular-nums group-data-[collapsible=icon]:hidden",
+    getAppEnvironmentBadgeClass(appEnv),
+    appCommit && "cursor-pointer",
+  );
+
+  async function copyCommit() {
+    if (!appCommit) return;
+    try {
+      await navigator.clipboard.writeText(appCommit);
+      toast.success(`Copied ${appCommit}`);
+    } catch {
+      toast.error("Could not copy commit");
+    }
+  }
+
+  if (!appCommit) {
+    return (
+      <Badge variant="outline" className={badgeClassName}>
+        {release}
+      </Badge>
+    );
+  }
+
+  return (
+    <Badge
+      variant="outline"
+      className={badgeClassName}
+      render={<button type="button" />}
+      aria-label={`Copy commit ${appCommit}`}
+      onClick={() => void copyCommit()}
+    >
+      {release}
+    </Badge>
+  );
+}
+
 export function AppLayout({
   broker,
   sideNav,
@@ -141,6 +190,7 @@ export function AppLayout({
   recentsOpen = false,
   navSectionsExpanded = [],
   sessionTimeout = null,
+  theme = "system",
   content,
 }: {
   broker: BrokerSession;
@@ -153,6 +203,8 @@ export function AppLayout({
   navSectionsExpanded?: NavSectionId[];
   /** Idle / absolute session limits for the client timeout dialog. */
   sessionTimeout?: SessionTimeoutClientState | null;
+  /** Saved theme preference from cookie (SSR). */
+  theme?: Theme;
   /** When set (e.g. layout ErrorBoundary), replace the route Outlet. */
   content?: React.ReactNode;
 }) {
@@ -163,8 +215,6 @@ export function AppLayout({
     navSectionsExpanded,
   });
   useSuccessToastFromSearch();
-  const appVersion = getAppVersion();
-  const appEnv = getAppEnvironment(appVersion);
 
   const handleSidebarOpenChange = React.useCallback((open: boolean) => {
     setShellNav((prev) => ({
@@ -195,70 +245,63 @@ export function AppLayout({
   );
 
   return (
-    <TooltipProvider>
-      <SentryUserSync userId={broker.id} email={broker.email} />
-      <NavigationProgress />
-      <OfflineDialog />
-      <SessionTimeoutDialog config={sessionTimeout} />
-      <SidebarProvider
-        open={shellNav.sidebarOpen}
-        onOpenChange={handleSidebarOpenChange}
-      >
-        <Sidebar collapsible="icon" variant="sidebar">
-          <SidebarHeader className="flex h-14 w-full shrink-0 flex-row items-center gap-1 border-b border-sidebar-border px-2 group-data-[collapsible=icon]:justify-center">
-            <SidebarBrand />
-          </SidebarHeader>
+    <ThemeProvider initialTheme={theme} enableSystem>
+      <TooltipProvider>
+        <SentryUserSync userId={broker.id} email={broker.email} />
+        <NavigationProgress />
+        <OfflineDialog />
+        <SessionTimeoutDialog config={sessionTimeout} />
+        <SidebarProvider
+          open={shellNav.sidebarOpen}
+          onOpenChange={handleSidebarOpenChange}
+        >
+          <Sidebar collapsible="icon" variant="sidebar">
+            <SidebarHeader className="flex h-14 w-full shrink-0 flex-row items-center gap-1 border-b border-sidebar-border px-2 group-data-[collapsible=icon]:justify-center">
+              <SidebarBrand />
+            </SidebarHeader>
 
-          <SidebarContent>
-            <SidebarGroup>
-              <SidebarGroupContent>
-                <AppSideNav
-                  data={sideNav}
-                  recentsOpen={shellNav.recentsOpen}
-                  sidebarExpanded={shellNav.sidebarOpen}
-                  navSectionsExpanded={shellNav.navSectionsExpanded}
-                  onRecentsOpenChange={handleRecentsOpenChange}
-                  onNavSectionsChange={handleNavSectionsChange}
-                />
-              </SidebarGroupContent>
-            </SidebarGroup>
-          </SidebarContent>
+            <SidebarContent>
+              <SidebarGroup>
+                <SidebarGroupContent>
+                  <AppSideNav
+                    data={sideNav}
+                    recentsOpen={shellNav.recentsOpen}
+                    sidebarExpanded={shellNav.sidebarOpen}
+                    navSectionsExpanded={shellNav.navSectionsExpanded}
+                    onRecentsOpenChange={handleRecentsOpenChange}
+                    onNavSectionsChange={handleNavSectionsChange}
+                  />
+                </SidebarGroupContent>
+              </SidebarGroup>
+            </SidebarContent>
 
-          <SidebarFooter className="border-t border-sidebar-border">
-            <div className="flex items-center justify-between gap-2 px-2 py-1 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
-              <Badge
-                variant="outline"
-                className={cn(
-                  "max-w-full truncate font-mono text-[10px] tabular-nums group-data-[collapsible=icon]:hidden",
-                  getAppEnvironmentBadgeClass(appEnv),
-                )}
-                title={`App version ${appVersion}`}
-              >
-                {appVersion}
-              </Badge>
-              <SidebarCollapseToggle />
+            <SidebarFooter className="border-t border-sidebar-border">
+              <div className="flex items-center justify-between gap-2 px-2 py-1 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+                <AppVersionBadge />
+                <SidebarCollapseToggle />
+              </div>
+            </SidebarFooter>
+          </Sidebar>
+
+          <SidebarInset className="relative z-0 min-w-0 overflow-x-hidden">
+            <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-card px-4 md:px-6">
+              {/* Mobile: open sheet. Desktop toggle lives in the sidebar footer. */}
+              <SidebarTrigger className="md:hidden" aria-label="Open menu" />
+              <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
+              <div className="ml-auto flex min-w-0 items-center gap-3">
+                <ThemeToggle />
+                <AccountMenu broker={broker} />
+              </div>
+            </header>
+
+            <div className="relative z-0 min-w-0 flex-1 p-4 md:p-8">
+              {content ?? <Outlet />}
             </div>
-          </SidebarFooter>
-        </Sidebar>
-
-        <SidebarInset className="relative z-0 min-w-0 overflow-x-hidden">
-          <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-card px-4 md:px-6">
-            {/* Mobile: open sheet. Desktop toggle lives in the sidebar footer. */}
-            <SidebarTrigger className="md:hidden" aria-label="Open menu" />
-            <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
-            <div className="ml-auto flex min-w-0 items-center gap-3">
-              <ThemeToggle />
-              <AccountMenu broker={broker} />
-            </div>
-          </header>
-
-          <div className="relative z-0 min-w-0 flex-1 p-4 md:p-8">
-            {content ?? <Outlet />}
-          </div>
-        </SidebarInset>
-      </SidebarProvider>
-      <Toaster />
-    </TooltipProvider>
+          </SidebarInset>
+        </SidebarProvider>
+        <Toaster />
+      </TooltipProvider>
+    </ThemeProvider>
   );
 }
 
@@ -269,21 +312,6 @@ function AccountMenu({ broker }: { broker: BrokerSession }) {
   const loggingOut =
     logoutFetcher.state !== "idle" ||
     (navigation.state !== "idle" && navigation.formAction?.includes("/logout"));
-
-  if (!hydrated) {
-    return (
-      <span
-        className="rounded-full outline-none"
-        aria-label="Account menu"
-      >
-        <UserAvatar
-          email={broker.email}
-          fullName={broker.fullName}
-          userId={broker.id}
-        />
-      </span>
-    );
-  }
 
   return (
     <DropdownMenu>
@@ -300,41 +328,43 @@ function AccountMenu({ broker }: { broker: BrokerSession }) {
           avatarR2Key={broker.avatarR2Key}
         />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-52">
-        <DropdownMenuGroup>
-          <DropdownMenuLabel className="font-normal">
-            <div className="flex flex-col gap-0.5">
-              <span className="truncate text-sm font-medium text-foreground">
-                {broker.fullName}
-              </span>
-              <span className="truncate text-xs text-muted-foreground">
-                {broker.email}
-              </span>
-            </div>
-          </DropdownMenuLabel>
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <DropdownMenuItem render={<Link to="/profile" />}>
-            <UserIcon />
-            Profile
+      {hydrated && (
+        <DropdownMenuContent align="end" className="min-w-52">
+          <DropdownMenuGroup>
+            <DropdownMenuLabel className="font-normal">
+              <div className="flex flex-col gap-0.5">
+                <span className="truncate text-sm font-medium text-foreground">
+                  {broker.fullName}
+                </span>
+                <span className="truncate text-xs text-muted-foreground">
+                  {broker.email}
+                </span>
+              </div>
+            </DropdownMenuLabel>
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
+            <DropdownMenuItem render={<Link to="/profile" />}>
+              <UserIcon />
+              Profile
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            variant="destructive"
+            disabled={loggingOut}
+            onClick={() => {
+              void logoutFetcher.submit(null, {
+                method: "post",
+                action: "/logout",
+              });
+            }}
+          >
+            {loggingOut ? <Spinner /> : <LogOutIcon />}
+            {loggingOut ? "Logging out…" : "Log out"}
           </DropdownMenuItem>
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          variant="destructive"
-          disabled={loggingOut}
-          onClick={() => {
-            void logoutFetcher.submit(null, {
-              method: "post",
-              action: "/logout",
-            });
-          }}
-        >
-          {loggingOut ? <Spinner /> : <LogOutIcon />}
-          {loggingOut ? "Logging out…" : "Log out"}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
+        </DropdownMenuContent>
+      )}
     </DropdownMenu>
   );
 }

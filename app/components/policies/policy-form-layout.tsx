@@ -1,11 +1,17 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Link } from "react-router";
 import { CheckIcon, ChevronDownIcon } from "lucide-react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router";
+
+import { FilterAutocomplete } from "~/components/forms/autocomplete";
 import {
   AppBreadcrumb,
   type AppBreadcrumbItem,
 } from "~/components/layout/app-breadcrumb";
-import { FilterAutocomplete } from "~/components/clients/filter-autocomplete";
+import { PolicyNumberField } from "~/components/policies/policy-number-field";
+import {
+  PolicyStatusMenu,
+  type TerminalStatusValidation,
+} from "~/components/policies/policy-status-menu";
 import { Badge } from "~/components/reui/badge";
 import {
   Card,
@@ -21,13 +27,8 @@ import {
 } from "~/components/ui/collapsible";
 import { Separator } from "~/components/ui/separator";
 import { StatusBadge } from "~/components/ui/status-badge";
-import {
-  PolicyStatusMenu,
-  type TerminalStatusValidation,
-} from "~/components/policies/policy-status-menu";
-import { PolicyNumberField } from "~/components/policies/policy-number-field";
-import { cn } from "~/lib/utils";
 import { listPolicyFieldSearchOptions } from "~/lib/policies/field-labels";
+import { cn } from "~/lib/utils";
 import { wizardSteps } from "~/lib/zod/policy-car";
 
 export const POLICY_FORM_SECTIONS = [

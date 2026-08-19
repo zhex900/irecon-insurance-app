@@ -2,6 +2,7 @@ import { Extension } from "@tiptap/core";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import Suggestion, { type SuggestionProps } from "@tiptap/suggestion";
+
 import { EMAIL_TEMPLATE_PLACEHOLDERS } from "~/lib/email/templates";
 
 type PlaceholderItem = (typeof EMAIL_TEMPLATE_PLACEHOLDERS)[number];

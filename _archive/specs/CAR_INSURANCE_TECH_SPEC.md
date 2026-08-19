@@ -469,7 +469,7 @@ export async function sendPolicyEmail({
 }: SendPolicyEmailInput) {
   const resend = createResendClient(env.RESEND_API_KEY);
   const { data, error } = await resend.emails.send({
-    from: env.RESEND_FROM_ADDRESS,
+    from,
     to,
     subject,
     html,
@@ -494,7 +494,6 @@ export async function sendPolicyEmail({
 | Setting               | Value                                                  |
 | --------------------- | ------------------------------------------------------ |
 | `RESEND_API_KEY`      | Workers secret                                         |
-| `RESEND_FROM_ADDRESS` | Verified sender on Resend domain                       |
 | Domain DNS            | SPF, DKIM, DMARC via Resend dashboard                  |
 | Webhook (optional)    | `POST /api/webhooks/resend` for delivery/bounce events |
 

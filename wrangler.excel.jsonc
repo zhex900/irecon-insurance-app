@@ -1,0 +1,31 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "insurance-excel-worker-uat",
+  "compatibility_date": "2026-08-08",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "./workers/excel/index.ts",
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "destinations": ["sentry-logs"],
+    },
+    "traces": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "destinations": ["sentry-traces"],
+    },
+  },
+  "vars": {
+    "WORKER_VERSION": "2.0.0",
+    "APP_URL": "{{ secrets.APP_URL }}",
+  },
+  "placement": {
+    "mode": "smart",
+  },
+  "limits": {
+    "cpu_ms": 60000,
+  },
+  "upload_source_maps": true,
+}

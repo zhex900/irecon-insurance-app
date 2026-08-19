@@ -1,4 +1,5 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+
 import {
   EMAIL_DOCUMENT_ELEMENT_CSS,
   EMAIL_DOCUMENT_SURFACE_CSS,
@@ -24,6 +25,10 @@ type EmailDocumentFrameProps = {
 function buildEmailDocumentSrcDoc(bodyHtml: string): string {
   // cellpadding → inline padding (same look as inboxes / sent mail)
   const body = materializeEmailTableAttrs(bodyHtml.trim()) || "&nbsp;";
+  // Basic security sanitization - remove script tags and dangerous attributes
+  const sanitizedBody = body
+    .replace(/<\/?(script|iframe|object|embed)[^>]*>/gi, "")
+    .replace(/\bon\w+\s*=\s*["'][^"']*["']/gi, "");
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -56,7 +61,7 @@ function buildEmailDocumentSrcDoc(bodyHtml: string): string {
   }
 </style>
 </head>
-<body>${body}</body>
+<body>${sanitizedBody}</body>
 </html>`;
 }
 
@@ -73,6 +78,7 @@ export function EmailDocumentFrame({
   const editingRef = useRef(false);
   const loadedHtmlRef = useRef<string | null>(null);
   const reloadKeyRef = useRef(reloadKey);
+  const [frameReady, setFrameReady] = useState(false);
 
   useEffect(() => {
     onHtmlChangeRef.current = onHtmlChange;
@@ -87,6 +93,7 @@ export function EmailDocumentFrame({
 
     if (forced) {
       editingRef.current = false;
+      setFrameReady(false);
     } else if (editingRef.current) {
       // Parent echoed our onHtmlChange — keep caret, don't rewrite srcdoc.
       loadedHtmlRef.current = html;
@@ -96,6 +103,7 @@ export function EmailDocumentFrame({
     }
 
     loadedHtmlRef.current = html;
+    setFrameReady(false);
     iframe.srcdoc = buildEmailDocumentSrcDoc(html);
   }, [html, reloadKey]);
 
@@ -107,6 +115,7 @@ export function EmailDocumentFrame({
       const body = iframe.contentDocument?.body;
       if (!body) return;
 
+      setFrameReady(true);
       body.contentEditable = editable ? "true" : "false";
       body.spellcheck = false;
 
@@ -143,11 +152,23 @@ export function EmailDocumentFrame({
   }, [editable, reloadKey]);
 
   return (
-    <iframe
-      ref={iframeRef}
-      title={title}
-      sandbox="allow-same-origin"
-      className={cn("block w-full border-0 bg-white", className)}
-    />
+    <div className={cn("relative bg-white", className)}>
+      {!frameReady ? (
+        <div
+          className="absolute inset-0 animate-pulse bg-muted"
+          role="status"
+          aria-label="Loading email preview"
+        />
+      ) : null}
+      <iframe
+        ref={iframeRef}
+        title={title}
+        sandbox="allow-same-origin allow-scripts"
+        className={cn(
+          "block h-full w-full border-0 bg-white",
+          !frameReady && "invisible",
+        )}
+      />
+    </div>
   );
 }

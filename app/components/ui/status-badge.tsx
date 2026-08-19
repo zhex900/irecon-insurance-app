@@ -1,6 +1,7 @@
+import type { ReactNode } from "react";
+
 import { Badge } from "~/components/reui/badge";
 import { cn } from "~/lib/utils";
-import type { ReactNode } from "react";
 
 const STATUS_VARIANT: Record<
   number,

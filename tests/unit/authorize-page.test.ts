@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
+
 import {
-  UNAUTHORIZED_PAGE_MESSAGE,
   requireAdminPage,
   requireFeatureOrSuperAdminPage,
   requireSuperAdminPage,
   throwUnauthorizedPage,
+  UNAUTHORIZED_PAGE_MESSAGE,
 } from "~/lib/auth/authorize.server";
 
 describe("authorize.server page guards", () => {

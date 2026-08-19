@@ -1,14 +1,14 @@
 /**
  * App version label shown in the sidebar footer.
  *
- * Set at build time via VITE_APP_VERSION:
- * - local        → "local" (default in `npm run dev`)
- * - PR preview   → "PR-<number>"
- * - staging      → "staging-<short-commit>"
- * - production   → release tag (e.g. "v1.2.3")
+ * Set at build time:
+ * - VITE_APP_VERSION — env label (pr-1, uat, …)
+ * - VITE_APP_COMMIT   — short git SHA
+ *
+ * Sidebar badge shows the release (e.g. pr-1-abc1234); click copies the commit.
  */
 
-export type AppEnvironment = "local" | "pr" | "staging" | "prod" | "unknown";
+export type AppEnvironment = "local" | "pr" | "uat" | "prod" | "unknown";
 
 export function getAppVersion(): string {
   const fromEnv = import.meta.env.VITE_APP_VERSION?.trim();
@@ -17,15 +17,29 @@ export function getAppVersion(): string {
   return "unknown";
 }
 
+export function getAppCommit(): string | undefined {
+  const commit = import.meta.env.VITE_APP_COMMIT?.trim();
+  return commit || undefined;
+}
+
+/** Full release id for Sentry, caches, etc. (e.g. pr-1-a1b2c3d, uat-a1b2c3d). */
+export function getAppRelease(): string {
+  const version = getAppVersion();
+  const commit = getAppCommit();
+  if (commit && version !== "local" && version !== "unknown") {
+    return `${version}-${commit}`;
+  }
+  return version;
+}
+
 export function getAppEnvironment(version = getAppVersion()): AppEnvironment {
   const v = version.trim().toLowerCase();
   if (v === "local") return "local";
   if (/^pr[-_]?\d+/.test(v) || v.startsWith("pr-") || v.startsWith("pr/")) {
     return "pr";
   }
-  if (v.startsWith("staging")) return "staging";
+  if (v.startsWith("uat") || v.startsWith("staging")) return "uat";
   if (v === "unknown") return "unknown";
-  // Release tags (v1.2.3) and anything else deployed as production
   return "prod";
 }
 
@@ -38,8 +52,8 @@ export function getAppEnvironmentBadgeClass(env: AppEnvironment): string {
     case "local":
       return "border-sidebar-border bg-sidebar-accent text-sidebar-foreground";
     case "pr":
-      return "border-destructive/50 bg-destructive/25 text-destructive";
-    case "staging":
+      return "border-focus/50 bg-focus/25 text-focus";
+    case "uat":
       return "border-warning/50 bg-warning/25 text-warning";
     case "prod":
       return "border-success/50 bg-success/25 text-success";

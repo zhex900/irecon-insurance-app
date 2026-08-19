@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import {
   buildApiSearchUrl,
   CLIENT_PICKER_SEARCH_PARAMS,

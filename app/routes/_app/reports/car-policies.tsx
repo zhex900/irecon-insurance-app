@@ -1,10 +1,12 @@
+import { DownloadIcon } from "lucide-react";
 import { useMemo } from "react";
 import { Form, Link, useSearchParams } from "react-router";
-import { DownloadIcon } from "lucide-react";
+import { z } from "zod";
+
 import { PageHeader } from "~/components/layout/app-layout";
 import { Button, buttonVariants } from "~/components/ui/button";
-import { Field, FieldGroup, FieldLabel } from "~/components/ui/field";
 import { DateInput } from "~/components/ui/date-input";
+import { Field, FieldGroup, FieldLabel } from "~/components/ui/field";
 import {
   Table,
   TableBody,
@@ -14,27 +16,28 @@ import {
   TableRow,
 } from "~/components/ui/table";
 import { TablePagination } from "~/components/ui/table-pagination";
+import { requireAuth } from "~/lib/auth/session/server.server";
+import { pageTitle } from "~/lib/brand";
+import { optionalIsoDateSchema } from "~/lib/http/route-input";
 import {
-  CAR_SEARCH_STATUSES,
-  defaultCarPolicyPeriod,
-  type CarSearchStatus,
-} from "~/lib/services/reports/service";
+  pageSearchHref,
+  pageSizeSearchHref,
+  parsePagination,
+} from "~/lib/pagination";
+import { recordAuditEventClient } from "~/lib/services/audit/client";
 import {
   filtersForCarSearchStatus,
   getCarPolicyReportSummary,
   listReportPoliciesPage,
 } from "~/lib/services/reports/list.service";
 import {
-  pageSearchHref,
-  pageSizeSearchHref,
-  parsePagination,
-} from "~/lib/pagination";
+  CAR_SEARCH_STATUSES,
+  type CarSearchStatus,
+  defaultCarPolicyPeriod,
+} from "~/lib/services/reports/service";
 import { formatCurrency, formatDate } from "~/lib/utils";
+
 import type { Route } from "./+types/car-policies";
-import { pageTitle } from "~/lib/brand";
-import { requireAuth } from "~/lib/auth/session.server";
-import { optionalIsoDateSchema } from "~/lib/http/route-input";
-import { z } from "zod";
 
 const DETAIL_PAGE_SIZE = 25;
 
@@ -110,6 +113,47 @@ function statusDetailSearch(
   return `?${params.toString()}`;
 }
 
+function auditCarPolicySummaryExport(
+  dateFrom: string,
+  dateTo: string,
+  rowCount: number,
+) {
+  recordAuditEventClient({
+    action: "report.export",
+    entityType: "report",
+    entityId: "car-policies-summary",
+    summary: `Exported CAR policy summary Excel (${rowCount} rows)`,
+    metadata: {
+      filename: `car-policy-report-${dateFrom}-${dateTo}.xlsx`,
+      dateFrom,
+      dateTo,
+      rowCount,
+    },
+  });
+}
+
+function auditCarPolicyDetailExport(
+  dateFrom: string,
+  dateTo: string,
+  status: CarSearchStatus,
+  rowCount: number,
+) {
+  const slug = status.replace(/\s+/g, "-").toLowerCase();
+  recordAuditEventClient({
+    action: "report.export",
+    entityType: "report",
+    entityId: "car-policies-detail",
+    summary: `Exported CAR policy detail Excel for ${status} (${rowCount} rows)`,
+    metadata: {
+      filename: `car-policy-report-${slug}-${dateFrom}-${dateTo}.xlsx`,
+      dateFrom,
+      dateTo,
+      statusLabel: status,
+      rowCount,
+    },
+  });
+}
+
 export default function CarPolicyReportRoute({
   loaderData,
 }: Route.ComponentProps) {
@@ -175,9 +219,18 @@ export default function CarPolicyReportRoute({
           href={summaryExportHref}
           className={buttonVariants({ variant: "outline" })}
           aria-disabled={totalPolicies === 0}
-          {...(totalPolicies === 0
-            ? { tabIndex: -1, onClick: (e) => e.preventDefault() }
-            : {})}
+          tabIndex={totalPolicies === 0 ? -1 : undefined}
+          onClick={(event) => {
+            if (totalPolicies === 0) {
+              event.preventDefault();
+              return;
+            }
+            auditCarPolicySummaryExport(
+              loaderData.dateFrom,
+              loaderData.dateTo,
+              summary.length,
+            );
+          }}
         >
           <DownloadIcon data-icon="inline-start" />
           Export Excel
@@ -272,9 +325,19 @@ export default function CarPolicyReportRoute({
                   href={detailExportHref}
                   className={buttonVariants({ variant: "outline", size: "sm" })}
                   aria-disabled={detail.total === 0}
-                  {...(detail.total === 0
-                    ? { tabIndex: -1, onClick: (e) => e.preventDefault() }
-                    : {})}
+                  tabIndex={detail.total === 0 ? -1 : undefined}
+                  onClick={(event) => {
+                    if (detail.total === 0) {
+                      event.preventDefault();
+                      return;
+                    }
+                    auditCarPolicyDetailExport(
+                      loaderData.dateFrom,
+                      loaderData.dateTo,
+                      detail.status,
+                      detail.total,
+                    );
+                  }}
                 >
                   <DownloadIcon data-icon="inline-start" />
                   Export Excel

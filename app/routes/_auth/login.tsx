@@ -1,8 +1,8 @@
 import * as React from "react";
 import { Form, Link, useNavigation, useSearchParams } from "react-router";
-import { TurnstileWidget } from "~/components/auth/turnstile-widget";
+
 import { AuthShell } from "~/components/auth/auth-shell";
-import { LoadingButton } from "~/components/ui/loading-button";
+import { TurnstileWidget } from "~/components/auth/turnstile-widget";
 import {
   Field,
   FieldError,
@@ -10,16 +10,16 @@ import {
   FieldLabel,
 } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
+import { LoadingButton } from "~/components/ui/loading-button";
+import { pageTitle } from "~/lib/brand";
+import { publicErrorMessage } from "~/lib/http/public-error.server";
+import { trackUsage } from "~/lib/observability/metrics.server";
+import { writeAuditLog } from "~/lib/services/audit/service";
+import { getUser } from "~/lib/services/users/service";
 import {
   appendAuthSessionCookies,
   signInWithPassword,
 } from "~/lib/supabase/auth.server";
-import { writeAuditLog } from "~/lib/services/audit/service";
-import { publicErrorMessage } from "~/lib/http/public-error.server";
-import { trackUsage } from "~/lib/observability/metrics.server";
-import { getUser } from "~/lib/services/users/service";
-import type { Route } from "./+types/login";
-import { pageTitle } from "~/lib/brand";
 import {
   isTurnstileEnabled,
   readTurnstileSecretKey,
@@ -29,6 +29,8 @@ import {
   clientIpFromRequest,
   verifyTurnstileToken,
 } from "~/lib/turnstile/verify.server";
+
+import type { Route } from "./+types/login";
 
 function LoginTurnstileGate({
   siteKey,

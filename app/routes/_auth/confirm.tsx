@@ -1,13 +1,15 @@
 import { Link, redirect } from "react-router";
+
 import { AuthHashSessionBridge } from "~/components/auth/auth-hash-session-bridge";
 import { AuthShell } from "~/components/auth/auth-shell";
 import { buttonVariants } from "~/components/ui/button";
-import { cn } from "~/lib/utils";
 import {
   appendAuthSessionCookies,
   exchangeCodeForSession,
   setSessionFromTokens,
 } from "~/lib/supabase/auth.server";
+import { cn } from "~/lib/utils";
+
 import type { Route } from "./+types/confirm";
 
 function safeNext(value: string | null) {

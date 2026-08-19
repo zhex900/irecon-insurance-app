@@ -1,9 +1,11 @@
 import { z } from "zod";
-import { requireAuth } from "~/lib/auth/session.server";
+
+import { requireAuth } from "~/lib/auth/session/server.server";
 import { parseUuid } from "~/lib/http/route-input";
 import { trackUsage } from "~/lib/observability/metrics.server";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import { getPolicy, savePolicy } from "~/lib/services/policy/data.service";
+
 import type { Route } from "./+types/policies.$policyId.documents";
 
 const MAX_DOCUMENTS = 50;
@@ -28,6 +30,7 @@ const policyDocumentSchema = z
     pdfBase64: z.string().max(MAX_PDF_BASE64_LENGTH).optional(),
     generatedWhen: z.string().max(100),
     generatedBy: z.string().max(500),
+    documentTypeCode: z.string().trim().max(50).optional(),
   })
   .strict();
 

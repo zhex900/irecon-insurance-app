@@ -1,5 +1,5 @@
-import { format } from "prettier/standalone";
 import * as htmlPlugin from "prettier/plugins/html";
+import { format } from "prettier/standalone";
 
 /** Pretty-print email HTML for the Code editor (browser-safe Prettier). */
 export async function formatEmailHtml(html: string): Promise<string> {

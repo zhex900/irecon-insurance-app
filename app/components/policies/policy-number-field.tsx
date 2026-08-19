@@ -1,3 +1,7 @@
+import {
+  FieldSavedTick,
+  useFieldSaveState,
+} from "~/components/forms/field-save-highlight";
 import { FieldError, FieldLabel } from "~/components/ui/field";
 import {
   InputGroup,
@@ -6,12 +10,8 @@ import {
   InputGroupText,
 } from "~/components/ui/input-group";
 import {
-  FieldSavedTick,
-  useFieldSaveState,
-} from "~/components/forms/field-save-highlight";
-import {
-  POLICY_NUMBER_PREFIX,
   composePolicyNumber,
+  POLICY_NUMBER_PREFIX,
   policyNumberSuffix,
 } from "~/lib/policies/policy-number";
 import { cn } from "~/lib/utils";

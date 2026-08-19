@@ -1,12 +1,14 @@
-import { Link, useFetcher, useNavigate, useNavigation } from "react-router";
-import { useEffect, useRef, useState } from "react";
 import { FilePenLineIcon, PlusIcon } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Link, useFetcher, useNavigate, useNavigation } from "react-router";
 import { toast } from "sonner";
-import { PageHeader } from "~/components/layout/app-layout";
+
 import {
-  DocumentTemplatesEditorShell,
-  DocumentTemplatesListShell,
-} from "~/components/documents/document-templates-loading";
+  EditorShell,
+  ListShell,
+} from "~/components/documents/templates/loading";
+import { PageHeader } from "~/components/layout/app-layout";
+import { AppSelect } from "~/components/ui/app-select";
 import { Button } from "~/components/ui/button";
 import {
   Card,
@@ -24,7 +26,6 @@ import {
 } from "~/components/ui/dialog";
 import { Field, FieldGroup, FieldLabel } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
-import { AppSelect } from "~/components/ui/app-select";
 import { InteractiveTableRow } from "~/components/ui/interactive-table-row";
 import {
   Table,
@@ -34,22 +35,23 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table";
-import { requireAuth } from "~/lib/auth/session.server";
 import { requireFeatureOrSuperAdminPage } from "~/lib/auth/authorize.server";
-import { publicErrorMessage } from "~/lib/http/public-error.server";
-import { parseFormIntent } from "~/lib/http/route-input";
 import { isAdminRole, isSuperAdmin } from "~/lib/auth/roles";
+import { requireAuth } from "~/lib/auth/session/server.server";
 import { pageTitle } from "~/lib/brand";
 import { formatDocumentTemplateTitle } from "~/lib/documents/template-title";
+import { publicErrorMessage } from "~/lib/http/public-error.server";
+import { parseFormIntent } from "~/lib/http/route-input";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import {
   createDocumentTemplate,
   createDocumentTemplateInputSchema,
-  listDocumentTemplates,
   type DocumentTemplateListItem,
+  listDocumentTemplates,
 } from "~/lib/services/documents/document-templates";
 import { isFeatureEnabled } from "~/lib/services/feature-flags";
 import { formatDate, formatRelativeTimeAgo } from "~/lib/utils";
+
 import type { Route } from "./+types/document-templates";
 
 export function meta() {
@@ -58,7 +60,7 @@ export function meta() {
 
 /** Shown immediately while the list (or a template editor) is loading. */
 export function HydrateFallback() {
-  return <DocumentTemplatesListShell />;
+  return <ListShell />;
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -361,7 +363,7 @@ export default function DocumentTemplatesRoute({
   const loadingEditor = navigation.state !== "idle" && Boolean(editorMatch);
 
   if (loadingEditor && editorMatch) {
-    return <DocumentTemplatesEditorShell title="Document Template" />;
+    return <EditorShell templateTitle="Document Template" />;
   }
 
   return (

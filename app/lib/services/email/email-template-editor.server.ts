@@ -1,18 +1,19 @@
 import { z } from "zod";
+
 import { requireFeatureOrSuperAdminPage } from "~/lib/auth/authorize.server";
-import { requireAuth } from "~/lib/auth/session.server";
 import { isSuperAdmin } from "~/lib/auth/roles";
+import { requireAuth } from "~/lib/auth/session/server.server";
+import type { EmailTemplateEditorLoaderData } from "~/lib/email/template-editor-types";
 import {
   EMAIL_TEMPLATE_KEYS,
   EMAIL_TEMPLATE_META,
-  htmlToPlainText,
   type EmailTemplateKey,
+  htmlToPlainText,
 } from "~/lib/email/templates";
-import type { EmailTemplateEditorLoaderData } from "~/lib/email/template-editor-types";
-import { writeAuditLog } from "~/lib/services/audit/service";
-import { redirectResponse } from "~/lib/http/redirect-response";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
+import { redirectResponse } from "~/lib/http/redirect-response";
 import { parseFormIntent } from "~/lib/http/route-input";
+import { writeAuditLog } from "~/lib/services/audit/service";
 import { getEmailFooterImage } from "~/lib/services/email/footer-image.server";
 import { sendEmail } from "~/lib/services/email/resend.server";
 import {

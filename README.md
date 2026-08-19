@@ -6,19 +6,21 @@ Clients, policies, prices, and users persist in **Supabase Postgres** via Drizzl
 
 ### Docs
 
-| Doc                                                              | Purpose                                     |
-| ---------------------------------------------------------------- | ------------------------------------------- |
-| [AGENTS.md](AGENTS.md)                                           | AI behavior only                            |
-| [docs/architecture.md](docs/architecture.md)                     | Principles, layering, folder ownership      |
-| [docs/coding-standards.md](docs/coding-standards.md)             | TypeScript, React, Router, errors, security |
-| [docs/design-patterns.md](docs/design-patterns.md)               | Service, repository, mapper, composition    |
-| [docs/performance.md](docs/performance.md)                       | Queries, render, Workers                    |
-| [docs/ui-guidelines.md](docs/ui-guidelines.md)                   | shadcn/ReUI, Tailwind, accessibility        |
-| [docs/code-review.md](docs/code-review.md)                       | Pre-finish / review checklist               |
-| [docs/email.md](docs/email.md)                                   | Resend document send + Supabase auth mail   |
-| [docs/testing.md](docs/testing.md)                               | Vitest + Playwright                         |
-| [docs/tooling.md](docs/tooling.md)                               | ESLint, Prettier, husky, verify             |
-| [docs/REFACTOR_TO_PRODUCTION.md](docs/REFACTOR_TO_PRODUCTION.md) | Production hardening plan                   |
+| Doc                                                                                | Purpose                                     |
+| ---------------------------------------------------------------------------------- | ------------------------------------------- |
+| [AGENTS.md](AGENTS.md)                                                             | AI behavior only                            |
+| [docs/architecture.md](docs/architecture.md)                                       | Principles, layering, folder ownership      |
+| [docs/coding-standards.md](docs/coding-standards.md)                               | TypeScript, React, Router, errors, security |
+| [docs/design-patterns.md](docs/design-patterns.md)                                 | Service, repository, mapper, composition    |
+| [docs/performance.md](docs/performance.md)                                         | Queries, render, Workers                    |
+| [docs/ui-guidelines.md](docs/ui-guidelines.md)                                     | shadcn/ReUI, Tailwind, accessibility        |
+| [docs/code-review.md](docs/code-review.md)                                         | Pre-finish / review checklist               |
+| [docs/email.md](docs/email.md)                                                     | Resend document send + Supabase auth mail   |
+| [docs/testing.md](docs/testing.md)                                                 | Vitest + Playwright                         |
+| [docs/tooling.md](docs/tooling.md)                                                 | ESLint, Prettier, husky, verify             |
+| [docs/REFACTOR_TO_PRODUCTION.md](docs/REFACTOR_TO_PRODUCTION.md)                   | Production hardening plan                   |
+| [docs/domain.md](docs/domain.md)                                                   | Hostnames, environments, DNS                |
+| [docs/deployment/preview-environments.md](docs/deployment/preview-environments.md) | Per-PR Cloudflare + Supabase preview        |
 
 ## Stack
 
@@ -49,9 +51,11 @@ npm install
 cp .env.example .env   # DATABASE_URL points at local Supabase
 npm run db:start       # starts local Postgres on :54322
 npm run db:reset       # apply migrations + seed
+npm run db:copy:uat    # replace local DB with full UAT copy (.env.uat → .env)
+npm run db:copy:prod -- --confirm   # replace production DB with UAT (.env.uat → .env.production)
 npm run dev            # http://127.0.0.1:5173
 # Second terminal: private PDF service used by email attachment rendering
-npm run dev:documents-worker
+npm run dev:pdf-worker
 ```
 
 Sign in with a seeded user from `_archive/data/users.json`. Default password: `password123`.
@@ -81,7 +85,7 @@ npm run db:export:prices  # MSSQL → JSON snapshot only
 npm run db:push           # drizzle-kit push (dev only)
 npm run dev
 npm run build
-npm run build:documents-worker # document Worker dry-run bundle
+npm run build:pdf-worker # PDF Worker dry-run bundle
 npm run typecheck
 npm run lint
 npm run format:check
@@ -89,12 +93,14 @@ npm run verify            # lint + format:check + typecheck + unit
 npm run test              # Vitest
 npm run test:e2e          # Playwright (needs `npx playwright install chromium`)
 npm run test:smoke        # Playwright smoke subset
-npm run deploy:staging
-npm run deploy:documents:staging # document Worker only
+npm run deploy            # UAT (default)
+npm run deploy --env pr-11
+npm run destroy --env pr-11
+npm run deploy:uat
 npm run deploy:secret
 ```
 
-See [docs/testing.md](docs/testing.md) and [docs/tooling.md](docs/tooling.md).
+See [docs/testing.md](docs/testing.md), [docs/tooling.md](docs/tooling.md), and [docs/deployment/preview-environments.md](docs/deployment/preview-environments.md).
 
 ## UI components
 

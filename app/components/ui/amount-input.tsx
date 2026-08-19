@@ -1,17 +1,15 @@
+import { CheckIcon } from "lucide-react";
 import { useState } from "react";
 import { Controller, useFormContext } from "react-hook-form";
-import { CheckIcon } from "lucide-react";
-import {
-  formatAmountInput,
-  sanitizeAmountInput,
-} from "~/lib/amount-input";
+
+import { useFieldSaveState } from "~/components/forms/field-save-highlight";
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
   InputGroupText,
 } from "~/components/ui/input-group";
-import { useFieldSaveState } from "~/components/forms/field-save-highlight";
+import { formatAmountInput, sanitizeAmountInput } from "~/lib/amount-input";
 import { cn } from "~/lib/utils";
 
 type AmountInputProps = Omit<
@@ -29,7 +27,7 @@ function assignRef<T>(ref: React.Ref<T> | undefined, value: T | null) {
     return;
   }
   if (ref && typeof ref === "object") {
-    (ref as React.MutableRefObject<T | null>).current = value;
+    (ref as React.RefObject<T | null>).current = value;
   }
 }
 

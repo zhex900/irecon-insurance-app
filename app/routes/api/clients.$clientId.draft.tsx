@@ -1,5 +1,4 @@
-import { clientDraftSchema, formValuesToClientInput } from "~/lib/zod/client";
-import { requireAuth } from "~/lib/auth/session.server";
+import { requireAuth } from "~/lib/auth/session/server.server";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
 import { parseUuid } from "~/lib/http/route-input";
 import {
@@ -7,6 +6,8 @@ import {
   getClient,
   updateClient,
 } from "~/lib/services/clients/service";
+import { clientDraftSchema, formValuesToClientInput } from "~/lib/zod/client";
+
 import type { Route } from "./+types/clients.$clientId.draft";
 
 /** Browser client draft-save / discard endpoint (Postgres via Drizzle). */

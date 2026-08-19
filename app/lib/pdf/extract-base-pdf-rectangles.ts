@@ -1,8 +1,10 @@
 import { inflateSync, unzipSync } from "node:zlib";
+
 import type { Schema, Template } from "@pdfme/common";
+
 import {
-  withBlankPageBackground,
   type DocumentPageOrientation,
+  withBlankPageBackground,
 } from "~/lib/pdf/templates";
 
 const PT_TO_MM = 25.4 / 72;

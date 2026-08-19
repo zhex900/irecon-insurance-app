@@ -1,12 +1,14 @@
+import * as Sentry from "@sentry/react-router/cloudflare";
+import { isbot } from "isbot";
+import { renderToReadableStream } from "react-dom/server";
 import type {
   EntryContext,
   HandleErrorFunction,
   RouterContextProvider,
 } from "react-router";
 import { ServerRouter } from "react-router";
-import { isbot } from "isbot";
-import { renderToReadableStream } from "react-dom/server";
-import * as Sentry from "@sentry/react-router/cloudflare";
+
+import { formatDbErrorChain } from "~/lib/db/query-gate";
 import { logger } from "~/lib/observability/logger.server";
 import { captureServerException } from "~/lib/observability/sentry.server";
 
@@ -60,7 +62,7 @@ async function handleRequest(
 export const handleError: HandleErrorFunction = (error, { request }) => {
   if (request.signal.aborted) return;
   logger.error("route.handle_error", {
-    error: error instanceof Error ? error.message : "route_error",
+    error: formatDbErrorChain(error),
   });
   captureServerException(error);
 };

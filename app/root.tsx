@@ -1,10 +1,12 @@
+import "./app.css";
+
 import { Links, Meta, Outlet, Scripts, ScrollRestoration } from "react-router";
 
+import { RootErrorBoundary } from "~/components/root-error-boundary";
+import { geistFontFaceCss, geistFontFaces } from "~/lib/fonts";
+import { themeInitScript } from "~/lib/theme";
+
 import type { Route } from "./+types/root";
-import { AppErrorPage } from "~/components/app-error-page";
-import { ThemeProvider } from "~/components/theme-provider";
-import { geistFontFaceCss, geistFontFaces, themeInitScript } from "~/lib/fonts";
-import "./app.css";
 
 export const links: Route.LinksFunction = () => [
   { rel: "icon", href: "/favicon.ico", sizes: "any" },
@@ -32,14 +34,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          {children}
-        </ThemeProvider>
+        {children}
         <ScrollRestoration />
         <Scripts />
       </body>
@@ -52,5 +47,5 @@ export default function App() {
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-  return <AppErrorPage error={error} />;
+  return <RootErrorBoundary error={error} />;
 }

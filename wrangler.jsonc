@@ -1,11 +1,9 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "insurance-app-staging",
+  "name": "insurance-app-uat",
   "compatibility_date": "2026-07-20",
   "compatibility_flags": ["nodejs_compat"],
   "main": "./workers/app.ts",
-  // Workers Logs + Traces. Export to Sentry via CF dashboard destinations named
-  // exactly `sentry-logs` / `sentry-traces` (OTLP → Sentry). See docs/observability.md.
   "observability": {
     "enabled": true,
     "logs": {
@@ -23,13 +21,26 @@
   "placement": {
     "mode": "smart",
   },
-  "services": [
+  "limits": {
+    "cpu_ms": 60000,
+  },
+  "workers_dev": false,
+  "routes": [
     {
-      "binding": "DOCUMENT_SERVICE",
-      "service": "insurance-document-worker-staging",
+      "pattern": "uat.irecon.net",
+      "custom_domain": true,
     },
   ],
-  // `limits.cpu_ms` requires a paid Workers plan — omit on Free (API code 100328).
+  "services": [
+    {
+      "binding": "EXCEL_SERVICE",
+      "service": "insurance-excel-worker-uat",
+    },
+    {
+      "binding": "PDF_SERVICE",
+      "service": "insurance-pdf-worker-uat",
+    },
+  ],
   "vars": {
     "SUPABASE_URL": "https://tjnsygunohylofihoksl.supabase.co",
     "SESSION_INACTIVITY_TIMEOUT_MINUTES": "30",

@@ -1,9 +1,10 @@
 import {
-  EMAIL_FOOTER_DISPLAY_WIDTH_DEFAULT,
   applyEmailFooterImageWidth,
   applyEmailTemplate,
+  EMAIL_FOOTER_DISPLAY_WIDTH_DEFAULT,
   type EmailTemplateVars,
 } from "~/lib/email/template-core";
+
 export function isEmailHtmlBody(body: string): boolean {
   return /<[a-z][\s\S]*>/i.test(body.trim());
 }

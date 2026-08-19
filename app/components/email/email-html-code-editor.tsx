@@ -1,11 +1,9 @@
-import { useRef, useState, type UIEvent } from "react";
 import { AlignLeftIcon } from "lucide-react";
-import Prism from "prismjs";
+import { type UIEvent, useEffect, useRef, useState } from "react";
+
 import { Button } from "~/components/ui/button";
 import { formatEmailHtml } from "~/lib/email/format-html";
 import { cn } from "~/lib/utils";
-import "prismjs/components/prism-markup";
-import "prismjs/themes/prism-tomorrow.css";
 
 type EmailHtmlCodeEditorProps = {
   value: string;
@@ -18,17 +16,6 @@ type EmailHtmlCodeEditorProps = {
 const CODE_FONT =
   'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
 
-function highlightMarkup(code: string): string {
-  const grammar = Prism.languages.markup;
-  if (!grammar) {
-    return code
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;");
-  }
-  return Prism.highlight(code, grammar, "markup");
-}
-
 export function EmailHtmlCodeEditor({
   value,
   onChange,
@@ -39,6 +26,47 @@ export function EmailHtmlCodeEditor({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const highlightRef = useRef<HTMLPreElement>(null);
   const [formatting, setFormatting] = useState(false);
+  const [prismModule, setPrismModule] = useState<
+    typeof import("prismjs") | null
+  >(null);
+
+  // Load prismjs dynamically on the client side
+  useEffect(() => {
+    if (prismModule) return;
+
+    Promise.all([
+      import("prismjs"),
+      import("prismjs/themes/prism-tomorrow.css"),
+    ])
+      .then(([prism]) => {
+        setPrismModule(prism.default || prism);
+      })
+      .catch((error) => {
+        console.error("Failed to load prismjs:", error);
+      });
+  }, [prismModule]);
+
+  function highlightMarkup(code: string): string {
+    // Always use basic escaping for server-side rendering
+    // Only use Prism when it's loaded on the client
+    if (!prismModule || typeof window === "undefined") {
+      return code
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
+    }
+
+    // Use the loaded Prism module
+    const Prism = prismModule;
+    if (!Prism.languages || !Prism.languages.markup) {
+      return code
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
+    }
+    return Prism.highlight(code, Prism.languages.markup, "markup");
+  }
+
   // Trailing newline keeps highlight height in sync with <textarea>.
   const highlighted = `${highlightMarkup(value)}\n`;
 

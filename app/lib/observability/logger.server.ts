@@ -5,7 +5,6 @@
  * warn/error also bridge to Sentry.logger when the SDK is initialized
  * (`enableLogs: true` on the Worker SDK).
  */
-/* eslint-disable no-console -- this module is the approved project logger */
 import {
   getRequestContext,
   type RequestContext,
@@ -43,7 +42,7 @@ function write(
     bridgeToSentry("warn", message, fields, ctx);
     return;
   }
-  console.log(line);
+  console.warn(line);
 }
 
 function bridgeToSentry(

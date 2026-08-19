@@ -6,9 +6,10 @@ import {
   useActionData,
   useNavigation,
 } from "react-router";
-import { ClientPoliciesTable } from "~/components/clients/client-policies-table";
+
+import { ClientPolicies } from "~/components/clients/summary";
+import { PageHeader } from "~/components/layout/app-layout";
 import { Button } from "~/components/ui/button";
-import { LoadingButton } from "~/components/ui/loading-button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import {
   Dialog,
@@ -18,26 +19,27 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
-import { PageHeader } from "~/components/layout/app-layout";
-import { withSuccessToast } from "~/hooks/use-success-toast";
-import { requireAuth } from "~/lib/auth/session.server";
-import { parseFormIntent, parseUuid } from "~/lib/http/route-input";
-import { clientNotFoundResponse } from "~/lib/http/resource-not-found";
+import { LoadingButton } from "~/components/ui/loading-button";
+import { withSuccessToast } from "~/hooks/utilities";
+import { requireAuth } from "~/lib/auth/session/server.server";
+import { pageTitle } from "~/lib/brand";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
+import { clientNotFoundResponse } from "~/lib/http/resource-not-found";
+import { parseFormIntent, parseUuid } from "~/lib/http/route-input";
 import { parsePagination } from "~/lib/pagination";
 import { parsePolicyListFiltersFromUrl } from "~/lib/search/policy-list-filters";
-import { formatCurrency, formatDate } from "~/lib/utils";
 import { writeAuditLog } from "~/lib/services/audit/service";
-import { listPoliciesPage } from "~/lib/services/policies/list.service";
 import {
   countClientPolicies,
   deleteClient,
   getClient,
 } from "~/lib/services/clients/service";
+import { listPoliciesPage } from "~/lib/services/policies/list.service";
 import { deletePolicies } from "~/lib/services/policy/data.service";
 import { getReferenceDataAsync } from "~/lib/services/reference.service";
+import { formatCurrency, formatDate } from "~/lib/utils";
+
 import type { Route } from "./+types/$clientId";
-import { pageTitle } from "~/lib/brand";
 
 const PAGE_SIZE = 25;
 
@@ -53,25 +55,30 @@ export async function loader({ params, request }: Route.LoaderArgs) {
   const filters = parsePolicyListFiltersFromUrl(url);
   const pagination = parsePagination(url, { defaultSize: PAGE_SIZE });
 
-  const [client, reference, page, policyCount] = await Promise.all([
+  const [client, reference, page] = await Promise.all([
     getClient(clientId),
     getReferenceDataAsync(),
-    listPoliciesPage({
-      clientId,
-      search: filters.q,
-      policyStatusIds: filters.statusIds,
-      coverTypeIds: filters.coverTypeIds,
-      policyCategoryIds: filters.policyCategoryIds,
-      inceptionFrom: filters.inception.from,
-      inceptionTo: filters.inception.to,
-      expiryFrom: filters.expiry.from,
-      expiryTo: filters.expiry.to,
-      limit: pagination.limit,
-      offset: pagination.offset,
-    }),
-    countClientPolicies(clientId),
+    listPoliciesPage(
+      {
+        clientId,
+        search: filters.q,
+        policyStatusIds: filters.statusIds,
+        coverTypeIds: filters.coverTypeIds,
+        policyCategoryIds: filters.policyCategoryIds,
+        inceptionFrom: filters.inception.from,
+        inceptionTo: filters.inception.to,
+        expiryFrom: filters.expiry.from,
+        expiryTo: filters.expiry.to,
+        limit: pagination.limit,
+        offset: pagination.offset,
+      },
+      { includePremium: true, includeMeta: true },
+    ),
   ]);
   if (!client) throw clientNotFoundResponse();
+
+  // After the heavy list query batch — avoids query-gate contention with meta counts.
+  const policyCount = await countClientPolicies(clientId);
 
   const allCount = Object.values(page.statusCounts).reduce((a, b) => a + b, 0);
 
@@ -120,7 +127,10 @@ export async function action({ request, params }: Route.ActionArgs) {
     }
 
     try {
-      const deleted = await deletePolicies(ids, { clientId });
+      const deleted = await deletePolicies(ids, {
+        clientId,
+        userId: actor.userId,
+      });
       await writeAuditLog({
         actor,
         action: "policy.delete",
@@ -330,7 +340,7 @@ export default function ClientDetailRoute({
             </div>
           </CardHeader>
           <CardContent>
-            <ClientPoliciesTable
+            <ClientPolicies
               policies={loaderData.policies}
               total={loaderData.total}
               page={loaderData.page}

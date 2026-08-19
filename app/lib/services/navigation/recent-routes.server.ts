@@ -2,6 +2,7 @@
  * Per-user route history for the side nav Recents stack.
  */
 import { and, desc, eq, notInArray, sql } from "drizzle-orm";
+
 import { getDb } from "~/lib/db/client";
 import { appUserRecentRoute, client, policy, policyCar } from "~/lib/db/schema";
 import { formatDocumentTemplateTitle } from "~/lib/documents/template-title";
@@ -9,11 +10,12 @@ import { getLatestDocumentTemplate } from "~/lib/services/documents/document-tem
 import {
   matchRecentLeafSection,
   normalizeRecentPath,
+  RECENT_ROUTES_MAX,
   recentCaptionForPath,
   recentIdForPath,
-  recentTemplateNameFromKey,
-  RECENT_ROUTES_MAX,
   type RecentLeafSection,
+  recentTemplateNameFromKey,
+  STATIC_RECENT_ROUTES,
 } from "~/lib/services/navigation/recent-routes";
 import type { SideNavLink } from "~/lib/services/navigation/side-nav.service";
 
@@ -25,26 +27,6 @@ export {
 const UUID_SEGMENT = "[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}";
 const CLIENT_PATH_PATTERN = new RegExp(`^/clients/(${UUID_SEGMENT})(?:/|$)`);
 const POLICY_PATH_PATTERN = new RegExp(`^/policies/(${UUID_SEGMENT})(?:/|$)`);
-
-const STATIC_LABELS: Record<string, string> = {
-  "/clients": "Clients",
-  "/policies": "Policies",
-  "/reports": "Reports",
-  "/reports/car-policies": "CAR Policy Report",
-  "/reports/car-renewals": "CAR Renewal Report",
-  "/settings": "Settings",
-  "/settings/users": "User Management",
-  "/settings/ar-brokers": "Authorised Representatives",
-  "/settings/account-managers": "Account Managers",
-  "/settings/car-wording": "Additional Wording",
-  "/settings/email-templates": "Email Templates",
-  "/settings/library-documents": "Library Documents",
-  "/settings/document-templates": "Document Templates",
-  "/settings/features": "Features",
-  "/settings/audit-log": "Audit Log",
-  "/settings/prices": "Prices",
-  "/profile": "Profile",
-};
 
 /**
  * Optional async leaf-label resolvers keyed by `RecentLeafSection.rootPath`.
@@ -73,7 +55,8 @@ async function resolveLeafLabel(
 }
 
 export async function resolveRecentRouteLabel(path: string): Promise<string> {
-  if (STATIC_LABELS[path]) return STATIC_LABELS[path];
+  const staticRoute = STATIC_RECENT_ROUTES[path];
+  if (staticRoute) return staticRoute.label;
 
   const leaf = matchRecentLeafSection(path);
   if (leaf) return resolveLeafLabel(leaf.section, leaf.leafId);
@@ -118,10 +101,8 @@ export async function resolveRecentRouteLabel(path: string): Promise<string> {
   );
 }
 
-/** Secondary Recents line — root nav for leaf pages, type for clients/policies. */
-export async function resolveRecentRouteCaption(
-  path: string,
-): Promise<string | undefined> {
+/** Secondary Recents line — parent nav section or entity type. */
+export function resolveRecentRouteCaption(path: string): string {
   return recentCaptionForPath(path);
 }
 
@@ -133,7 +114,7 @@ async function toSideNavLink(
     id: recentIdForPath(path),
     label,
     href: path,
-    caption: await resolveRecentRouteCaption(path),
+    caption: resolveRecentRouteCaption(path),
   };
 }
 

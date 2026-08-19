@@ -1,8 +1,9 @@
-import { reactRouter } from "@react-router/dev/vite";
 import { cloudflare } from "@cloudflare/vite-plugin";
+import { reactRouter } from "@react-router/dev/vite";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
-import { stubClientOnlySsr } from "./vite.stub-client-only";
+
+import { stubClientOnlySsr } from "./vite.stub-client-only.ts";
 
 export default defineConfig({
   plugins: [
@@ -14,7 +15,7 @@ export default defineConfig({
     reactRouter(),
   ],
   // Emit .map for Sentry; omit //# sourceMappingURL so maps are not public.
-  // deploy-staging deletes *.map after upload (before wrangler deploy).
+  // deploy-uat deletes *.map after upload (before wrangler deploy).
   build: {
     sourcemap: "hidden",
   },
@@ -47,5 +48,6 @@ export default defineConfig({
       "@tiptap/extension-text-style",
       "@tiptap/extension-font-family",
     ],
+    exclude: ["react/jsx-dev-runtime", "react/jsx-runtime", "@sentry/react"],
   },
 });

@@ -11,9 +11,10 @@ import {
   inArray,
   lte,
   or,
-  sql,
   type SQL,
+  sql,
 } from "drizzle-orm";
+
 import { getDb } from "~/lib/db/client";
 import {
   authorisedRepresentative,
@@ -25,10 +26,10 @@ import { type PageResult, toPageResult } from "~/lib/pagination";
 import { getReferenceData } from "~/lib/services/reference.service";
 import {
   CAR_SEARCH_STATUSES,
-  resolveCarSearchStatus,
   type CarPolicySummaryRow,
   type CarSearchStatus,
   type ReportPolicyRow,
+  resolveCarSearchStatus,
 } from "~/lib/services/reports/service";
 import { likePattern, resolvePage } from "~/lib/services/shared/list-query";
 import { POLICY_STATUS } from "~/lib/zod/policy-car";

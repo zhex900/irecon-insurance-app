@@ -1,5 +1,7 @@
 import { createContext } from "react-router";
-import type { DocumentServiceBinding } from "~/lib/pdf/document-worker.client.server";
+
+import type { ExcelWorkerBinding } from "~/lib/excel/excel-worker.server";
+import type { PdfWorkerBinding } from "~/lib/pdf/pdf-worker.server";
 
 export type R2BucketLike = {
   put(
@@ -24,11 +26,10 @@ export type CloudflareEnv = {
   DATABASE_URL?: string;
   APP_URL?: string;
   SUPABASE_URL?: string;
-  SUPABASE_ANON_KEY?: string;
-  SUPABASE_SERVICE_ROLE_KEY?: string;
+  SUPABASE_PUBLISHABLE_KEY?: string;
+  SUPABASE_SECRET_KEY?: string;
   RESEND_API_KEY?: string;
   EMAIL_FROM?: string;
-  EMAIL_REPLY_TO?: string;
   /** Sentry DSN for Worker / SSR error reporting (secret). */
   SENTRY_DSN?: string;
   /** Cloudflare Turnstile secret for login siteverify (secret). */
@@ -40,7 +41,8 @@ export type CloudflareEnv = {
   HYPERDRIVE?: { connectionString: string };
   AVATARS?: R2BucketLike;
   LIBRARY_DOCUMENTS?: R2BucketLike;
-  DOCUMENT_SERVICE?: DocumentServiceBinding;
+  PDF_SERVICE?: PdfWorkerBinding;
+  EXCEL_SERVICE?: ExcelWorkerBinding;
 };
 
 export const cloudflareContext = createContext<{
@@ -75,11 +77,21 @@ export function getLibraryDocumentsBucket(
   return getR2Bucket(context, "LIBRARY_DOCUMENTS");
 }
 
-export function getDocumentService(
+export function getPdfService(
   context: CloudflareRouterContext,
-): DocumentServiceBinding | null {
+): PdfWorkerBinding | null {
   try {
-    return context.get(cloudflareContext)?.env.DOCUMENT_SERVICE ?? null;
+    return context.get(cloudflareContext)?.env.PDF_SERVICE ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export function getExcelService(
+  context: CloudflareRouterContext,
+): ExcelWorkerBinding | null {
+  try {
+    return context.get(cloudflareContext)?.env.EXCEL_SERVICE ?? null;
   } catch {
     return null;
   }

@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+
 import { getDb } from "~/lib/db/client";
 import { appEmailTemplate } from "~/lib/db/schema";
 import {

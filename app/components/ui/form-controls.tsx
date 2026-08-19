@@ -1,13 +1,17 @@
 import type { ReactNode } from "react";
 import {
-  Controller,
-  useController,
-  useFormContext,
   type Control,
+  Controller,
   type FieldPath,
   type FieldValues,
+  useController,
+  useFormContext,
 } from "react-hook-form";
-import { cn } from "~/lib/utils";
+
+import {
+  FieldSavedTick,
+  useFieldSaveState,
+} from "~/components/forms/field-save-highlight";
 import { AmountInput } from "~/components/ui/amount-input";
 import { AppSelect, type AppSelectOption } from "~/components/ui/app-select";
 import { DateInput } from "~/components/ui/date-input";
@@ -20,10 +24,7 @@ import {
 import { FormulaTooltip } from "~/components/ui/formula-tooltip";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
-import {
-  FieldSavedTick,
-  useFieldSaveState,
-} from "~/components/forms/field-save-highlight";
+import { cn } from "~/lib/utils";
 
 function assignRef<T>(ref: React.Ref<T> | undefined, value: T | null) {
   if (typeof ref === "function") {
@@ -31,7 +32,7 @@ function assignRef<T>(ref: React.Ref<T> | undefined, value: T | null) {
     return;
   }
   if (ref && typeof ref === "object") {
-    (ref as React.MutableRefObject<T | null>).current = value;
+    (ref as React.RefObject<T | null>).current = value;
   }
 }
 

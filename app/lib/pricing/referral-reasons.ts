@@ -5,10 +5,9 @@
  * Display Homes / Existing Structure reasons use Limits of Liability
  * sum-insured fields — not Premium Breakdown lines.
  */
+import { TERROR_START_DATE } from "~/constants";
 import { formatCurrency } from "~/lib/utils";
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
-
-import { TERROR_START_DATE } from "~/constants";
 
 /** Rating fields needed for rate-missing referral reasons. */
 export type ReferralRatingInput = {

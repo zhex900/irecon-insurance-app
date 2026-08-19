@@ -1,11 +1,12 @@
 import type { ReactNode } from "react";
-import { formatRoleLabel } from "~/lib/auth/roles";
+
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
 } from "~/components/ui/hover-card";
 import { UserAvatar } from "~/components/ui/user-avatar";
+import { formatRoleLabel } from "~/lib/auth/roles";
 import type { NoteAuthor } from "~/lib/services/users/service";
 
 export function UserHoverCard({

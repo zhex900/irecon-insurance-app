@@ -1,4 +1,5 @@
 import { Extension } from "@tiptap/core";
+
 import type { WordingListStyle } from "~/lib/policies/wording/html";
 import { isWordingListStyle } from "~/lib/policies/wording/html";
 

@@ -1,5 +1,6 @@
-import type { Route } from "./+types/$";
 import { pageTitle } from "~/lib/brand";
+
+import type { Route } from "./+types/$";
 
 export function meta() {
   return [{ title: pageTitle("Not found") }];

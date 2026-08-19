@@ -1,4 +1,3 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { Editor } from "@tiptap/react";
 import {
   BoldIcon,
@@ -9,6 +8,8 @@ import {
   ListOrderedIcon,
   UnderlineIcon,
 } from "lucide-react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
+
 import { Button } from "~/components/ui/button";
 import { Field, FieldError, FieldLabel } from "~/components/ui/field";
 import {
@@ -138,7 +139,7 @@ function WordingEditorInner({
       attributes: {
         ...(id ? { id } : {}),
         class:
-          "wording-list-styles wording-rich-editor-prose min-h-[4.5rem] px-3 py-2 text-sm outline-none",
+          "wording-list-styles wording-rich-editor-prose min-h-[4.5rem] px-3 py-2 text-sm text-foreground outline-none",
       },
     },
   });
@@ -212,7 +213,7 @@ function WordingEditorInner({
       </FieldLabel>
       <div
         className={cn(
-          "overflow-hidden rounded-md border border-input bg-background",
+          "wording-rich-editor overflow-hidden rounded-md border border-input bg-background text-foreground",
           error && "border-destructive",
           disabled && "opacity-60",
         )}

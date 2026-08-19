@@ -1,6 +1,8 @@
 import { Trash2Icon, UserCheckIcon, UsersIcon, UserXIcon } from "lucide-react";
+
 import { ListSearchField } from "~/components/forms/list-search-field";
 import { Badge } from "~/components/reui/badge";
+import { SearchHighlight } from "~/components/search/highlight-cell";
 import { Button } from "~/components/ui/button";
 import {
   Empty,
@@ -25,7 +27,6 @@ import { TablePagination } from "~/components/ui/table-pagination";
 import { UserAvatar } from "~/components/ui/user-avatar";
 import { formatRoleLabel } from "~/lib/auth/roles";
 import type { AppUser } from "~/lib/db/types";
-import { SearchHighlight } from "~/components/search/highlight-cell";
 
 export function UsersTable({
   users,

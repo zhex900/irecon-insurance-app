@@ -4,10 +4,14 @@ import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 import globals from "globals";
 import tseslint from "typescript-eslint";
+import filenames from "eslint-plugin-filenames";
+import importPlugin from "eslint-plugin-import";
+import simpleImportSort from "eslint-plugin-simple-import-sort";
 
 export default tseslint.config(
   {
     ignores: [
+      "dist/**",
       "build/**",
       ".wrangler/**",
       ".react-router/**",
@@ -23,10 +27,18 @@ export default tseslint.config(
       "workers/*-env.d.ts",
       // Ops / one-off scripts — not part of the app lint gate.
       "scripts/**",
+      "test-excel-worker.js",
     ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
+  {
+    plugins: {
+      filenames,
+      import: importPlugin,
+      "simple-import-sort": simpleImportSort,
+    },
+  },
   {
     files: ["**/*.{ts,tsx}"],
     languageOptions: {
@@ -74,6 +86,13 @@ export default tseslint.config(
       "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/no-empty-object-type": "off",
       "no-console": ["error", { allow: ["warn", "error"] }],
+      "simple-import-sort/imports": "error",
+      "simple-import-sort/exports": "error",
+      "import/first": "error",
+      "import/newline-after-import": "error",
+      "import/no-duplicates": "error",
+
+      // Directory and naming standards rules
     },
   },
   {
@@ -131,9 +150,13 @@ export default tseslint.config(
       "app/components/forms/field-save-highlight.tsx",
       "app/components/policies/policy-form-layout.tsx",
       "app/components/policies/wizard/section-shared.tsx",
+      "app/components/policies/wizard/car-policy-wizard-mode-context.tsx",
+      // Federation loader exports both functions and components
+      "federation/loader/index.tsx",
     ],
     rules: {
       "react-refresh/only-export-components": "off",
+      "react-hooks/static-components": "off",
     },
   },
   {

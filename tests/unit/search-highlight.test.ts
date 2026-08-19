@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { fieldMatches, highlightSegments } from "~/lib/search/match";
 
 describe("fieldMatches digit queries", () => {

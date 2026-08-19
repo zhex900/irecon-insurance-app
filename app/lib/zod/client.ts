@@ -1,4 +1,5 @@
 import { z } from "zod";
+
 import type { Client } from "~/lib/db/types";
 
 const optionalText = z.string().default("");

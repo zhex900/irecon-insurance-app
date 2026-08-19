@@ -1,5 +1,6 @@
-import { useState } from "react";
 import { CheckIcon, ChevronDownIcon, ListFilterIcon } from "lucide-react";
+import { useState } from "react";
+
 import { Button } from "~/components/ui/button";
 import {
   Popover,
@@ -22,12 +23,14 @@ export function ColumnFilterHeader({
   selected,
   onChange,
   align = "start",
+  countsPending = false,
 }: {
   label: string;
   options: ColumnFilterOption[];
   selected: string[];
   onChange: (next: string[]) => void;
   align?: "start" | "center" | "end";
+  countsPending?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   /** Local draft so multi-select (OR) stays responsive while the URL revalidates. */
@@ -129,6 +132,10 @@ export function ColumnFilterHeader({
                 {option.count != null ? (
                   <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
                     {option.count}
+                  </span>
+                ) : countsPending ? (
+                  <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                    —
                   </span>
                 ) : null}
               </button>

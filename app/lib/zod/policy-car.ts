@@ -1,4 +1,5 @@
 import { z } from "zod";
+
 import { stripAmountCommas } from "~/lib/amount-input";
 import { visibleExcessFields } from "~/lib/policies/excesses";
 
@@ -8,6 +9,25 @@ const subLimitText = z
   .trim()
   .min(1, "Required")
   .max(100, "Must be 100 characters or fewer");
+
+/** General text field with reasonable limits */
+const standardTextField = z
+  .string()
+  .trim()
+  .max(500, "Must be 500 characters or fewer");
+
+/** Long text field for notes/descriptions */
+const _longTextField = z
+  .string()
+  .trim()
+  .max(2000, "Must be 2000 characters or fewer");
+
+/** URL-safe field */
+const urlSafeField = z
+  .string()
+  .trim()
+  .max(200, "Must be 200 characters or fewer")
+  .regex(/^[a-zA-Z0-9\-_.\s]*$/, "Contains invalid characters");
 
 /** Required money: empty is invalid (do not coerce "" → 0). */
 const moneyNumber = z.preprocess(
@@ -87,23 +107,32 @@ const baseFields = {
     .int()
     .min(1, "'Status' is required")
     .max(3, "'Status' is required"),
-  insurerCode: z.string().min(1, "Insurer is required"),
-  insuredName: z.string().min(1, "Insured name is required"),
+  insurerCode: urlSafeField.min(1, "Insurer is required"),
+  insuredName: standardTextField.min(1, "Insured name is required"),
   coverTypeId: z.coerce.number().min(1, "Type of cover is required"),
   /** Required when cover type is Annual; cleared for Single / Owner Builder. */
   annualCoverTypeId: z.coerce.number().optional().nullable(),
   policyCategoryId: z.coerce.number().min(1, "Policy category is required"),
-  policyNumber: z.string().optional(),
-  siteAddress: z.string().optional().default(""),
+  policyNumber: urlSafeField.optional(),
+  siteAddress: standardTextField.optional().default(""),
   estimatedTurnover: moneyNumberPositive,
   postcode: z
     .string()
     .trim()
     .regex(/^\d{4}$/, "Postcode is required"),
-  stateId: z.coerce.number().min(1, "State is required"),
-  businessActivities: z.string().min(1, "Business activities is required"),
-  insuredContracts: z.string().min(1, "Insured contracts is required"),
-  geographicalScopes: z.string().optional().default(""),
+  stateId: z.preprocess(
+    (val) => {
+      if (val === "" || val === null || val === undefined) return undefined;
+      return val;
+    },
+    z.coerce.number().min(1, "State is required"),
+  ),
+  businessActivities: standardTextField.min(
+    1,
+    "Business activities is required",
+  ),
+  insuredContracts: standardTextField.min(1, "Insured contracts is required"),
+  geographicalScopes: standardTextField.optional().default(""),
   maximumConstructionPeriod: z.coerce.number().int().positive(),
   maximumMaintenancePeriod: z.coerce.number().int().positive(),
   dateStart: z.string().min(1, "Policy from date is required"),
@@ -124,10 +153,13 @@ const baseFields = {
   contractWorksSumInsured: moneyNumber,
   displayHomes: moneyNumber,
   existingStructure: moneyNumber,
-  section1DisplayHomes: z.coerce.number().min(0).default(0),
-  section1ExistingStructure: z.coerce.number().min(0).default(0),
+  section1DisplayHomes: z.coerce.number().min(0),
+  section1ExistingStructure: z.coerce.number().min(0),
   plantEquipment: moneyNumber,
-  liabilityLimitBand: z.coerce.number().min(1),
+  liabilityLimitBand: z.preprocess((val) => {
+    if (val === "" || val === null || val === undefined) return undefined;
+    return val;
+  }, z.coerce.number().min(1)),
   claimsCountLast3Years: z.preprocess(
     (val) => {
       const stripped = stripAmountCommas(val);
@@ -290,7 +322,6 @@ export function getPolicyRuleIssues(
       }
     }
   }
-
   return issues;
 }
 
@@ -325,8 +356,8 @@ function applyExcessRules(
 const draftFields = {
   clientId: z.string().uuid(),
   policyStatusId: z.coerce.number().optional(),
-  insurerCode: z.string().optional(),
-  insuredName: z.string().optional(),
+  insurerCode: urlSafeField.optional(),
+  insuredName: standardTextField.optional(),
   coverTypeId: z.coerce.number().optional(),
   annualCoverTypeId: z.preprocess((val) => {
     if (val === "" || val === null || val === undefined) return null;
@@ -437,13 +468,19 @@ export const carPolicyPricingSchema = z
     coverTypeId: z.coerce.number().min(1),
     estimatedTurnover: moneyNumberPositive,
     postcode: z.string().regex(/^\d{4}$/),
-    stateId: z.coerce.number().min(1),
+    stateId: z.preprocess((val) => {
+      if (val === "" || val === null || val === undefined) return undefined;
+      return val;
+    }, z.coerce.number().min(1)),
     dateStart: z.string().min(1),
     contractWorksSumInsured: moneyNumber,
     displayHomes: moneyNumber,
     existingStructure: moneyNumber,
     plantEquipment: moneyNumber,
-    liabilityLimitBand: z.coerce.number().min(1),
+    liabilityLimitBand: z.preprocess((val) => {
+      if (val === "" || val === null || val === undefined) return undefined;
+      return val;
+    }, z.coerce.number().min(1)),
     claimsCountLast3Years: z.preprocess(
       (val) => {
         const stripped = stripAmountCommas(val);

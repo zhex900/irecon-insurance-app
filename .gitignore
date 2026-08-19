@@ -3,8 +3,12 @@ node_modules/
 .env
 .env.*
 !.env.example
-!.env.staging.example
+!.env.uat.example
+!.env.production.example
+!.env.pr.example
 .dev.vars
+workers/excel-local.env
+*.backup
 
 # Build / tooling
 .DS_Store
@@ -15,6 +19,10 @@ desktop.ini
 logs/
 .tmp/
 .wrangler/
+.preview-envs/
+.local-db/
+.preview/
+.production-env/
 .react-router/
 /build/
 .vscode/
@@ -30,9 +38,12 @@ test-results/
 playwright-report/
 blob-report/
 playwright/.cache/
+workers/excel/test-output/
 
 # Local MSSQL credentials (live under _archive/mssql/)
 _archive/mssql/.env.mssql
 
 # Nested git checkout under archive (not part of this repo)
 _archive/legacy-app/
+
+dist/

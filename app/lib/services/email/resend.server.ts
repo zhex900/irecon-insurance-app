@@ -1,5 +1,7 @@
 import { Resend } from "resend";
+
 import { ExternalServiceError } from "~/lib/errors";
+import { logger } from "~/lib/observability/logger.server";
 
 export type SendEmailAttachment = {
   filename: string;
@@ -15,8 +17,10 @@ export type SendEmailInput = {
   subject: string;
   text: string;
   html?: string;
+  from?: string;
   cc?: string | string[];
-  replyTo?: string | string[];
+  /** Set `null` to omit reply-to (e.g. password reset). Default uses EMAIL_REPLY_TO. */
+  replyTo?: string | string[] | null;
   attachments?: SendEmailAttachment[];
   tags?: Array<{ name: string; value: string }>;
 };
@@ -39,10 +43,15 @@ export function getResendApiKey() {
 
 /** Verified sender, e.g. `Irecon Insurance <policies@example.com.au>`. */
 export function getEmailFrom() {
-  return required(
-    "EMAIL_FROM",
-    process.env.EMAIL_FROM ?? process.env.RESEND_FROM_ADDRESS,
-  );
+  return required("EMAIL_FROM", process.env.EMAIL_FROM);
+}
+
+/** Auth mail sender — defaults to EMAIL_FROM */
+export function getAuthEmailFrom() {
+  const from = process.env.EMAIL_FROM?.trim();
+
+  logger.info("getAuthEmailFrom", { from });
+  return required("EMAIL_FROM", from);
 }
 
 export function getEmailReplyTo() {
@@ -114,7 +123,8 @@ export async function sendEmail(
   input: SendEmailInput,
 ): Promise<SendEmailResult> {
   const resend = createResendClient();
-  const replyTo = input.replyTo ?? getEmailReplyTo();
+  const replyTo =
+    input.replyTo === null ? undefined : (input.replyTo ?? getEmailReplyTo());
 
   const inline = input.html?.trim()
     ? convertDataUriImagesToCid(input.html)
@@ -123,13 +133,13 @@ export async function sendEmail(
   const attachments = [...(input.attachments ?? []), ...inline.attachments];
 
   const { data, error } = await resend.emails.send({
-    from: getEmailFrom(),
+    from: input.from?.trim() || getEmailFrom(),
     to: input.to,
     subject: input.subject,
     text: stripDataUrisFromText(input.text),
     html: inline.html,
     cc: input.cc,
-    replyTo,
+    ...(replyTo ? { replyTo } : {}),
     attachments: attachments.map((file) => ({
       filename: file.filename,
       content: file.content,
@@ -140,10 +150,14 @@ export async function sendEmail(
   });
 
   if (error) {
-    throw new ExternalServiceError("Email could not be sent right now.");
+    throw new ExternalServiceError(
+      `Email could not be sent right now: ${error.message}`,
+    );
   }
   if (!data?.id) {
-    throw new ExternalServiceError("Email could not be sent right now.");
+    throw new ExternalServiceError(
+      "Email could not be sent right now: Resend returned no message id.",
+    );
   }
   return { id: data.id };
 }

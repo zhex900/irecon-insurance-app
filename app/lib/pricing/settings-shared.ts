@@ -1,11 +1,11 @@
 /**
  * Shared helpers for Settings → Prices nested routes.
  */
+import { catalogueLabel } from "~/lib/services/price/labels";
 import type {
   PriceCatalogueKind,
   PriceCatalogueSnapshot,
 } from "~/lib/services/price/types";
-import { catalogueLabel } from "~/lib/services/price/labels";
 
 export const PRICE_CATALOGUE_SLUGS = [
   "car-rates",

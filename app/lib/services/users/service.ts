@@ -1,4 +1,5 @@
 import { asc, eq, inArray } from "drizzle-orm";
+
 import { getDb } from "~/lib/db/client";
 import { appUser } from "~/lib/db/schema";
 import type { AppUser } from "~/lib/db/types";

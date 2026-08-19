@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { applyManualPremiumEdit } from "~/lib/pricing/premium-manual-recalc";
+
 import type { PremiumBreakdown, RatingSnapshot } from "~/lib/db/types";
+import { applyManualPremiumEdit } from "~/lib/pricing/premium-manual-recalc";
 
 function rating(overrides: Partial<RatingSnapshot> = {}): RatingSnapshot {
   return {

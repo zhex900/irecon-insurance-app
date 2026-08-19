@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
+
 import {
-  resolveNavSectionsExpanded,
-  resolveShellNavState,
   readNavSectionsFromCookieHeader,
   readRecentsOpenFromCookieHeader,
   readRecentsOpenFromRequest,
   readSidebarOpenFromCookieHeader,
   readSidebarOpenFromRequest,
+  resolveNavSectionsExpanded,
+  resolveShellNavState,
   sectionFromPathname,
 } from "~/lib/services/navigation/sidebar-state";
 

@@ -1,4 +1,6 @@
 import { z } from "zod";
+
+import { formatDbErrorChain } from "~/lib/db/query-gate";
 import { DomainError } from "~/lib/errors";
 import { logger } from "~/lib/observability/logger.server";
 import { captureServerException } from "~/lib/observability/sentry.server";
@@ -33,7 +35,7 @@ export function publicErrorMessage(
   logger.error("Unexpected route operation failure", {
     operation,
     errorType: error instanceof Error ? error.name : typeof error,
-    errorMessage: error instanceof Error ? error.message : undefined,
+    errorMessage: formatDbErrorChain(error),
   });
   captureServerException(error, { operation });
   return fallback;

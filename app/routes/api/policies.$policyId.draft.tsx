@@ -1,24 +1,24 @@
-import { carPolicyDraftSchema } from "~/lib/zod/policy-car";
-import { POLICY_STATUS } from "~/lib/zod/policy-car";
-import { requireAuth } from "~/lib/auth/session.server";
+import { requireAuth } from "~/lib/auth/session/server.server";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
 import { parseUuid } from "~/lib/http/route-input";
 import {
   POLICY_NUMBER_TAKEN_MESSAGE,
   validatePolicyNumberInput,
 } from "~/lib/policies/policy-number";
-import { mergeDraftIntoPolicy } from "~/lib/services/policy/draft-merge";
 import {
   deletePolicyDraft,
   getPolicy,
   isPolicyNumberTaken,
   savePolicy,
 } from "~/lib/services/policy/data.service";
+import { mergeDraftIntoPolicy } from "~/lib/services/policy/draft-merge";
+import { carPolicyDraftSchema, POLICY_STATUS } from "~/lib/zod/policy-car";
+
 import type { Route } from "./+types/policies.$policyId.draft";
 
 /** Browser draft-save / discard endpoint (Postgres via Drizzle). */
 export async function action({ request, params }: Route.ActionArgs) {
-  await requireAuth(request);
+  const actor = await requireAuth(request);
   const policyId = parseUuid(params.policyId);
   if (!policyId) {
     return Response.json(
@@ -29,7 +29,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 
   if (request.method === "DELETE") {
     try {
-      await deletePolicyDraft(policyId);
+      await deletePolicyDraft(policyId, actor.userId);
       return Response.json({ ok: true });
     } catch (error) {
       return Response.json(

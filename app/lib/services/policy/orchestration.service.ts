@@ -1,32 +1,15 @@
+import type { z } from "zod";
+
 import {
-  POLICY_MESSAGE_NOTE_TYPE_ID,
   type Policy,
+  POLICY_MESSAGE_NOTE_TYPE_ID,
   type PremiumBreakdown,
 } from "~/lib/db/types";
-export { POLICY_MESSAGE_NOTE_TYPE_ID };
-import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
-import type { z } from "zod";
 import { NotFoundError, ValidationError } from "~/lib/errors";
-import {
-  isTerminalStatus,
-  POLICY_STATUS,
-  type carPolicyDraftSchema,
-} from "~/lib/zod/policy-car";
 import {
   flatCustomWordings,
   normalizeCustomWordings,
 } from "~/lib/policies/custom-wordings";
-import {
-  calculatePremiumForPolicy,
-  createMessageNote,
-  mergeReferralNotes,
-} from "~/lib/services/price/premium.service";
-import {
-  createPolicyDraft,
-  getPolicy,
-  isPolicyNumberTaken,
-  savePolicy,
-} from "~/lib/services/policy/data.service";
 import {
   POLICY_NUMBER_TAKEN_MESSAGE,
   resolvePolicyNumberForSave,
@@ -40,6 +23,24 @@ import {
   buildReferralReasons,
   liabilityLimitLabel,
 } from "~/lib/pricing/referral-reasons";
+import {
+  createPolicyDraft,
+  getPolicy,
+  isPolicyNumberTaken,
+  savePolicy,
+} from "~/lib/services/policy/data.service";
+import {
+  calculatePremiumForPolicy,
+  createMessageNote,
+  mergeReferralNotes,
+} from "~/lib/services/price/premium.service";
+import type {
+  carPolicyDraftSchema,
+  CarPolicyFormValues,
+} from "~/lib/zod/policy-car";
+import { isTerminalStatus, POLICY_STATUS } from "~/lib/zod/policy-car";
+
+export { POLICY_MESSAGE_NOTE_TYPE_ID };
 
 export { isTerminalStatus };
 export {
@@ -107,56 +108,61 @@ export async function upsertPolicyFromForm(
   },
   createdBy: string,
 ) {
-  const existing = await getPolicy(policyId);
-  if (!existing) throw new NotFoundError("Policy not found");
-  if (isTerminalStatus(existing.policyStatusId)) {
-    throw new PolicySaveError("This policy status cannot be changed.");
-  }
+  const { monitorCriticalOperation } =
+    await import("~/lib/performance/internal-monitoring.server");
 
-  const { premium: calculatedPremium, rating } =
-    await calculatePremiumForPolicy(values);
-
-  // Prefer broker manual edits when provided; otherwise use the calculator.
-  const premium: PremiumBreakdown =
-    values.premium && typeof values.premium === "object"
-      ? {
-          ...calculatedPremium,
-          ...(values.premium as Partial<PremiumBreakdown>),
-        }
-      : calculatedPremium;
-
-  // Referral DH / ES use Limits of Liability fields, not premium lines.
-  const referralReasons = buildReferralReasons(
-    values,
-    rating,
-    liabilityLimitLabel(Number(values.liabilityLimitBand)),
-  );
-
-  if (
-    existing.policyStatusId !== POLICY_STATUS.Taken &&
-    values.policyStatusId === POLICY_STATUS.Taken
-  ) {
-    const takenErrors = getTakenStatusErrors(values, premium);
-    if (takenErrors.length > 0) {
-      throw new PolicySaveError(formatTakenStatusBlockMessage(takenErrors));
+  return monitorCriticalOperation("policySubmit", async () => {
+    const existing = await getPolicy(policyId);
+    if (!existing) throw new NotFoundError("Policy not found");
+    if (isTerminalStatus(existing.policyStatusId)) {
+      throw new PolicySaveError("This policy status cannot be changed.");
     }
-  }
 
-  const policy = applyFormValues(existing, values, {
-    draft: false,
-    premium,
-    rating,
-    referralReasons,
-    notes: mergeReferralNotes(
-      existing.notes,
-      policyId,
+    const { premium: calculatedPremium, rating } =
+      await calculatePremiumForPolicy(values);
+
+    // Prefer broker manual edits when provided; otherwise use the calculator.
+    const premium: PremiumBreakdown =
+      values.premium && typeof values.premium === "object"
+        ? {
+            ...calculatedPremium,
+            ...(values.premium as Partial<PremiumBreakdown>),
+          }
+        : calculatedPremium;
+
+    // Referral DH / ES use Limits of Liability fields, not premium lines.
+    const referralReasons = buildReferralReasons(
+      values,
+      rating,
+      liabilityLimitLabel(Number(values.liabilityLimitBand)),
+    );
+
+    if (
+      existing.policyStatusId !== POLICY_STATUS.Taken &&
+      values.policyStatusId === POLICY_STATUS.Taken
+    ) {
+      const takenErrors = getTakenStatusErrors(values, premium);
+      if (takenErrors.length > 0) {
+        throw new PolicySaveError(formatTakenStatusBlockMessage(takenErrors));
+      }
+    }
+
+    const policy = applyFormValues(existing, values, {
+      draft: false,
+      premium,
+      rating,
       referralReasons,
-      createdBy,
-    ),
-  });
+      notes: mergeReferralNotes(
+        existing.notes,
+        policyId,
+        referralReasons,
+        createdBy,
+      ),
+    });
 
-  await assertPolicyNumberAvailable(policy, existing);
-  return savePolicy({ ...policy, isDraft: false }, { actor: createdBy });
+    await assertPolicyNumberAvailable(policy, existing);
+    return savePolicy({ ...policy, isDraft: false }, { actor: createdBy });
+  });
 }
 
 export async function applyPremiumCalculation(
@@ -349,12 +355,14 @@ function applyFormValues(
         values.existingStructure ?? existing.car.existingStructure,
       displayHomes: values.displayHomes ?? existing.car.displayHomes,
       // Premium lines come from the calculator / existing premium — not risk values.
-      contractWorksExistingStructurePremium:
-        extras.premium?.contractWorksExistingStructurePremium ??
-        existing.car.contractWorksExistingStructurePremium,
-      contractWorksDisplayHomesPremium:
-        extras.premium?.contractWorksDisplayHomesPremium ??
-        existing.car.contractWorksDisplayHomesPremium,
+      // When extras.premium is present (recalculate), missing DH/ES means 0 so
+      // Reset Premium clears typed add-on lines instead of keeping the last edit.
+      contractWorksExistingStructurePremium: extras.premium
+        ? (extras.premium.contractWorksExistingStructurePremium ?? 0)
+        : existing.car.contractWorksExistingStructurePremium,
+      contractWorksDisplayHomesPremium: extras.premium
+        ? (extras.premium.contractWorksDisplayHomesPremium ?? 0)
+        : existing.car.contractWorksDisplayHomesPremium,
       claimsCountLast3Years:
         values.claimsCountLast3Years ?? existing.car.claimsCountLast3Years,
       anyClaimsExceed20k:

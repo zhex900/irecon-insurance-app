@@ -1,14 +1,20 @@
-import { Form, useActionData, useNavigation } from "react-router";
 import { useMemo, useState } from "react";
-import { ClientsIndexFilters } from "~/components/clients/clients-index-filters";
-import { ClientsIndexTable } from "~/components/clients/clients-index-table";
-import { DeleteClientDialog } from "~/components/clients/delete-client-dialog";
+import {
+  Form,
+  type ShouldRevalidateFunctionArgs,
+  useActionData,
+  useNavigation,
+} from "react-router";
+
+import { DeleteClientDialog } from "~/components/clients/dialogs";
+import { ClientsTable, ClientsTableFilters } from "~/components/clients/list";
 import { PageHeader } from "~/components/layout/app-layout";
 import { Button } from "~/components/ui/button";
-import { useHandledActionData } from "~/hooks/use-handled-action-data";
-import { useActionSuccessToast } from "~/hooks/use-success-toast";
-import { useDebouncedSearchQuery } from "~/hooks/use-debounced-search-query";
-import { requireAuth } from "~/lib/auth/session.server";
+import { useListReference } from "~/hooks/list";
+import { useDebouncedSearchQuery } from "~/hooks/search";
+import { useActionSuccessToast, useHandledActionData } from "~/hooks/utilities";
+import { requireAuth } from "~/lib/auth/session/server.server";
+import { pageTitle } from "~/lib/brand";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
 import { parseFormIntent, parseUuid } from "~/lib/http/route-input";
 import {
@@ -16,20 +22,37 @@ import {
   pageSizeSearchHref,
   parsePagination,
 } from "~/lib/pagination";
+import { referenceData } from "~/lib/reference-data";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import {
-  listClientsPage,
   type ClientListItem,
+  listClientsPage,
 } from "~/lib/services/clients/list.service";
 import { deleteClient } from "~/lib/services/clients/service";
-import { getReferenceDataAsync } from "~/lib/services/reference.service";
+
 import type { Route } from "./+types/_index";
-import { pageTitle } from "~/lib/brand";
 
 const PAGE_SIZE = 25;
 
 export function meta() {
   return [{ title: pageTitle("Clients") }];
+}
+
+export function shouldRevalidate({
+  formData,
+  actionResult,
+  defaultShouldRevalidate,
+}: ShouldRevalidateFunctionArgs) {
+  if (formData?.get("intent") === "delete") return true;
+  if (
+    actionResult &&
+    typeof actionResult === "object" &&
+    "intent" in actionResult &&
+    (actionResult as { intent?: string }).intent === "delete"
+  ) {
+    return true;
+  }
+  return defaultShouldRevalidate;
 }
 
 function parsePositiveInt(value: string | null) {
@@ -56,18 +79,15 @@ export async function loader({ request }: Route.LoaderArgs) {
       : "all";
   const pagination = parsePagination(url, { defaultSize: PAGE_SIZE });
 
-  const [page, reference] = await Promise.all([
-    listClientsPage({
-      search,
-      accountManagerId,
-      authorisedRepresentativeId,
-      arCompanyName: arCompanyName || null,
-      policyFilter,
-      limit: pagination.limit,
-      offset: pagination.offset,
-    }),
-    getReferenceDataAsync(),
-  ]);
+  const page = await listClientsPage({
+    search,
+    accountManagerId,
+    authorisedRepresentativeId,
+    arCompanyName: arCompanyName || null,
+    policyFilter,
+    limit: pagination.limit,
+    offset: pagination.offset,
+  });
 
   return {
     clients: page.rows,
@@ -77,7 +97,6 @@ export async function loader({ request }: Route.LoaderArgs) {
     withPolicies: page.withPolicies,
     withoutPolicies: page.withoutPolicies,
     allMatching: page.withPolicies + page.withoutPolicies,
-    reference,
     filters: {
       search,
       accountManagerId,
@@ -153,31 +172,42 @@ export default function ClientsIndexRoute({
     onSuccess: () => setDeleting(null),
   });
 
+  const { reference: listReference } = useListReference();
+
+  const reference = useMemo(() => {
+    if (!listReference) return referenceData;
+    return {
+      ...referenceData,
+      accountManagers: listReference.accountManagers,
+      wholesaleBrokers: listReference.wholesaleBrokers,
+    };
+  }, [listReference]);
+
   const accountManagerOptions = useMemo(
     () =>
-      loaderData.reference.accountManagers.map((manager) => ({
+      reference.accountManagers.map((manager) => ({
         value: manager.accountManagerId,
         label: manager.fullName,
         secondary: manager.abbrev,
       })),
-    [loaderData.reference.accountManagers],
+    [reference.accountManagers],
   );
 
   const arNameOptions = useMemo(
     () =>
-      loaderData.reference.wholesaleBrokers.map((ar) => ({
+      reference.wholesaleBrokers.map((ar) => ({
         value: ar.authorisedRepresentativeId,
         label: ar.fullName,
         secondary: ar.companyName,
         searchText: `${ar.companyName} ${ar.arNumber}`,
       })),
-    [loaderData.reference.wholesaleBrokers],
+    [reference.wholesaleBrokers],
   );
 
   const arCompanyOptions = useMemo(() => {
     const seen = new Set<string>();
     const options: { value: string; label: string }[] = [];
-    for (const ar of loaderData.reference.wholesaleBrokers) {
+    for (const ar of reference.wholesaleBrokers) {
       const company = ar.companyName.trim();
       if (!company) continue;
       const key = company.toLowerCase();
@@ -186,7 +216,7 @@ export default function ClientsIndexRoute({
       options.push({ value: company, label: company });
     }
     return options.sort((a, b) => a.label.localeCompare(b.label));
-  }, [loaderData.reference.wholesaleBrokers]);
+  }, [reference.wholesaleBrokers]);
 
   function buildParams(next?: {
     search?: string;
@@ -257,7 +287,7 @@ export default function ClientsIndexRoute({
         }
       />
 
-      <ClientsIndexFilters
+      <ClientsTableFilters
         search={search}
         onSearchChange={setSearch}
         onSearchClear={clearSearch}
@@ -283,14 +313,14 @@ export default function ClientsIndexRoute({
         <p className="mb-3 text-sm text-destructive">{actionData.error}</p>
       ) : null}
 
-      <ClientsIndexTable
+      <ClientsTable
         clients={loaderData.clients}
         total={loaderData.total}
         page={loaderData.page}
         pageSize={loaderData.pageSize}
         searchQuery={searchQuery}
         searchFilter={loaderData.filters.search}
-        reference={loaderData.reference}
+        reference={reference}
         pageHref={pageHref}
         pageSizeHref={pageSizeHref}
         onDeleteRequest={setDeleting}

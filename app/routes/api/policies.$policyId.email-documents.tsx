@@ -1,18 +1,20 @@
 import { z } from "zod";
-import { requireAuth } from "~/lib/auth/session.server";
+
+import { requireAuth } from "~/lib/auth/session/server.server";
+import {
+  getLibraryDocumentsBucket,
+  getPdfService,
+} from "~/lib/cloudflare.server";
+import { EMAIL_SEND_RECIPIENTS } from "~/lib/email/templates";
 import { ExternalServiceError } from "~/lib/errors";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
 import { parseUuid } from "~/lib/http/route-input";
-import {
-  getDocumentService,
-  getLibraryDocumentsBucket,
-} from "~/lib/cloudflare.server";
-import { EMAIL_SEND_RECIPIENTS } from "~/lib/email/templates";
-import { DocumentRenderServiceError } from "~/lib/pdf/document-worker.client.server";
 import { logger } from "~/lib/observability/logger.server";
+import { PdfRenderServiceError } from "~/lib/pdf/pdf-worker.server";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import { sendPolicyDocumentsEmail } from "~/lib/services/email/send-policy-documents.server";
 import { getPolicy } from "~/lib/services/policy/data.service";
+
 import type { Route } from "./+types/policies.$policyId.email-documents";
 
 const extraAttachmentSchema = z.object({
@@ -84,8 +86,8 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 
   try {
     const libraryBucket = getLibraryDocumentsBucket(context);
-    const documentService = getDocumentService(context);
-    if (!documentService) {
+    const pdfService = getPdfService(context);
+    if (!pdfService) {
       return Response.json(
         { error: "Document generation is temporarily unavailable." },
         { status: 503 },
@@ -102,7 +104,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
       html: payload.html?.trim() || undefined,
       recipientType: payload.recipientType,
       libraryBucket,
-      documentService,
+      pdfService,
     });
 
     const attachmentCount = documents.length + payload.extraAttachments.length;
@@ -119,6 +121,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
         cc: payload.cc || undefined,
         attachmentNames: sent.attachmentNames,
         attachmentBytes: sent.attachmentBytes,
+        replyTo: sent.replyTo,
         extraAttachmentCount: payload.extraAttachments.length,
         resendId: sent.resendId,
       },
@@ -137,7 +140,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
       operation: "policy_documents_email_send",
     });
     const status =
-      error instanceof DocumentRenderServiceError ||
+      error instanceof PdfRenderServiceError ||
       error instanceof ExternalServiceError ||
       /not set|RESEND|EMAIL_FROM/i.test(internalMessage)
         ? 503

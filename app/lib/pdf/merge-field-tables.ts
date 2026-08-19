@@ -1,13 +1,13 @@
-import { normalizeCustomWordings } from "~/lib/policies/custom-wordings";
 import type { CarWording } from "~/lib/db/types";
-import { referenceData as reference } from "~/lib/reference-data";
-import { formatCurrency } from "~/lib/utils";
-import { isWordingHtmlEmpty } from "~/lib/policies/wording/html";
-
 import {
   canonicalMergeFieldName,
   resolveTableMergeInput,
 } from "~/lib/pdf/merge-field-schemas";
+import { normalizeCustomWordings } from "~/lib/policies/custom-wordings";
+import { isWordingHtmlEmpty } from "~/lib/policies/wording/html";
+import { referenceData as reference } from "~/lib/reference-data";
+import { formatCurrency } from "~/lib/utils";
+
 const STATE_BY_ID = new Map(
   reference.states.map((s) => [s.stateId, s.code] as const),
 );

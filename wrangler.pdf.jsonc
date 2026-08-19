@@ -1,0 +1,30 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "insurance-pdf-worker-uat",
+  "main": "./workers/pdf/index.ts",
+  "compatibility_date": "2026-07-20",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "preview_urls": false,
+  "assets": {
+    "directory": "./public/fonts",
+    "binding": "ASSETS",
+    "run_worker_first": true,
+  },
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "destinations": ["sentry-logs"],
+    },
+    "traces": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "destinations": ["sentry-traces"],
+    },
+  },
+  "limits": {
+    "cpu_ms": 60000,
+  },
+}

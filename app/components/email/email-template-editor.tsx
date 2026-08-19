@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { useFetcher } from "react-router";
 import { CodeIcon, PencilIcon } from "lucide-react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { useFetcher } from "react-router";
 import { toast } from "sonner";
+
 import { EmailDocumentFrame } from "~/components/email/email-document-frame";
 import { EmailHtmlCodeEditor } from "~/components/email/email-html-code-editor";
 import { EmailTemplateEditorActions } from "~/components/email/email-template-editor-actions";
@@ -182,19 +183,37 @@ export function EmailTemplateEditor({
     fetcher.submit(formData, { method: "post" });
   }
 
+  const syncedLoaderRef = useRef<string | null>(null);
+
   useEffect(() => {
     const injected = injectEmailFooterImage(
       template.body,
       footerImageDataUri,
       footerImageWidth,
     );
+    const loaderSignature = [
+      template.recipientType,
+      template.subject,
+      template.body,
+      template.toEmail,
+      footerImageDataUri,
+      footerImageWidth,
+    ].join("\0");
+
+    const isFirstLoad = syncedLoaderRef.current === null;
+    if (syncedLoaderRef.current === loaderSignature) return;
+    syncedLoaderRef.current = loaderSignature;
+
     resetHistory({ subject: template.subject, body: injected });
-    queueMicrotask(() => {
-      setSubject(template.subject);
-      setCodeHtml(injected);
-      setToEmail(template.toEmail);
-      setFrameKey((key) => key + 1);
-    });
+
+    // Initial useState already matches loader data — skip redundant setState and
+    // frameKey bump that reload the visual editor on cold open.
+    if (isFirstLoad) return;
+
+    setSubject(template.subject);
+    setCodeHtml(injected);
+    setToEmail(template.toEmail);
+    setFrameKey((key) => key + 1);
   }, [
     template.recipientType,
     template.subject,

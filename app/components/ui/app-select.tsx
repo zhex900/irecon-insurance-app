@@ -1,6 +1,5 @@
-import { forwardRef, useState, type ReactNode } from "react";
+import { forwardRef, type ReactNode, useState } from "react";
 
-import { cn } from "~/lib/utils";
 import {
   Select,
   SelectContent,
@@ -9,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
+import { cn } from "~/lib/utils";
 
 /** Base UI disallows empty item values; map "" through this sentinel. */
 const EMPTY_VALUE = "__app_select_empty__";

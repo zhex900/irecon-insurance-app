@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
+
+import type { Policy } from "~/lib/db/types";
 import {
   alignBrokerFeeSchemaNames,
   brokerFeeMergeFields,
   policyToMergeInputs,
 } from "~/lib/pdf/merge-fields";
-import type { Policy } from "~/lib/db/types";
 
 const FEE_LINES = [
   {

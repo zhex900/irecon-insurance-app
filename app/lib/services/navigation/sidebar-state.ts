@@ -72,8 +72,9 @@ export function readNavSectionsFromCookieHeader(
 }
 
 /**
- * Expanded Reports/Settings sections for SSR. Cookie state plus the active
- * section for the current path so submenus match on first paint.
+ * Expanded Reports/Settings for SSR first paint only.
+ * Cookie state plus the active path section so a deep link shows its submenu.
+ * Client navigations must not auto expand/collapse — only the user toggle.
  */
 export function resolveNavSectionsExpanded(
   request: Request,

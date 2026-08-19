@@ -1,12 +1,12 @@
-import type { AppUser } from "~/lib/db/types";
 import { isAdminRole, isSuperAdmin } from "~/lib/auth/roles";
+import type { AppUser } from "~/lib/db/types";
 
 /** User-facing copy when an authenticated user hits a page they cannot open. */
 export const UNAUTHORIZED_PAGE_MESSAGE =
   "You are not authorised for this page.";
 
 /**
- * Abort the loader/action with HTTP 403 so ErrorBoundary / AppErrorPage can
+ * Abort the loader/action with HTTP 403 so ErrorBoundary / RootErrorBoundary can
  * explain the denial (instead of a silent redirect or fake 404).
  */
 export function throwUnauthorizedPage(

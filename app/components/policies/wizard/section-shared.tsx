@@ -1,5 +1,11 @@
 import type { ReactNode } from "react";
 import { useFormContext } from "react-hook-form";
+
+import {
+  FieldSavedTick,
+  useFieldSaveState,
+} from "~/components/forms/field-save-highlight";
+import { AmountInput } from "~/components/ui/amount-input";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import {
   Field,
@@ -7,18 +13,13 @@ import {
   FieldError,
   FieldLabel,
 } from "~/components/ui/field";
-import { AmountInput } from "~/components/ui/amount-input";
 import { FormulaTooltip } from "~/components/ui/formula-tooltip";
 import { Input } from "~/components/ui/input";
-import { type CarPolicyFormValues } from "~/lib/zod/policy-car";
-import {
-  FieldSavedTick,
-  useFieldSaveState,
-} from "~/components/forms/field-save-highlight";
 import type { ReferenceData } from "~/lib/db/types";
 import type { ExcessFieldConfig } from "~/lib/policies/excesses";
 import type { SubLimitFieldConfig } from "~/lib/policies/sub-limits";
 import { cn } from "~/lib/utils";
+import { type CarPolicyFormValues } from "~/lib/zod/policy-car";
 
 export function SubLimitField({ field }: { field: SubLimitFieldConfig }) {
   const {

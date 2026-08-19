@@ -1,5 +1,6 @@
 import { PDFDocument } from "pdf-lib";
 import { describe, expect, it } from "vitest";
+
 import {
   applyEndorsementRichDrawOps,
   type EndorsementRichDrawOp,

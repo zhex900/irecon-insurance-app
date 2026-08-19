@@ -1,3 +1,4 @@
+import type { policy, policyCar, policyCarAdjustment } from "~/lib/db/schema";
 import type {
   CarAdjustmentRecord,
   CarExcesses,
@@ -8,11 +9,10 @@ import type {
   PremiumBreakdown,
   RatingSnapshot,
 } from "~/lib/db/types";
-import type { policy, policyCar, policyCarAdjustment } from "~/lib/db/schema";
 import {
+  type CustomWordingItem,
   flatCustomWordings,
   normalizeCustomWordings,
-  type CustomWordingItem,
 } from "~/lib/policies/custom-wordings";
 
 type PolicyRow = typeof policy.$inferSelect;

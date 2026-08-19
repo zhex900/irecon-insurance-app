@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDownIcon, FileTypeIcon, MailIcon } from "lucide-react";
-import { PdfPreviewDialog } from "~/components/documents/pdf-preview-dialog";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useFormContext } from "react-hook-form";
+
+import { PreviewDialog } from "~/components/documents/pdf/preview";
 import { EmailDocumentsDialog } from "~/components/email/email-documents-dialog";
 import { Badge } from "~/components/reui/badge";
 import { Button } from "~/components/ui/button";
@@ -19,31 +21,119 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "~/components/ui/tooltip";
+import { usePolicyEmailCompose } from "~/hooks/policy";
 import { usePolicyDocumentPreview } from "~/hooks/use-policy-document-preview";
-import type { CarWording, Policy, PolicyDocument } from "~/lib/db/types";
+import type {
+  CarWording,
+  Policy,
+  PolicyDocument,
+  ReferenceData,
+} from "~/lib/db/types";
 import { formatDocumentLabel } from "~/lib/documents/document-label";
+import { emailVarsFromAccountManager } from "~/lib/email/templates";
 import {
   DEFAULT_EMAIL_TEMPLATES,
-  resolveBrokerTemplateKey,
   type EmailSendRecipient,
-  type EmailTemplate,
-  type EmailTemplateVars,
+  resolveBrokerTemplateKey,
 } from "~/lib/email/templates";
-import type { EmailDirectoryEntry } from "~/lib/email/directory";
-import { isPremiumExcelDocument } from "~/lib/pricing/premium-excel";
+import { isPremiumExcelDocument } from "~/lib/excel/client";
 import { versionPolicyDocuments } from "~/lib/services/policy/documents/versions";
+import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
+
+function PremiumSummaryEmailDialog({
+  open,
+  onOpenChange,
+  policyId,
+  documents,
+  policyNumber,
+  clientName,
+  reference,
+  policy,
+  emailRecipient,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  policyId: string;
+  documents: PolicyDocument[];
+  policyNumber: string;
+  clientName?: string;
+  reference: ReferenceData;
+  policy?: Policy;
+  emailRecipient: EmailSendRecipient;
+}) {
+  const { compose, pending: composePending } = usePolicyEmailCompose(
+    policyId,
+    true,
+  );
+  const brokerName = compose?.broker?.fullName ?? "";
+  const brokerEmail = compose?.broker?.email ?? "";
+  const emailTemplates = compose?.templates ?? [];
+  const emailDirectory = compose?.directory ?? [];
+  const footerImageWidth = compose?.footerImageWidth;
+
+  const emailTemplateVars = useMemo(
+    () => ({
+      coverType:
+        reference.coverTypes.find(
+          (item) => item.coverTypeId === (policy?.car?.coverTypeId ?? 1),
+        )?.name ?? "",
+      insuredName: policy?.car.insuredName ?? "",
+      siteAddress: policy?.car.siteAddress ?? "",
+      ...emailVarsFromAccountManager(compose?.accountManager ?? undefined),
+      footerImage: compose?.footerImageDataUri ?? "",
+    }),
+    [compose, policy, reference.coverTypes],
+  );
+
+  const brokerTemplateKey = resolveBrokerTemplateKey({
+    coverTypeId: policy?.car?.coverTypeId ?? 1,
+    policyCategoryId: policy?.policyCategoryId ?? 1,
+  });
+  const brokerTemplate = emailTemplates.find(
+    (t) => t.recipientType === brokerTemplateKey,
+  ) ?? {
+    recipientType: brokerTemplateKey,
+    ...DEFAULT_EMAIL_TEMPLATES[brokerTemplateKey],
+  };
+  const insurerTemplate = emailTemplates.find(
+    (t) => t.recipientType === "insurer",
+  ) ?? {
+    recipientType: "insurer" as const,
+    ...DEFAULT_EMAIL_TEMPLATES.insurer,
+  };
+  const activeTemplate =
+    emailRecipient === "insurer" ? insurerTemplate : brokerTemplate;
+  const activeDefaultTo =
+    emailRecipient === "insurer" ? insurerTemplate.toEmail : brokerEmail;
+
+  return (
+    <EmailDocumentsDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      loading={composePending}
+      policyId={policyId}
+      documents={documents}
+      policyNumber={policyNumber}
+      clientName={clientName}
+      brokerName={brokerName}
+      brokerEmail={brokerEmail}
+      recipientType={emailRecipient}
+      template={activeTemplate}
+      defaultTo={activeDefaultTo}
+      templateVars={emailTemplateVars}
+      footerImageDataUri={compose?.footerImageDataUri}
+      footerImageWidth={footerImageWidth}
+      emailDirectory={emailDirectory}
+    />
+  );
+}
 
 export function PremiumSummaryDocuments({
   documents,
   isGeneratingDocuments = false,
   policyNumber,
   clientName = "",
-  brokerName = "",
-  brokerEmail = "",
-  emailTemplates = [],
-  emailDirectory = [],
-  emailTemplateVars,
-  footerImageWidth,
+  reference,
   policy,
   getPreviewPolicy,
   carWording,
@@ -54,12 +144,7 @@ export function PremiumSummaryDocuments({
   isGeneratingDocuments?: boolean;
   policyNumber: string;
   clientName?: string;
-  brokerName?: string;
-  brokerEmail?: string;
-  emailTemplates?: EmailTemplate[];
-  emailDirectory?: EmailDirectoryEntry[];
-  emailTemplateVars?: EmailTemplateVars;
-  footerImageWidth?: number;
+  reference: ReferenceData;
   policy?: Policy;
   getPreviewPolicy?: () => Policy | null;
   carWording?: CarWording[];
@@ -71,12 +156,16 @@ export function PremiumSummaryDocuments({
   }>;
   documentsOnly?: boolean;
 }) {
+  const form = useFormContext<CarPolicyFormValues>();
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [showPreviousVersions, setShowPreviousVersions] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
   const [emailRecipient, setEmailRecipient] =
     useState<EmailSendRecipient>("broker");
+  const [emailPolicyNumber, setEmailPolicyNumber] = useState(policyNumber);
   const [previewDoc, setPreviewDoc] = useState<PolicyDocument | null>(null);
+
+  const policyId = policy?.policyId ?? "";
 
   const { previewSrc, previewLoading, previewError } = usePolicyDocumentPreview(
     {
@@ -127,27 +216,6 @@ export function PremiumSummaryDocuments({
     .filter((row) => selectedIds.includes(row.doc.policyDocumentId))
     .map((row) => row.doc);
 
-  const brokerTemplateKey = resolveBrokerTemplateKey({
-    coverTypeId: policy?.car?.coverTypeId ?? 1,
-    policyCategoryId: policy?.policyCategoryId ?? 1,
-  });
-  const brokerTemplate = emailTemplates.find(
-    (t) => t.recipientType === brokerTemplateKey,
-  ) ?? {
-    recipientType: brokerTemplateKey,
-    ...DEFAULT_EMAIL_TEMPLATES[brokerTemplateKey],
-  };
-  const insurerTemplate = emailTemplates.find(
-    (t) => t.recipientType === "insurer",
-  ) ?? {
-    recipientType: "insurer" as const,
-    ...DEFAULT_EMAIL_TEMPLATES.insurer,
-  };
-  const activeTemplate =
-    emailRecipient === "insurer" ? insurerTemplate : brokerTemplate;
-  const activeDefaultTo =
-    emailRecipient === "insurer" ? insurerTemplate.toEmail : brokerEmail;
-
   function toggleDoc(id: number, checked: boolean) {
     setSelectedIds((prev) =>
       checked ? [...prev, id] : prev.filter((item) => item !== id),
@@ -165,8 +233,13 @@ export function PremiumSummaryDocuments({
   }
 
   function openEmail(recipient: EmailSendRecipient) {
+    setEmailPolicyNumber(
+      form.getValues("policyNumber")?.trim() ||
+        policy?.policyNumber ||
+        policyNumber,
+    );
     setEmailRecipient(recipient);
-    window.setTimeout(() => setEmailOpen(true), 0);
+    setEmailOpen(true);
   }
 
   return (
@@ -335,11 +408,7 @@ export function PremiumSummaryDocuments({
             <DropdownMenuContent align="start" className="max-w-80 min-w-48">
               <DropdownMenuItem onClick={() => openEmail("broker")}>
                 <MailIcon />
-                <span className="truncate">
-                  {brokerName.trim()
-                    ? `Broker: ${brokerName.trim()}`
-                    : "Broker"}
-                </span>
+                Broker
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => openEmail("insurer")}>
                 <MailIcon />
@@ -347,24 +416,20 @@ export function PremiumSummaryDocuments({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <EmailDocumentsDialog
-            open={emailOpen}
-            onOpenChange={setEmailOpen}
-            policyId={policy?.policyId ?? ""}
-            documents={selectedDocs}
-            policyNumber={policyNumber}
-            clientName={clientName}
-            brokerName={brokerName}
-            brokerEmail={brokerEmail}
-            recipientType={emailRecipient}
-            template={activeTemplate}
-            defaultTo={activeDefaultTo}
-            templateVars={emailTemplateVars}
-            footerImageDataUri={emailTemplateVars?.footerImage}
-            footerImageWidth={footerImageWidth}
-            emailDirectory={emailDirectory}
-          />
-          <PdfPreviewDialog
+          {emailOpen && policyId ? (
+            <PremiumSummaryEmailDialog
+              open={emailOpen}
+              onOpenChange={setEmailOpen}
+              policyId={policyId}
+              documents={selectedDocs}
+              policyNumber={emailPolicyNumber}
+              clientName={clientName}
+              reference={reference}
+              policy={policy}
+              emailRecipient={emailRecipient}
+            />
+          ) : null}
+          <PreviewDialog
             open={previewDoc != null}
             onOpenChange={(open) => {
               if (!open) setPreviewDoc(null);

@@ -1,21 +1,22 @@
 import type { Template } from "@pdfme/common";
+import { isBlankPdf } from "@pdfme/common";
 import { and, desc, eq, isNull, lt, or, sql } from "drizzle-orm";
 import { z } from "zod";
+
 import { getDb } from "~/lib/db/client";
 import { appDocumentTemplateVersion } from "~/lib/db/schema";
-import { promoteStaticBackgroundToEditableSchemas } from "~/lib/pdf/extract-base-pdf-rectangles";
-import type { FlowPushDown } from "~/lib/pdf/flow-push-down";
 import {
   DOCUMENT_LABEL_MAX_LENGTH,
   documentLabelFromFilename,
   normalizeDocumentLabel,
 } from "~/lib/documents/document-label";
+import { promoteStaticBackgroundToEditableSchemas } from "~/lib/pdf/extract-base-pdf-rectangles";
+import type { FlowPushDown } from "~/lib/pdf/flow-push-down";
 import {
   DOCUMENT_TEMPLATE_BLANK_BASE_PDF,
-  withBlankPageBackground,
   type DocumentTemplate,
+  withBlankPageBackground,
 } from "~/lib/pdf/templates";
-import { isBlankPdf } from "@pdfme/common";
 
 const pdfmeTemplateSchema = z.object({
   basePdf: z.union([z.string(), z.record(z.string(), z.unknown())]),
