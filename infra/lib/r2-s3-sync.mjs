@@ -74,7 +74,8 @@ export async function syncR2Bucket(sourceBucket, destBucket) {
   console.log(`✓ R2 sync complete (${sourceBucket} → ${destBucket})`);
 }
 
-/** Remove all objects from an R2 bucket. */
+/**
+ * Remove all objects from an R2 bucket. */
 export async function emptyR2Bucket(bucket) {
   const { endpoint } = r2S3Config();
   console.log(`→ Emptying R2 bucket ${bucket}…`);
@@ -88,4 +89,34 @@ export async function emptyR2Bucket(bucket) {
     "--only-show-errors",
   ]);
   console.log(`✓ Emptied R2 bucket ${bucket}`);
+}
+
+/** Whether an R2 bucket exists (S3 API list). */
+export async function r2BucketExists(bucket) {
+  const names = await listR2BucketNames();
+  return names.includes(bucket);
+}
+
+/** List R2 bucket names via the S3-compatible API (wrangler list needs a TTY). */
+export async function listR2BucketNames() {
+  const { endpoint, accessKeyId, secretAccessKey } = r2S3Config();
+  await ensureAwsCli();
+  const { stdout } = await capture(
+    "aws",
+    ["s3", "ls", "--endpoint-url", endpoint],
+    {
+      env: {
+        ...process.env,
+        AWS_ACCESS_KEY_ID: accessKeyId,
+        AWS_SECRET_ACCESS_KEY: secretAccessKey,
+        AWS_REGION: "auto",
+        AWS_EC2_METADATA_DISABLED: "true",
+      },
+      silent: true,
+    },
+  );
+  return stdout
+    .split("\n")
+    .map((line) => line.trim().split(/\s+/).pop())
+    .filter(Boolean);
 }

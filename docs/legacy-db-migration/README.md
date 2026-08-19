@@ -6,6 +6,10 @@ Migrate domain data from the legacy **vs434253_1** MSSQL database into Supabase 
 
 **Run separately (slow):** policy documents (PDF upload to R2 + `policy_car.app_extras.documents`).
 
+### Target scope
+
+Only **CAR policies with `InceptionDate >= 2025-06-01`** are exported. Clients without an in-scope policy are excluded. Documents, notes, and wordings follow the same policy set (no full-database R2 copy). Filter lives in `scripts/sql/legacy/_target-scope.sql`.
+
 ---
 
 ## Prerequisites
@@ -35,7 +39,21 @@ Removes **policies → clients → account managers → AR** on the target datab
 
 Add `-- --dry-run` to preview counts. Add `-- --confirm` to skip the interactive `yes` prompt.
 
-### Migrate (account managers, AR, clients, policies)
+### Clear documents only (migrated PDFs + checkpoint)
+
+Removes legacy document rows from `policy_car.app_extras`, deletes expected R2 keys, and resets the sync checkpoint.
+
+| Environment | Command                                   |
+| ----------- | ----------------------------------------- |
+| Local       | `npm run db:clear:legacy:documents:local` |
+| UAT         | `npm run db:clear:legacy:documents:uat`   |
+| Production  | `npm run db:clear:legacy:documents:prod`  |
+
+### Migrate (account managers, AR, clients, policies — Postgres only)
+
+Does **not** upload PDFs to R2. Export still includes document row counts for the separate documents step.
+
+For UAT/prod, the command **exports and prints row counts first**; add `--confirm` to load after reviewing counts.
 
 | Environment | Command                           |
 | ----------- | --------------------------------- |
@@ -121,10 +139,13 @@ Then:
 npm run db:migrate:legacy:documents:local
 ```
 
-Postgres updates happen **after** all R2 uploads finish. Watch for:
+Re-run safely if interrupted — progress is checkpointed. Postgres updates happen as each document uploads.
+
+Postgres updates happen incrementally during upload (not only at the end). Watch for:
 
 ```
-Updating app_extras.documents on XXXX policies…
+  resuming checkpoint — …
+  checkpoint saved _archive/data/legacy-documents-sync-state.json
 ```
 
 ### 8. Verify

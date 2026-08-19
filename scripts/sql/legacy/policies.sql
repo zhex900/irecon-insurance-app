@@ -1,5 +1,5 @@
--- Default: CAR policies with PolicyCAR premium, sub-limits, excesses, and adjustment columns.
--- Override this file to filter (e.g. date range, status, client subset).
+-- Target migration: CAR policies with InceptionDate >= 2025-06-01.
+-- See scripts/sql/legacy/_target-scope.sql
 SELECT
   p.PolicyId AS policyId,
   p.ClientId AS clientId,
@@ -130,4 +130,5 @@ INNER JOIN dbo.PolicyCAR pc ON pc.PolicyId = p.PolicyId
 LEFT JOIN dbo.PolicyCARSubLimitWording sl ON sl.PolicyId = p.PolicyId
 LEFT JOIN dbo.PolicyCARExcess ex ON ex.PolicyId = p.PolicyId
 WHERE p.ClassCode = 'CAR'
+  AND p.InceptionDate >= '2025-06-01'
 ORDER BY p.PolicyId;

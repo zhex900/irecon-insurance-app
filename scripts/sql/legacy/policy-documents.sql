@@ -1,4 +1,4 @@
--- Default: all policy documents for CAR policies.
+-- Target migration: documents for in-scope CAR policies only (see _target-scope.sql).
 SELECT
   pd.PolicyDocumentId AS policyDocumentId,
   pd.PolicyId AS policyId,
@@ -10,5 +10,6 @@ SELECT
 FROM dbo.PolicyDocument pd
 INNER JOIN dbo.Policy p ON p.PolicyId = pd.PolicyId
 WHERE p.ClassCode = 'CAR'
+  AND p.InceptionDate >= '2025-06-01'
   AND pd.DocumentName NOT LIKE 'ERROR%'
 ORDER BY pd.PolicyDocumentId;

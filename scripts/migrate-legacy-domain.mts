@@ -1,11 +1,16 @@
 /**
- * Migrate legacy MSSQL domain data → Postgres (+ R2 for policy documents).
+ * Migrate legacy MSSQL domain data → Postgres (documents/R2 are separate).
+ *
+ * Target scope: CAR policies with InceptionDate >= 2025-06-01 (see scripts/sql/legacy/_target-scope.sql).
+ * Clients, documents, notes, and wordings are limited to that policy set.
+ *
+ * Default load: account-managers, AR, clients, policies (no R2).
+ * Documents: npm run db:migrate:legacy:documents:uat (or --only documents).
  *
  * Usage (from repo root):
  *   npm run db:migrate:legacy -- --env=local --dry-run
- *   npm run db:migrate:legacy -- --env=local --replace
- *   npm run db:migrate:legacy -- --env=uat --confirm --only clients
- *   npm run db:migrate:legacy -- --env=prod --confirm --replace
+ *   npm run db:migrate:legacy -- --env=uat --confirm --replace
+ *   npm run db:migrate:legacy:documents:uat
  *
  * Options:
  *   --env=local|uat|pr|prod   Target Postgres (required)
@@ -17,6 +22,9 @@
  *   --skip-r2                 Skip R2 upload (metadata only)
  *   --missing-csv [path]      Write missing PDF paths to CSV (default: _archive/data/legacy-documents-missing.csv)
  *   --no-missing-csv          Do not write missing-documents CSV
+ *   --clear-documents         Remove migrated documents (Postgres + R2 + checkpoint) before upload
+ *   --no-resume               Ignore checkpoint and re-process every document row
+ *   --sync-state [path]       Checkpoint file (default: _archive/data/legacy-documents-sync-state.json)
  *   --default-ar <id>         Fallback AR when client row has no mapping
  *   --confirm                 Required for uat, pr, and prod
  *   --sql <slice> <path>      Override SQL for a slice (see scripts/sql/legacy/)
@@ -32,6 +40,7 @@ import { fileURLToPath } from "node:url";
 import { resetSharedDbPool } from "../app/lib/db/client";
 import { exportLegacyDomain } from "./export-legacy-domain.mts";
 import {
+  DEFAULT_DB_SLICES,
   loadLegacyDomain,
   parseOnlySlices,
 } from "./lib/load-legacy-domain.mts";
@@ -45,6 +54,7 @@ import {
 } from "./lib/migrate-target-env.mts";
 import { applyEnvFile, readEnvFile } from "../infra/lib/pr-env.mjs";
 import type { LegacyDomainPayload } from "./lib/legacy-payload.ts";
+import { logMigrationScopeCounts } from "./lib/legacy-migration-scope.mts";
 import { parseSqlOverrides } from "./lib/legacy-sql.mts";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -69,6 +79,9 @@ function parseArgs(argv: string[]) {
   let defaultAr: number | null = null;
   let missingCsv: string | undefined = DEFAULT_MISSING_CSV;
   let noMissingCsv = false;
+  let clearDocuments = false;
+  let resumeDocuments = true;
+  let syncState: string | undefined;
 
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -86,6 +99,23 @@ function parseArgs(argv: string[]) {
     }
     if (arg === "--no-missing-csv") {
       noMissingCsv = true;
+      continue;
+    }
+    if (arg === "--clear-documents") {
+      clearDocuments = true;
+      resumeDocuments = false;
+      continue;
+    }
+    if (arg === "--no-resume") {
+      resumeDocuments = false;
+      continue;
+    }
+    if (arg === "--sync-state") {
+      const next = argv[i + 1];
+      if (next && !next.startsWith("-")) {
+        syncState = isAbsolute(next) ? next : resolve(process.cwd(), next);
+        i += 1;
+      }
       continue;
     }
     if (arg === "--missing-csv") {
@@ -135,11 +165,18 @@ function parseArgs(argv: string[]) {
     defaultAr,
     sqlOverrides: parseSqlOverrides(argv),
     missingCsv: noMissingCsv ? undefined : missingCsv,
+    clearDocuments,
+    resumeDocuments,
+    syncStatePath: syncState,
   };
 }
 
+function effectiveSlices(only: ReturnType<typeof parseOnlySlices>) {
+  return only?.length ? only : DEFAULT_DB_SLICES;
+}
+
 function includesDocumentsSlice(only: ReturnType<typeof parseOnlySlices>) {
-  return !only?.length || only.includes("documents");
+  return effectiveSlices(only).includes("documents");
 }
 
 async function main() {
@@ -150,7 +187,6 @@ async function main() {
   }
 
   const args = parseArgs(process.argv.slice(2));
-  assertMigrateConfirmed(targetEnv, args.confirm || args.dryRun);
 
   // MSSQL + local document paths always come from .env (source machine).
   const localEnv = await readEnvFile(".env");
@@ -173,17 +209,11 @@ async function main() {
   } else {
     console.log("1/2 Exporting legacy domain from MSSQL…");
     payload = await exportLegacyDomain({ sqlOverrides: args.sqlOverrides });
-    console.log(
-      `  source=${payload.meta.database} exportedAt=${payload.meta.exportedAt}\n` +
-        `  accountManagers=${payload.accountManagers.length} ` +
-        `ar=${payload.authorisedRepresentatives.length} ` +
-        `clients=${payload.clients.length} ` +
-        `policies=${payload.policies.length} ` +
-        `policyDocuments=${payload.policyDocuments.length}`,
-    );
   }
 
-  if (args.writeJson) {
+  logMigrationScopeCounts(payload);
+
+  if (args.writeJson && !args.readJson) {
     mkdirSync(dirname(args.writeJson), { recursive: true });
     writeFileSync(
       args.writeJson,
@@ -192,6 +222,8 @@ async function main() {
     );
     console.log(`  wrote snapshot ${args.writeJson}`);
   }
+
+  const exportPath = args.readJson ?? DEFAULT_JSON;
 
   if (args.dryRun) {
     const stats = await loadLegacyDomain({
@@ -204,13 +236,25 @@ async function main() {
       missingDocumentsCsv: includesDocumentsSlice(args.only)
         ? args.missingCsv
         : undefined,
+      clearDocuments: args.clearDocuments,
+      resumeDocuments: args.resumeDocuments,
+      syncStatePath: args.syncStatePath,
+      targetEnv,
+      exportPath,
     });
     console.log("Dry run — skipped Postgres/R2.", stats);
     await resetSharedDbPool();
     return;
   }
 
-  console.log("2/2 Loading into Postgres…");
+  assertMigrateConfirmed(targetEnv, args.confirm);
+
+  const slices = effectiveSlices(args.only);
+  console.log(
+    slices.includes("documents")
+      ? "2/2 Loading documents (Postgres + R2)…"
+      : "2/2 Loading into Postgres…",
+  );
   const stats = await loadLegacyDomain({
     data: payload,
     only: args.only,
@@ -220,6 +264,11 @@ async function main() {
     missingDocumentsCsv: includesDocumentsSlice(args.only)
       ? args.missingCsv
       : undefined,
+    clearDocuments: args.clearDocuments,
+    resumeDocuments: args.resumeDocuments,
+    syncStatePath: args.syncStatePath,
+    targetEnv,
+    exportPath,
   });
   console.log("Done.", stats);
   await resetSharedDbPool();

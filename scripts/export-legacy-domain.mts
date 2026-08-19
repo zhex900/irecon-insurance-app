@@ -28,6 +28,7 @@ import type {
   LegacyPolicyWording,
 } from "./lib/legacy-payload.ts";
 import { loadLegacySql, parseSqlOverrides } from "./lib/legacy-sql.mts";
+import { logMigrationScopeCounts } from "./lib/legacy-migration-scope.mts";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const SQL_DIR = join(repoRoot, "scripts/sql/legacy");
@@ -244,6 +245,7 @@ async function main() {
   const { out, sqlOverrides } = parseArgs(process.argv.slice(2));
   console.log("Exporting legacy domain from MSSQL…");
   const payload = await exportLegacyDomain({ sqlOverrides });
+  logMigrationScopeCounts(payload);
   mkdirSync(dirname(out), { recursive: true });
   writeFileSync(out, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
   console.log(

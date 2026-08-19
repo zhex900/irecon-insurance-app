@@ -1,6 +1,6 @@
--- Default: all clients.
+-- Target migration: clients that own at least one in-scope CAR policy.
+-- Scope: scripts/sql/legacy/_target-scope.sql
 -- authorisedRepresentativeId is not on legacy Client; SubAgent.LeadBroker when set.
--- Override this file to filter or join differently.
 SELECT
   c.ClientId AS clientId,
   c.Name AS name,
@@ -17,4 +17,11 @@ SELECT
   c.CreationDate AS createdWhen
 FROM dbo.Client c
 LEFT JOIN dbo.SubAgent sa ON sa.Code = c.SubAgentCode
+WHERE c.ClientId IN (
+  SELECT p.ClientId
+  FROM dbo.Policy p
+  INNER JOIN dbo.PolicyCAR pc ON pc.PolicyId = p.PolicyId
+  WHERE p.ClassCode = 'CAR'
+    AND p.InceptionDate >= '2025-06-01'
+)
 ORDER BY c.ClientId;

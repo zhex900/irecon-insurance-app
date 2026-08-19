@@ -18,7 +18,11 @@ import {
   wranglerEnv,
   writeJsonc,
 } from "./preview-env.mjs";
-import { emptyR2Bucket, syncR2Bucket } from "./r2-s3-sync.mjs";
+import {
+  emptyR2Bucket,
+  listR2BucketNames,
+  syncR2Bucket,
+} from "./r2-s3-sync.mjs";
 
 function configPath(envName, file) {
   return join(previewRoot, envName, file);
@@ -46,7 +50,7 @@ async function wranglerCapture(args, { verbose = false, silent = false } = {}) {
   );
 }
 
-async function r2BucketExists(bucket) {
+export async function r2BucketExists(bucket) {
   try {
     await wranglerCapture(["r2", "bucket", "info", bucket, "--json"], {
       silent: true,
@@ -56,6 +60,8 @@ async function r2BucketExists(bucket) {
     return false;
   }
 }
+
+export { listR2BucketNames };
 
 export async function ensureR2Buckets(names) {
   for (const bucket of [names.avatarsBucket, names.libraryBucket]) {
@@ -74,7 +80,7 @@ export async function copyR2FromUat(names) {
   await emptyR2Bucket(names.avatarsBucket);
   await emptyR2Bucket(names.libraryBucket);
   console.log(
-    `→ Copying R2 objects from ${UAT_AVATARS_BUCKET} + ${UAT_LIBRARY_BUCKET}…`,
+    `→ Copying all R2 objects from ${UAT_AVATARS_BUCKET} + ${UAT_LIBRARY_BUCKET}…`,
   );
   await syncR2Bucket(UAT_AVATARS_BUCKET, names.avatarsBucket);
   await syncR2Bucket(UAT_LIBRARY_BUCKET, names.libraryBucket);
@@ -95,41 +101,32 @@ export async function emptyAndDeleteR2Buckets(names) {
   }
 
   if (existing.length === 0) {
-    console.log("→ No preview R2 buckets found — skipping empty step");
-  } else {
-    const pendingDelete = [];
-    for (const bucket of existing) {
-      try {
-        await wrangler(["r2", "bucket", "delete", bucket]);
-        console.log(`✓ Deleted R2 bucket ${bucket}`);
-      } catch {
-        pendingDelete.push(bucket);
-      }
-    }
+    console.log("→ No preview R2 buckets found — skipping R2 cleanup");
+    await deleteWorker(`insurance-r2-copy-${names.slug}`);
+    return;
+  }
 
-    if (pendingDelete.length > 0) {
-      console.log("→ Emptying R2 buckets before delete…");
-      try {
-        for (const bucket of pendingDelete) {
-          await emptyR2Bucket(bucket);
-        }
-      } catch (error) {
-        console.warn(
-          "Warning: could not empty R2 buckets via S3 API.",
-          error instanceof Error ? error.message : error,
-        );
-      }
-      for (const bucket of pendingDelete) {
-        try {
-          await wrangler(["r2", "bucket", "delete", bucket]);
-          console.log(`✓ Deleted R2 bucket ${bucket}`);
-        } catch (error) {
-          console.warn(
-            `Warning: could not delete R2 bucket ${bucket}.`,
-            error instanceof Error ? error.message : error,
-          );
-        }
-      }
+  console.log("→ Emptying preview R2 buckets…");
+  try {
+    for (const bucket of existing) {
+      await emptyR2Bucket(bucket);
+    }
+  } catch (error) {
+    console.warn(
+      "Warning: could not empty R2 buckets via S3 API.",
+      error instanceof Error ? error.message : error,
+    );
+  }
+
+  for (const bucket of existing) {
+    try {
+      await wrangler(["r2", "bucket", "delete", bucket]);
+      console.log(`✓ Deleted R2 bucket ${bucket}`);
+    } catch (error) {
+      console.warn(
+        `Warning: could not delete R2 bucket ${bucket}.`,
+        error instanceof Error ? error.message : error,
+      );
     }
   }
 

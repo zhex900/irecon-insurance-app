@@ -1,0 +1,5 @@
+-- Target migration scope (CAR policies only).
+-- Used by policies.sql, clients.sql, policy-documents.sql, policy-notes.sql, policy-wordings.sql.
+--
+--   p.ClassCode = 'CAR'
+--   AND p.InceptionDate >= '2025-06-01'

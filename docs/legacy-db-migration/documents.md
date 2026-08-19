@@ -39,19 +39,35 @@ Document metadata is written to **`policy_car.app_extras.documents`**. Policies 
 
 1. Read document rows from export snapshot (~28k)
 2. For each row, find PDF under `POLICY_DOCUMENT_PATHS`
-3. Upload to R2 bucket **`insurance-app-library-documents`**
-4. After **all** uploads, update `policy_car.app_extras.documents` per policy
+3. Upload to R2 bucket **`insurance-app-library-documents-uat`** (override: `R2_POLICY_DOCUMENTS_BUCKET`)
+4. Update `policy_car.app_extras.documents` **per document** as uploads succeed
 
 Progress:
 
 ```
+  resuming checkpoint — 12000 uploaded, 4 missing
 documents 5000/28168 (23168 left, 18%) — uploaded 4996, missing 4
 ...
-documents done — uploaded 28164, missing 4
-Updating app_extras.documents on XXXX policies…
+documents done — uploaded 28164, missing 4, skipped 12000 (checkpoint)
+  checkpoint saved _archive/data/legacy-documents-sync-state.json
 ```
 
-**Postgres is not updated until the upload loop finishes.**
+Re-run the same command after an interruption; completed uploads are skipped and Postgres keeps prior rows.
+
+Checkpoint file (default): `_archive/data/legacy-documents-sync-state.json`
+
+---
+
+## Restart / clear
+
+| Goal                            | Command                                                                                                               |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Resume after interrupt          | Re-run `npm run db:migrate:legacy:documents:*` (default)                                                              |
+| Ignore checkpoint               | `npm run db:migrate:legacy -- --env=local --only documents --no-resume --file _archive/data/legacy-export.json`       |
+| Wipe migrated docs + checkpoint | `npm run db:clear:legacy:documents:local -- --confirm`                                                                |
+| Wipe then re-migrate            | `npm run db:migrate:legacy -- --env=local --only documents --clear-documents --file _archive/data/legacy-export.json` |
+
+Clear removes legacy rows from Postgres (`generationKey` starts with `legacy:`), deletes expected R2 keys from the export snapshot, and deletes the checkpoint file.
 
 ---
 
@@ -74,6 +90,12 @@ Skip CSV: `--no-missing-csv`
 ## Useful flags
 
 ```bash
+# Resume is default; custom checkpoint path
+npm run db:migrate:legacy -- --env=local --only documents --sync-state /tmp/doc-sync.json --file _archive/data/legacy-export.json
+
+# Clear migrated documents, then upload from scratch
+npm run db:migrate:legacy -- --env=local --only documents --clear-documents --file _archive/data/legacy-export.json
+
 # Skip R2 (metadata only — files must still exist on disk for the scan)
 npm run db:migrate:legacy -- --env=local --only documents --skip-r2 --file _archive/data/legacy-export.json
 
@@ -96,3 +118,9 @@ LIMIT 10;
 ```
 
 App serves migrated PDFs via `/api/policies/:policyId/documents/r2?key=...`.
+
+### Local dev
+
+The document migration uploads PDFs to **remote** R2 (`insurance-app-library-documents-uat` for UAT; `insurance-app-library-documents-local` for local dev). Local `npm run dev` uses **remote bindings** for `LIBRARY_DOCUMENTS` in `wrangler.jsonc` (`"remote": true`) pointing at the `-local` bucket. Populate local R2 via `npm run infra:bootstrap:r2 -- --only local` or `npm run db:copy:uat`. You also need Cloudflare auth for remote bindings (`npx wrangler login` or `CLOUDFLARE_API_TOKEN` in the environment Wrangler reads).
+
+Without remote R2, migrated rows appear in Postgres but `/api/policies/:policyId/documents/r2` returns 404 (`File not found in storage`) because the local Miniflare bucket is empty.

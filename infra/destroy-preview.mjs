@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Tear down a per-PR preview environment (Workers, R2, Hyperdrive).
- * The shared PR Supabase database (.env.pr) is not deleted.
+ * Tear down a per-PR preview environment (Workers, R2 buckets, Hyperdrive).
+ * Empties and deletes per-PR R2 buckets. The shared PR Supabase database (.env.pr) is not deleted.
  *
  *   npm run destroy -- pr-11
  */

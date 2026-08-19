@@ -102,7 +102,8 @@ export function assertMigrateConfirmed(
   if (target === "local") return;
   if (confirmFlag) return;
   throw new Error(
-    `--env=${target} requires --confirm (or use --dry-run to preview only).`,
+    `--env=${target} requires --confirm to load into Postgres/R2.\n` +
+      "Review the migration scope counts above, then re-run with --confirm.",
   );
 }
 

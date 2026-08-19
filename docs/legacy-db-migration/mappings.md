@@ -49,11 +49,11 @@ Implementation: `scripts/lib/legacy-policy-mapper.mts`, `scripts/sql/legacy/*.sq
 
 ## Documents (separate slice)
 
-| Legacy               | Target                                                                     |
-| -------------------- | -------------------------------------------------------------------------- |
-| `PolicyDocument` row | `PolicyDocument` object in `app_extras.documents[]`                        |
-| PDF on disk          | R2 key `policies/{policyUuid}/{docId}-{filename}`                          |
-| Bucket               | `insurance-app-library-documents` (override: `R2_POLICY_DOCUMENTS_BUCKET`) |
+| Legacy               | Target                                                                         |
+| -------------------- | ------------------------------------------------------------------------------ |
+| `PolicyDocument` row | `PolicyDocument` object in `app_extras.documents[]`                            |
+| PDF on disk          | R2 key `policies/{policyUuid}/{docId}-{filename}`                              |
+| Bucket               | `insurance-app-library-documents-uat` (override: `R2_POLICY_DOCUMENTS_BUCKET`) |
 
 ---
 

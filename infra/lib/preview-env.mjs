@@ -15,8 +15,15 @@ export const webRoot = join(__dirname, "../..");
 export const previewRoot = join(webRoot, ".preview-envs");
 
 export const UAT_PROJECT_REF = "tjnsygunohylofihoksl";
-export const UAT_AVATARS_BUCKET = "insurance-app-avatars";
-export const UAT_LIBRARY_BUCKET = "insurance-app-library-documents";
+
+/** Original shared buckets — source for one-time `npm run infra:bootstrap:r2`. */
+export const LEGACY_AVATARS_BUCKET = "insurance-app-avatars";
+export const LEGACY_LIBRARY_BUCKET = "insurance-app-library-documents";
+
+export const UAT_AVATARS_BUCKET = "insurance-app-avatars-uat";
+export const UAT_LIBRARY_BUCKET = "insurance-app-library-documents-uat";
+export const LOCAL_AVATARS_BUCKET = "insurance-app-avatars-local";
+export const LOCAL_LIBRARY_BUCKET = "insurance-app-library-documents-local";
 export const PREVIEW_DOMAIN_ZONE = "irecon.net";
 export const WORKERS_DEV_SUBDOMAIN = "zhex900";
 export const DEFAULT_REGION = "ap-southeast-2";
