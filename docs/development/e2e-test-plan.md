@@ -15,7 +15,7 @@ Statement/branch coverage is a **unit/integration** concern, not an E2E one. Dri
 
 ## 2. Current state (baseline)
 
-Config: [playwright.config.ts](../playwright.config.ts) — `e2e` project (all `*.spec.ts` except smoke) + `smoke` project. Helpers: [e2e/helpers/auth.ts](../e2e/helpers/auth.ts) (`loginAs`, `logout`, `waitForTurnstileIfPresent`, `mockResendEmailApi`).
+Config: [playwright.config.ts](../playwright.config.ts) — `e2e` project (all `*.spec.ts` except smoke) + `smoke` project. Helpers: [e2e/helpers/auth.ts](../e2e/helpers/auth.ts) (`loginAs`, `logout`, `mockResendEmailApi`).
 
 Existing specs:
 
@@ -150,7 +150,6 @@ Per [.cursor/rules/worker-bundle.mdc](../.cursor/rules/worker-bundle.mdc), the D
 - Downloads: `page.waitForEvent("download")`, assert suggested filename pattern (`car-policies*.xlsx`) and non-zero size.
 - Uploads: small fixture files under `e2e/fixtures/` (e.g. a 1x1 PNG for avatars/email footer, a tiny PDF for library documents).
 - Email: extend the `mockResendEmailApi` pattern to any other Resend call sites; never depend on a real inbox.
-- Turnstile: `waitForTurnstileIfPresent` already handles both configured/unconfigured environments — reuse for every login-adjacent test.
 
 ### 6.5 Data seeding & isolation
 
