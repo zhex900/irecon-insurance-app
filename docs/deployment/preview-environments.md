@@ -11,17 +11,14 @@ npm run destroy -- pr-11
 
 ## Supabase layout (free plan)
 
-
-| Project | Env file   | Role                                                  |
-| ------- | ---------- | ----------------------------------------------------- |
+| Project | Env file   | Role                                                 |
+| ------- | ---------- | ---------------------------------------------------- |
 | UAT     | `.env.uat` | Source of truth; never wiped by PR deployPREVIEW_ENV |
-| PR      | `.env.pr`  | Shared preview DB; reset + UAT copy each deploy       |
-
+| PR      | `.env.pr`  | Shared preview DB; reset + UAT copy each deploy      |
 
 Supabase branching is **not** used (requires Pro). Copy `.env.pr.example` → `.env.pr` and point it at your second Supabase project.
 
 ## What gets created per PR
-
 
 | Resource             | Name pattern (example `pr-11`)                          |
 | -------------------- | ------------------------------------------------------- |
@@ -35,19 +32,16 @@ Supabase branching is **not** used (requires Pro). Copy `.env.pr.example` → `.
 
 Infra targets (Hyperdrive limits, Supabase pool size, Worker CPU) live in [`scripts/lib/infra-settings.mjs`](../scripts/lib/infra-settings.mjs). Deploy applies Hyperdrive limits automatically; Supabase pool size is set manually in each project's dashboard.
 
-
 Generated wrangler configs live in `.preview-envs/<env>/` (gitignored).
 
 ## Environment names
 
 Use any label you like (`pr-11`, branch name, ticket id). `APP_URL` **is not set in** `.env.pr` — it is derived from the deploy slug and `BASE_URL`:
 
-
 | `--env` | `BASE_URL=irecon.net` → Worker `APP_URL` |
 | ------- | ---------------------------------------- |
 | `pr-11` | `https://pr-11.irecon.net`               |
 | `pr-1`  | `https://pr-1.irecon.net`                |
-
 
 Non-`pr-*` slugs fall back to `*.workers.dev`.
 
@@ -56,8 +50,6 @@ npm run deploy -- pr-11
 PREVIEW_ENV=pr-11 npm run deploy
 ```
 
-
-
 ## Prerequisites
 
 - Wrangler logged in or `CLOUDFLARE_API_TOKEN` in `.env.pr`
@@ -65,8 +57,6 @@ PREVIEW_ENV=pr-11 npm run deploy
 - R2 S3 API credentials (`R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_S3_ENDPOINT`) and [AWS CLI](https://aws.amazon.com/cli/) for UAT → preview R2 copy
 - Docker or local `psql` (for UAT → PR database copy)
 - `SUPABASE_ACCESS_TOKEN` in `.env.pr` (optional — Auth redirect URLs on PR project)
-
-
 
 ## Commands
 
@@ -87,8 +77,6 @@ npm run deploy -- pr-11 -- --dry-run
 npm run destroy -- pr-11
 ```
 
-
-
 ## Database flow
 
 1. **Dump UAT** — roles, schema, data from `UAT_DATABASE_URL` in `.env.pr`
@@ -98,21 +86,16 @@ npm run destroy -- pr-11
 5. **Migrate** — `supabase db push` applies only migrations in this branch that are not yet on UAT
 6. **Hyperdrive** — preview Worker connects to PR database
 
-
-
 ## CI (GitHub Actions)
-
 
 | Workflow         | Trigger             | What runs                                                |
 | ---------------- | ------------------- | -------------------------------------------------------- |
 | `pr-preview.yml` | PR opened / updated | Quality → `npm run deploy:pr` → E2E → PR comment         |
 | `pr-cleanup.yml` | PR closed           | `npm run destroy:pr`; on **merge**, `npm run deploy:uat` |
 
-
 Workflows write `.env.pr` / `.env.uat` at runtime via `scripts/ci-write-env.mjs` from GitHub **environments** + **repository** secrets (no monolithic env-file secret).
 
 ### GitHub environment: `uat`
-
 
 | Name                       | Kind     | Used by    |
 | -------------------------- | -------- | ---------- |
@@ -122,11 +105,7 @@ Workflows write `.env.pr` / `.env.uat` at runtime via `scripts/ci-write-env.mjs`
 | `SUPABASE_PUBLISHABLE_KEY` | secret   | UAT deploy |
 | `SUPABASE_SECRET_KEY`      | secret   | UAT deploy |
 
-
-
-
 ### GitHub environment: `pr`
-
 
 | Name                       | Kind     | Used by                 |
 | -------------------------- | -------- | ----------------------- |
@@ -139,9 +118,6 @@ Workflows write `.env.pr` / `.env.uat` at runtime via `scripts/ci-write-env.mjs`
 | `UAT_SUPABASE_URL`         | secret   | UAT copy source         |
 | `SUPABASE_ACCESS_TOKEN`    | secret   | optional — PR Auth URLs |
 | `CLOUDFLARE_API_TOKEN`     | secret   | Wrangler deploy/destroy |
-
-
-
 
 ### Repository secrets (shared)
 

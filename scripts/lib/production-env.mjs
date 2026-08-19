@@ -10,9 +10,7 @@ import {
   webRoot,
   writeJsonc,
 } from "./preview-env.mjs";
-import {
-  workerCpuLimits,
-} from "./infra-settings.mjs";
+import { workerCpuLimits } from "./infra-settings.mjs";
 
 export const productionRoot = join(webRoot, ".production-env");
 
