@@ -50,7 +50,10 @@ export function policyToFormValues(
     anyClaimsExceed20k: policy.car.anyClaimsExceed20k,
     declarationConfirmed: policy.car.declarationConfirmed,
     subLimits: normalizeSubLimits(policy.car.subLimits),
-    excesses: normalizeExcesses(policy.car.excesses),
+    excesses: normalizeExcesses(
+      policy.car.excesses,
+      policy.car.estimatedTurnover,
+    ),
     excludedContracts1: policy.car.excludedContracts1,
     excludedContracts2: policy.car.excludedContracts2,
     excludedContracts3: policy.car.excludedContracts3,

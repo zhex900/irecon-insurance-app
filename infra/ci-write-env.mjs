@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 /**
- * Write .env.uat or .env.pr from process.env (GitHub Actions secrets/vars).
+ * Write .env.uat, .env.pr, or .env.production from process.env (GitHub Actions secrets/vars).
  *
- *   node scripts/ci-write-env.mjs uat
- *   node scripts/ci-write-env.mjs pr
+ *   node infra/ci-write-env.mjs uat
+ *   node infra/ci-write-env.mjs pr
+ *   node infra/ci-write-env.mjs production
  */
 import { writeFile } from "node:fs/promises";
 
@@ -44,10 +45,27 @@ const KEYS = {
     "VITE_SENTRY_DSN",
     "SENTRY_DSN",
   ],
+  production: [
+    "APP_URL",
+    "DATABASE_URL",
+    "SUPABASE_URL",
+    "SUPABASE_PUBLISHABLE_KEY",
+    "SUPABASE_SECRET_KEY",
+    "SUPABASE_ACCESS_TOKEN",
+    "RESEND_API_KEY",
+    "EMAIL_FROM",
+    "SENTRY_ORG",
+    "SENTRY_PROJECT",
+    "SENTRY_AUTH_TOKEN",
+    "VITE_SENTRY_DSN",
+    "SENTRY_DSN",
+    "VITE_TURNSTILE_SITE_KEY",
+    "TURNSTILE_SECRET_KEY",
+  ],
 };
 
 if (!profile || !(profile in KEYS)) {
-  console.error("Usage: node scripts/ci-write-env.mjs <uat|pr>");
+  console.error("Usage: node infra/ci-write-env.mjs <uat|pr|production>");
   process.exit(1);
 }
 
@@ -59,6 +77,11 @@ for (const key of KEYS[profile]) {
 
 if (profile === "uat" && !process.env.DATABASE_URL?.trim()) {
   console.error("DATABASE_URL is required (uat environment secret).");
+  process.exit(1);
+}
+
+if (profile === "production" && !process.env.DATABASE_URL?.trim()) {
+  console.error("DATABASE_URL is required (production environment secret).");
   process.exit(1);
 }
 

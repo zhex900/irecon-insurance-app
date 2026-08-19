@@ -53,7 +53,7 @@ docs/microfrontend-performance-impact.md
 
 - **`docs/performance.md`** - Current performance guidelines
 - **`scripts/analyze-bundle.sh`** - Bundle analysis script
-- **`scripts/deploy-microfrontends.sh`** - Deployment automation
+- **`infra/deploy-microfrontends.sh`** - Deployment automation
 
 ## Implementation Roadmap
 

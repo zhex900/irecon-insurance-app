@@ -4,7 +4,7 @@
  *
  * Requires SUPABASE_ACCESS_TOKEN (https://supabase.com/dashboard/account/tokens)
  *
- *   SUPABASE_ACCESS_TOKEN=... node --env-file=.env.uat scripts/configure-uat-auth-urls.mjs
+ *   SUPABASE_ACCESS_TOKEN=... node --env-file=.env.uat infra/configure-uat-auth-urls.mjs
  */
 const PROJECT_REF =
   process.env.UAT_SUPABASE_REF?.trim() || "tjnsygunohylofihoksl";

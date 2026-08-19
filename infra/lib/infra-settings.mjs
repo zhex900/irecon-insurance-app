@@ -28,7 +28,7 @@ export const HYPERDRIVE_ORIGIN_CONNECTION_LIMIT = {
 
 /**
  * Supabase Dashboard → Project → Database → Connection pooling → Pool size.
- * Session mode (port 5432) for Hyperdrive; see scripts/lib/preview-env.mjs `toSessionDbUrl`.
+ * Session mode (port 5432) for Hyperdrive; see infra/lib/preview-env.mjs `toSessionDbUrl`.
  */
 export const SUPABASE_POOL_SIZE = {
   production: 20,

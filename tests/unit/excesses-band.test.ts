@@ -5,6 +5,9 @@ import {
   activeBandExcessAmounts,
   CONTRACT_VALUE_BAND_LABEL,
   contractValueBandLabel,
+  migrateLegacyExcessKeys,
+  normalizeExcesses,
+  relocateExcessesToActiveBand,
 } from "~/lib/policies/excesses";
 
 const excesses: Pick<
@@ -76,5 +79,64 @@ describe("activeBandExcessAmounts", () => {
       limit10M: "",
       limit20M: "",
     });
+  });
+});
+
+describe("legacy excess migration", () => {
+  const legacy19965 = {
+    excessSection1A: "$2,500",
+    excessSection1B: "$1,000",
+    excessSection1C: "N/A",
+    excessSection1D: "N/A",
+    excessSection1E: "$1,000",
+    excessSection2A: "$15,000",
+    excessSection2B: "",
+    excessSection2C: "N/A",
+    excessSection2D: "$2,500",
+    excessSection2E: "N/A",
+    excessSection2F: "N/A",
+    excessAdditionalNotes: "",
+  };
+
+  it("maps legacy section keys and skips N/A", () => {
+    expect(migrateLegacyExcessKeys(legacy19965)).toMatchObject({
+      excessPlantEquipment: "$2,500",
+      excessUpTo2MMinorPerils: "$1,000",
+      excessUpTo2MMajorPerils: "$1,000",
+      excessWorkerToWorker: "$15,000",
+      excessUpTo2MLimit20M: "$2,500",
+    });
+    expect(migrateLegacyExcessKeys(legacy19965)).not.toHaveProperty(
+      "excessSection1B",
+    );
+  });
+
+  it("relocates up-to-2M values into over-2M band for high turnover", () => {
+    const normalized = normalizeExcesses(legacy19965, 4_000_000);
+    expect(normalized).toMatchObject({
+      excessOver2MMinorPerils: "1000",
+      excessOver2MMajorPerils: "1000",
+      excessOver2MLimit20M: "2500",
+      excessPlantEquipment: "2500",
+      excessWorkerToWorker: "15000",
+    });
+    expect(activeBandExcessAmounts(normalized, 4_000_000)).toEqual({
+      minorPerils: "1000",
+      majorPerils: "1000",
+      limit10M: "",
+      limit20M: "2500",
+    });
+  });
+
+  it("maps legacy 2B to $10M limit when populated", () => {
+    const legacy = {
+      ...legacy19965,
+      excessSection2B: "$10,000",
+    };
+    const normalized = normalizeExcesses(legacy, 1_500_000);
+    expect(normalized.excessUpTo2MLimit10M).toBe("10000");
+    expect(relocateExcessesToActiveBand(normalized, 1_500_000)).toEqual(
+      normalized,
+    );
   });
 });

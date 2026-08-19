@@ -337,6 +337,25 @@ export async function buildPdfBlobFromDocument(
     font?: Font;
   },
 ): Promise<Blob> {
+  if (doc.r2Key && policy?.policyId) {
+    try {
+      const apiRes = await fetch(
+        `/api/policies/${policy.policyId}/documents/r2?key=${encodeURIComponent(doc.r2Key)}`,
+      );
+      if (apiRes.ok) {
+        const contentType = apiRes.headers.get("content-type") ?? "";
+        if (
+          contentType.includes("application/pdf") ||
+          contentType.includes("octet-stream")
+        ) {
+          return apiRes.blob();
+        }
+      }
+    } catch {
+      // Fall through to other sources.
+    }
+  }
+
   if (isLibraryDocument(doc) && !doc.templateKey) {
     const apiPath =
       doc.libraryDocumentId != null

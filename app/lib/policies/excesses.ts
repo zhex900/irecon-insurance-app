@@ -25,7 +25,7 @@ export const EXCESS_DEFAULT_FIELD_BY_ID: Partial<
   15: "excessOver2MLimit20M",
 };
 
-/** Old Section1A-style keys → readable keys (one-time JSON upgrade on read). */
+/** Old MSSQL PolicyCARExcess columns → flat form keys. */
 const LEGACY_EXCESS_KEY: Record<string, ExcessFieldKey> = {
   excessSection1A: "excessPlantEquipment",
   excessSection1B: "excessUpTo2MMinorPerils",
@@ -33,11 +33,22 @@ const LEGACY_EXCESS_KEY: Record<string, ExcessFieldKey> = {
   excessSection1C: "excessOver2MMinorPerils",
   excessSection1D: "excessOver2MMajorPerils",
   excessSection2A: "excessWorkerToWorker",
+  // Legacy DB uses 2B for $10M limit; 2C is usually N/A.
+  excessSection2B: "excessUpTo2MLimit10M",
   excessSection2C: "excessUpTo2MLimit10M",
   excessSection2D: "excessUpTo2MLimit20M",
   excessSection2E: "excessOver2MLimit10M",
   excessSection2F: "excessOver2MLimit20M",
 };
+
+const BAND_EXCESS_PAIRS: ReadonlyArray<
+  readonly [ExcessFieldKey, ExcessFieldKey]
+> = [
+  ["excessUpTo2MMinorPerils", "excessOver2MMinorPerils"],
+  ["excessUpTo2MMajorPerils", "excessOver2MMajorPerils"],
+  ["excessUpTo2MLimit10M", "excessOver2MLimit10M"],
+  ["excessUpTo2MLimit20M", "excessOver2MLimit20M"],
+];
 
 export type ExcessGroup = "contractWorks" | "legalLiability";
 
@@ -267,19 +278,45 @@ export function normalizeExcessValue(value: string | undefined): string {
   return match?.[0] ?? "";
 }
 
+function isLegacyExcessEmpty(value: string | undefined): boolean {
+  if (value == null) return true;
+  const trimmed = value.trim();
+  if (!trimmed) return true;
+  return /^n\/a$/i.test(trimmed);
+}
+
+/** Copy band-specific excess values into the band matching estimated turnover. */
+export function relocateExcessesToActiveBand(
+  excesses: CarExcesses,
+  estimatedTurnover: unknown,
+): CarExcesses {
+  const band = resolveContractValueBand(estimatedTurnover);
+  if (!band) return excesses;
+
+  const result = { ...excesses };
+  for (const [upTo2m, over2m] of BAND_EXCESS_PAIRS) {
+    const [source, target] =
+      band === "from2mTo5m" ? [upTo2m, over2m] : [over2m, upTo2m];
+    if (!result[target] && result[source]) {
+      result[target] = result[source];
+    }
+  }
+  return result;
+}
+
 /** Upgrade legacy excessSection1A-style keys when loading stored JSON. */
 export function migrateLegacyExcessKeys(
   excesses: Record<string, string | undefined> | null | undefined,
 ): Record<string, string> {
   const raw: Record<string, string> = {};
   for (const [key, value] of Object.entries(excesses ?? {})) {
-    if (value != null) raw[key] = value;
+    if (value != null && !isLegacyExcessEmpty(value)) raw[key] = value;
   }
   for (const [oldKey, newKey] of Object.entries(LEGACY_EXCESS_KEY)) {
     const legacy = raw[oldKey];
-    if (legacy == null || legacy === "") continue;
-    if (raw[newKey] == null || raw[newKey] === "") {
-      raw[newKey] = legacy;
+    if (isLegacyExcessEmpty(legacy)) continue;
+    if (isLegacyExcessEmpty(raw[newKey])) {
+      raw[newKey] = legacy!;
     }
     delete raw[oldKey];
   }
@@ -288,16 +325,21 @@ export function migrateLegacyExcessKeys(
 
 export function normalizeExcesses(
   excesses: CarExcesses | Record<string, string | undefined>,
+  estimatedTurnover?: unknown,
 ): CarExcesses {
   const migrated = migrateLegacyExcessKeys(excesses);
   const numeric = Object.fromEntries(
     EXCESS_FIELDS.map(({ key }) => [key, normalizeExcessValue(migrated[key])]),
   ) as Pick<CarExcesses, ExcessFieldKey>;
 
-  return {
+  const normalized: CarExcesses = {
     ...numeric,
     excessAdditionalNotes: migrated.excessAdditionalNotes ?? "",
   };
+
+  return estimatedTurnover == null
+    ? normalized
+    : relocateExcessesToActiveBand(normalized, estimatedTurnover);
 }
 
 /** Build flat defaultExcesses from PolicyCARExcessDefault catalogue rows. */

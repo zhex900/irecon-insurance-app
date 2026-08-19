@@ -8,7 +8,7 @@
  *   npm run deploy:prod
  *   npm run deploy:prod -- --skip-build
  *   npm run deploy:prod -- --skip-migrate
- *   node --env-file=.env.production scripts/deploy-production.mjs --secret-only
+ *   node --env-file=.env.production infra/deploy-production.mjs --secret-only
  */
 import { spawn, execFileSync } from "node:child_process";
 import { readdir, unlink, writeFile } from "node:fs/promises";

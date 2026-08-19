@@ -94,10 +94,10 @@ npm run deploy:production -- --canary 10  # 10% of users
 
 ```bash
 # Automated deployment script
-./scripts/deploy-microfrontends.sh --env staging
+./infra/deploy-microfrontends.sh --env staging
 
 # With validation
-./scripts/deploy-microfrontends.sh \
+./infra/deploy-microfrontends.sh \
   --env production \
   --validate \
   --health-check \
@@ -324,7 +324,7 @@ test:
 
 deploy-staging:
   script:
-    - ./scripts/deploy-microfrontends.sh --env staging
+    - ./infra/deploy-microfrontends.sh --env staging
     - ./scripts/run-integration-tests.sh
 
 deploy-production:

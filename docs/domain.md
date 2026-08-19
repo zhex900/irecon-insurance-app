@@ -49,6 +49,8 @@ Deploy applies pending `supabase/migrations` to production, then deploys Workers
 npm run deploy:prod
 ```
 
+**CI:** publishing a GitHub Release (non-prerelease) runs `.github/workflows/release.yml` → `npm run deploy:prod` on the release tag. Requires a GitHub **environment** named `production` with secrets (see [deployment/preview-environments.md](deployment/preview-environments.md)).
+
 ## UAT
 
 Worker: `insurance-app-uat` · URL: `https://uat.irecon.net`.
@@ -64,7 +66,7 @@ npm run deploy
 Configure Supabase Auth Site URL after first deploy:
 
 ```bash
-node --env-file=.env.uat scripts/configure-uat-auth-urls.mjs
+node --env-file=.env.uat infra/configure-uat-auth-urls.mjs
 ```
 
 ## PR preview environments
