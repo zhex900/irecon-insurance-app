@@ -51,6 +51,7 @@ npm install
 cp .env.example .env   # DATABASE_URL points at local Supabase
 npm run db:start       # starts local Postgres on :54322
 npm run db:reset       # apply migrations + seed
+npm run db:copy:uat    # replace local DB with full UAT copy (.env.uat → .env)
 npm run dev            # http://127.0.0.1:5173
 # Second terminal: private PDF service used by email attachment rendering
 npm run dev:pdf-worker

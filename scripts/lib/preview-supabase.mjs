@@ -59,6 +59,15 @@ export async function runPreviewMigrations(sessionUrl) {
   console.log(
     "→ Applying pending migrations to PR database (UAT baseline already synced)…",
   );
+  await runDatabaseMigrations(sessionUrl, "PR");
+}
+
+export async function runUatMigrations(sessionUrl) {
+  await runDatabaseMigrations(sessionUrl, "UAT");
+}
+
+async function runDatabaseMigrations(sessionUrl, target) {
+  console.log(`→ Applying pending migrations to ${target} database…`);
   await run("npx", [
     "supabase",
     "db",
@@ -67,7 +76,7 @@ export async function runPreviewMigrations(sessionUrl) {
     "--db-url",
     toSessionDbUrl(sessionUrl),
   ]);
-  console.log("✓ PR migrations applied");
+  console.log(`✓ ${target} migrations applied`);
 }
 
 async function copyPgsodiumKey(sourceRef, destRef) {

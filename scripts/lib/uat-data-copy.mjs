@@ -7,6 +7,20 @@ import { dirname, join } from "node:path";
 
 import { capture, run, sleep, toSessionDbUrl } from "./preview-env.mjs";
 
+/** Docker psql cannot use host 127.0.0.1 — reach local Supabase via host.docker.internal. */
+function dockerDbUrl(dbUrl) {
+  try {
+    const parsed = new URL(dbUrl.replace(/^postgres:/, "postgresql:"));
+    if (parsed.hostname === "127.0.0.1" || parsed.hostname === "localhost") {
+      parsed.hostname = "host.docker.internal";
+      return parsed.toString().replace(/^postgresql:/, "postgres:");
+    }
+  } catch {
+    // keep original URL
+  }
+  return dbUrl;
+}
+
 const RESET_TARGET_DB_SQL = `
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -51,7 +65,7 @@ async function runPsqlScript(dbUrl, file) {
     "--file",
     dockerFile,
     "--dbname",
-    dbUrl,
+    dockerDbUrl(dbUrl),
   ]);
 }
 
@@ -129,7 +143,7 @@ export async function restoreWithPsql(
     "--file",
     "/dump/data.sql",
     "--dbname",
-    destUrl,
+    dockerDbUrl(destUrl),
   ]);
 }
 
@@ -184,7 +198,18 @@ async function querySql(dbUrl, sql) {
   }
   const { stdout } = await capture(
     "docker",
-    ["run", "--rm", "postgres:17-alpine", "psql", ...args],
+    [
+      "run",
+      "--rm",
+      "postgres:17-alpine",
+      "psql",
+      "-t",
+      "-A",
+      "--dbname",
+      dockerDbUrl(dbUrl),
+      "-c",
+      sql,
+    ],
     { silent: true },
   );
   return stdout.trim();

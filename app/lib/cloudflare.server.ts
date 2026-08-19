@@ -30,9 +30,6 @@ export type CloudflareEnv = {
   SUPABASE_SECRET_KEY?: string;
   RESEND_API_KEY?: string;
   EMAIL_FROM?: string;
-  /** Optional auth-mail sender; defaults to EMAIL_FROM when unset. */
-  AUTH_EMAIL_FROM?: string;
-  EMAIL_REPLY_TO?: string;
   /** Sentry DSN for Worker / SSR error reporting (secret). */
   SENTRY_DSN?: string;
   /** Cloudflare Turnstile secret for login siteverify (secret). */

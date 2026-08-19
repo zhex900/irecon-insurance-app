@@ -2,11 +2,11 @@ import { expect, type Page } from "@playwright/test";
 
 export const demoUsers = {
   broker: {
-    email: "broker@demo.local",
+    email: "zhex900+broker@gmail.com",
     password: "password123",
   },
   admin: {
-    email: "admin@demo.local",
+    email: "zhex900+admin@gmail.com",
     password: "password123",
   },
   superAdmin: {

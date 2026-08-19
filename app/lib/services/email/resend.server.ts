@@ -1,6 +1,7 @@
 import { Resend } from "resend";
 
 import { ExternalServiceError } from "~/lib/errors";
+import { logger } from "~/lib/observability/logger.server";
 
 export type SendEmailAttachment = {
   filename: string;
@@ -16,7 +17,6 @@ export type SendEmailInput = {
   subject: string;
   text: string;
   html?: string;
-  /** Override default EMAIL_FROM (e.g. AUTH_EMAIL_FROM for auth mail). */
   from?: string;
   cc?: string | string[];
   /** Set `null` to omit reply-to (e.g. password reset). Default uses EMAIL_REPLY_TO. */
@@ -43,19 +43,15 @@ export function getResendApiKey() {
 
 /** Verified sender, e.g. `Irecon Insurance <policies@example.com.au>`. */
 export function getEmailFrom() {
-  return required(
-    "EMAIL_FROM",
-    process.env.EMAIL_FROM ?? process.env.RESEND_FROM_ADDRESS,
-  );
+  return required("EMAIL_FROM", process.env.EMAIL_FROM);
 }
 
-/** Auth mail sender — defaults to EMAIL_FROM when AUTH_EMAIL_FROM is unset. */
+/** Auth mail sender — defaults to EMAIL_FROM */
 export function getAuthEmailFrom() {
-  const from =
-    process.env.AUTH_EMAIL_FROM?.trim() ||
-    process.env.EMAIL_FROM?.trim() ||
-    process.env.RESEND_FROM_ADDRESS?.trim();
-  return required("AUTH_EMAIL_FROM or EMAIL_FROM", from);
+  const from = process.env.EMAIL_FROM?.trim();
+
+  logger.info("getAuthEmailFrom", { from });
+  return required("EMAIL_FROM", from);
 }
 
 export function getEmailReplyTo() {
@@ -154,10 +150,14 @@ export async function sendEmail(
   });
 
   if (error) {
-    throw new ExternalServiceError("Email could not be sent right now.");
+    throw new ExternalServiceError(
+      `Email could not be sent right now: ${error.message}`,
+    );
   }
   if (!data?.id) {
-    throw new ExternalServiceError("Email could not be sent right now.");
+    throw new ExternalServiceError(
+      "Email could not be sent right now: Resend returned no message id.",
+    );
   }
   return { id: data.id };
 }

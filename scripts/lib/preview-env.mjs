@@ -54,6 +54,7 @@ const SCRIPT_FLAGS = new Set([
   "--skip-r2",
   "--skip-build",
   "--skip-migrate",
+  "--skip-hyperdrive",
   "--refresh-data",
   "--secret-only",
 ]);
@@ -557,6 +558,33 @@ export function previewExcelWrangler(names) {
     placement: { mode: "smart" },
     upload_source_maps: true,
   };
+}
+
+/** UAT app Worker — deploy prebuilt SSR bundle (includes workers/app.ts wrapper). */
+export function uatAppWrangler(params) {
+  return previewAppWrangler(params);
+}
+
+export function uatStatePath() {
+  return join(previewRoot, "uat", "state.json");
+}
+
+export async function loadUatState() {
+  try {
+    return JSON.parse(await readFile(uatStatePath(), "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+export async function saveUatState(state) {
+  const dir = join(previewRoot, "uat");
+  await mkdir(dir, { recursive: true });
+  await writeFile(
+    uatStatePath(),
+    `${JSON.stringify(state, null, 2)}\n`,
+    "utf8",
+  );
 }
 
 export async function writeJsonc(path, value) {

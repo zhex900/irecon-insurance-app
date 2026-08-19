@@ -13,6 +13,10 @@ import { LoadingButton } from "~/components/ui/loading-button";
 import { pageTitle } from "~/lib/brand";
 import { ExternalServiceError } from "~/lib/errors";
 import { logger } from "~/lib/observability/logger.server";
+import {
+  Sentry,
+  setSentryRequestTags,
+} from "~/lib/observability/sentry.server";
 import { sendPasswordResetEmail } from "~/lib/services/email/send-password-reset.server";
 import { getUserByEmail } from "~/lib/services/users/service";
 import { getAppOrigin } from "~/lib/supabase/env.server";
@@ -54,6 +58,18 @@ export async function action({ request }: Route.ActionArgs) {
     logger.warn("Password reset link generation failed", {
       operation: "auth_password_reset_link",
       errorType: linkResult.reason,
+      errorMessage: linkResult.message,
+      redirectTo,
+    });
+    setSentryRequestTags();
+    Sentry.withScope((scope) => {
+      scope.setTag("operation", "auth_password_reset_link");
+      scope.setExtra("reason", linkResult.reason);
+      scope.setExtra("message", linkResult.message);
+      scope.setExtra("redirectTo", redirectTo);
+      Sentry.captureMessage("Password reset link generation failed", {
+        level: "error",
+      });
     });
     return {
       error:
@@ -68,9 +84,24 @@ export async function action({ request }: Route.ActionArgs) {
       recipientName: profile.fullName,
     });
   } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : "unknown_password_reset_error";
     logger.warn("Password reset email failed", {
       operation: "auth_password_reset_email",
       errorType: error instanceof Error ? error.name : "unknown",
+      errorMessage,
+    });
+    setSentryRequestTags();
+    Sentry.withScope((scope) => {
+      scope.setTag("operation", "auth_password_reset_email");
+      scope.setExtra(
+        "errorType",
+        error instanceof Error ? error.name : "unknown",
+      );
+      scope.setExtra("errorMessage", errorMessage);
+      Sentry.captureException(
+        error instanceof Error ? error : new Error(errorMessage),
+      );
     });
     if (error instanceof ExternalServiceError) {
       return {

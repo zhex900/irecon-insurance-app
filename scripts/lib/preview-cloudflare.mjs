@@ -11,6 +11,7 @@ import {
   previewPdfWrangler,
   previewRoot,
   run,
+  uatAppWrangler,
   UAT_AVATARS_BUCKET,
   UAT_LIBRARY_BUCKET,
   webRoot,
@@ -236,6 +237,23 @@ export async function writePreviewWranglerConfigs({
   return { appPath, pdfPath, excelPath };
 }
 
+export async function writeUatWranglerConfigs({
+  names,
+  supabaseUrl,
+  hyperdriveId,
+}) {
+  const appPath = configPath("uat", "wrangler.app.jsonc");
+  const pdfPath = configPath("uat", "wrangler.pdf.jsonc");
+  const excelPath = configPath("uat", "wrangler.excel.jsonc");
+  await writeJsonc(
+    appPath,
+    uatAppWrangler({ names, supabaseUrl, hyperdriveId }),
+  );
+  await writeJsonc(pdfPath, previewPdfWrangler(names));
+  await writeJsonc(excelPath, previewExcelWrangler(names));
+  return { appPath, pdfPath, excelPath };
+}
+
 export async function deployPreviewWorkers({ names, configs }) {
   console.log("→ Deploying Excel Worker…");
   await wrangler(["deploy", "--config", configs.excelPath]);
@@ -266,8 +284,6 @@ export async function syncPreviewSecrets({ names, supabase, appUrl }) {
     APP_URL: appUrl,
     RESEND_API_KEY: process.env.RESEND_API_KEY,
     EMAIL_FROM: process.env.EMAIL_FROM,
-    AUTH_EMAIL_FROM: process.env.AUTH_EMAIL_FROM,
-    EMAIL_REPLY_TO: process.env.EMAIL_REPLY_TO,
     SENTRY_DSN: process.env.SENTRY_DSN,
     TURNSTILE_SECRET_KEY: process.env.TURNSTILE_SECRET_KEY,
   };

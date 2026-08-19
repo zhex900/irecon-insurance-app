@@ -20,6 +20,7 @@ logs/
 .tmp/
 .wrangler/
 .preview-envs/
+.local-db/
 .preview/
 .production-env/
 .react-router/

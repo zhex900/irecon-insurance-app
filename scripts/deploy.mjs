@@ -2,10 +2,12 @@
 /**
  * Deploy UAT (default) or a per-PR preview environment.
  *
+ * UAT uses `.env.uat` — same Cloudflare flow as PR (Hyperdrive, secrets, Workers).
+ *
  * PR previews use a single shared Supabase project (.env.pr). Each deploy clears
  * that DB and copies schema + data from UAT (.env.uat), then deploys Workers.
  *
- *   npm run deploy
+ *   npm run deploy:uat
  *   npm run deploy -- pr-11
  */
 import { execFileSync } from "node:child_process";
@@ -17,22 +19,33 @@ import {
   ensureR2Buckets,
   syncPreviewSecrets,
   writePreviewWranglerConfigs,
+  writeUatWranglerConfigs,
 } from "./lib/preview-cloudflare.mjs";
 import {
   assertPreviewEnvName,
   hasFlag,
   loadState,
+  loadUatState,
   parseEnvName,
   resourceNames,
   run,
   saveState,
+  saveUatState,
   webRoot,
 } from "./lib/preview-env.mjs";
-import { applyEnvFile, loadPrDeployEnv, readEnvFile } from "./lib/pr-env.mjs";
+import { loadPrDeployEnv } from "./lib/pr-env.mjs";
+import { uploadSentrySourceMaps } from "./lib/sentry-deploy.mjs";
+import {
+  UAT_HYPERDRIVE_ID,
+  loadUatDeployEnv,
+  uatNames,
+  uatSupabaseFromEnv,
+} from "./lib/uat-env.mjs";
 import {
   configureAuthUrls,
   loadPrSupabase,
   runPreviewMigrations,
+  runUatMigrations,
   syncPrDatabaseFromUat,
 } from "./lib/preview-supabase.mjs";
 
@@ -65,6 +78,135 @@ async function buildApp(envName) {
   });
   console.log("✓ Build complete");
   return `${appVersion}-${commit}`;
+}
+
+async function deployUat() {
+  await loadUatDeployEnv();
+
+  const names = uatNames();
+  const supabase = uatSupabaseFromEnv();
+  const dryRun = hasFlag("--dry-run");
+  const skipBuild = hasFlag("--skip-build");
+  const skipMigrate = hasFlag("--skip-migrate");
+  const skipHyperdrive = hasFlag("--skip-hyperdrive");
+  const secretOnly = hasFlag("--secret-only");
+
+  console.log("UAT environment");
+  console.log(`  App URL ${names.appUrl}`);
+  console.log(`  App     ${names.appWorker}`);
+  console.log(`  PDF     ${names.pdfWorker}`);
+  console.log(`  Excel   ${names.excelWorker}`);
+  console.log(`  R2      ${names.avatarsBucket}, ${names.libraryBucket}`);
+  console.log(`  Supabase ${supabase.supabaseUrl}`);
+
+  if (dryRun) {
+    console.log("Dry run — no resources changed.");
+    return;
+  }
+
+  const state = await loadUatState();
+
+  if (secretOnly) {
+    const hyperdriveId = await ensureHyperdrive({
+      names,
+      connectionString: supabase.sessionUrl,
+      existingId: state?.hyperdriveId || UAT_HYPERDRIVE_ID,
+      forceUpdate: !skipHyperdrive,
+    });
+    await syncPreviewSecrets({
+      names,
+      supabase,
+      appUrl: names.appUrl,
+    });
+    await saveUatState({
+      ...(state ?? {}),
+      env: "uat",
+      appUrl: names.appUrl,
+      supabaseProjectRef: supabase.projectRef,
+      supabaseUrl: supabase.supabaseUrl,
+      hyperdriveId,
+      updatedAt: new Date().toISOString(),
+    });
+    console.log("Done (--secret-only).");
+    return;
+  }
+
+  await ensureR2Buckets(names);
+
+  if (!skipMigrate) {
+    await runUatMigrations(supabase.sessionUrl);
+  } else {
+    console.log("→ Skipping database migrations (--skip-migrate)");
+  }
+
+  const hyperdriveId = await ensureHyperdrive({
+    names,
+    connectionString: supabase.sessionUrl,
+    existingId: state?.hyperdriveId || UAT_HYPERDRIVE_ID,
+    forceUpdate: !skipHyperdrive,
+  });
+
+  const configs = await writeUatWranglerConfigs({
+    names,
+    supabaseUrl: supabase.supabaseUrl,
+    hyperdriveId,
+  });
+
+  let release;
+  if (!skipBuild) {
+    release = await buildApp("uat");
+    try {
+      await uploadSentrySourceMaps(release);
+    } catch (error) {
+      console.warn(
+        "Warning: Sentry source map upload failed.",
+        error instanceof Error ? error.message : error,
+      );
+    }
+  }
+
+  await deployPreviewWorkers({ names, configs });
+  await syncPreviewSecrets({ names, supabase, appUrl: names.appUrl });
+
+  if (process.env.SUPABASE_ACCESS_TOKEN?.trim()) {
+    try {
+      await configureAuthUrls({
+        projectRef: supabase.projectRef,
+        appUrl: names.appUrl,
+      });
+    } catch (error) {
+      console.warn(
+        "Warning: could not update Supabase Auth URLs.",
+        error instanceof Error ? error.message : error,
+      );
+    }
+  } else {
+    console.warn(
+      "Warning: SUPABASE_ACCESS_TOKEN unset — skipping Auth Site URL update.",
+    );
+  }
+
+  await saveUatState({
+    env: "uat",
+    appUrl: names.appUrl,
+    supabaseProjectRef: supabase.projectRef,
+    supabaseUrl: supabase.supabaseUrl,
+    hyperdriveId,
+    workers: {
+      app: names.appWorker,
+      pdf: names.pdfWorker,
+      excel: names.excelWorker,
+    },
+    r2: {
+      avatars: names.avatarsBucket,
+      library: names.libraryBucket,
+    },
+    updatedAt: new Date().toISOString(),
+    ...(release ? { release } : {}),
+  });
+
+  console.log("");
+  console.log(`UAT deployed: ${names.appUrl}`);
 }
 
 async function deployPreview(envName) {
@@ -179,8 +321,10 @@ async function deployPreview(envName) {
 
 const envName = parseEnvName();
 if (!envName || envName === "uat") {
-  applyEnvFile(await readEnvFile(".env.uat"));
-  await import("./deploy-uat.mjs");
+  deployUat().catch((error) => {
+    console.error(error instanceof Error ? error.message : error);
+    process.exit(1);
+  });
 } else {
   deployPreview(envName).catch((error) => {
     console.error(error instanceof Error ? error.message : error);
