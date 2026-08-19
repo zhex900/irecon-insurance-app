@@ -11,6 +11,7 @@ import simpleImportSort from "eslint-plugin-simple-import-sort";
 export default tseslint.config(
   {
     ignores: [
+      "infra/**",
       "dist/**",
       "build/**",
       ".wrangler/**",
