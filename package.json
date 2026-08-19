@@ -29,6 +29,7 @@
     "db:seed:faker": "tsx --env-file=.env scripts/seed-faker.mts",
     "db:reset": "supabase db reset --yes && npm run db:seed",
     "db:copy:uat": "node --env-file=.env --env-file=.env.uat scripts/copy-uat-to-local.mjs",
+    "db:copy:prod": "node --env-file=.env.uat --env-file=.env.production scripts/copy-uat-to-prod.mjs",
     "deploy": "node scripts/deploy.mjs",
     "deploy:pr": "node scripts/deploy.mjs",
     "deploy:uat": "node --env-file=.env.uat scripts/deploy.mjs",

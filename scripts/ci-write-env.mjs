@@ -23,8 +23,6 @@ const KEYS = {
     "SENTRY_AUTH_TOKEN",
     "VITE_SENTRY_DSN",
     "SENTRY_DSN",
-    "VITE_TURNSTILE_SITE_KEY",
-    "TURNSTILE_SECRET_KEY",
   ],
   pr: [
     "BASE_URL",
@@ -45,8 +43,6 @@ const KEYS = {
     "SENTRY_AUTH_TOKEN",
     "VITE_SENTRY_DSN",
     "SENTRY_DSN",
-    "VITE_TURNSTILE_SITE_KEY",
-    "TURNSTILE_SECRET_KEY",
   ],
 };
 

@@ -119,7 +119,9 @@ Workflows write `.env.pr` / `.env.uat` at runtime via `scripts/ci-write-env.mjs`
 
 ### Repository secrets (shared)
 
-`RESEND_API_KEY`, `SENTRY_AUTH_TOKEN`, `VITE_SENTRY_DSN`, `SENTRY_DSN`, `VITE_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`, `SUPABASE_ACCESS_TOKEN`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_S3_ENDPOINT`
+`RESEND_API_KEY`, `SENTRY_AUTH_TOKEN`, `VITE_SENTRY_DSN`, `SENTRY_DSN`, `SUPABASE_ACCESS_TOKEN`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_S3_ENDPOINT`
+
+Turnstile is **not** configured on PR previews (login has no captcha; Playwright E2E runs without Turnstile). UAT/production use `VITE_TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` from their environment secrets.
 
 ### Repository variables (shared)
 

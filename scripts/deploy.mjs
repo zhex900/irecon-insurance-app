@@ -284,6 +284,7 @@ async function deployPreview(envName) {
       names,
       supabase,
       appUrl: names.appUrl,
+      turnstile: false,
     });
     console.log("Done (--secret-only).");
     return;
@@ -294,7 +295,12 @@ async function deployPreview(envName) {
   }
 
   await deployPreviewWorkers({ names, configs });
-  await syncPreviewSecrets({ names, supabase, appUrl: names.appUrl });
+  await syncPreviewSecrets({
+    names,
+    supabase,
+    appUrl: names.appUrl,
+    turnstile: false,
+  });
 
   await saveState(names.label, {
     env: names.label,

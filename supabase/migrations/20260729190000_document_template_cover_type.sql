@@ -1,8 +1,26 @@
 -- Cover-linked document templates: rename slot_key, add cover_type_id + title.
 -- No document_type_code. Null cover_type_id = included for every cover (e.g. adjustment).
 
-alter table public.app_document_template_version
-  rename column slot_key to document_template_key;
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'app_document_template_version'
+      and column_name = 'slot_key'
+  )
+  and not exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'app_document_template_version'
+      and column_name = 'document_template_key'
+  ) then
+    alter table public.app_document_template_version
+      rename column slot_key to document_template_key;
+  end if;
+end $$;
 
 alter table public.app_document_template_version
   add column if not exists cover_type_id integer,
@@ -39,22 +57,31 @@ set
       'CAR ADJUSTMENT'
     else initcap(replace(document_template_key, '-', ' '))
   end
-where true;
+where title = '' or cover_type_id is null;
 
 alter table public.app_document_template_version
   drop constraint if exists app_document_template_version_slot_version_uq;
 
-alter table public.app_document_template_version
-  add constraint app_document_template_version_key_version_uq
-    unique (document_template_key, version_number);
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'app_document_template_version_key_version_uq'
+  ) then
+    alter table public.app_document_template_version
+      add constraint app_document_template_version_key_version_uq
+      unique (document_template_key, version_number);
+  end if;
+end $$;
 
 drop index if exists public.app_document_template_version_one_published;
-create unique index app_document_template_version_one_published
+create unique index if not exists app_document_template_version_one_published
   on public.app_document_template_version (document_template_key)
   where is_published;
 
 drop index if exists public.app_document_template_version_slot_idx;
-create index app_document_template_version_key_idx
+create index if not exists app_document_template_version_key_idx
   on public.app_document_template_version (document_template_key, version_number desc);
 
 create index if not exists app_document_template_version_cover_idx

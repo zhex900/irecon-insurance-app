@@ -276,7 +276,12 @@ export async function putWorkerSecret(workerName, name, value) {
   return true;
 }
 
-export async function syncPreviewSecrets({ names, supabase, appUrl }) {
+export async function syncPreviewSecrets({
+  names,
+  supabase,
+  appUrl,
+  turnstile = true,
+}) {
   const secrets = {
     DATABASE_URL: supabase.transactionUrl,
     SUPABASE_PUBLISHABLE_KEY: supabase.publishableKey,
@@ -285,7 +290,9 @@ export async function syncPreviewSecrets({ names, supabase, appUrl }) {
     RESEND_API_KEY: process.env.RESEND_API_KEY,
     EMAIL_FROM: process.env.EMAIL_FROM,
     SENTRY_DSN: process.env.SENTRY_DSN,
-    TURNSTILE_SECRET_KEY: process.env.TURNSTILE_SECRET_KEY,
+    ...(turnstile
+      ? { TURNSTILE_SECRET_KEY: process.env.TURNSTILE_SECRET_KEY }
+      : {}),
   };
   for (const [name, value] of Object.entries(secrets)) {
     await putWorkerSecret(names.appWorker, name, value ?? "");
