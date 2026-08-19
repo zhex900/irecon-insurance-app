@@ -121,6 +121,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
         cc: payload.cc || undefined,
         attachmentNames: sent.attachmentNames,
         attachmentBytes: sent.attachmentBytes,
+        replyTo: sent.replyTo,
         extraAttachmentCount: payload.extraAttachments.length,
         resendId: sent.resendId,
       },

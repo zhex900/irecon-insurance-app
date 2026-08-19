@@ -19,8 +19,9 @@ Env (local `.env` / Worker secrets):
 | ---------------- | ------------- | ---------------------------------------------------------- |
 | `RESEND_API_KEY` | Yes (to send) | Resend API key                                             |
 | `EMAIL_FROM`     | Yes (to send) | Verified sender, e.g. `Irecon Insurance <policies@domain>` |
-| `EMAIL_REPLY_TO` | No            | Optional reply-to                                          |
 | `APP_URL`        | Recommended   | Public origin for footer logo URL in outbound HTML emails  |
+
+Policy document emails set **Reply-To** to the client's assigned account manager (`account_manager.email`). `EMAIL_REPLY_TO` is not used for policy sends.
 
 ## Auth emails — Resend
 

@@ -12,6 +12,8 @@ import {
   type PdfWorkerBinding,
   renderPolicyPdf,
 } from "~/lib/pdf/pdf-worker.server";
+import { getAccountManager } from "~/lib/services/account-managers/service";
+import { getClient } from "~/lib/services/clients/service";
 import { resolvePublishedPdfTemplate } from "~/lib/services/documents/document-templates";
 import {
   getLibraryDocumentByFilename,
@@ -56,6 +58,7 @@ export type SendPolicyDocumentsResult = {
   resendId: string;
   attachmentNames: string[];
   attachmentBytes: number;
+  replyTo: string;
 };
 
 function splitEmails(raw: string): string[] {
@@ -170,6 +173,26 @@ function decodeBase64Bytes(contentBase64: string): Uint8Array {
   }
 }
 
+/** Reply-To must be the client's assigned account manager (not a global inbox). */
+export async function resolvePolicyEmailReplyTo(
+  clientId: string,
+): Promise<string> {
+  const client = await getClient(clientId);
+  if (!client) {
+    throw new Error("Client not found for this policy.");
+  }
+
+  const manager = await getAccountManager(client.accountManagerId);
+  const email = manager?.email?.trim();
+  if (!email) {
+    throw new Error(
+      "This client's account manager does not have an email address. Add one in Settings → Account Managers before sending.",
+    );
+  }
+
+  return email;
+}
+
 /**
  * Build PDF attachments and send via Resend.
  * Policy PDFs are attached (typically small). Prefer signed R2 links later for very large packs.
@@ -247,12 +270,15 @@ export async function sendPolicyDocumentsEmail(
         .trim() || input.body
     : input.body;
 
+  const replyTo = await resolvePolicyEmailReplyTo(input.policy.clientId);
+
   const result = await sendEmail({
     to: toList,
     cc: ccList.length > 0 ? ccList : undefined,
     subject: input.subject.trim(),
     text,
     html,
+    replyTo,
     attachments,
     tags: [
       { name: "policy_id", value: String(input.policy.policyId) },
@@ -273,5 +299,6 @@ export async function sendPolicyDocumentsEmail(
     resendId: result.id,
     attachmentNames: attachments.map((file) => file.filename),
     attachmentBytes: totalBytes,
+    replyTo,
   };
 }
