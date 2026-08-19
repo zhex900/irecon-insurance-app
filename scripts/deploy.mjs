@@ -21,6 +21,7 @@ import {
   writePreviewWranglerConfigs,
   writeUatWranglerConfigs,
 } from "./lib/preview-cloudflare.mjs";
+import { HYPERDRIVE_ORIGIN_CONNECTION_LIMIT } from "./lib/infra-settings.mjs";
 import {
   assertPreviewEnvName,
   hasFlag,
@@ -112,6 +113,7 @@ async function deployUat() {
       connectionString: supabase.sessionUrl,
       existingId: state?.hyperdriveId || UAT_HYPERDRIVE_ID,
       forceUpdate: !skipHyperdrive,
+      originConnectionLimit: HYPERDRIVE_ORIGIN_CONNECTION_LIMIT.uat,
     });
     await syncPreviewSecrets({
       names,
@@ -144,6 +146,7 @@ async function deployUat() {
     connectionString: supabase.sessionUrl,
     existingId: state?.hyperdriveId || UAT_HYPERDRIVE_ID,
     forceUpdate: !skipHyperdrive,
+    originConnectionLimit: HYPERDRIVE_ORIGIN_CONNECTION_LIMIT.uat,
   });
 
   const configs = await writeUatWranglerConfigs({
@@ -271,6 +274,7 @@ async function deployPreview(envName) {
     connectionString: supabase.sessionUrl,
     existingId: state?.hyperdriveId,
     forceUpdate: !skipDb,
+    originConnectionLimit: HYPERDRIVE_ORIGIN_CONNECTION_LIMIT.pr,
   });
 
   const configs = await writePreviewWranglerConfigs({

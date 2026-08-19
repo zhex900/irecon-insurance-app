@@ -21,6 +21,9 @@
   "placement": {
     "mode": "smart",
   },
+  "limits": {
+    "cpu_ms": 60000,
+  },
   "workers_dev": false,
   "routes": [
     {

@@ -20,30 +20,10 @@ export async function loginAs(
   user: { email: string; password: string },
 ) {
   await page.goto("/login");
-  await waitForTurnstileIfPresent(page);
   await page.getByLabel(/email/i).fill(user.email);
   await page.getByLabel(/^password$/i).fill(user.password);
   await page.getByRole("button", { name: /sign in/i }).click();
   await expect(page).toHaveURL(/\/dashboard/);
-}
-
-/** When Turnstile is configured, wait for the hidden token before submit. */
-export async function waitForTurnstileIfPresent(page: Page) {
-  const widget = page.locator("[data-turnstile-widget]");
-  try {
-    await widget.waitFor({ state: "visible", timeout: 3000 });
-    await page.waitForFunction(
-      () => {
-        const input = document.querySelector(
-          'input[name="cf-turnstile-response"]',
-        );
-        return input instanceof HTMLInputElement && input.value.length > 0;
-      },
-      { timeout: 15_000 },
-    );
-  } catch {
-    // Turnstile not enabled for this environment.
-  }
 }
 
 export async function logout(page: Page) {

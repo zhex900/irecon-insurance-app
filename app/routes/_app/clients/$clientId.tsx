@@ -55,7 +55,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
   const filters = parsePolicyListFiltersFromUrl(url);
   const pagination = parsePagination(url, { defaultSize: PAGE_SIZE });
 
-  const [client, reference, page, policyCount] = await Promise.all([
+  const [client, reference, page] = await Promise.all([
     getClient(clientId),
     getReferenceDataAsync(),
     listPoliciesPage(
@@ -74,9 +74,11 @@ export async function loader({ params, request }: Route.LoaderArgs) {
       },
       { includePremium: true, includeMeta: true },
     ),
-    countClientPolicies(clientId),
   ]);
   if (!client) throw clientNotFoundResponse();
+
+  // After the heavy list query batch — avoids query-gate contention with meta counts.
+  const policyCount = await countClientPolicies(clientId);
 
   const allCount = Object.values(page.statusCounts).reduce((a, b) => a + b, 0);
 

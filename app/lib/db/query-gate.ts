@@ -126,6 +126,7 @@ export function isTransientDbError(error: unknown): boolean {
     message.includes("connection terminated") ||
     message.includes("connection reset") ||
     message.includes("connection closed") ||
+    message.includes("connection lost") ||
     message.includes("connection refused") ||
     message.includes("after calling end on the pool") ||
     message.includes("socket hang up") ||

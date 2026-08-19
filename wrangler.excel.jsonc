@@ -24,5 +24,8 @@
   "placement": {
     "mode": "smart",
   },
+  "limits": {
+    "cpu_ms": 60000,
+  },
   "upload_source_maps": true,
 }

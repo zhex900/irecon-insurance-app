@@ -10,6 +10,9 @@ import {
   webRoot,
   writeJsonc,
 } from "./preview-env.mjs";
+import {
+  workerCpuLimits,
+} from "./infra-settings.mjs";
 
 export const productionRoot = join(webRoot, ".production-env");
 
@@ -21,12 +24,10 @@ export const PRODUCTION_LIBRARY_BUCKET =
   "insurance-app-library-documents-production";
 export const DEFAULT_PRODUCTION_APP_URL = "https://app.irecon.net";
 
-/** Max CPU ms per invocation on Workers Paid (30 seconds). */
-export const PRODUCTION_CPU_MS = 30_000;
+/** @deprecated Use WORKER_CPU_MS from infra-settings.mjs */
+export { WORKER_CPU_MS as PRODUCTION_CPU_MS } from "./infra-settings.mjs";
 
-const productionWorkerLimits = {
-  limits: { cpu_ms: PRODUCTION_CPU_MS },
-};
+const productionWorkerLimits = workerCpuLimits;
 
 /** Wrangler custom domains — must be zones on your Cloudflare account. */
 export const DEFAULT_PRODUCTION_WRANGLER_CUSTOM_DOMAINS = ["app.irecon.net"];

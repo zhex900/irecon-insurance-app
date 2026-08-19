@@ -22,6 +22,7 @@ import {
   putWorkerSecret,
 } from "./lib/preview-cloudflare.mjs";
 import { configureAuthUrls } from "./lib/preview-supabase.mjs";
+import { HYPERDRIVE_ORIGIN_CONNECTION_LIMIT } from "./lib/infra-settings.mjs";
 import {
   assertProductionDatabaseUrl,
   extractSupabaseProjectRef,
@@ -277,6 +278,7 @@ async function main() {
     names,
     connectionString: toSessionDbUrl(process.env.DATABASE_URL),
     existingId: state?.hyperdriveId,
+    originConnectionLimit: HYPERDRIVE_ORIGIN_CONNECTION_LIMIT.production,
   });
 
   const configs = await writeProductionWranglerConfigs({

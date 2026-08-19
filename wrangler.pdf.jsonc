@@ -24,4 +24,7 @@
       "destinations": ["sentry-traces"],
     },
   },
+  "limits": {
+    "cpu_ms": 60000,
+  },
 }

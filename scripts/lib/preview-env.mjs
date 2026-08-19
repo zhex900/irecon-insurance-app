@@ -476,6 +476,15 @@ export const observability = {
   },
 };
 
+export {
+  HYPERDRIVE_ORIGIN_CONNECTION_LIMIT,
+  SUPABASE_POOL_SIZE,
+  WORKER_CPU_MS,
+  WORKER_DB_POOL_MAX,
+  WORKER_DB_QUERY_GATE_MAX,
+  workerCpuLimits,
+} from "./infra-settings.mjs";
+
 /** Paths are relative to `.preview-envs/<label>/` where generated wrangler files live. */
 const fromPreviewDir = {
   schema: "../../node_modules/wrangler/config-schema.json",
@@ -505,6 +514,7 @@ export function previewAppWrangler({ names, supabaseUrl, hyperdriveId }) {
     observability,
     upload_source_maps: true,
     placement: { mode: "smart" },
+    ...workerCpuLimits,
     vars: {
       SUPABASE_URL: supabaseUrl,
       SESSION_INACTIVITY_TIMEOUT_MINUTES: "30",
@@ -540,6 +550,7 @@ export function previewPdfWrangler(names) {
       run_worker_first: true,
     },
     observability,
+    ...workerCpuLimits,
   };
 }
 
@@ -551,6 +562,7 @@ export function previewExcelWrangler(names) {
     compatibility_flags: ["nodejs_compat"],
     main: fromPreviewDir.excelMain,
     observability,
+    ...workerCpuLimits,
     vars: {
       WORKER_VERSION: "2.0.0",
       APP_URL: names.appUrl,

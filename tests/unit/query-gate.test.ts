@@ -98,6 +98,15 @@ describe("isTransientDbError", () => {
     ).toBe(true);
   });
 
+  it("detects cloudflare network connection lost in error cause", () => {
+    const inner = new Error("Network connection lost.");
+    const wrapped = new Error(
+      'Failed query: select count(*)::int from "policy" where "policy"."client_id" = $1',
+    );
+    wrapped.cause = inner;
+    expect(isTransientDbError(wrapped)).toBe(true);
+  });
+
   it("does not treat generic failed query as transient", () => {
     expect(isTransientDbError(new Error("Failed query: select 1"))).toBe(false);
   });

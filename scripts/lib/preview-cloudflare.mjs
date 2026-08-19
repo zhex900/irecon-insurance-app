@@ -137,12 +137,35 @@ export async function emptyAndDeleteR2Buckets(names) {
   await deleteWorker(`insurance-r2-copy-${names.slug}`);
 }
 
+function hyperdriveOriginLimitArgs(originConnectionLimit) {
+  return ["--origin-connection-limit", String(originConnectionLimit)];
+}
+
+async function syncHyperdriveOriginLimit(id, originConnectionLimit) {
+  console.log(
+    `→ Setting Hyperdrive ${id} origin connection limit to ${originConnectionLimit}…`,
+  );
+  await wrangler([
+    "hyperdrive",
+    "update",
+    id,
+    ...hyperdriveOriginLimitArgs(originConnectionLimit),
+  ]);
+}
+
 export async function ensureHyperdrive({
   names,
   connectionString,
   existingId,
   forceUpdate = false,
+  originConnectionLimit,
 }) {
+  if (originConnectionLimit == null || originConnectionLimit <= 0) {
+    throw new Error(
+      "ensureHyperdrive requires originConnectionLimit (see infra-settings.mjs).",
+    );
+  }
+
   const existing = existingId || (await findHyperdriveId(names.hyperdriveName));
 
   if (existing && forceUpdate) {
@@ -153,6 +176,7 @@ export async function ensureHyperdrive({
       existing,
       "--connection-string",
       connectionString,
+      ...hyperdriveOriginLimitArgs(originConnectionLimit),
     ]);
     console.log(`✓ Hyperdrive ${existing} updated`);
     return existing;
@@ -160,6 +184,7 @@ export async function ensureHyperdrive({
 
   if (existing) {
     console.log(`→ Reusing Hyperdrive ${existing}`);
+    await syncHyperdriveOriginLimit(existing, originConnectionLimit);
     return existing;
   }
 
@@ -172,6 +197,7 @@ export async function ensureHyperdrive({
         names.hyperdriveName,
         "--connection-string",
         connectionString,
+        ...hyperdriveOriginLimitArgs(originConnectionLimit),
       ],
       { verbose: true },
     );

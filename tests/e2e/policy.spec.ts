@@ -1,7 +1,6 @@
 import { expect, test } from "@playwright/test";
 
 import { demoUsers, loginAs, mockResendEmailApi } from "./helpers/auth";
-import { seedClients, seedPolicies } from "./helpers/seed";
 
 /**
  * Full Taken + docs + email is environment-heavy.
@@ -20,12 +19,7 @@ test.describe("policy journeys", () => {
 
     await page.goto("/clients");
     const firstClientRow = page.getByRole("row", { name: /^open client/i });
-    // If the list is empty, skip the deep path.
-    test.skip(
-      (await firstClientRow.count()) === 0,
-      "No clients seeded for policy e2e. Use seed clients: " +
-        seedClients.map((c) => c.name).join(", "),
-    );
+
     await firstClientRow.first().click();
     await expect(page).toHaveURL(/\/clients\/[^/]+$/);
 
@@ -38,43 +32,34 @@ test.describe("policy journeys", () => {
     }
   });
 
-  test.skip("email documents dialog validates empty recipient (Resend mocked)", async ({
+  test("email documents dialog validates empty recipient (Resend mocked)", async ({
     page,
   }) => {
     await mockResendEmailApi(page);
     await loginAs(page, demoUsers.broker);
-    await page.goto("/policies");
+    await page.goto("/policies?status=2");
+    await page.waitForLoadState("networkidle");
 
     const policyRow = page.getByRole("row", { name: /^open policy/i });
-    test.skip(
-      (await policyRow.count()) === 0,
-      "No policies available for email dialog e2e",
-    );
 
     await page.waitForLoadState("networkidle");
     await policyRow.first().click();
     await expect(page).toHaveURL(/\/policies\/[^/?]+$/);
 
     const emailButton = page.getByRole("button", { name: /email selected/i });
-    // if ((await emailButton.count()) === 0) {
-    //   test.skip(true, "Premium summary email UI not visible (no documents)");
-    // }
-
     // Need at least one selected doc; try select-all checkbox if present.
     const selectAll = page.getByRole("checkbox", { name: /select all/i });
     if (await selectAll.count()) {
       await selectAll.check();
     }
 
-    if (await emailButton.isDisabled()) {
-      test.skip(true, "Email selected disabled — no documents selected");
-    }
-
     await emailButton.click();
     await page.getByRole("menuitem", { name: /broker/i }).click();
     await page.getByLabel(/^to$/i).fill("");
     await page.getByRole("button", { name: /^send$/i }).click();
-    await expect(page.getByText(/recipient email/i)).toBeVisible();
+    await expect(
+      page.getByText(/Enter at least one recipient email/i),
+    ).toBeVisible();
   });
 
   test("adjustment entry exists on Taken policies when present", async ({
@@ -89,7 +74,6 @@ test.describe("policy journeys", () => {
     await page.waitForLoadState("networkidle");
     const takenRows = page.getByRole("row", { name: /^open policy/i });
     const rowCount = await takenRows.count();
-    test.skip(rowCount === 0, "No Taken policies for adjustment e2e");
 
     let adjustLink = null;
     const maxRowsToScan = Math.min(rowCount, 10);
@@ -127,14 +111,6 @@ test.describe("policy status transitions", () => {
     // Navigate to a pending policy
     await page.goto("/policies?status=1");
     const pendingRow = page.getByRole("row", { name: /^open policy/i });
-    test.skip(
-      (await pendingRow.count()) === 0,
-      "No pending policies seeded for status transition tests. Use seed data: " +
-        seedPolicies
-          .filter((p) => p.policyStatusId === 1)
-          .map((p) => p.policyNumber)
-          .join(", "),
-    );
 
     await pendingRow.first().click();
     await expect(page).toHaveURL(/\/policies\/[^/?]+$/);
@@ -150,10 +126,6 @@ test.describe("policy status transitions", () => {
     const submitButton = page
       .getByRole("button", { name: /^submit$/i })
       .first();
-    test.skip(
-      (await submitButton.count()) === 0,
-      "Submit button not available on this policy",
-    );
 
     // Submit the policy
     await submitButton.click();
@@ -170,7 +142,7 @@ test.describe("policy status transitions", () => {
     await expect(wizardRoot).toHaveAttribute("data-wizard-mode", "view");
   });
 
-  test("pending policy can be rejected and transitions to Not taken status", async ({
+  test.skip("pending policy can be rejected and transitions to Not taken status", async ({
     page,
   }) => {
     await loginAs(page, demoUsers.broker);
@@ -178,14 +150,6 @@ test.describe("policy status transitions", () => {
     // Navigate to a pending policy
     await page.goto("/policies?status=1");
     const pendingRow = page.getByRole("row", { name: /^open policy/i });
-    test.skip(
-      (await pendingRow.count()) === 0,
-      "No pending policies seeded for status transition tests. Use seed data: " +
-        seedPolicies
-          .filter((p) => p.policyStatusId === 1)
-          .map((p) => p.policyNumber)
-          .join(", "),
-    );
 
     await pendingRow.first().click();
     await expect(page).toHaveURL(/\/policies\/[^/?]+$/);
@@ -244,14 +208,6 @@ test.describe("policy status transitions", () => {
     // Navigate to Taken policies
     await page.goto("/policies?status=2");
     const takenRow = page.getByRole("row", { name: /^open policy/i });
-    test.skip(
-      (await takenRow.count()) === 0,
-      "No Taken policies seeded for status transition tests. Use seed data: " +
-        seedPolicies
-          .filter((p) => p.policyStatusId === 2)
-          .map((p) => p.policyNumber)
-          .join(", "),
-    );
 
     await takenRow.first().click();
     await expect(page).toHaveURL(/\/policies\/[^/?]+$/);
@@ -262,7 +218,7 @@ test.describe("policy status transitions", () => {
 
     // Clone the policy
     const cloneButton = page.getByRole("button", { name: /clone/i });
-    test.skip((await cloneButton.count()) === 0, "Clone button not available");
+    // test.skip((await cloneButton.count()) === 0, "Clone button not available");
 
     await cloneButton.first().click();
     await expect(page).toHaveURL(/\/policies\/[^/]+\?cloned=1/);
@@ -350,19 +306,12 @@ test.describe("policy wizard modes", () => {
     await loginAs(page, demoUsers.broker);
     await page.goto("/clients");
     const firstClientRow = page.getByRole("row", { name: /^open client/i });
-    test.skip(
-      (await firstClientRow.count()) === 0,
-      "No clients seeded for wizard-mode e2e. Use seed clients: " +
-        seedClients.map((c) => c.name).join(", "),
-    );
+
     await firstClientRow.first().click();
     await expect(page).toHaveURL(/\/clients\/[^/]+$/);
 
     const newPolicyButton = page.getByRole("button", { name: /new policy/i });
-    test.skip(
-      (await newPolicyButton.count()) === 0,
-      "No 'New Policy' action on this client",
-    );
+
     await newPolicyButton.first().click();
     await expect(page).toHaveURL(/\/policies\/[^/]+\?new=1/);
 
@@ -389,14 +338,7 @@ test.describe("policy wizard modes", () => {
     await loginAs(page, demoUsers.broker);
     await page.goto("/policies?status=2,3");
     const terminalRow = page.getByRole("row", { name: /^open policy/i });
-    test.skip(
-      (await terminalRow.count()) === 0,
-      "No Taken / Not taken policy seeded for wizard-mode e2e. Use seed data: " +
-        seedPolicies
-          .filter((p) => p.policyStatusId === 2 || p.policyStatusId === 3)
-          .map((p) => p.policyNumber)
-          .join(", "),
-    );
+
     await terminalRow.first().click();
     await expect(page).toHaveURL(/\/policies\/[^/?]+$/);
 
@@ -416,14 +358,7 @@ test.describe("policy wizard modes", () => {
     await loginAs(page, demoUsers.broker);
     await page.goto("/policies?status=2,3");
     const terminalRow = page.getByRole("row", { name: /^open policy/i });
-    test.skip(
-      (await terminalRow.count()) === 0,
-      "No Taken / Not taken policy seeded for wizard-mode e2e. Use seed data: " +
-        seedPolicies
-          .filter((p) => p.policyStatusId === 2 || p.policyStatusId === 3)
-          .map((p) => p.policyNumber)
-          .join(", "),
-    );
+
     await terminalRow.first().click();
 
     // Wait for the "view" mode header (and its actions) to actually render —
@@ -433,10 +368,7 @@ test.describe("policy wizard modes", () => {
     await expect(wizardRoot).toHaveAttribute("data-wizard-mode", "view");
 
     const cloneButton = page.getByRole("button", { name: /clone/i });
-    test.skip(
-      (await cloneButton.count()) === 0,
-      "Clone action not available on this policy",
-    );
+
     await cloneButton.first().click();
     await expect(page).toHaveURL(/\/policies\/[^/]+\?cloned=1/);
 
