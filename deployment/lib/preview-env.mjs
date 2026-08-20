@@ -34,9 +34,6 @@ import {
   R2_LIBRARY_BUCKET_PREFIX,
   R2_SLUG_MAX_LEN,
   RESERVED_ENV_NAMES,
-  STAGING_AVATARS_BUCKET,
-  STAGING_LIBRARY_BUCKET,
-  STAGING_PROJECT_REF,
   SUPABASE_POOL_SIZE,
   UAT_AVATARS_BUCKET,
   UAT_LIBRARY_BUCKET,
@@ -62,9 +59,6 @@ export {
   LEGACY_LIBRARY_BUCKET,
   LOCAL_AVATARS_BUCKET,
   LOCAL_LIBRARY_BUCKET,
-  STAGING_AVATARS_BUCKET,
-  STAGING_LIBRARY_BUCKET,
-  STAGING_PROJECT_REF,
   SUPABASE_POOL_SIZE,
   UAT_AVATARS_BUCKET,
   UAT_LIBRARY_BUCKET,
@@ -219,27 +213,6 @@ export function resourceNames(envName) {
     supabaseBranchName: slug,
     appUrl,
   };
-}
-
-/** Persisted state for resources shared across all `pr-*` previews (Hyperdrive). */
-export const prSharedStateDir = join(previewRoot, "_pr-shared");
-export const prSharedStatePath = join(prSharedStateDir, "state.json");
-
-export async function loadPrSharedState() {
-  try {
-    return JSON.parse(await readFile(prSharedStatePath, "utf8"));
-  } catch {
-    return null;
-  }
-}
-
-export async function savePrSharedState(state) {
-  await mkdir(prSharedStateDir, { recursive: true });
-  await writeFile(
-    prSharedStatePath,
-    `${JSON.stringify(state, null, 2)}\n`,
-    "utf8",
-  );
 }
 
 export function statePath(envName) {

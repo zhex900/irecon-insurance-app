@@ -331,7 +331,7 @@ policies/{policyId}/{documentType}/{timestamp}.pdf
 | Env          | Purpose                                        |
 | ------------ | ---------------------------------------------- |
 | `dev`        | Local Wrangler + Supabase local or dev project |
-| `staging`    | Pre-prod validation                            |
+| `uat`    | Pre-prod validation                            |
 | `production` | Live broker use                                |
 
 ---
@@ -661,7 +661,7 @@ No dedicated Supabase skill is installed; rely on Supabase MCP + official docs f
 
 - RLS policies
 - E2E tests for policy flow
-- Staging deploy
+- UAT deploy
 
 ---
 

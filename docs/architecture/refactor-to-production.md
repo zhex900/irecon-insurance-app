@@ -46,7 +46,7 @@ Large files (all under ~500-line gate after Phase 3 follow-ups):
 3. **Migrate before delete** — move data to DB / seeds first; remove JSON only when nothing imports it.
 4. **URL stability** — folder-based routes must keep the same public paths.
 5. **Secrets never in git** — env examples only; CI uses GitHub/Cloudflare/Supabase secrets.
-6. **Production data is sacred** — no private customer dumps in repo; UAT/staging use anonymised or synthetic data.
+6. **Production data is sacred** — no private customer dumps in repo; UAT uses anonymised or synthetic data.
 7. **Prefer boring** — industry defaults over clever one-offs.
 
 ---
@@ -106,7 +106,7 @@ After reorganisation (names can vary; structure should not):
 - No private PII in repo.
 - ESLint + Prettier + typecheck on every PR.
 - Playwright smoke + critical path e2e on PR (against ephemeral Supabase).
-- Staging auto-deploy on `main`; prod on semver tag.
+- UAT auto-deploy on PR merge; prod on semver tag.
 - Resend live for broker/insurer document email + password flows as designed.
 - Runtime reference data and prices from DB (or explicit, versioned seed tables)—not ad-hoc JSON reads in the request path.
 
@@ -429,7 +429,7 @@ tag vX.Y.Z / GitHub Release
 #### Suggested workflows
 
 - `.github/workflows/pr.yml` — quality + preview e2e
-- `.github/workflows/staging.yml` — on push to `main`
+- `.github/workflows/pr-cleanup.yml` — UAT deploy on PR merge
 - `.github/workflows/release.yml` — on tag `v*`
 - `.github/workflows/pr-cleanup.yml` — on PR close
 
@@ -529,7 +529,7 @@ Beyond those—industry defaults for this stack (keep in sync when promoting rul
 8. Vitest pricing + domain tests
 9. Playwright smoke locally
 10. Supabase preview + PR e2e
-11. Staging workflow on `main`
+11. UAT deploy on PR merge (`pr-cleanup.yml`)
 12. Release workflow + smoke
 13. Prod data migration dry-run → go-live
 

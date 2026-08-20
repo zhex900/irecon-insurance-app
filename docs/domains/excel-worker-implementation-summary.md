@@ -195,10 +195,10 @@ EXCEL_WORKER_ENABLED=true
 EXCEL_WORKER_FALLBACK_ENABLED=true
 ```
 
-### **Step 3: Test in Staging**
+### **Step 3: Test in UAT**
 
 ```bash
-# Test all Excel endpoints in staging
+# Test all Excel endpoints in UAT
 # Verify:
 # 1. Reports generate correctly
 # 2. Performance is acceptable
@@ -257,7 +257,7 @@ EXCEL_WORKER_ENABLED=false
 
 ### **Immediate (Deployment):**
 
-1. Deploy Excel Worker to staging
+1. Deploy Excel Worker to UAT
 2. Configure environment variables
 3. Test with real broker workflows
 4. Monitor bundle size reduction

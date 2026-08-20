@@ -277,7 +277,6 @@ async function main() {
   const hyperdriveId = await ensureHyperdrive({
     names,
     connectionString: toSessionDbUrl(process.env.DATABASE_URL),
-    existingId: state?.hyperdriveId,
     originConnectionLimit: HYPERDRIVE_ORIGIN_CONNECTION_LIMIT.production,
   });
 

@@ -15,7 +15,6 @@ import {
   assertPreviewEnvName,
   hasFlag,
   isPrPreviewSlug,
-  loadState,
   parseEnvName,
   removeStateDir,
   resourceNames,
@@ -27,7 +26,6 @@ async function destroyPreview(envName) {
 
   const names = resourceNames(assertPreviewEnvName(envName));
   const dryRun = hasFlag("--dry-run");
-  const state = await loadState(names.label);
 
   console.log(`Destroy preview environment: ${names.label}`);
   console.log(
@@ -49,8 +47,7 @@ async function destroyPreview(envName) {
   await deletePreviewWorkers(names);
   if (!isPrPreviewSlug(names.slug)) {
     await emptyAndDeleteR2Buckets(names);
-    const hyperdriveId =
-      state?.hyperdriveId || (await findHyperdriveId(names.hyperdriveName));
+    const hyperdriveId = await findHyperdriveId(names.hyperdriveName);
     await deleteHyperdrive(hyperdriveId);
   }
 

@@ -2,9 +2,10 @@ import { isRouteErrorResponse } from "react-router";
 
 const reported = new WeakSet<object>();
 
-function shouldReport(error: unknown): boolean {
+/** Skip expected route responses (404/405, redirects) — not app bugs. */
+export function shouldReportRouteError(error: unknown): boolean {
   if (isRouteErrorResponse(error)) {
-    // Skip expected client / auth redirects and not-found.
+    // Includes React Router internal errors (unknown URL, POST without action).
     if (error.status < 500) return false;
   }
   return true;
@@ -16,7 +17,7 @@ function shouldReport(error: unknown): boolean {
  */
 export function reportClientRouteError(error: unknown): void {
   if (typeof document === "undefined") return;
-  if (!shouldReport(error)) return;
+  if (!shouldReportRouteError(error)) return;
 
   const key = typeof error === "object" && error !== null ? error : null;
   if (key) {

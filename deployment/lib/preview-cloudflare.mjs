@@ -94,9 +94,6 @@ export async function copyR2FromUat(names) {
   };
 }
 
-/** @deprecated Use copyR2FromUat */
-export const copyR2FromStaging = copyR2FromUat;
-
 export async function emptyAndDeleteR2Buckets(names) {
   const targets = [names.avatarsBucket, names.libraryBucket];
   const existing = [];
@@ -154,10 +151,14 @@ async function syncHyperdriveOriginLimit(id, originConnectionLimit) {
   ]);
 }
 
+/** Resolve Hyperdrive by config name on every deploy (no hardcoded ids). */
+async function resolveHyperdriveId(hyperdriveName) {
+  return findHyperdriveId(hyperdriveName);
+}
+
 export async function ensureHyperdrive({
   names,
   connectionString,
-  existingId,
   forceUpdate = false,
   originConnectionLimit,
 }) {
@@ -167,7 +168,7 @@ export async function ensureHyperdrive({
     );
   }
 
-  const existing = existingId || (await findHyperdriveId(names.hyperdriveName));
+  const existing = await resolveHyperdriveId(names.hyperdriveName);
 
   if (existing && forceUpdate) {
     console.log(`→ Updating Hyperdrive ${existing} connection…`);
@@ -224,11 +225,14 @@ export async function findHyperdriveId(name) {
   const { stdout, stderr } = await wranglerCapture(["hyperdrive", "list"], {
     verbose: true,
   });
-  const lines = `${stdout}\n${stderr}`.split("\n");
-  for (const line of lines) {
-    if (!line.includes(name)) continue;
-    const match = line.match(/[a-f0-9]{32}/i);
-    if (match) return match[0];
+  for (const line of `${stdout}\n${stderr}`.split("\n")) {
+    if (!line.includes("│")) continue;
+    const cols = line.split("│").map((col) => col.trim());
+    if (cols.length < 3) continue;
+    const id = cols[1];
+    const configName = cols[2];
+    if (configName !== name) continue;
+    if (/^[a-f0-9]{32}$/i.test(id)) return id;
   }
   return null;
 }
@@ -326,13 +330,33 @@ export async function syncPreviewSecrets({
   }
 }
 
+async function workerExists(name) {
+  try {
+    await wranglerCapture(["deployments", "list", "--name", name], {
+      silent: true,
+    });
+    return true;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (/10007|10090|does not exist/i.test(message)) return false;
+    return true;
+  }
+}
+
 export async function deleteWorker(name) {
+  if (!(await workerExists(name))) return;
+
   try {
     await wranglerCapture(["delete", name, "--force"], { silent: true });
     console.log(`✓ Deleted Worker ${name}`);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (/10090|does not exist/i.test(message)) return;
+    // Wrangler can exit non-zero after deleting the script (e.g. KV cleanup auth in CI).
+    if (!(await workerExists(name))) {
+      console.log(`✓ Deleted Worker ${name}`);
+      return;
+    }
     console.warn(`Warning: could not delete Worker ${name}.`, message);
   }
 }
