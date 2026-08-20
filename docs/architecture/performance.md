@@ -10,7 +10,8 @@ Measure before optimizing. Readability wins over micro-optimizations without evi
 - **Index** filters you actually use; verify slow paths with `EXPLAIN`.
 - **Transactions** for multi-table writes — correct first, then fast.
 - Prefer request-scoped `getDb()` / Hyperdrive pooling — don’t open ad-hoc pools per call.
-- **Workers query concurrency:** cap at **≤4 parallel** in-flight queries per loader/action (`WORKER_QUERY_GATE_MAX` in `app/lib/db/query-gate.ts`). Each Worker request gets its **own postgres pool** (`WORKER_POOL_MAX = 5`, closed after the request) plus a **per-request query gate** set one below pool max — pools must not be shared across requests (Workers I/O isolation). Use **waves** of `Promise.all`, **combined SQL** (`count(*) FILTER (WHERE …)` for badge counts), and **one query for feature flags** (`getFeatureFlagStates()`). See `app/lib/services/price/snapshot.ts` and `app/lib/services/policies/list.service.ts`.
+- **Workers:** one postgres connection per request (`WORKER_POOL_MAX = 1`); Hyperdrive pools origins. Transient disconnects retry automatically (`runWithTransientRetry` in `app/lib/db/query-gate.ts`).
+- **Dev:** cap at **≤3 parallel** in-flight queries (`DEV_QUERY_GATE_MAX`) so local `Promise.all` does not hammer Postgres. Use **waves** of `Promise.all`, **combined SQL** (`count(*) FILTER (WHERE …)` for badge counts), and **one query for feature flags** (`getFeatureFlagStates()`). See `app/lib/services/price/snapshot.ts` and `app/lib/services/policies/list.service.ts`.
 
 ## HTTP & payloads
 

@@ -295,6 +295,50 @@ export async function deployPreviewWorkers({ names, configs }) {
   console.log(`✓ Deployed ${names.appUrl}`);
 }
 
+/** Wake Supabase/Neon origin after copy/migrate (direct session pooler URL). */
+export async function warmupDatabaseOrigin(sessionUrl) {
+  console.log("→ Warming up database origin (SELECT 1)…");
+  try {
+    const postgres = (await import("postgres")).default;
+    const sql = postgres(sessionUrl, {
+      max: 1,
+      prepare: false,
+      connect_timeout: 30,
+    });
+    await sql`select 1 as ok`;
+    await sql.end({ timeout: 5 });
+    console.log("✓ Database origin warm");
+  } catch (error) {
+    console.warn(
+      "Warning: database origin warmup failed.",
+      error instanceof Error ? error.message : error,
+    );
+  }
+}
+
+/** Hit the deployed app so the Worker opens a fresh Hyperdrive connection. */
+export async function warmupDeployedWorker(appUrl) {
+  const base = appUrl.replace(/\/$/, "");
+  const url = `${base}/`;
+  console.log(`→ Warming up Hyperdrive via ${url}…`);
+  try {
+    const res = await fetch(url, {
+      redirect: "manual",
+      signal: AbortSignal.timeout(30_000),
+    });
+    if (res.status >= 500) {
+      console.warn(`Warning: Hyperdrive warmup returned HTTP ${res.status}`);
+      return;
+    }
+    console.log(`✓ Hyperdrive warmup (HTTP ${res.status})`);
+  } catch (error) {
+    console.warn(
+      "Warning: Hyperdrive warmup failed.",
+      error instanceof Error ? error.message : error,
+    );
+  }
+}
+
 export async function putWorkerSecret(workerName, name, value) {
   if (!value?.trim()) {
     console.warn(`Warning: ${name} is empty — skipping secret put.`);

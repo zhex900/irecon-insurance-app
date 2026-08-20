@@ -4,12 +4,11 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 
 import {
-  DEV_QUERY_GATE_MAX,
-  QueryGate,
+  createDbExecutor,
+  type DbExecutor,
   registerPoolResetHandler,
   WORKER_POOL_MAX,
-  WORKER_QUERY_GATE_MAX,
-  wrapPostgresWithGate,
+  wrapPostgresSql,
 } from "~/lib/db/query-gate";
 import * as schema from "~/lib/db/schema";
 
@@ -30,12 +29,10 @@ type Sql = ReturnType<typeof postgres>;
 type Db = ReturnType<typeof drizzle<typeof schema>>;
 
 type DbStore = {
-  /** Gated client passed to Drizzle. */
   sql: Sql;
-  /** Underlying pool — closed after each Worker request. */
   baseSql: Sql;
   db: Db;
-  gate: QueryGate;
+  executor: DbExecutor;
 };
 
 const dbContext = new AsyncLocalStorage<DbStore>();
@@ -43,42 +40,38 @@ const dbContext = new AsyncLocalStorage<DbStore>();
 const globalForDb = globalThis as unknown as {
   __ireconBaseSql?: Sql;
   __ireconBaseSqlUrl?: string;
-  __ireconGatedSql?: Sql;
-  __ireconGatedSqlUrl?: string;
+  __ireconWrappedSql?: Sql;
+  __ireconWrappedSqlUrl?: string;
   __ireconDb?: Db;
-  __ireconGate?: QueryGate;
+  __ireconExecutor?: DbExecutor;
 };
-
-function queryGateLimit() {
-  return isCloudflareWorker() ? WORKER_QUERY_GATE_MAX : DEV_QUERY_GATE_MAX;
-}
-
-function workerPoolMax() {
-  return WORKER_POOL_MAX;
-}
 
 function createSql(url: string) {
   return postgres(url, {
-    max: isCloudflareWorker() ? workerPoolMax() : 10,
+    max: isCloudflareWorker() ? WORKER_POOL_MAX : 10,
     prepare: false,
-    idle_timeout: isCloudflareWorker() ? 0 : 0,
-    max_lifetime: isCloudflareWorker() ? 0 : 0,
+    idle_timeout: 0,
+    max_lifetime: 0,
     connect_timeout: 30,
   });
 }
 
+function createExecutor() {
+  return createDbExecutor(!isCloudflareWorker());
+}
+
 /** Reset dev/global fallback pool (not used for Worker request-scoped pools). */
 export async function resetSharedDbPool() {
-  if (globalForDb.__ireconGate) {
-    await globalForDb.__ireconGate.drain();
+  if (globalForDb.__ireconExecutor) {
+    await globalForDb.__ireconExecutor.drain();
   }
   if (globalForDb.__ireconBaseSql) {
     await globalForDb.__ireconBaseSql.end({ timeout: 2 }).catch(() => {});
   }
   globalForDb.__ireconBaseSql = undefined;
   globalForDb.__ireconBaseSqlUrl = undefined;
-  globalForDb.__ireconGatedSql = undefined;
-  globalForDb.__ireconGatedSqlUrl = undefined;
+  globalForDb.__ireconWrappedSql = undefined;
+  globalForDb.__ireconWrappedSqlUrl = undefined;
   globalForDb.__ireconDb = undefined;
 }
 
@@ -93,49 +86,49 @@ function getDevBaseSql(url = getDatabaseUrl()): Sql {
   return globalForDb.__ireconBaseSql;
 }
 
-function createGatedSql(baseSql: Sql, gate: QueryGate): Sql {
-  return wrapPostgresWithGate(baseSql, gate);
+function wrapSql(baseSql: Sql, executor: DbExecutor): Sql {
+  return wrapPostgresSql(baseSql, executor);
 }
 
-function getOrCreateGlobalGate() {
-  if (!globalForDb.__ireconGate) {
-    globalForDb.__ireconGate = new QueryGate(queryGateLimit());
+function getOrCreateGlobalExecutor() {
+  if (!globalForDb.__ireconExecutor) {
+    globalForDb.__ireconExecutor = createExecutor();
   }
-  return globalForDb.__ireconGate;
+  return globalForDb.__ireconExecutor;
 }
 
-function getGlobalGatedSql(url = getDatabaseUrl()): Sql {
+function getGlobalWrappedSql(url = getDatabaseUrl()): Sql {
   if (
-    !globalForDb.__ireconGatedSql ||
-    globalForDb.__ireconGatedSqlUrl !== url
+    !globalForDb.__ireconWrappedSql ||
+    globalForDb.__ireconWrappedSqlUrl !== url
   ) {
-    globalForDb.__ireconGatedSql = createGatedSql(
+    globalForDb.__ireconWrappedSql = wrapSql(
       getDevBaseSql(url),
-      getOrCreateGlobalGate(),
+      getOrCreateGlobalExecutor(),
     );
-    globalForDb.__ireconGatedSqlUrl = url;
+    globalForDb.__ireconWrappedSqlUrl = url;
     globalForDb.__ireconDb = undefined;
   }
-  return globalForDb.__ireconGatedSql;
+  return globalForDb.__ireconWrappedSql;
 }
 
 function createStore(url = getDatabaseUrl()): DbStore {
-  const gate = new QueryGate(queryGateLimit());
+  const executor = createExecutor();
   const baseSql = createSql(url);
-  const sql = createGatedSql(baseSql, gate);
+  const sql = wrapSql(baseSql, executor);
   const db = drizzle(sql, { schema });
-  return { sql, db, gate, baseSql };
+  return { sql, db, executor, baseSql };
 }
 
-/** Drop the active pool (request-scoped on Workers, global in dev) before retry. */
+/** Drop the active pool before retry (request-scoped on Workers, global in dev). */
 export async function resetActiveDbPool() {
   const store = dbContext.getStore();
   if (store) {
-    await store.gate.drain();
+    await store.executor.drain();
     await store.baseSql.end({ timeout: 2 }).catch(() => {});
     const baseSql = createSql(getDatabaseUrl());
     store.baseSql = baseSql;
-    store.sql = createGatedSql(baseSql, store.gate);
+    store.sql = wrapSql(baseSql, store.executor);
     store.db = drizzle(store.sql, { schema });
     return;
   }
@@ -168,8 +161,8 @@ export function getDb() {
   }
 
   const url = getDatabaseUrl();
-  if (!globalForDb.__ireconDb || globalForDb.__ireconGatedSqlUrl !== url) {
-    globalForDb.__ireconDb = drizzle(getGlobalGatedSql(url), { schema });
+  if (!globalForDb.__ireconDb || globalForDb.__ireconWrappedSqlUrl !== url) {
+    globalForDb.__ireconDb = drizzle(getGlobalWrappedSql(url), { schema });
   }
   return globalForDb.__ireconDb;
 }

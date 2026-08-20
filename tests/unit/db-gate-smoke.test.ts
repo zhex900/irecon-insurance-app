@@ -3,7 +3,7 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { describe, expect, it } from "vitest";
 
-import { QueryGate, wrapPostgresWithGate } from "~/lib/db/query-gate";
+import { createDbExecutor, wrapPostgresSql } from "~/lib/db/query-gate";
 import { appFeatureFlag } from "~/lib/db/schema";
 
 const url =
@@ -29,11 +29,11 @@ async function hasMigrationSeedData() {
 const featureKey = await hasMigrationSeedData();
 const describeDb = featureKey ? describe : describe.skip;
 
-describeDb("gated drizzle against local postgres", () => {
+describeDb("wrapped drizzle against local postgres", () => {
   it("runs repeated feature-flag-style queries", async () => {
     const base = postgres(url, { max: 5, prepare: false });
-    const gate = new QueryGate(3);
-    const sql = wrapPostgresWithGate(base, gate);
+    const executor = createDbExecutor(true);
+    const sql = wrapPostgresSql(base, executor);
     const db = drizzle(sql);
     const key = featureKey!;
 
@@ -51,7 +51,7 @@ describeDb("gated drizzle against local postgres", () => {
 });
 
 if (!featureKey) {
-  describe.skip("gated drizzle against local postgres (DATABASE_URL unreachable)", () => {
+  describe.skip("wrapped drizzle against local postgres (DATABASE_URL unreachable)", () => {
     it("skipped", () => {
       expect(true).toBe(true);
     });

@@ -35,9 +35,10 @@ export const SUPABASE_POOL_SIZE = {
   pr: 35,
 };
 
-/** Documented targets for app-side pooling (app/lib/db/query-gate.ts). */
-export const WORKER_DB_POOL_MAX = 5;
-export const WORKER_DB_QUERY_GATE_MAX = 4;
+/** Worker postgres pool max (Hyperdrive pools origins; see app/lib/db/query-gate.ts). */
+export const WORKER_DB_POOL_MAX = 1;
+/** Dev-only parallel query cap (app/lib/db/query-gate.ts DEV_QUERY_GATE_MAX). */
+export const DEV_DB_QUERY_GATE_MAX = 3;
 
 // ── Cloudflare / domain ────────────────────────────────────────────────────
 
