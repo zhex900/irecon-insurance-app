@@ -2,9 +2,9 @@
  * Export legacy domain data from MSSQL.
  *
  * Usage:
- *   npx tsx scripts/export-legacy-domain.mts
- *   npx tsx scripts/export-legacy-domain.mts --out _archive/data/legacy-export.json
- *   npx tsx scripts/export-legacy-domain.mts --sql clients path/to/clients.sql
+ *   npx tsx scripts/db/legacy/export-legacy-domain.mts
+ *   npx tsx scripts/db/legacy/export-legacy-domain.mts --out _archive/data/legacy-export.json
+ *   npx tsx scripts/db/legacy/export-legacy-domain.mts --sql clients path/to/clients.sql
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
@@ -30,8 +30,8 @@ import type {
 import { loadLegacySql, parseSqlOverrides } from "./lib/legacy-sql.mts";
 import { logMigrationScopeCounts } from "./lib/legacy-migration-scope.mts";
 
-const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
-const SQL_DIR = join(repoRoot, "scripts/sql/legacy");
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
+const SQL_DIR = join(repoRoot, "scripts/db/legacy/sql");
 const DEFAULT_OUT = join(repoRoot, "_archive/data/legacy-export.json");
 
 function parseArgs(argv: string[]) {

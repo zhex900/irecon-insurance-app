@@ -791,7 +791,7 @@ The directory standardization plan has been partially implemented with the follo
 
 ### Enforcement Mechanisms in Place
 
-#### 1. Organization Check Script (`scripts/check-organization.sh`)
+#### 1. Organization Check Script (`scripts/quality/check-organization.sh`)
 
 ```bash
 # Runs comprehensive checks:

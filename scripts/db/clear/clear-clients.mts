@@ -7,9 +7,9 @@
  *   npm run db:clear:clients -- --env=prod --confirm
  *   npm run db:clear:clients -- --env=local --client-id=<uuid>
  */
-import { resetSharedDbPool } from "../app/lib/db/client";
-import { clearClients } from "./lib/clear-domain-data.mts";
-import { runClearDomainScript } from "./lib/clear-domain-cli.mts";
+import { resetSharedDbPool } from "../../../app/lib/db/client";
+import { clearClients } from "../lib/clear-domain-data.mts";
+import { runClearDomainScript } from "../lib/clear-domain-cli.mts";
 
 async function main() {
   await runClearDomainScript({

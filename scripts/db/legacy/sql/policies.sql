@@ -1,5 +1,5 @@
 -- Target migration: CAR policies with InceptionDate >= 2025-06-01.
--- See scripts/sql/legacy/_target-scope.sql
+-- See scripts/db/legacy/sql/_target-scope.sql
 SELECT
   p.PolicyId AS policyId,
   p.ClientId AS clientId,

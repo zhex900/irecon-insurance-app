@@ -7,9 +7,9 @@
  *   npm run db:clear:ar -- --env=local
  *   npm run db:clear:ar -- --env=local --id=42
  */
-import { resetSharedDbPool } from "../app/lib/db/client";
-import { clearAuthorisedRepresentatives } from "./lib/clear-domain-data.mts";
-import { runClearDomainScript } from "./lib/clear-domain-cli.mts";
+import { resetSharedDbPool } from "../../../app/lib/db/client";
+import { clearAuthorisedRepresentatives } from "../lib/clear-domain-data.mts";
+import { runClearDomainScript } from "../lib/clear-domain-cli.mts";
 
 async function main() {
   await runClearDomainScript({

@@ -4,14 +4,19 @@
  *
  * Requires SUPABASE_ACCESS_TOKEN (https://supabase.com/dashboard/account/tokens)
  *
- *   SUPABASE_ACCESS_TOKEN=... node --env-file=.env.uat infra/configure-uat-auth-urls.mjs
+ *   SUPABASE_ACCESS_TOKEN=... node --env-file=.env.uat deployment/configure-uat-auth-urls.mjs
  */
-const PROJECT_REF =
-  process.env.UAT_SUPABASE_REF?.trim() || "tjnsygunohylofihoksl";
-const APP_URL = (process.env.APP_URL ?? "https://uat.irecon.net").replace(
-  /\/$/,
-  "",
-);
+import {
+  LOCAL_DEV_AUTH_ORIGINS,
+  PASSWORD_RESET_EMAIL_SUBJECT,
+  PASSWORD_RESET_EMAIL_TEMPLATE,
+  SUPABASE_API,
+  UAT_APP_URL,
+  UAT_PROJECT_REF,
+} from "./lib/constants.mjs";
+
+const PROJECT_REF = process.env.UAT_SUPABASE_REF?.trim() || UAT_PROJECT_REF;
+const APP_URL = (process.env.APP_URL ?? UAT_APP_URL).replace(/\/$/, "");
 
 const allowList = [
   APP_URL,
@@ -19,8 +24,7 @@ const allowList = [
   `${APP_URL}/auth/confirm`,
   `${APP_URL}/auth/confirm/**`,
   `${APP_URL}/reset-password`,
-  "http://127.0.0.1:5173/**",
-  "http://localhost:5173/**",
+  ...LOCAL_DEV_AUTH_ORIGINS,
 ].join(",");
 
 async function main() {
@@ -37,7 +41,7 @@ async function main() {
   };
 
   const getRes = await fetch(
-    `https://api.supabase.com/v1/projects/${PROJECT_REF}/config/auth`,
+    `${SUPABASE_API}/projects/${PROJECT_REF}/config/auth`,
     { headers: { Authorization: headers.Authorization } },
   );
   if (!getRes.ok) {
@@ -51,16 +55,15 @@ async function main() {
   console.log("  uri_allow_list =", before.uri_allow_list);
 
   const patchRes = await fetch(
-    `https://api.supabase.com/v1/projects/${PROJECT_REF}/config/auth`,
+    `${SUPABASE_API}/projects/${PROJECT_REF}/config/auth`,
     {
       method: "PATCH",
       headers,
       body: JSON.stringify({
         site_url: APP_URL,
         uri_allow_list: allowList,
-        mailer_subjects_recovery: "Reset your password",
-        mailer_templates_recovery_content:
-          '<h2>Reset your password</h2><p>We received a request to reset your password. Follow the link below to choose a new one.</p><p><a href="{{ .ConfirmationURL }}">Reset password</a></p><p>If you didn\'t request this, you can safely ignore this email.</p>',
+        mailer_subjects_recovery: PASSWORD_RESET_EMAIL_SUBJECT,
+        mailer_templates_recovery_content: PASSWORD_RESET_EMAIL_TEMPLATE,
       }),
     },
   );

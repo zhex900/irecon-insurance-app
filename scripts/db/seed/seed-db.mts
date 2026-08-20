@@ -9,21 +9,21 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { sql } from "drizzle-orm";
-import { getDb } from "../app/lib/db/client";
+import { getDb } from "../../../app/lib/db/client";
 import {
   client,
   policy,
   policyCar,
   policyCarAdjustment,
-} from "../app/lib/db/schema";
-import { policyToRows } from "../app/lib/db/policy-mapper";
-import type { Policy } from "../app/lib/db/types";
-import { createUser } from "../app/lib/services/users/service";
-import { getSupabaseAdmin } from "../app/lib/supabase/admin.server";
+} from "../../../app/lib/db/schema";
+import { policyToRows } from "../../../app/lib/db/policy-mapper";
+import type { Policy } from "../../../app/lib/db/types";
+import { createUser } from "../../../app/lib/services/users/service";
+import { getSupabaseAdmin } from "../../../app/lib/supabase/admin.server";
 import { seedAuthorisedRepresentativesFromCsv } from "./seed-ar-from-csv.mts";
 import { seedPrices } from "./seed-prices";
 
-const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const root = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 const wholesaleBrokerCsv = join(
   root,
   "_archive/seeds-source/WholesaleBroker.csv",

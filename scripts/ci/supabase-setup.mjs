@@ -2,7 +2,7 @@
  * Start local Supabase (Docker), apply migrations, and export env for CI.
  *
  * Usage:
- *   node scripts/ci-supabase-setup.mjs
+ *   node scripts/ci/supabase-setup.mjs
  *
  * When GITHUB_ENV is set, writes DATABASE_URL and Supabase keys for later workflow steps.
  */

@@ -1,6 +1,6 @@
 import type { LegacyDomainPayload } from "./legacy-payload.ts";
 
-/** Inception date filter — keep in sync with scripts/sql/legacy/_target-scope.sql */
+/** Inception date filter — keep in sync with scripts/db/legacy/sql/_target-scope.sql */
 export const LEGACY_TARGET_INCEPTION_FROM = "2025-06-01";
 
 export function logMigrationScopeCounts(payload: LegacyDomainPayload): void {

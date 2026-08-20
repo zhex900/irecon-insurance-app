@@ -35,7 +35,7 @@ Config: `vitest.config.ts`. Suites under `tests/unit/`:
 
 GitHub Actions starts local Supabase in Docker before tests:
 
-1. `node scripts/ci-supabase-setup.mjs` — `supabase start`, `db reset` (migrations + SQL seeds)
+1. `node scripts/ci/supabase-setup.mjs` — `supabase start`, `db reset` (migrations + SQL seeds)
 2. Vitest runs with the exported `DATABASE_URL` / Supabase keys
 
 Reproduce locally: `npm run ci:db && npm run test`

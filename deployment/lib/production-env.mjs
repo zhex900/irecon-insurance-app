@@ -5,36 +5,42 @@ import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 
 import {
-  observability,
+  DEFAULT_PRODUCTION_APP_URL,
+  DEFAULT_PRODUCTION_AUTH_DOMAINS,
+  DEFAULT_PRODUCTION_WRANGLER_CUSTOM_DOMAINS,
+  DEFAULT_SESSION_ABSOLUTE_TIMEOUT_HOURS,
+  DEFAULT_SESSION_INACTIVITY_TIMEOUT_MINUTES,
+  EXCEL_WORKER_VERSION,
+  PRODUCTION_APP_WORKER,
+  PRODUCTION_AVATARS_BUCKET,
+  PRODUCTION_EXCEL_WORKER,
+  PRODUCTION_LIBRARY_BUCKET,
+  PRODUCTION_PDF_WORKER,
+  PRODUCTION_SCRIPT_FLAGS,
+  PRODUCTION_WRANGLER_PATHS,
   UAT_PROJECT_REF,
-  webRoot,
-  writeJsonc,
-} from "./preview-env.mjs";
-import { workerCpuLimits } from "./infra-settings.mjs";
+  WORKER_CPU_MS,
+  WRANGLER_APP_COMPATIBILITY_DATE,
+  WRANGLER_COMPATIBILITY_FLAGS,
+  WRANGLER_EXCEL_COMPATIBILITY_DATE,
+  workerCpuLimits,
+  observability,
+} from "./constants.mjs";
+import { webRoot, writeJsonc } from "./preview-env.mjs";
 
 export const productionRoot = join(webRoot, ".production-env");
 
-export const PRODUCTION_APP_WORKER = "insurance-app-production";
-export const PRODUCTION_PDF_WORKER = "insurance-pdf-worker-production";
-export const PRODUCTION_EXCEL_WORKER = "insurance-excel-worker-production";
-export const PRODUCTION_AVATARS_BUCKET = "insurance-app-avatars-production";
-export const PRODUCTION_LIBRARY_BUCKET =
-  "insurance-app-library-documents-production";
-export const DEFAULT_PRODUCTION_APP_URL = "https://app.irecon.net";
-
-/** @deprecated Use WORKER_CPU_MS from infra-settings.mjs */
-export { WORKER_CPU_MS as PRODUCTION_CPU_MS } from "./infra-settings.mjs";
-
-const productionWorkerLimits = workerCpuLimits;
-
-/** Wrangler custom domains — must be zones on your Cloudflare account. */
-export const DEFAULT_PRODUCTION_WRANGLER_CUSTOM_DOMAINS = ["app.irecon.net"];
-
-/** All public app hostnames (Auth redirect allow list). Includes external SaaS hostnames. */
-export const DEFAULT_PRODUCTION_AUTH_DOMAINS = [
-  "app.irecon.net",
-  "app.irecon.com.au",
-];
+export {
+  DEFAULT_PRODUCTION_APP_URL,
+  DEFAULT_PRODUCTION_AUTH_DOMAINS,
+  DEFAULT_PRODUCTION_WRANGLER_CUSTOM_DOMAINS,
+  PRODUCTION_APP_WORKER,
+  PRODUCTION_AVATARS_BUCKET,
+  PRODUCTION_EXCEL_WORKER,
+  PRODUCTION_LIBRARY_BUCKET,
+  PRODUCTION_PDF_WORKER,
+  WORKER_CPU_MS as PRODUCTION_CPU_MS,
+};
 
 export function productionWranglerCustomDomains() {
   const fromEnv = process.env.PRODUCTION_WRANGLER_DOMAINS?.trim();
@@ -76,24 +82,6 @@ export function productionAuthExtraOrigins(appUrl) {
     ...new Set(productionAuthDomains().map((domain) => `https://${domain}`)),
   ].filter((origin) => origin !== primary);
 }
-
-/** Paths relative to `.production-env/` where generated wrangler files live. */
-const fromProductionDir = {
-  schema: "../node_modules/wrangler/config-schema.json",
-  appMain: "../build/server/index.js",
-  appBaseDir: "../build/server",
-  appAssets: "../build/client",
-  pdfMain: "../workers/pdf/index.ts",
-  excelMain: "../workers/excel/index.ts",
-  fonts: "../public/fonts",
-};
-
-const PRODUCTION_FLAGS = new Set([
-  "--skip-build",
-  "--skip-migrate",
-  "--secret-only",
-  "--dry-run",
-]);
 
 export function hasProductionFlag(flag, argv = process.argv.slice(2)) {
   if (argv.includes(flag)) return true;
@@ -139,27 +127,29 @@ export async function saveState(state) {
 
 export function productionAppWrangler({ names, supabaseUrl, hyperdriveId }) {
   return {
-    $schema: fromProductionDir.schema,
+    $schema: PRODUCTION_WRANGLER_PATHS.schema,
     name: names.appWorker,
-    compatibility_date: "2026-07-20",
-    compatibility_flags: ["nodejs_compat"],
-    main: fromProductionDir.appMain,
+    compatibility_date: WRANGLER_APP_COMPATIBILITY_DATE,
+    compatibility_flags: WRANGLER_COMPATIBILITY_FLAGS,
+    main: PRODUCTION_WRANGLER_PATHS.appMain,
     no_bundle: true,
-    base_dir: fromProductionDir.appBaseDir,
+    base_dir: PRODUCTION_WRANGLER_PATHS.appBaseDir,
     rules: [{ type: "ESModule", globs: ["**/*.js", "**/*.mjs"] }],
-    assets: { directory: fromProductionDir.appAssets },
+    assets: { directory: PRODUCTION_WRANGLER_PATHS.appAssets },
     workers_dev: false,
     routes: productionAppCustomDomainRoutes(),
     observability,
     upload_source_maps: true,
     placement: { mode: "smart" },
-    ...productionWorkerLimits,
+    ...workerCpuLimits,
     vars: {
       SUPABASE_URL: supabaseUrl,
       SESSION_INACTIVITY_TIMEOUT_MINUTES:
-        process.env.SESSION_INACTIVITY_TIMEOUT_MINUTES?.trim() || "30",
+        process.env.SESSION_INACTIVITY_TIMEOUT_MINUTES?.trim() ||
+        DEFAULT_SESSION_INACTIVITY_TIMEOUT_MINUTES,
       SESSION_ABSOLUTE_TIMEOUT_HOURS:
-        process.env.SESSION_ABSOLUTE_TIMEOUT_HOURS?.trim() || "12",
+        process.env.SESSION_ABSOLUTE_TIMEOUT_HOURS?.trim() ||
+        DEFAULT_SESSION_ABSOLUTE_TIMEOUT_HOURS,
     },
     services: [
       { binding: "EXCEL_SERVICE", service: names.excelWorker },
@@ -178,34 +168,34 @@ export function productionAppWrangler({ names, supabaseUrl, hyperdriveId }) {
 
 export function productionPdfWrangler(names) {
   return {
-    $schema: fromProductionDir.schema,
+    $schema: PRODUCTION_WRANGLER_PATHS.schema,
     name: names.pdfWorker,
-    main: fromProductionDir.pdfMain,
-    compatibility_date: "2026-07-20",
-    compatibility_flags: ["nodejs_compat"],
+    main: PRODUCTION_WRANGLER_PATHS.pdfMain,
+    compatibility_date: WRANGLER_APP_COMPATIBILITY_DATE,
+    compatibility_flags: WRANGLER_COMPATIBILITY_FLAGS,
     workers_dev: false,
     preview_urls: false,
     assets: {
-      directory: fromProductionDir.fonts,
+      directory: PRODUCTION_WRANGLER_PATHS.fonts,
       binding: "ASSETS",
       run_worker_first: true,
     },
     observability,
-    ...productionWorkerLimits,
+    ...workerCpuLimits,
   };
 }
 
 export function productionExcelWrangler(names) {
   return {
-    $schema: fromProductionDir.schema,
+    $schema: PRODUCTION_WRANGLER_PATHS.schema,
     name: names.excelWorker,
-    compatibility_date: "2026-08-08",
-    compatibility_flags: ["nodejs_compat"],
-    main: fromProductionDir.excelMain,
+    compatibility_date: WRANGLER_EXCEL_COMPATIBILITY_DATE,
+    compatibility_flags: WRANGLER_COMPATIBILITY_FLAGS,
+    main: PRODUCTION_WRANGLER_PATHS.excelMain,
     observability,
-    ...productionWorkerLimits,
+    ...workerCpuLimits,
     vars: {
-      WORKER_VERSION: "2.0.0",
+      WORKER_VERSION: EXCEL_WORKER_VERSION,
       APP_URL: names.appUrl,
     },
     placement: { mode: "smart" },
@@ -326,4 +316,5 @@ export async function loadUatEnv() {
 /** @deprecated Use loadUatEnv */
 export const loadStagingEnv = loadUatEnv;
 
-export { PRODUCTION_FLAGS };
+/** @deprecated Use PRODUCTION_SCRIPT_FLAGS */
+export { PRODUCTION_SCRIPT_FLAGS as PRODUCTION_FLAGS };

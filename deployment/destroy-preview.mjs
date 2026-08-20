@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Tear down a per-PR preview environment (Workers, R2 buckets, Hyperdrive).
- * Empties and deletes per-PR R2 buckets. The shared PR Supabase database (.env.pr) is not deleted.
+ * Tear down a per-PR preview environment (Workers, Hyperdrive).
+ * Shared PR R2 buckets and the shared PR Supabase database (.env.pr) are left intact.
  *
  *   npm run destroy -- pr-11
  */
@@ -14,6 +14,7 @@ import {
 import {
   assertPreviewEnvName,
   hasFlag,
+  isPrPreviewSlug,
   loadState,
   parseEnvName,
   removeStateDir,
@@ -34,6 +35,9 @@ async function destroyPreview(envName) {
   );
   console.log(`  R2       ${names.avatarsBucket}, ${names.libraryBucket}`);
   console.log(`  App URL  ${names.appUrl}`);
+  if (isPrPreviewSlug(names.slug)) {
+    console.log("  R2 cleanup skipped (shared PR buckets)");
+  }
   console.log("  Database shared PR Supabase (.env.pr) — left intact");
 
   if (dryRun) {
@@ -42,7 +46,9 @@ async function destroyPreview(envName) {
   }
 
   await deletePreviewWorkers(names);
-  await emptyAndDeleteR2Buckets(names);
+  if (!isPrPreviewSlug(names.slug)) {
+    await emptyAndDeleteR2Buckets(names);
+  }
 
   const hyperdriveId =
     state?.hyperdriveId || (await findHyperdriveId(names.hyperdriveName));

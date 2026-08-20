@@ -10,23 +10,70 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import {
+  APP_WORKER_PREFIX,
+  DEFAULT_REGION,
+  DEFAULT_SESSION_ABSOLUTE_TIMEOUT_HOURS,
+  DEFAULT_SESSION_INACTIVITY_TIMEOUT_MINUTES,
+  EXCEL_WORKER_PREFIX,
+  EXCEL_WORKER_VERSION,
+  HYPERDRIVE_ORIGIN_CONNECTION_LIMIT,
+  LEGACY_AVATARS_BUCKET,
+  LEGACY_LIBRARY_BUCKET,
+  LOCAL_AVATARS_BUCKET,
+  LOCAL_LIBRARY_BUCKET,
+  MAX_ENV_NAME_LENGTH,
+  PDF_WORKER_PREFIX,
+  PREVIEW_DOMAIN_ZONE,
+  PREVIEW_SCRIPT_FLAGS,
+  PREVIEW_WRANGLER_PATHS,
+  PR_AVATARS_BUCKET,
+  PR_LIBRARY_BUCKET,
+  R2_AVATARS_BUCKET_PREFIX,
+  R2_LIBRARY_BUCKET_PREFIX,
+  R2_SLUG_MAX_LEN,
+  RESERVED_ENV_NAMES,
+  STAGING_AVATARS_BUCKET,
+  STAGING_LIBRARY_BUCKET,
+  STAGING_PROJECT_REF,
+  SUPABASE_POOL_SIZE,
+  UAT_AVATARS_BUCKET,
+  UAT_LIBRARY_BUCKET,
+  UAT_PROJECT_REF,
+  WORKER_CPU_MS,
+  WORKER_DB_POOL_MAX,
+  WORKER_DB_QUERY_GATE_MAX,
+  WORKERS_DEV_SUBDOMAIN,
+  WRANGLER_APP_COMPATIBILITY_DATE,
+  WRANGLER_COMPATIBILITY_FLAGS,
+  WRANGLER_EXCEL_COMPATIBILITY_DATE,
+  workerCpuLimits,
+  observability,
+} from "./constants.mjs";
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 export const webRoot = join(__dirname, "../..");
 export const previewRoot = join(webRoot, ".preview-envs");
 
-export const UAT_PROJECT_REF = "tjnsygunohylofihoksl";
-
-/** Original shared buckets — source for one-time `npm run infra:bootstrap:r2`. */
-export const LEGACY_AVATARS_BUCKET = "insurance-app-avatars";
-export const LEGACY_LIBRARY_BUCKET = "insurance-app-library-documents";
-
-export const UAT_AVATARS_BUCKET = "insurance-app-avatars-uat";
-export const UAT_LIBRARY_BUCKET = "insurance-app-library-documents-uat";
-export const LOCAL_AVATARS_BUCKET = "insurance-app-avatars-local";
-export const LOCAL_LIBRARY_BUCKET = "insurance-app-library-documents-local";
-export const PREVIEW_DOMAIN_ZONE = "irecon.net";
-export const WORKERS_DEV_SUBDOMAIN = "zhex900";
-export const DEFAULT_REGION = "ap-southeast-2";
+export {
+  HYPERDRIVE_ORIGIN_CONNECTION_LIMIT,
+  LEGACY_AVATARS_BUCKET,
+  LEGACY_LIBRARY_BUCKET,
+  LOCAL_AVATARS_BUCKET,
+  LOCAL_LIBRARY_BUCKET,
+  STAGING_AVATARS_BUCKET,
+  STAGING_LIBRARY_BUCKET,
+  STAGING_PROJECT_REF,
+  SUPABASE_POOL_SIZE,
+  UAT_AVATARS_BUCKET,
+  UAT_LIBRARY_BUCKET,
+  UAT_PROJECT_REF,
+  WORKER_CPU_MS,
+  WORKER_DB_POOL_MAX,
+  WORKER_DB_QUERY_GATE_MAX,
+  workerCpuLimits,
+  observability,
+};
 
 /** Hostname for PR preview URLs — from `.env.pr` `BASE_URL`, default `irecon.net`. */
 export function previewBaseDomain() {
@@ -36,38 +83,6 @@ export function previewBaseDomain() {
     PREVIEW_DOMAIN_ZONE;
   return raw.replace(/^https?:\/\//, "").replace(/\/$/, "");
 }
-
-/** @deprecated Use UAT_* constants */
-export const STAGING_PROJECT_REF = UAT_PROJECT_REF;
-/** @deprecated Use UAT_* constants */
-export const STAGING_AVATARS_BUCKET = UAT_AVATARS_BUCKET;
-/** @deprecated Use UAT_* constants */
-export const STAGING_LIBRARY_BUCKET = UAT_LIBRARY_BUCKET;
-
-const RESERVED_ENVS = new Set([
-  "uat",
-  "production",
-  "prod",
-  "local",
-  "development",
-  "dev",
-  "excel",
-  "pdf",
-]);
-
-const SCRIPT_FLAGS = new Set([
-  "--dry-run",
-  "--skip-db",
-  "--skip-r2",
-  "--skip-build",
-  "--skip-migrate",
-  "--skip-hyperdrive",
-  "--refresh-data",
-  "--secret-only",
-]);
-
-/** Longest preview R2 bucket: `insurance-app-library-documents-<slug>` (63 char max). */
-const R2_SLUG_MAX_LEN = 63 - "insurance-app-library-documents-".length;
 
 export function parseEnvName(argv = process.argv.slice(2)) {
   const eq = argv.find((arg) => arg.startsWith("--env="));
@@ -80,7 +95,7 @@ export function parseEnvName(argv = process.argv.slice(2)) {
     fromNpm && fromNpm !== "true" && fromNpm !== "false" ? fromNpm : "";
 
   const positional = argv.find(
-    (arg) => !arg.startsWith("-") && !SCRIPT_FLAGS.has(arg),
+    (arg) => !arg.startsWith("-") && !PREVIEW_SCRIPT_FLAGS.has(arg),
   );
 
   return (
@@ -125,7 +140,7 @@ export function assertPreviewEnvName(name) {
   const trimmed = name.trim();
   const lowered = trimmed.toLowerCase();
 
-  if (RESERVED_ENVS.has(lowered)) {
+  if (RESERVED_ENV_NAMES.has(lowered)) {
     throw new Error(
       `Refusing to use reserved environment name "${trimmed}". Use a preview slug such as pr-11.`,
     );
@@ -137,9 +152,9 @@ export function assertPreviewEnvName(name) {
     );
   }
 
-  if (trimmed.length > 128) {
+  if (trimmed.length > MAX_ENV_NAME_LENGTH) {
     throw new Error(
-      `Environment name "${trimmed}" is too long (max 128 characters).`,
+      `Environment name "${trimmed}" is too long (max ${MAX_ENV_NAME_LENGTH} characters).`,
     );
   }
 
@@ -160,7 +175,7 @@ export function previewAppUrl(slug) {
   }
   const subdomain =
     process.env.WORKERS_DEV_SUBDOMAIN?.trim() || WORKERS_DEV_SUBDOMAIN;
-  return `https://insurance-app-${slug}.${subdomain}.workers.dev`;
+  return `https://${APP_WORKER_PREFIX}-${slug}.${subdomain}.workers.dev`;
 }
 
 export function previewCustomDomainRoutes(appUrl) {
@@ -176,19 +191,29 @@ export function previewCustomDomainRoutes(appUrl) {
   return [];
 }
 
+/** True for CI/manual PR previews (`pr-11`, `pr-42`, …). */
+export function isPrPreviewSlug(slug) {
+  return /^pr-.+/.test(slug);
+}
+
 export function resourceNames(envName) {
   const label = assertPreviewEnvName(envName);
   const slug = toResourceSlug(label);
-  const app = `insurance-app-${slug}`;
+  const app = `${APP_WORKER_PREFIX}-${slug}`;
   const appUrl = previewAppUrl(slug);
+  const sharedPrR2 = isPrPreviewSlug(slug);
   return {
     label,
     slug,
     appWorker: app,
-    pdfWorker: `insurance-pdf-worker-${slug}`,
-    excelWorker: `insurance-excel-worker-${slug}`,
-    avatarsBucket: `insurance-app-avatars-${slug}`,
-    libraryBucket: `insurance-app-library-documents-${slug}`,
+    pdfWorker: `${PDF_WORKER_PREFIX}-${slug}`,
+    excelWorker: `${EXCEL_WORKER_PREFIX}-${slug}`,
+    avatarsBucket: sharedPrR2
+      ? PR_AVATARS_BUCKET
+      : `${R2_AVATARS_BUCKET_PREFIX}-${slug}`,
+    libraryBucket: sharedPrR2
+      ? PR_LIBRARY_BUCKET
+      : `${R2_LIBRARY_BUCKET_PREFIX}-${slug}`,
     hyperdriveName: app,
     supabaseBranchName: slug,
     appUrl,
@@ -469,61 +494,18 @@ export function wranglerEnv(extra = {}) {
   };
 }
 
-export const observability = {
-  enabled: true,
-  logs: {
-    enabled: true,
-    head_sampling_rate: 1,
-    destinations: ["sentry-logs"],
-  },
-  traces: {
-    enabled: true,
-    head_sampling_rate: 1,
-    destinations: ["sentry-traces"],
-  },
-};
-
-import {
-  HYPERDRIVE_ORIGIN_CONNECTION_LIMIT,
-  SUPABASE_POOL_SIZE,
-  WORKER_CPU_MS,
-  WORKER_DB_POOL_MAX,
-  WORKER_DB_QUERY_GATE_MAX,
-  workerCpuLimits,
-} from "./infra-settings.mjs";
-
-export {
-  HYPERDRIVE_ORIGIN_CONNECTION_LIMIT,
-  SUPABASE_POOL_SIZE,
-  WORKER_CPU_MS,
-  WORKER_DB_POOL_MAX,
-  WORKER_DB_QUERY_GATE_MAX,
-  workerCpuLimits,
-};
-
-/** Paths are relative to `.preview-envs/<label>/` where generated wrangler files live. */
-const fromPreviewDir = {
-  schema: "../../node_modules/wrangler/config-schema.json",
-  appMain: "../../build/server/index.js",
-  appBaseDir: "../../build/server",
-  appAssets: "../../build/client",
-  pdfMain: "../../workers/pdf/index.ts",
-  excelMain: "../../workers/excel/index.ts",
-  fonts: "../../public/fonts",
-};
-
 export function previewAppWrangler({ names, supabaseUrl, hyperdriveId }) {
   const customRoutes = previewCustomDomainRoutes(names.appUrl);
   return {
-    $schema: fromPreviewDir.schema,
+    $schema: PREVIEW_WRANGLER_PATHS.schema,
     name: names.appWorker,
-    compatibility_date: "2026-07-20",
-    compatibility_flags: ["nodejs_compat"],
-    main: fromPreviewDir.appMain,
+    compatibility_date: WRANGLER_APP_COMPATIBILITY_DATE,
+    compatibility_flags: WRANGLER_COMPATIBILITY_FLAGS,
+    main: PREVIEW_WRANGLER_PATHS.appMain,
     no_bundle: true,
-    base_dir: fromPreviewDir.appBaseDir,
+    base_dir: PREVIEW_WRANGLER_PATHS.appBaseDir,
     rules: [{ type: "ESModule", globs: ["**/*.js", "**/*.mjs"] }],
-    assets: { directory: fromPreviewDir.appAssets },
+    assets: { directory: PREVIEW_WRANGLER_PATHS.appAssets },
     ...(customRoutes.length > 0
       ? { workers_dev: false, routes: customRoutes }
       : {}),
@@ -533,8 +515,9 @@ export function previewAppWrangler({ names, supabaseUrl, hyperdriveId }) {
     ...workerCpuLimits,
     vars: {
       SUPABASE_URL: supabaseUrl,
-      SESSION_INACTIVITY_TIMEOUT_MINUTES: "30",
-      SESSION_ABSOLUTE_TIMEOUT_HOURS: "12",
+      SESSION_INACTIVITY_TIMEOUT_MINUTES:
+        DEFAULT_SESSION_INACTIVITY_TIMEOUT_MINUTES,
+      SESSION_ABSOLUTE_TIMEOUT_HOURS: DEFAULT_SESSION_ABSOLUTE_TIMEOUT_HOURS,
     },
     services: [
       { binding: "EXCEL_SERVICE", service: names.excelWorker },
@@ -553,15 +536,15 @@ export function previewAppWrangler({ names, supabaseUrl, hyperdriveId }) {
 
 export function previewPdfWrangler(names) {
   return {
-    $schema: fromPreviewDir.schema,
+    $schema: PREVIEW_WRANGLER_PATHS.schema,
     name: names.pdfWorker,
-    main: fromPreviewDir.pdfMain,
-    compatibility_date: "2026-07-20",
-    compatibility_flags: ["nodejs_compat"],
+    main: PREVIEW_WRANGLER_PATHS.pdfMain,
+    compatibility_date: WRANGLER_APP_COMPATIBILITY_DATE,
+    compatibility_flags: WRANGLER_COMPATIBILITY_FLAGS,
     workers_dev: false,
     preview_urls: false,
     assets: {
-      directory: fromPreviewDir.fonts,
+      directory: PREVIEW_WRANGLER_PATHS.fonts,
       binding: "ASSETS",
       run_worker_first: true,
     },
@@ -572,15 +555,15 @@ export function previewPdfWrangler(names) {
 
 export function previewExcelWrangler(names) {
   return {
-    $schema: fromPreviewDir.schema,
+    $schema: PREVIEW_WRANGLER_PATHS.schema,
     name: names.excelWorker,
-    compatibility_date: "2026-08-08",
-    compatibility_flags: ["nodejs_compat"],
-    main: fromPreviewDir.excelMain,
+    compatibility_date: WRANGLER_EXCEL_COMPATIBILITY_DATE,
+    compatibility_flags: WRANGLER_COMPATIBILITY_FLAGS,
+    main: PREVIEW_WRANGLER_PATHS.excelMain,
     observability,
     ...workerCpuLimits,
     vars: {
-      WORKER_VERSION: "2.0.0",
+      WORKER_VERSION: EXCEL_WORKER_VERSION,
       APP_URL: names.appUrl,
     },
     placement: { mode: "smart" },

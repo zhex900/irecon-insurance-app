@@ -70,5 +70,5 @@ else
   echo "⚠ Found $ISSUES organization issue(s)"
   echo ""
   echo "Run the full check for details:"
-  echo "  ./scripts/check-hook-grouping.sh"
+  echo "  ./scripts/quality/check-hook-grouping.sh"
 fi

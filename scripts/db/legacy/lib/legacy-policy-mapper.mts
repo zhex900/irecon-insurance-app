@@ -5,17 +5,17 @@ import {
   normalizeExcesses,
   visibleExcessFields,
   type ExcessFieldKey,
-} from "../../app/lib/policies/excesses";
-import { normalizeSubLimits } from "../../app/lib/policies/sub-limits";
-import { referenceData } from "../../app/lib/reference-data";
-import type { Policy } from "../../app/lib/db/types";
+} from "../../../../app/lib/policies/excesses";
+import { normalizeSubLimits } from "../../../../app/lib/policies/sub-limits";
+import { referenceData } from "../../../../app/lib/reference-data";
+import type { Policy } from "../../../../app/lib/db/types";
 import type {
   AdjustmentSectionRow,
   CarAdjustmentRecord,
   CarExcesses,
   CarSubLimits,
   PolicyNote,
-} from "../../app/lib/db/types";
+} from "../../../../app/lib/db/types";
 import { legacyClientUuid, legacyPolicyUuid } from "./legacy-id-map.mts";
 import type {
   LegacyPolicyAdjustment,

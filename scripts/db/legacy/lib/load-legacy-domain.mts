@@ -5,8 +5,8 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { sql, eq } from "drizzle-orm";
 
-import { getDb } from "../../app/lib/db/client";
-import { policyToRows } from "../../app/lib/db/policy-mapper";
+import { getDb } from "../../../../app/lib/db/client";
+import { policyToRows } from "../../../../app/lib/db/policy-mapper";
 import {
   accountManager,
   authorisedRepresentative,
@@ -14,8 +14,8 @@ import {
   policy,
   policyCar,
   policyCarAdjustment,
-} from "../../app/lib/db/schema";
-import type { PolicyDocument } from "../../app/lib/db/types";
+} from "../../../../app/lib/db/schema";
+import type { PolicyDocument } from "../../../../app/lib/db/types";
 import { accountManagerIdForCode } from "./legacy-account-manager-map.mts";
 import {
   resolveLegacyDocumentFile,
@@ -58,7 +58,7 @@ import type {
   LegacyPolicyDocumentRow,
 } from "./legacy-payload.ts";
 
-const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 
 export type LoadLegacyDomainOptions = {
   data: LegacyDomainPayload;

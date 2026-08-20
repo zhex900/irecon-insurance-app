@@ -6,7 +6,7 @@ import {
   markDocumentCompleted,
   markDocumentMissing,
   syncStateSets,
-} from "../../scripts/lib/legacy-document-sync-state.mts";
+} from "../../scripts/db/legacy/lib/legacy-document-sync-state.mts";
 
 describe("legacy document sync state", () => {
   it("tracks completed and missing document ids", () => {

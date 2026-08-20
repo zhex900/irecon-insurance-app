@@ -2,62 +2,42 @@
 /**
  * One-time migration: copy objects into per-environment R2 buckets.
  *
- *   npm run infra:bootstrap:r2
- *   npm run infra:bootstrap:r2 -- --only uat
- *   npm run infra:bootstrap:r2 -- --only local
- *   npm run infra:bootstrap:r2 -- --from uat --only local
- *   npm run infra:bootstrap:r2 -- --dry-run
+ *   npm run deployment:bootstrap:r2
+ *   npm run deployment:bootstrap:r2 -- --only uat
+ *   npm run deployment:bootstrap:r2 -- --only local
+ *   npm run deployment:bootstrap:r2 -- --only pr
+ *   npm run deployment:bootstrap:r2 -- --from uat --only local
+ *   npm run deployment:bootstrap:r2 -- --from uat --only pr
+ *   npm run deployment:bootstrap:r2 -- --dry-run
  *
  * Default source is the legacy shared buckets. Use `--from uat` to copy UAT → local
- * after UAT buckets are populated.
+ * and/or PR after UAT buckets are populated.
  *
  * Requires R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_S3_ENDPOINT and Cloudflare auth
  * (`CLOUDFLARE_API_TOKEN` in .env.uat or `npx wrangler login`).
  */
 import {
+  LEGACY_LIBRARY_BUCKET,
+  R2_BOOTSTRAP_SOURCE_PRESETS,
+  R2_BOOTSTRAP_TARGETS,
+} from "./lib/constants.mjs";
+import {
   ensureR2Buckets,
   listR2BucketNames,
   r2BucketExists,
 } from "./lib/preview-cloudflare.mjs";
-import {
-  LEGACY_AVATARS_BUCKET,
-  LEGACY_LIBRARY_BUCKET,
-  LOCAL_AVATARS_BUCKET,
-  LOCAL_LIBRARY_BUCKET,
-  UAT_AVATARS_BUCKET,
-  UAT_LIBRARY_BUCKET,
-} from "./lib/preview-env.mjs";
 import { syncR2Bucket } from "./lib/r2-s3-sync.mjs";
 import { loadUatDeployEnv } from "./lib/uat-env.mjs";
 
-const TARGETS = {
-  uat: {
-    avatarsBucket: UAT_AVATARS_BUCKET,
-    libraryBucket: UAT_LIBRARY_BUCKET,
-  },
-  local: {
-    avatarsBucket: LOCAL_AVATARS_BUCKET,
-    libraryBucket: LOCAL_LIBRARY_BUCKET,
-  },
-};
-
-const SOURCE_PRESETS = {
-  legacy: {
-    avatarsBucket: LEGACY_AVATARS_BUCKET,
-    libraryBucket: LEGACY_LIBRARY_BUCKET,
-  },
-  uat: {
-    avatarsBucket: UAT_AVATARS_BUCKET,
-    libraryBucket: UAT_LIBRARY_BUCKET,
-  },
-};
+const TARGETS = R2_BOOTSTRAP_TARGETS;
+const SOURCE_PRESETS = R2_BOOTSTRAP_SOURCE_PRESETS;
 
 function parseOnlyTargets(argv) {
   const onlyIdx = argv.indexOf("--only");
   if (onlyIdx < 0) return Object.keys(TARGETS);
   const raw = argv[onlyIdx + 1]?.trim().toLowerCase();
   if (!raw || !TARGETS[raw]) {
-    throw new Error(`Invalid --only value "${raw ?? ""}". Use: uat, local`);
+    throw new Error(`Invalid --only value "${raw ?? ""}". Use: uat, local, pr`);
   }
   return [raw];
 }
@@ -145,10 +125,10 @@ async function main() {
   let targets = parseOnlyTargets(argv);
 
   if (fromPreset === "uat") {
-    targets = targets.filter((target) => target === "local");
+    targets = targets.filter((target) => target !== "uat");
     if (targets.length === 0) {
       throw new Error(
-        "--from uat only applies when copying to local (--only local).",
+        "--from uat copies to local and/or pr (e.g. --only local, --only pr, or omit --only for both).",
       );
     }
   }
@@ -199,13 +179,18 @@ async function main() {
       "  Local dev reads insurance-app-*-local via wrangler.jsonc remote bindings.",
     );
   }
+  if (targets.includes("pr")) {
+    console.log(
+      "  PR previews use the shared insurance-app-*-pr buckets (not cleared on deploy).",
+    );
+  }
   if (
     fromPreset === "legacy" &&
     targets.includes("uat") &&
     !targets.includes("local")
   ) {
     console.log(
-      "  Copy UAT → local later: npm run infra:bootstrap:r2 -- --from uat --only local",
+      "  Copy UAT → local or PR later: npm run deployment:bootstrap:r2 -- --from uat --only local|pr",
     );
   }
 }

@@ -7,7 +7,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import sql from "mssql";
 
-const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 const ENV_FILE = join(repoRoot, "_archive/mssql/.env.mssql");
 
 export function loadLegacyEnvFile(path = ENV_FILE) {

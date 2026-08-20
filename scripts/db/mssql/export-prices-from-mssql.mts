@@ -14,9 +14,9 @@ import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import sql from "mssql";
-import type { PricesPayload } from "./lib/prices-payload";
+import type { PricesPayload } from "./prices-payload";
 
-const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 const DEFAULT_OUT = join(repoRoot, "_archive/data/prices.json");
 const ENV_FILE = join(repoRoot, "_archive/mssql/.env.mssql");
 

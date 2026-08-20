@@ -1,10 +1,10 @@
 import * as readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 
-import { assertProductionDatabaseUrl } from "../../infra/lib/production-env.mjs";
-import { repairSupabaseDatabaseUrl } from "../../infra/lib/preview-env.mjs";
-import { applyEnvFile, readEnvFile } from "../../infra/lib/pr-env.mjs";
-import { loadUatDeployEnv } from "../../infra/lib/uat-env.mjs";
+import { assertProductionDatabaseUrl } from "../../../deployment/lib/production-env.mjs";
+import { repairSupabaseDatabaseUrl } from "../../../deployment/lib/preview-env.mjs";
+import { applyEnvFile, readEnvFile } from "../../../deployment/lib/pr-env.mjs";
+import { loadUatDeployEnv } from "../../../deployment/lib/uat-env.mjs";
 
 import {
   type ClearRunOptions,

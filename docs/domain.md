@@ -66,7 +66,7 @@ npm run deploy
 Configure Supabase Auth Site URL after first deploy:
 
 ```bash
-node --env-file=.env.uat infra/configure-uat-auth-urls.mjs
+node --env-file=.env.uat deployment/configure-uat-auth-urls.mjs
 ```
 
 ## PR preview environments

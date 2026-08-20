@@ -10,11 +10,11 @@ import { readFileSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { sql } from "drizzle-orm";
-import { getDb } from "../app/lib/db/client";
-import { authorisedRepresentative } from "../app/lib/db/schema";
+import { getDb } from "../../../app/lib/db/client";
+import { authorisedRepresentative } from "../../../app/lib/db/schema";
 import { parseWholesaleBrokerCsv } from "./parse-wholesale-broker-csv";
 
-const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 const DEFAULT_CSV = join(repoRoot, "_archive/seeds-source/WholesaleBroker.csv");
 
 function parseArgs(argv: string[]) {

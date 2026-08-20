@@ -3,6 +3,7 @@
  */
 import { join } from "node:path";
 
+import { SUPABASE_API } from "./constants.mjs";
 import { copyDatabaseFromUat } from "./uat-data-copy.mjs";
 import {
   extractProjectRefFromDbUrl,
@@ -12,8 +13,6 @@ import {
   UAT_PROJECT_REF,
 } from "./preview-env.mjs";
 import { prSupabaseFromEnv } from "./pr-env.mjs";
-
-const SUPABASE_API = "https://api.supabase.com/v1";
 
 function accessToken() {
   return (

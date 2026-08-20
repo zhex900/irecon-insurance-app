@@ -1,7 +1,7 @@
 /**
  * Migrate legacy MSSQL domain data → Postgres (documents/R2 are separate).
  *
- * Target scope: CAR policies with InceptionDate >= 2025-06-01 (see scripts/sql/legacy/_target-scope.sql).
+ * Target scope: CAR policies with InceptionDate >= 2025-06-01 (see scripts/db/legacy/sql/_target-scope.sql).
  * Clients, documents, notes, and wordings are limited to that policy set.
  *
  * Default load: account-managers, AR, clients, policies (no R2).
@@ -27,7 +27,7 @@
  *   --sync-state [path]       Checkpoint file (default: _archive/data/legacy-documents-sync-state.json)
  *   --default-ar <id>         Fallback AR when client row has no mapping
  *   --confirm                 Required for uat, pr, and prod
- *   --sql <slice> <path>      Override SQL for a slice (see scripts/sql/legacy/)
+ *   --sql <slice> <path>      Override SQL for a slice (see scripts/db/legacy/sql/)
  *
  * MSSQL: MSSQL_* in .env (or _archive/mssql/.env.mssql)
  * Documents: POLICY_DOCUMENT_PATHS or POLICY_DOCUMENT_PATH (local folder(s) of legacy PDFs)
@@ -37,7 +37,7 @@ import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { resetSharedDbPool } from "../app/lib/db/client";
+import { resetSharedDbPool } from "../../../app/lib/db/client";
 import { exportLegacyDomain } from "./export-legacy-domain.mts";
 import {
   DEFAULT_DB_SLICES,
@@ -51,13 +51,13 @@ import {
   logMigrateTarget,
   missingMigrateEnvHelp,
   parseMigrateTargetEnv,
-} from "./lib/migrate-target-env.mts";
-import { applyEnvFile, readEnvFile } from "../infra/lib/pr-env.mjs";
+} from "../lib/migrate-target-env.mts";
+import { applyEnvFile, readEnvFile } from "../../../deployment/lib/pr-env.mjs";
 import type { LegacyDomainPayload } from "./lib/legacy-payload.ts";
 import { logMigrationScopeCounts } from "./lib/legacy-migration-scope.mts";
 import { parseSqlOverrides } from "./lib/legacy-sql.mts";
 
-const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 const DEFAULT_JSON = join(repoRoot, "_archive/data/legacy-export.json");
 const DEFAULT_MISSING_CSV = join(
   repoRoot,

@@ -8,7 +8,7 @@ Migrate domain data from the legacy **vs434253_1** MSSQL database into Supabase 
 
 ### Target scope
 
-Only **CAR policies with `InceptionDate >= 2025-06-01`** are exported. Clients without an in-scope policy are excluded. Documents, notes, and wordings follow the same policy set (no full-database R2 copy). Filter lives in `scripts/sql/legacy/_target-scope.sql`.
+Only **CAR policies with `InceptionDate >= 2025-06-01`** are exported. Clients without an in-scope policy are excluded. Documents, notes, and wordings follow the same policy set (no full-database R2 copy). Filter lives in `scripts/db/legacy/sql/_target-scope.sql`.
 
 ---
 
@@ -193,8 +193,8 @@ npm run db:migrate:legacy:documents:uat
 
 Load order: account managers → AR → clients → policies → documents.
 
-SQL files: `scripts/sql/legacy/*.sql`  
-Mapper code: `scripts/lib/legacy-policy-mapper.mts`
+SQL files: `scripts/db/legacy/sql/*.sql`  
+Mapper code: `scripts/db/legacy/lib/legacy-policy-mapper.mts`
 
 ### Duplicate policy numbers (renewals)
 
@@ -205,7 +205,7 @@ Legacy reuses `PolicyNumber` across renewals. Postgres requires uniqueness. The 
 3. `ATCCWI0487-2024-06-15` (full date) — if year-month taken
 4. `ATCCWI0487-a1b2c3d4` (UUID hash) — if all date suffixes taken
 
-Implemented in `dedupeLegacyPolicyNumbers()` (`scripts/lib/legacy-policy-mapper.mts`).
+Implemented in `dedupeLegacyPolicyNumbers()` (`scripts/db/legacy/lib/legacy-policy-mapper.mts`).
 
 ---
 

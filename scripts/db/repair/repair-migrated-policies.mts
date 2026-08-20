@@ -8,19 +8,23 @@
  */
 import { eq } from "drizzle-orm";
 
-import { policyToFormValues } from "../app/components/policies/wizard/shared/policy-to-values";
-import { getDb, resetSharedDbPool } from "../app/lib/db/client";
-import { rowsToPolicy } from "../app/lib/db/policy-mapper";
-import { policy, policyCar, policyCarAdjustment } from "../app/lib/db/schema";
-import { carPolicySchema } from "../app/lib/zod/policy-car";
+import { policyToFormValues } from "../../../app/components/policies/wizard/shared/policy-to-values";
+import { getDb, resetSharedDbPool } from "../../../app/lib/db/client";
+import { rowsToPolicy } from "../../../app/lib/db/policy-mapper";
+import {
+  policy,
+  policyCar,
+  policyCarAdjustment,
+} from "../../../app/lib/db/schema";
+import { carPolicySchema } from "../../../app/lib/zod/policy-car";
 import {
   assertMigrateConfirmed,
   loadMigrateTargetEnv,
   logMigrateTarget,
   missingMigrateEnvHelp,
   parseMigrateTargetEnv,
-} from "./lib/migrate-target-env.mts";
-import { buildMigratedPolicyRepairPatch } from "./lib/repair-migrated-policy-fields.mts";
+} from "../lib/migrate-target-env.mts";
+import { buildMigratedPolicyRepairPatch } from "../legacy/lib/repair-migrated-policy-fields.mts";
 
 function readFlag(name: string): boolean {
   return process.argv.includes(name);

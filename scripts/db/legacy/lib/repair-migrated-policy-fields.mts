@@ -1,17 +1,17 @@
 /**
  * Backfill missing required CAR policy fields on migrated rows using app defaults.
  */
-import { referenceData } from "../../app/lib/reference-data";
-import type { CarExcesses, CarSubLimits } from "../../app/lib/db/types";
+import { referenceData } from "../../../../app/lib/reference-data";
+import type { CarExcesses, CarSubLimits } from "../../../../app/lib/db/types";
 import {
   normalizeExcesses,
   visibleExcessFields,
   type ExcessFieldKey,
-} from "../../app/lib/policies/excesses";
+} from "../../../../app/lib/policies/excesses";
 import {
   normalizeSubLimits,
   SUB_LIMIT_FIELDS,
-} from "../../app/lib/policies/sub-limits";
+} from "../../../../app/lib/policies/sub-limits";
 import {
   defaultConstructionPeriodMonths,
   positiveInt,

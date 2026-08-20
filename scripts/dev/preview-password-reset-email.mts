@@ -8,8 +8,8 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import { buildPasswordResetEmail } from "../app/lib/email/password-reset-email.ts";
-import { getEmailFooterImage } from "../app/lib/services/email/footer-image.server.ts";
+import { buildPasswordResetEmail } from "../../app/lib/email/password-reset-email.ts";
+import { getEmailFooterImage } from "../../app/lib/services/email/footer-image.server.ts";
 
 const outDir = join(process.cwd(), ".preview");
 const outPath = join(outDir, "password-reset-email.html");

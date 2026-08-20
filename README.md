@@ -6,21 +6,20 @@ Clients, policies, prices, and users persist in **Supabase Postgres** via Drizzl
 
 ### Docs
 
-| Doc                                                                                | Purpose                                     |
-| ---------------------------------------------------------------------------------- | ------------------------------------------- |
-| [AGENTS.md](AGENTS.md)                                                             | AI behavior only                            |
-| [docs/architecture.md](docs/architecture.md)                                       | Principles, layering, folder ownership      |
-| [docs/coding-standards.md](docs/coding-standards.md)                               | TypeScript, React, Router, errors, security |
-| [docs/design-patterns.md](docs/design-patterns.md)                                 | Service, repository, mapper, composition    |
-| [docs/performance.md](docs/performance.md)                                         | Queries, render, Workers                    |
-| [docs/ui-guidelines.md](docs/ui-guidelines.md)                                     | shadcn/ReUI, Tailwind, accessibility        |
-| [docs/code-review.md](docs/code-review.md)                                         | Pre-finish / review checklist               |
-| [docs/email.md](docs/email.md)                                                     | Resend document send + Supabase auth mail   |
-| [docs/testing.md](docs/testing.md)                                                 | Vitest + Playwright                         |
-| [docs/tooling.md](docs/tooling.md)                                                 | ESLint, Prettier, husky, verify             |
-| [docs/REFACTOR_TO_PRODUCTION.md](docs/REFACTOR_TO_PRODUCTION.md)                   | Production hardening plan                   |
-| [docs/domain.md](docs/domain.md)                                                   | Hostnames, environments, DNS                |
-| [docs/deployment/preview-environments.md](docs/deployment/preview-environments.md) | Per-PR Cloudflare + Supabase preview        |
+| Doc                                                                                        | Purpose                                     |
+| ------------------------------------------------------------------------------------------ | ------------------------------------------- |
+| [AGENTS.md](AGENTS.md)                                                                     | AI behavior only                            |
+| [docs/architecture/performance.md](docs/architecture/performance.md)                       | Layering, queries, render, Worker bundles   |
+| [docs/guidelines/coding-standards.md](docs/guidelines/coding-standards.md)                 | TypeScript, React, Router, errors, security |
+| [docs/guidelines/design-patterns.md](docs/guidelines/design-patterns.md)                   | Service, repository, mapper, composition    |
+| [docs/guidelines/ui-guidelines.md](docs/guidelines/ui-guidelines.md)                       | shadcn/ReUI, Tailwind, accessibility        |
+| [docs/guidelines/code-review.md](docs/guidelines/code-review.md)                           | Pre-finish / review checklist               |
+| [docs/development/email.md](docs/development/email.md)                                     | Resend document send + Supabase auth mail   |
+| [docs/development/testing.md](docs/development/testing.md)                                 | Vitest + Playwright                         |
+| [docs/guidelines/tooling.md](docs/guidelines/tooling.md)                                   | ESLint, Prettier, husky, verify             |
+| [docs/architecture/refactor-to-production.md](docs/architecture/refactor-to-production.md) | Production hardening plan                   |
+| [docs/domain.md](docs/domain.md)                                                           | Hostnames, environments, DNS                |
+| [docs/deployment/preview-environments.md](docs/deployment/preview-environments.md)         | Per-PR Cloudflare + Supabase preview        |
 
 ## Stack
 
@@ -35,9 +34,9 @@ Clients, policies, prices, and users persist in **Supabase Postgres** via Drizzl
 
 ```text
 app/           React Router application
-infra/         Deploy, preview envs, Cloudflare/Supabase ops
+deployment/    Deploy, preview envs, Cloudflare/Supabase ops
 public/        Static assets
-scripts/       DB seed, dev tooling, MCP helpers
+scripts/       DB seed/migrate, dev tooling, quality checks — see scripts/README.md
 supabase/      Migrations + local Supabase config
 docs/          Living docs (incl. production refactor plan)
 _archive/      Legacy app, specs, CSVs, MSSQL dumps (not deployed)
@@ -101,7 +100,7 @@ npm run deploy:uat
 npm run deploy:secret
 ```
 
-See [docs/testing.md](docs/testing.md), [docs/tooling.md](docs/tooling.md), and [docs/deployment/preview-environments.md](docs/deployment/preview-environments.md).
+See [docs/development/testing.md](docs/development/testing.md), [docs/guidelines/tooling.md](docs/guidelines/tooling.md), and [docs/deployment/preview-environments.md](docs/deployment/preview-environments.md).
 
 ## UI components
 

@@ -4,8 +4,11 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
-import { r2S3Config, r2BucketExists } from "../../infra/lib/r2-s3-sync.mjs";
-import { LEGACY_LIBRARY_BUCKET } from "../../infra/lib/preview-env.mjs";
+import {
+  r2S3Config,
+  r2BucketExists,
+} from "../../../../deployment/lib/r2-s3-sync.mjs";
+import { LEGACY_LIBRARY_BUCKET } from "../../../../deployment/lib/preview-env.mjs";
 
 function ensureAwsCli() {
   try {

@@ -1,10 +1,10 @@
 /**
  * Delete policies / clients and related rows (CAR tables, audit, recents).
- * Used by scripts/clear-policies.mts and scripts/clear-clients.mts.
+ * Used by scripts/db/clear/clear-policies.mts and scripts/db/clear/clear-clients.mts.
  */
 import { and, eq, inArray, isNotNull, sql } from "drizzle-orm";
 
-import { getDb } from "../../app/lib/db/client";
+import { getDb } from "../../../app/lib/db/client";
 import {
   accountManager,
   appUser,
@@ -13,7 +13,7 @@ import {
   authorisedRepresentative,
   client,
   policy,
-} from "../../app/lib/db/schema";
+} from "../../../app/lib/db/schema";
 
 export function isLocalDatabaseUrl(url: string | undefined): boolean {
   if (!url?.trim()) return false;

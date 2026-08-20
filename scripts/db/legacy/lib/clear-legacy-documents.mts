@@ -3,9 +3,9 @@
  */
 import { existsSync, readFileSync } from "node:fs";
 
-import { getDb } from "../../app/lib/db/client";
-import { policyCar } from "../../app/lib/db/schema";
-import type { PolicyDocument } from "../../app/lib/db/types";
+import { getDb } from "../../../../app/lib/db/client";
+import { policyCar } from "../../../../app/lib/db/schema";
+import type { PolicyDocument } from "../../../../app/lib/db/types";
 import { eq } from "drizzle-orm";
 import {
   clearSyncStateFile,

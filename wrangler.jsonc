@@ -56,7 +56,7 @@
     {
       "binding": "AVATARS",
       "bucket_name": "insurance-app-avatars-local",
-      // Local dev reads the dedicated local R2 bucket (populate via `npm run infra:bootstrap:r2`).
+      // Local dev reads the dedicated local R2 bucket (populate via `npm run deployment:bootstrap:r2`).
       "remote": true,
     },
     {

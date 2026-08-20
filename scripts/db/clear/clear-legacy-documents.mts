@@ -11,11 +11,11 @@ import { fileURLToPath } from "node:url";
 import * as readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 
-import { resetSharedDbPool } from "../app/lib/db/client";
-import { clearLegacyDocuments } from "./lib/clear-legacy-documents.mts";
-import { maskDatabaseUrl } from "./lib/clear-domain-data.mts";
-import { loadLegacyEnvFile } from "./lib/legacy-mssql.mts";
-import type { MigrateTargetEnv } from "./lib/migrate-target-env.mts";
+import { resetSharedDbPool } from "../../../app/lib/db/client";
+import { clearLegacyDocuments } from "../legacy/lib/clear-legacy-documents.mts";
+import { maskDatabaseUrl } from "../lib/clear-domain-data.mts";
+import { loadLegacyEnvFile } from "../legacy/lib/legacy-mssql.mts";
+import type { MigrateTargetEnv } from "../lib/migrate-target-env.mts";
 import {
   assertMigrateConfirmed,
   loadMigrateTargetEnv,
@@ -23,18 +23,18 @@ import {
   missingMigrateEnvHelp,
   parseMigrateTargetEnv,
   readOption,
-} from "./lib/migrate-target-env.mts";
-import { applyEnvFile, readEnvFile } from "../infra/lib/pr-env.mjs";
-import { PRODUCTION_LIBRARY_BUCKET } from "../infra/lib/production-env.mjs";
+} from "../lib/migrate-target-env.mts";
+import { applyEnvFile, readEnvFile } from "../../../deployment/lib/pr-env.mjs";
+import { PRODUCTION_LIBRARY_BUCKET } from "../../../deployment/lib/production-env.mjs";
 import {
   assertPreviewEnvName,
   LOCAL_LIBRARY_BUCKET,
   parseEnvName,
   resourceNames,
   UAT_LIBRARY_BUCKET,
-} from "../infra/lib/preview-env.mjs";
+} from "../../../deployment/lib/preview-env.mjs";
 
-const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 const DEFAULT_EXPORT = join(repoRoot, "_archive/data/legacy-export.json");
 
 function readFlag(name: string): boolean {

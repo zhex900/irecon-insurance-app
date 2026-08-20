@@ -11,7 +11,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { sql } from "drizzle-orm";
-import { getDb } from "../app/lib/db/client";
+import { getDb } from "../../../app/lib/db/client";
 import {
   brokerFeeSchedule,
   brokerFeeScheduleLine,
@@ -26,14 +26,14 @@ import {
   priceTerrorismPostcode,
   priceTerrorismRate,
   state,
-} from "../app/lib/db/price-schema";
+} from "../../../app/lib/db/price-schema";
 import type {
   PricesPayload,
   PricesSeedCounts,
   TerrorPostcode,
-} from "./lib/prices-payload";
+} from "./prices-payload";
 
-const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const root = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 
 function readJson<T>(name: string): T {
   return JSON.parse(

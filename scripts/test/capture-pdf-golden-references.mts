@@ -8,7 +8,7 @@ import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const PROJECT_ROOT = join(__dirname, "..");
+const PROJECT_ROOT = join(__dirname, "../..");
 const OUTPUT_DIR = join(PROJECT_ROOT, "tests/fixtures/pdf-golden-references");
 
 // Import the PDF generation module

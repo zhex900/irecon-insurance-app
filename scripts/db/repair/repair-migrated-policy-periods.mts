@@ -4,7 +4,7 @@
  *
  * Legacy MSSQL stores 0 for unset period columns. COALESCE(..., 18) does not
  * help because 0 is not NULL. This script applies the same cover-type-aware
- * defaults used by scripts/lib/legacy-policy-mapper.mts.
+ * defaults used by scripts/db/legacy/lib/legacy-policy-mapper.mts.
  *
  *   npm run db:repair:policy-periods -- --env=local
  *   npm run db:repair:policy-periods -- --env=local --dry-run
@@ -12,15 +12,15 @@
  */
 import { sql } from "drizzle-orm";
 
-import { getDb, resetSharedDbPool } from "../app/lib/db/client";
-import { policy, policyCar } from "../app/lib/db/schema";
+import { getDb, resetSharedDbPool } from "../../../app/lib/db/client";
+import { policy, policyCar } from "../../../app/lib/db/schema";
 import {
   assertMigrateConfirmed,
   loadMigrateTargetEnv,
   logMigrateTarget,
   missingMigrateEnvHelp,
   parseMigrateTargetEnv,
-} from "./lib/migrate-target-env.mts";
+} from "../lib/migrate-target-env.mts";
 import { defaultConstructionPeriodMonths } from "./lib/legacy-policy-mapper.mts";
 
 function readFlag(name: string): boolean {

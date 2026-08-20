@@ -6,9 +6,9 @@
  *   npm run db:clear:account-managers -- --env=local
  *   npm run db:clear:account-managers -- --env=local --id=7
  */
-import { resetSharedDbPool } from "../app/lib/db/client";
-import { clearAccountManagers } from "./lib/clear-domain-data.mts";
-import { runClearDomainScript } from "./lib/clear-domain-cli.mts";
+import { resetSharedDbPool } from "../../../app/lib/db/client";
+import { clearAccountManagers } from "../lib/clear-domain-data.mts";
+import { runClearDomainScript } from "../lib/clear-domain-cli.mts";
 
 async function main() {
   await runClearDomainScript({

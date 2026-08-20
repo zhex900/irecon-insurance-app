@@ -16,14 +16,14 @@ This monitoring setup focuses on **what matters for internal insurance broker ap
 
 ### 1. Bundle Size Validation (Critical for Cloudflare Workers)
 
-**File:** `scripts/validate-bundle.js`
+**File:** `scripts/bundle/validate-bundle.js`
 **Purpose:** Prevent Cloudflare Worker deployment failures (Error 1102)
 
 **Usage:**
 
 ```bash
-npm run check-bundle     # Generates bundle reports via wrangler
-npm run validate:bundle  # Validates bundle sizes against Cloudflare limits
+npm run check:bundle     # Generates bundle reports via wrangler
+npm run check:bundle:quick  # Validates bundle sizes against Cloudflare limits
 ```
 
 **What it checks:**
@@ -132,7 +132,7 @@ SLOW_OPERATION: premiumCalculation took 3500ms (threshold: 2000ms)
 
 ### Bundle Validation
 
-**Script:** `scripts/validate-bundle.js`
+**Script:** `scripts/bundle/validate-bundle.js`
 **Limits:**
 
 - `MAX_BUNDLE_SIZE`: 2,500,000 bytes (2.5MB)
@@ -141,7 +141,7 @@ SLOW_OPERATION: premiumCalculation took 3500ms (threshold: 2000ms)
 **To adjust limits:**
 
 ```javascript
-// In scripts/validate-bundle.js
+// In scripts/bundle/validate-bundle.js
 const MAX_BUNDLE_SIZE = 3_000_000; // Increase if needed
 const MAX_GZIP_SIZE = 1_000_000; // Increase if needed
 ```
@@ -173,10 +173,10 @@ const OPERATION_TIMEOUTS = {
 
 ```bash
 # First, generate bundle reports
-npm run check-bundle
+npm run check:bundle
 
 # Then validate
-npm run validate:bundle
+npm run check:bundle:quick
 ```
 
 ### 2. Test Monitoring Integration
@@ -264,7 +264,7 @@ message:"WORKFLOW_FAILED:"
 
 Establish baseline performance:
 
-- Run `npm run validate:bundle` weekly
+- Run `npm run check:bundle:quick` weekly
 - Review slow operations weekly in Sentry
 - Adjust timeouts based on broker feedback
 - Track trend of operation durations
@@ -344,7 +344,7 @@ Establish baseline performance:
 2. Review static imports in routes
 3. Use dynamic imports for heavy libraries
 4. Split helper modules
-5. Review `docs/performance.md`
+5. Review `docs/architecture/performance.md`
 
 ### Monitoring Not Logging
 
@@ -369,6 +369,6 @@ Establish baseline performance:
 ## Support
 
 **Primary Contact:** Engineering Team
-**Documentation:** `docs/performance.md`
+**Documentation:** `docs/architecture/performance.md`
 **Alert Channel:** #engineering-alerts
 **On-call Rotation:** Engineering team roster

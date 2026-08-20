@@ -9,11 +9,11 @@
  */
 import "dotenv/config";
 import { faker } from "@faker-js/faker";
-import { createClient } from "../app/lib/services/clients/service";
-import { createPolicyDraft } from "../app/lib/services/policy/data.service";
-import { getReferenceDataAsync } from "../app/lib/services/reference.service";
-import { listAuthorisedRepresentatives } from "../app/lib/services/authorised-representatives/service";
-import type { Policy } from "../app/lib/db/types";
+import { createClient } from "../../../app/lib/services/clients/service";
+import { createPolicyDraft } from "../../../app/lib/services/policy/data.service";
+import { getReferenceDataAsync } from "../../../app/lib/services/reference.service";
+import { listAuthorisedRepresentatives } from "../../../app/lib/services/authorised-representatives/service";
+import type { Policy } from "../../../app/lib/db/types";
 
 const AU_STATES: Array<{ stateId: number; code: string; postcodes: string[] }> =
   [

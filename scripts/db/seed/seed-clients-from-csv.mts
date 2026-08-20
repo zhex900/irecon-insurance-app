@@ -16,11 +16,11 @@ import { readFileSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { asc, sql } from "drizzle-orm";
-import { getDb } from "../app/lib/db/client";
-import { authorisedRepresentative, client } from "../app/lib/db/schema";
+import { getDb } from "../../../app/lib/db/client";
+import { authorisedRepresentative, client } from "../../../app/lib/db/schema";
 import { parseClientCsv } from "./parse-client-csv";
 
-const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 const DEFAULT_CSV = join(repoRoot, "_archive/seeds-source/Client.csv");
 
 function parseArgs(argv: string[]) {

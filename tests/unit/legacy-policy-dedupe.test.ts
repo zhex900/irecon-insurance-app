@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { legacyPolicyUuid } from "../../scripts/lib/legacy-id-map.mts";
-import type { LegacyPolicyRow } from "../../scripts/lib/legacy-payload.ts";
-import { dedupeLegacyPolicyNumbers } from "../../scripts/lib/legacy-policy-mapper.mts";
+import { legacyPolicyUuid } from "../../scripts/db/legacy/lib/legacy-id-map.mts";
+import type { LegacyPolicyRow } from "../../scripts/db/legacy/lib/legacy-payload.ts";
+import { dedupeLegacyPolicyNumbers } from "../../scripts/db/legacy/lib/legacy-policy-mapper.mts";
 
 function policyRow(
   overrides: Partial<LegacyPolicyRow> & Pick<LegacyPolicyRow, "policyId">,

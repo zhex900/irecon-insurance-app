@@ -121,6 +121,6 @@ App serves migrated PDFs via `/api/policies/:policyId/documents/r2?key=...`.
 
 ### Local dev
 
-The document migration uploads PDFs to **remote** R2 (`insurance-app-library-documents-uat` for UAT; `insurance-app-library-documents-local` for local dev). Local `npm run dev` uses **remote bindings** for `LIBRARY_DOCUMENTS` in `wrangler.jsonc` (`"remote": true`) pointing at the `-local` bucket. Populate local R2 via `npm run infra:bootstrap:r2 -- --only local` or `npm run db:copy:uat`. You also need Cloudflare auth for remote bindings (`npx wrangler login` or `CLOUDFLARE_API_TOKEN` in the environment Wrangler reads).
+The document migration uploads PDFs to **remote** R2 (`insurance-app-library-documents-uat` for UAT; `insurance-app-library-documents-local` for local dev). Local `npm run dev` uses **remote bindings** for `LIBRARY_DOCUMENTS` in `wrangler.jsonc` (`"remote": true`) pointing at the `-local` bucket. Populate local R2 via `npm run deployment:bootstrap:r2 -- --only local` or `npm run db:copy:uat`. You also need Cloudflare auth for remote bindings (`npx wrangler login` or `CLOUDFLARE_API_TOKEN` in the environment Wrangler reads).
 
 Without remote R2, migrated rows appear in Postgres but `/api/policies/:policyId/documents/r2` returns 404 (`File not found in storage`) because the local Miniflare bucket is empty.

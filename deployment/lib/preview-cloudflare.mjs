@@ -159,7 +159,7 @@ export async function ensureHyperdrive({
 }) {
   if (originConnectionLimit == null || originConnectionLimit <= 0) {
     throw new Error(
-      "ensureHyperdrive requires originConnectionLimit (see infra-settings.mjs).",
+      "ensureHyperdrive requires originConnectionLimit (see constants.mjs).",
     );
   }
 

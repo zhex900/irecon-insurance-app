@@ -1,11 +1,11 @@
-import { calculatePremiumForPolicy } from "../app/lib/services/price/premium.service";
+import { calculatePremiumForPolicy } from "../../app/lib/services/price/premium.service";
 import {
   resolveBrokerFeeTotal,
   resolveEsl,
   resolvePlantRate,
   resolvePrice,
   resolveStampDuty,
-} from "../app/server/pricing/rate-resolver";
+} from "../../app/server/pricing/rate-resolver";
 
 async function main() {
   const price = await resolvePrice(1, 500000, "2025-06-01");

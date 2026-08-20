@@ -2,70 +2,20 @@
 /**
  * Write .env.uat, .env.pr, or .env.production from process.env (GitHub Actions secrets/vars).
  *
- *   node infra/ci-write-env.mjs uat
- *   node infra/ci-write-env.mjs pr
- *   node infra/ci-write-env.mjs production
+ *   node deployment/ci-write-env.mjs uat
+ *   node deployment/ci-write-env.mjs pr
+ *   node deployment/ci-write-env.mjs production
  */
 import { writeFile } from "node:fs/promises";
 
+import { CI_ENV_PROFILE_KEYS } from "./lib/constants.mjs";
+
 const profile = process.argv[2];
 
-const KEYS = {
-  uat: [
-    "APP_URL",
-    "DATABASE_URL",
-    "SUPABASE_URL",
-    "SUPABASE_PUBLISHABLE_KEY",
-    "SUPABASE_SECRET_KEY",
-    "RESEND_API_KEY",
-    "EMAIL_FROM",
-    "SENTRY_ORG",
-    "SENTRY_PROJECT",
-    "SENTRY_AUTH_TOKEN",
-    "VITE_SENTRY_DSN",
-    "SENTRY_DSN",
-  ],
-  pr: [
-    "BASE_URL",
-    "DATABASE_URL",
-    "SUPABASE_URL",
-    "SUPABASE_PUBLISHABLE_KEY",
-    "SUPABASE_SECRET_KEY",
-    "UAT_DATABASE_URL",
-    "UAT_SUPABASE_URL",
-    "R2_ACCESS_KEY_ID",
-    "R2_SECRET_ACCESS_KEY",
-    "R2_S3_ENDPOINT",
-    "SUPABASE_ACCESS_TOKEN",
-    "RESEND_API_KEY",
-    "EMAIL_FROM",
-    "SENTRY_ORG",
-    "SENTRY_PROJECT",
-    "SENTRY_AUTH_TOKEN",
-    "VITE_SENTRY_DSN",
-    "SENTRY_DSN",
-  ],
-  production: [
-    "APP_URL",
-    "DATABASE_URL",
-    "SUPABASE_URL",
-    "SUPABASE_PUBLISHABLE_KEY",
-    "SUPABASE_SECRET_KEY",
-    "SUPABASE_ACCESS_TOKEN",
-    "RESEND_API_KEY",
-    "EMAIL_FROM",
-    "SENTRY_ORG",
-    "SENTRY_PROJECT",
-    "SENTRY_AUTH_TOKEN",
-    "VITE_SENTRY_DSN",
-    "SENTRY_DSN",
-    "VITE_TURNSTILE_SITE_KEY",
-    "TURNSTILE_SECRET_KEY",
-  ],
-};
+const KEYS = CI_ENV_PROFILE_KEYS;
 
 if (!profile || !(profile in KEYS)) {
-  console.error("Usage: node infra/ci-write-env.mjs <uat|pr|production>");
+  console.error("Usage: node deployment/ci-write-env.mjs <uat|pr|production>");
   process.exit(1);
 }
 

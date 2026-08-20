@@ -22,9 +22,9 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { exportPricesFromMssql } from "./export-prices-from-mssql.mts";
-import { seedPrices } from "./seed-prices";
+import { seedPrices } from "../seed/seed-prices.ts";
 
-const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 const DEFAULT_JSON = join(repoRoot, "_archive/data/prices.json");
 
 function parseArgs(argv: string[]) {

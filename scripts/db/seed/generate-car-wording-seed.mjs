@@ -28,7 +28,7 @@ const sqlEscape = (str) => str.replace(/'/g, "''");
 
 const sql = [
   "-- CAR wording seed data from car_wording.csv",
-  "-- Generated automatically; re-run: node scripts/generate-car-wording-seed.mjs",
+  "-- Generated automatically; re-run: node scripts/db/seed/generate-car-wording-seed.mjs",
   "",
   "insert into car_wording (car_wording_id, subject, content)",
   "values",

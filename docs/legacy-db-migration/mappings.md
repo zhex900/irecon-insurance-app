@@ -2,7 +2,7 @@
 
 Full policy field audit: [../domains/migration/legacy-policy-field-mapping.md](../domains/migration/legacy-policy-field-mapping.md)
 
-Implementation: `scripts/lib/legacy-policy-mapper.mts`, `scripts/sql/legacy/*.sql`
+Implementation: `scripts/db/legacy/lib/legacy-policy-mapper.mts`, `scripts/db/legacy/sql/*.sql`
 
 ---
 

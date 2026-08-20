@@ -4,8 +4,9 @@
  *
  * UAT uses `.env.uat` — same Cloudflare flow as PR (Hyperdrive, secrets, Workers).
  *
- * PR previews use a single shared Supabase project (.env.pr). Each deploy clears
- * that DB and copies schema + data from UAT (.env.uat), then deploys Workers.
+ * PR previews use a single shared Supabase project (.env.pr) and shared R2 buckets
+ * (`*-pr`). Each deploy clears that DB and copies schema + data from UAT (.env.uat),
+ * then deploys Workers. R2 objects are not cleared or re-copied on PR deploy.
  *
  *   npm run deploy:uat
  *   npm run deploy -- pr-11
@@ -21,10 +22,11 @@ import {
   writePreviewWranglerConfigs,
   writeUatWranglerConfigs,
 } from "./lib/preview-cloudflare.mjs";
-import { HYPERDRIVE_ORIGIN_CONNECTION_LIMIT } from "./lib/infra-settings.mjs";
+import { HYPERDRIVE_ORIGIN_CONNECTION_LIMIT } from "./lib/constants.mjs";
 import {
   assertPreviewEnvName,
   hasFlag,
+  isPrPreviewSlug,
   loadState,
   loadUatState,
   parseEnvName,
@@ -260,10 +262,16 @@ async function deployPreview(envName) {
     console.log("→ Skipping database migrations (--skip-migrate)");
   }
 
-  if (skipR2) {
-    console.log(
-      "→ Skipping R2 object copy (--skip-r2); ensuring buckets exist",
-    );
+  if (skipR2 || isPrPreviewSlug(names.slug)) {
+    if (isPrPreviewSlug(names.slug) && !skipR2) {
+      console.log(
+        `→ Shared PR R2 (${names.avatarsBucket}, ${names.libraryBucket}) — ensuring buckets exist; no copy/clear`,
+      );
+    } else {
+      console.log(
+        "→ Skipping R2 object copy (--skip-r2); ensuring buckets exist",
+      );
+    }
     await ensureR2Buckets(names);
   } else {
     await copyR2FromUat(names);

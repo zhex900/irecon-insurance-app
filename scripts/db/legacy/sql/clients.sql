@@ -1,5 +1,5 @@
 -- Target migration: clients that own at least one in-scope CAR policy.
--- Scope: scripts/sql/legacy/_target-scope.sql
+-- Scope: scripts/db/legacy/sql/_target-scope.sql
 -- authorisedRepresentativeId is not on legacy Client; SubAgent.LeadBroker when set.
 SELECT
   c.ClientId AS clientId,

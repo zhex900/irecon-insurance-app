@@ -6,9 +6,9 @@
  *   npm run db:clear:legacy:uat -- --dry-run
  *   npm run db:clear:legacy:prod -- --confirm
  */
-import { resetSharedDbPool } from "../app/lib/db/client";
-import { clearLegacyDomain } from "./lib/clear-domain-data.mts";
-import { runClearDomainScript } from "./lib/clear-domain-cli.mts";
+import { resetSharedDbPool } from "../../../app/lib/db/client";
+import { clearLegacyDomain } from "../lib/clear-domain-data.mts";
+import { runClearDomainScript } from "../lib/clear-domain-cli.mts";
 
 async function main() {
   await runClearDomainScript({

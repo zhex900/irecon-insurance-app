@@ -4,32 +4,38 @@
 import { join } from "node:path";
 
 import {
+  UAT_APP_URL,
+  UAT_APP_WORKER,
+  UAT_AVATARS_BUCKET,
+  UAT_EXCEL_WORKER,
+  UAT_HYPERDRIVE_ID,
+  UAT_HYPERDRIVE_NAME,
+  UAT_LIBRARY_BUCKET,
+  UAT_PDF_WORKER,
+  UAT_PROJECT_REF,
+} from "./constants.mjs";
+import {
   extractProjectRefFromDbUrl,
   repairSupabaseDatabaseUrl,
   toSessionDbUrl,
   toTransactionDbUrl,
-  UAT_AVATARS_BUCKET,
-  UAT_LIBRARY_BUCKET,
-  UAT_PROJECT_REF,
   webRoot,
 } from "./preview-env.mjs";
 import { applyEnvFile, readEnvFile } from "./pr-env.mjs";
 
-export const UAT_APP_URL = "https://uat.irecon.net";
-/** Legacy Hyperdrive config bound in wrangler.jsonc before generated configs. */
-export const UAT_HYPERDRIVE_ID = "1861601674b24d2ab8870dcb0c7a68ed";
+export { UAT_APP_URL, UAT_HYPERDRIVE_ID };
 
 export function uatNames() {
   const appUrl = process.env.APP_URL?.trim() || UAT_APP_URL;
   return {
     label: "uat",
     slug: "uat",
-    appWorker: "insurance-app-uat",
-    pdfWorker: "insurance-pdf-worker-uat",
-    excelWorker: "insurance-excel-worker-uat",
+    appWorker: UAT_APP_WORKER,
+    pdfWorker: UAT_PDF_WORKER,
+    excelWorker: UAT_EXCEL_WORKER,
     avatarsBucket: UAT_AVATARS_BUCKET,
     libraryBucket: UAT_LIBRARY_BUCKET,
-    hyperdriveName: "insurance-app-uat",
+    hyperdriveName: UAT_HYPERDRIVE_NAME,
     appUrl,
   };
 }

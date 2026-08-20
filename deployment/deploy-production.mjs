@@ -8,7 +8,7 @@
  *   npm run deploy:prod
  *   npm run deploy:prod -- --skip-build
  *   npm run deploy:prod -- --skip-migrate
- *   node --env-file=.env.production infra/deploy-production.mjs --secret-only
+ *   node --env-file=.env.production deployment/deploy-production.mjs --secret-only
  */
 import { spawn, execFileSync } from "node:child_process";
 import { readdir, unlink, writeFile } from "node:fs/promises";
@@ -22,7 +22,7 @@ import {
   putWorkerSecret,
 } from "./lib/preview-cloudflare.mjs";
 import { configureAuthUrls } from "./lib/preview-supabase.mjs";
-import { HYPERDRIVE_ORIGIN_CONNECTION_LIMIT } from "./lib/infra-settings.mjs";
+import { HYPERDRIVE_ORIGIN_CONNECTION_LIMIT } from "./lib/constants.mjs";
 import {
   assertProductionDatabaseUrl,
   extractSupabaseProjectRef,

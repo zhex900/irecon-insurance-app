@@ -1,11 +1,11 @@
 /**
  * Target Postgres env for migration scripts (--env=local|uat|pr|prod).
  */
-import { assertProductionDatabaseUrl } from "../../infra/lib/production-env.mjs";
-import { repairSupabaseDatabaseUrl } from "../../infra/lib/preview-env.mjs";
-import { applyEnvFile, readEnvFile } from "../../infra/lib/pr-env.mjs";
-import { loadPrDeployEnv } from "../../infra/lib/pr-env.mjs";
-import { loadUatDeployEnv } from "../../infra/lib/uat-env.mjs";
+import { assertProductionDatabaseUrl } from "../../../deployment/lib/production-env.mjs";
+import { repairSupabaseDatabaseUrl } from "../../../deployment/lib/preview-env.mjs";
+import { applyEnvFile, readEnvFile } from "../../../deployment/lib/pr-env.mjs";
+import { loadPrDeployEnv } from "../../../deployment/lib/pr-env.mjs";
+import { loadUatDeployEnv } from "../../../deployment/lib/uat-env.mjs";
 
 import { isLocalDatabaseUrl, maskDatabaseUrl } from "./clear-domain-data.mts";
 

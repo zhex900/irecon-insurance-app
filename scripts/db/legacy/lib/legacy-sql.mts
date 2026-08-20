@@ -7,8 +7,8 @@ import { fileURLToPath } from "node:url";
 
 import type { LegacyDomainSlice } from "./legacy-payload.ts";
 
-const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
-const SQL_DIR = join(repoRoot, "scripts/sql/legacy");
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
+const SQL_DIR = join(repoRoot, "scripts/db/legacy/sql");
 
 const FILE_BY_SLICE: Record<LegacyDomainSlice, string> = {
   "account-managers": "account-managers.sql",

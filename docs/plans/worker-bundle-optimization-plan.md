@@ -99,7 +99,7 @@ export async function generateAnalyticsReport(data) {
 
 ### **Week 1: Analysis & Design**
 
-1. **Bundle Analysis** (`scripts/simple-bundle-check.js` enhanced)
+1. **Bundle Analysis** (`scripts/bundle/simple-bundle-check.js` enhanced)
    - Map dependencies to bundle size contribution
    - Identify heaviest libraries in main Worker
    - Create dependency graph visualization
