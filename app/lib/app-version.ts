@@ -38,7 +38,7 @@ export function getAppEnvironment(version = getAppVersion()): AppEnvironment {
   if (/^pr[-_]?\d+/.test(v) || v.startsWith("pr-") || v.startsWith("pr/")) {
     return "pr";
   }
-  if (v.startsWith("uat") || v.startsWith("staging")) return "uat";
+  if (v.startsWith("uat")) return "uat";
   if (v === "unknown") return "unknown";
   return "prod";
 }

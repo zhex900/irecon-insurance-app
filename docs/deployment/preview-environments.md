@@ -52,7 +52,7 @@ Supabase branching is **not** used (requires Pro). Copy `.env.pr.example` → `.
 | Hyperdrive           | `insurance-app-pr` (shared; not deleted on destroy)                          |
 | Database             | Shared PR Supabase project (same for every PR number)                        |
 
-All `pr-*` Workers bind to one Hyperdrive config (`insurance-app-pr`, limit **15** origin connections). Set Supabase PR **Pool size** to **15** in the dashboard to match [`SUPABASE_POOL_SIZE.pr`](../../deployment/lib/constants.mjs).
+All `pr-*` Workers bind to one Hyperdrive config (`insurance-app-pr`, limit **35** origin connections). Supabase PR **Pool size** should be **35** in the dashboard ([`SUPABASE_POOL_SIZE.pr`](../../deployment/lib/constants.mjs)).
 
 **One-time cleanup:** delete orphaned per-PR Hyperdrive configs (`insurance-app-pr-4`, `insurance-app-pr-5`, …) in Cloudflare **Storage & databases → Hyperdrive** after the next deploy.
 

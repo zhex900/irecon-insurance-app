@@ -272,9 +272,9 @@ if (!(await rateLimiter.tryConsume(serviceToken, 1))) {
 - Test with local worker instances
 - Validate no breaking changes to existing APIs
 
-### Phase 2: Staging Environment
+### Phase 2: UAT environment
 
-- Deploy to staging with feature flags
+- Deploy to UAT with feature flags
 - Perform integration testing
 - Validate security patterns end-to-end
 - Gather performance metrics

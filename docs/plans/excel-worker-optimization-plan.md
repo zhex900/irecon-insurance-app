@@ -119,7 +119,7 @@ mkdir -p workers/excel
 # Create wrangler.excel.jsonc configuration
 echo '{
   "$schema": "../node_modules/wrangler/config-schema.json",
-  "name": "insurance-excel-worker-staging",
+  "name": "insurance-excel-worker-uat",
   "compatibility_date": "2026-08-13",
   "main": "./workers/excel/index.ts"
 }' > wrangler.excel.jsonc
@@ -199,7 +199,7 @@ export async function generateExcelReport(options) {
 // wrangler.excel.jsonc
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "insurance-excel-worker-staging",
+  "name": "insurance-excel-worker-uat",
   "compatibility_date": "2026-08-13",
   "compatibility_flags": ["nodejs_compat"],
   "main": "./workers/excel/index.ts",
@@ -397,13 +397,13 @@ npm run deploy:uat
 
 ## Deployment Strategy
 
-### **Phase 1: Staging Validation (Day 1)**
+### **Phase 1: UAT validation (Day 1)**
 
 ```bash
-# Deploy Excel Worker to staging
+# Deploy Excel Worker to UAT
 wrangler deploy --config wrangler.excel.jsonc
 
-# Test with staging data
+# Test with UAT data
 # Validate all report types
 ```
 
@@ -454,7 +454,7 @@ wrangler deploy --config wrangler.excel.jsonc
 | Design & Setup | 3 days               | Excel Worker skeleton, API design         |
 | Migration      | 3 days               | Updated endpoints, testing                |
 | Testing        | 2 days               | Performance, integration, user acceptance |
-| Deployment     | 2 days               | Staging → Canary → Production             |
+| Deployment     | 2 days               | UAT → Canary → Production                 |
 | **Total**      | **10 business days** | **Production-ready solution**             |
 
 ---

@@ -267,7 +267,7 @@ Development Commands:
 ```
 Deployment Commands:
 ├── Develop: Local development servers
-├── Staging: Feature flags and canary rollouts
+├── UAT: Feature flags and canary rollouts
 ├── Production: Automated deployment with rollback
 └── Monitoring: Performance dashboards and alerts
 ```
@@ -521,7 +521,7 @@ federation({
 ### Infrastructure Requirements
 
 1. **Development Environment**: Concurrent Portal + Documents worker servers
-2. **Staging Environment**: Separate deployment for Documents worker
+2. **UAT environment**: Separate deployment for Documents worker
 3. **Monitoring**: Cross-domain tracing and performance dashboards
 4. **CI/CD**: Automated testing and deployment pipelines
 
@@ -545,7 +545,7 @@ federation({
 
 1. **Complete Component Migration**: All PDFME dependencies to Documents
 2. **Advanced Integration**: State sync, error handling, optimization
-3. **Staging Deployment**: Feature-flagged deployment to staging
+3. **UAT deployment**: Feature-flagged deployment to UAT
 4. **User Testing**: Validate no degradation in user experience
 
 ### Long-Term Actions (Week 7-10)

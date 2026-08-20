@@ -112,13 +112,13 @@ Super-admin only: `/settings/sentry-test`
 
 ## Sampling (defaults)
 
-| Signal                               | Staging | Prod                            |
-| ------------------------------------ | ------- | ------------------------------- |
-| Client traces                        | 100%    | 10%                             |
-| Session Replay (all sessions)        | 100%    | 10%                             |
-| Session Replay (sessions with error) | 100%    | 100%                            |
-| Worker SDK traces                    | 100%    | 10%                             |
-| Workers Logs head sample             | 100%    | tune in wrangler when promoting |
+| Signal                               | UAT  | Prod                            |
+| ------------------------------------ | ---- | ------------------------------- |
+| Client traces                        | 100% | 10%                             |
+| Session Replay (all sessions)        | 100% | 10%                             |
+| Session Replay (sessions with error) | 100% | 100%                            |
+| Worker SDK traces                    | 100% | 10%                             |
+| Workers Logs head sample             | 100% | tune in wrangler when promoting |
 
 Temporarily raise rates in Sentry project settings or env-specific init when investigating an incident.
 

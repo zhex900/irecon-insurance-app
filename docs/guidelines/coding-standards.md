@@ -137,7 +137,7 @@ No `console.log` in committed app code; use [`app/lib/observability/logger.serve
 - CSRF: follow React Router same-origin action + cookie practices (`httpOnly` / `secure` / `sameSite`).
 - Rate-limit public endpoints (auth, email) when infrastructure allows.
 - R2/signed URLs short-lived; no public customer-doc buckets.
-- Secrets never in git. Staging must not email real insurers without a kill switch/sink.
+- Secrets never in git. UAT must not email real insurers without a kill switch/sink.
 
 ## Naming
 

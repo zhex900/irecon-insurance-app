@@ -8,7 +8,6 @@ import {
   UAT_APP_WORKER,
   UAT_AVATARS_BUCKET,
   UAT_EXCEL_WORKER,
-  UAT_HYPERDRIVE_ID,
   UAT_HYPERDRIVE_NAME,
   UAT_LIBRARY_BUCKET,
   UAT_PDF_WORKER,
@@ -23,7 +22,7 @@ import {
 } from "./preview-env.mjs";
 import { applyEnvFile, readEnvFile } from "./pr-env.mjs";
 
-export { UAT_APP_URL, UAT_HYPERDRIVE_ID };
+export { UAT_APP_URL };
 
 export function uatNames() {
   const appUrl = process.env.APP_URL?.trim() || UAT_APP_URL;

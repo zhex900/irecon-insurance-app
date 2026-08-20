@@ -27,13 +27,11 @@ import {
   assertPreviewEnvName,
   hasFlag,
   isPrPreviewSlug,
-  loadPrSharedState,
   loadState,
   loadUatState,
   parseEnvName,
   resourceNames,
   run,
-  savePrSharedState,
   saveState,
   saveUatState,
   webRoot,
@@ -41,7 +39,6 @@ import {
 import { loadPrDeployEnv } from "./lib/pr-env.mjs";
 import { uploadSentrySourceMaps } from "./lib/sentry-deploy.mjs";
 import {
-  UAT_HYPERDRIVE_ID,
   loadUatDeployEnv,
   uatNames,
   uatSupabaseFromEnv,
@@ -115,7 +112,6 @@ async function deployUat() {
     const hyperdriveId = await ensureHyperdrive({
       names,
       connectionString: supabase.sessionUrl,
-      existingId: state?.hyperdriveId || UAT_HYPERDRIVE_ID,
       forceUpdate: !skipHyperdrive,
       originConnectionLimit: HYPERDRIVE_ORIGIN_CONNECTION_LIMIT.uat,
     });
@@ -148,7 +144,6 @@ async function deployUat() {
   const hyperdriveId = await ensureHyperdrive({
     names,
     connectionString: supabase.sessionUrl,
-    existingId: state?.hyperdriveId || UAT_HYPERDRIVE_ID,
     forceUpdate: !skipHyperdrive,
     originConnectionLimit: HYPERDRIVE_ORIGIN_CONNECTION_LIMIT.uat,
   });
@@ -284,22 +279,12 @@ async function deployPreview(envName) {
     await copyR2FromUat(names);
   }
 
-  const sharedPr = isPrPreviewSlug(names.slug);
-  const prSharedState = sharedPr ? await loadPrSharedState() : null;
   const hyperdriveId = await ensureHyperdrive({
     names,
     connectionString: supabase.sessionUrl,
-    existingId: sharedPr ? prSharedState?.hyperdriveId : state?.hyperdriveId,
     forceUpdate: !skipDb,
     originConnectionLimit: HYPERDRIVE_ORIGIN_CONNECTION_LIMIT.pr,
   });
-  if (sharedPr) {
-    await savePrSharedState({
-      hyperdriveId,
-      hyperdriveName: names.hyperdriveName,
-      updatedAt: new Date().toISOString(),
-    });
-  }
 
   const configs = await writePreviewWranglerConfigs({
     names,
@@ -335,7 +320,6 @@ async function deployPreview(envName) {
     appUrl: names.appUrl,
     supabaseProjectRef: supabase.projectRef,
     supabaseUrl: supabase.supabaseUrl,
-    hyperdriveId,
     workers: {
       app: names.appWorker,
       pdf: names.pdfWorker,

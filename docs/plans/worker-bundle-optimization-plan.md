@@ -174,7 +174,7 @@ export async function generateAnalyticsReport(data) {
 
 ```jsonc
 {
-  "name": "insurance-analytics-worker-staging",
+  "name": "insurance-analytics-worker-uat",
   "compatibility_date": "2026-08-13",
   "compatibility_flags": ["nodejs_compat"],
   "main": "./workers/analytics.ts",
@@ -204,11 +204,11 @@ export async function generateAnalyticsReport(data) {
 "services": [
   {
     "binding": "DOCUMENT_SERVICE",
-    "service": "insurance-document-worker-staging"
+    "service": "insurance-document-worker-uat"
   },
   {
     "binding": "ANALYTICS_SERVICE",  // New
-    "service": "insurance-analytics-worker-staging"
+    "service": "insurance-analytics-worker-uat"
   }
 ]
 ```

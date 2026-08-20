@@ -275,9 +275,6 @@ export function assertSafeUatCopy({
   }
 }
 
-/** @deprecated Use assertSafeUatCopy */
-export const assertSafeStagingCopy = assertSafeUatCopy;
-
 export async function loadUatEnv() {
   const uatPath = join(webRoot, ".env.uat");
   let text;
@@ -312,9 +309,6 @@ export async function loadUatEnv() {
       UAT_PROJECT_REF,
   };
 }
-
-/** @deprecated Use loadUatEnv */
-export const loadStagingEnv = loadUatEnv;
 
 /** @deprecated Use PRODUCTION_SCRIPT_FLAGS */
 export { PRODUCTION_SCRIPT_FLAGS as PRODUCTION_FLAGS };

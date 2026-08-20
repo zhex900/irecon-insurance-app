@@ -19,18 +19,20 @@ export const workerCpuLimits = {
  * PR previews share one Hyperdrive config and one DB — do not multiply per PR Worker.
  */
 export const HYPERDRIVE_ORIGIN_CONNECTION_LIMIT = {
-  production: 100,
-  uat: 80,
+  /** Single Hyperdrive → production Supabase (Small: pool 50, max_connections 90). */
+  production: 50,
+  uat: 35,
   /** Single shared Hyperdrive for all `pr-*` Workers → shared PR Supabase. */
-  pr: 15,
+  pr: 35,
 };
 
 /** Supabase Dashboard → Database → Connection pooling → Pool size (manual). */
 export const SUPABASE_POOL_SIZE = {
-  production: 20,
-  uat: 12,
+  /** Production Small tier — leave ~40 headroom on 90 max_connections for direct/migrations. */
+  production: 50,
+  uat: 35,
   /** Shared PR Supabase — align with HYPERDRIVE_ORIGIN_CONNECTION_LIMIT.pr. */
-  pr: 15,
+  pr: 35,
 };
 
 /** Documented targets for app-side pooling (app/lib/db/query-gate.ts). */
@@ -49,9 +51,6 @@ export const SUPABASE_API = "https://api.supabase.com/v1";
 
 export const UAT_PROJECT_REF = "tjnsygunohylofihoksl";
 
-/** @deprecated Use UAT_PROJECT_REF */
-export const STAGING_PROJECT_REF = UAT_PROJECT_REF;
-
 // ── Worker name prefixes (preview slugs append `-<slug>`) ──────────────────
 
 export const APP_WORKER_PREFIX = "insurance-app";
@@ -65,8 +64,6 @@ export const UAT_APP_WORKER = "insurance-app-uat";
 export const UAT_PDF_WORKER = "insurance-pdf-worker-uat";
 export const UAT_EXCEL_WORKER = "insurance-excel-worker-uat";
 export const UAT_HYPERDRIVE_NAME = "insurance-app-uat";
-/** Legacy Hyperdrive config bound in wrangler.jsonc before generated configs. */
-export const UAT_HYPERDRIVE_ID = "1861601674b24d2ab8870dcb0c7a68ed";
 
 // ── Production (fixed names) ─────────────────────────────────────────────────
 
@@ -107,11 +104,6 @@ export const PR_LIBRARY_BUCKET = `${R2_LIBRARY_BUCKET_PREFIX}-pr`;
 export const PR_HYPERDRIVE_NAME = `${APP_WORKER_PREFIX}-pr`;
 export const PRODUCTION_AVATARS_BUCKET = `${R2_AVATARS_BUCKET_PREFIX}-production`;
 export const PRODUCTION_LIBRARY_BUCKET = `${R2_LIBRARY_BUCKET_PREFIX}-production`;
-
-/** @deprecated Use UAT_AVATARS_BUCKET */
-export const STAGING_AVATARS_BUCKET = UAT_AVATARS_BUCKET;
-/** @deprecated Use UAT_LIBRARY_BUCKET */
-export const STAGING_LIBRARY_BUCKET = UAT_LIBRARY_BUCKET;
 
 /** Longest preview R2 bucket slug (Cloudflare 63 char max on bucket name). */
 export const R2_SLUG_MAX_LEN = 63 - `${R2_LIBRARY_BUCKET_PREFIX}-`.length;

@@ -61,7 +61,7 @@ Current worker configurations will be updated to have:
 ```jsonc
 // wrangler.excel.jsonc - AFTER
 {
-  "name": "insurance-excel-worker-staging",
+  "name": "insurance-excel-worker-uat",
   // NO routes defined - internal only
   "main": "./workers/excel/index.ts",
   "observability": {/* ... */},
@@ -76,7 +76,7 @@ Main application worker (`wrangler.jsonc`) already has:
 "services": [
   {
     "binding": "DOCUMENT_SERVICE",
-    "service": "insurance-document-worker-staging",
+    "service": "insurance-document-worker-uat",
   },
 ],
 ```
@@ -87,11 +87,11 @@ Main application worker (`wrangler.jsonc`) already has:
 "services": [
   {
     "binding": "EXCEL_SERVICE",
-    "service": "insurance-excel-worker-staging",
+    "service": "insurance-excel-worker-uat",
   },
   {
     "binding": "DOCUMENT_SERVICE",
-    "service": "insurance-document-worker-staging",
+    "service": "insurance-document-worker-uat",
   },
 ]
 ```
@@ -249,7 +249,7 @@ export function trackServiceCall(
 ```jsonc
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "insurance-app-staging",
+  "name": "insurance-app-uat",
   "compatibility_date": "2026-07-20",
   "compatibility_flags": ["nodejs_compat"],
   "main": "./workers/app.ts",
@@ -258,11 +258,11 @@ export function trackServiceCall(
   "services": [
     {
       "binding": "EXCEL_SERVICE",
-      "service": "insurance-excel-worker-staging",
+      "service": "insurance-excel-worker-uat",
     },
     {
       "binding": "DOCUMENT_SERVICE",
-      "service": "insurance-document-worker-staging",
+      "service": "insurance-document-worker-uat",
     },
   ],
 
@@ -298,7 +298,7 @@ export function trackServiceCall(
 ```jsonc
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "insurance-excel-worker-staging",
+  "name": "insurance-excel-worker-uat",
   "compatibility_date": "2026-08-08",
   "compatibility_flags": ["nodejs_compat"],
   "main": "./workers/excel/index.ts",
@@ -327,7 +327,7 @@ export function trackServiceCall(
 ```jsonc
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "insurance-document-worker-staging",
+  "name": "insurance-document-worker-uat",
   "compatibility_date": "2026-08-08",
   "compatibility_flags": ["nodejs_compat"],
   "main": "./workers/documents/index.ts",
@@ -476,7 +476,7 @@ describe("Worker Security", () => {
 3. Validate authentication middleware
 4. Run integration tests
 
-### **Phase 2: Staging Environment**
+### **Phase 2: UAT environment**
 
 1. Deploy updated worker configurations
 2. Enable Service Bindings without routes
