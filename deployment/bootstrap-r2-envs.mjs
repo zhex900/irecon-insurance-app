@@ -26,7 +26,7 @@ import {
   listR2BucketNames,
   r2BucketExists,
 } from "./lib/preview-cloudflare.mjs";
-import { syncR2Bucket } from "./lib/r2-s3-sync.mjs";
+import { syncR2Bucket, summarizeR2Bucket } from "./lib/r2-s3-sync.mjs";
 import { loadUatDeployEnv } from "./lib/uat-env.mjs";
 
 const TARGETS = R2_BOOTSTRAP_TARGETS;
@@ -116,6 +116,17 @@ async function copySourceToTarget(source, targetKey) {
 
   console.log(`  ${source.libraryBucket} → ${names.libraryBucket}`);
   await syncR2Bucket(source.libraryBucket, names.libraryBucket);
+
+  for (const bucket of [names.avatarsBucket, names.libraryBucket]) {
+    const { objectCount, totalBytes } = await summarizeR2Bucket(bucket);
+    const sizeMb = (totalBytes / (1024 * 1024)).toFixed(1);
+    console.log(`  ✓ ${bucket}: ${objectCount} object(s), ${sizeMb} MiB`);
+    if (objectCount === 0) {
+      console.warn(
+        `    Warning: bucket looks empty. R2 dashboard only lists root keys — objects may live under prefixes like policies/ or library/.`,
+      );
+    }
+  }
 }
 
 async function main() {

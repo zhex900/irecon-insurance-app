@@ -49,8 +49,12 @@ Supabase branching is **not** used (requires Pro). Copy `.env.pr.example` → `.
 | Excel Worker         | `insurance-excel-worker-pr-11`                                               |
 | R2 avatars           | `insurance-app-avatars-pr` (shared; not cleared on deploy/destroy)           |
 | R2 library documents | `insurance-app-library-documents-pr` (shared; not cleared on deploy/destroy) |
-| Hyperdrive           | `insurance-app-pr-11` → shared PR Postgres                                   |
+| Hyperdrive           | `insurance-app-pr` (shared; not deleted on destroy)                          |
 | Database             | Shared PR Supabase project (same for every PR number)                        |
+
+All `pr-*` Workers bind to one Hyperdrive config (`insurance-app-pr`, limit **15** origin connections). Set Supabase PR **Pool size** to **15** in the dashboard to match [`SUPABASE_POOL_SIZE.pr`](../../deployment/lib/constants.mjs).
+
+**One-time cleanup:** delete orphaned per-PR Hyperdrive configs (`insurance-app-pr-4`, `insurance-app-pr-5`, …) in Cloudflare **Storage & databases → Hyperdrive** after the next deploy.
 
 Deployment targets (Hyperdrive limits, Supabase pool size, Worker CPU) live in [`deployment/lib/constants.mjs`](../../deployment/lib/constants.mjs). Deploy applies Hyperdrive limits automatically; Supabase pool size is set manually in each project's dashboard.
 
@@ -95,7 +99,7 @@ npm run deploy -- pr-11 -- --skip-migrate
 # Dry run
 npm run deploy -- pr-11 -- --dry-run
 
-# Tear down Workers + Hyperdrive (shared PR R2 + Supabase project kept)
+# Tear down Workers only (shared PR Hyperdrive, R2 + Supabase kept)
 npm run destroy -- pr-11
 
 # Local: full UAT → local Supabase
@@ -124,13 +128,15 @@ Workflows write `.env.pr` / `.env.uat` at runtime via `deployment/ci-write-env.m
 
 ### GitHub environment: `uat`
 
-| Name                       | Kind     | Used by    |
-| -------------------------- | -------- | ---------- |
-| `APP_URL`                  | variable | UAT deploy |
-| `DATABASE_URL`             | secret   | UAT deploy |
-| `SUPABASE_URL`             | secret   | UAT deploy |
-| `SUPABASE_PUBLISHABLE_KEY` | secret   | UAT deploy |
-| `SUPABASE_SECRET_KEY`      | secret   | UAT deploy |
+| Name                       | Kind     | Used by                  |
+| -------------------------- | -------- | ------------------------ |
+| `APP_URL`                  | variable | UAT deploy               |
+| `DATABASE_URL`             | secret   | UAT deploy               |
+| `SUPABASE_URL`             | secret   | UAT deploy               |
+| `SUPABASE_PUBLISHABLE_KEY` | secret   | UAT deploy               |
+| `SUPABASE_SECRET_KEY`      | secret   | UAT deploy               |
+| `VITE_TURNSTILE_SITE_KEY`  | secret   | optional — login captcha |
+| `TURNSTILE_SECRET_KEY`     | secret   | optional — login captcha |
 
 ### GitHub environment: `production`
 

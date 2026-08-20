@@ -280,6 +280,44 @@ export async function syncMigrationHistoryFromUat({
   );
 }
 
+/** Match supabase/migrations/20260806120000_client_policy_uuid_ids.sql setval logic. */
+const SYNC_POLICY_NUMBER_SEQ_SQL = `
+SELECT setval(
+  'public.policy_number_seq',
+  greatest(
+    1000,
+    coalesce(
+      (
+        select max(
+          nullif(regexp_replace(p.policy_number, '\\D', '', 'g'), '')::bigint
+        )
+        from public.policy p
+      ),
+      1000
+    )
+  )
+);
+`.trim();
+
+/**
+ * Standalone sequences are not always restored to the correct last_value after
+ * pg_dump restore; migration history sync also skips the one-time setval migration.
+ */
+export async function syncPolicyNumberSeq(destSessionUrl, workDir) {
+  await mkdir(workDir, { recursive: true });
+  const sqlPath = join(workDir, "sync_policy_number_seq.sql");
+  await writeFile(sqlPath, `${SYNC_POLICY_NUMBER_SEQ_SQL}\n`, "utf8");
+
+  console.log("→ Syncing policy_number_seq from copied policy rows…");
+  await runPsqlScriptWithRetry(toSessionDbUrl(destSessionUrl), sqlPath);
+
+  const nextSeq = await querySql(
+    toSessionDbUrl(destSessionUrl),
+    "SELECT last_value FROM public.policy_number_seq;",
+  );
+  console.log(`✓ policy_number_seq synced (last_value=${nextSeq})`);
+}
+
 /**
  * Replace target DB contents with a logical copy of UAT.
  */
@@ -294,6 +332,7 @@ export async function copyDatabaseFromUat({
   await resetTargetDatabase(destSessionUrl, workDir);
   console.log("→ Restoring UAT dump into target project…");
   await restoreWithPsql(destTransactionUrl, workDir, { skipRoles });
+  await syncPolicyNumberSeq(destSessionUrl, workDir);
   await syncMigrationHistoryFromUat({
     uatDbUrl,
     destSessionUrl,
