@@ -1,11 +1,7 @@
 import { expect, test } from "@playwright/test";
 
-import { demoUsers, loginAs } from "./helpers/auth";
-
 test.describe("clients", () => {
   test("create client draft, save, appear in list", async ({ page }) => {
-    await loginAs(page, demoUsers.broker);
-
     const stamp = Date.now();
     const registeredName = `E2E Client ${stamp}`;
     const tradingName = `E2E Trade ${stamp}`;
@@ -17,7 +13,6 @@ test.describe("clients", () => {
     await page.getByLabel(/registered name/i).fill(registeredName);
     await page.getByLabel(/trading name/i).fill(tradingName);
 
-    // Account manager + AR are required for complete save — pick first options if selects exist.
     const accountManager = page.getByLabel(/account manager/i);
     if (await accountManager.count()) {
       await accountManager.click();
@@ -35,7 +30,6 @@ test.describe("clients", () => {
     const save = page.getByRole("button", { name: /^save$/i });
     await save.click();
 
-    // Prefer detail URL; otherwise soft-assert via list search for the draft name.
     await Promise.race([
       page.waitForURL(/\/clients\/\d+$/, { timeout: 15_000 }).catch(() => null),
       page

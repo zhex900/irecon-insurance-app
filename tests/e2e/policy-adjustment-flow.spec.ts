@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { demoUsers, loginAs, mockResendEmailApi } from "./helpers/auth";
+import { mockResendEmailApi } from "./helpers/auth";
 import { seedPolicies } from "./helpers/seed";
 
 test.describe("policy adjustment flow", () => {
@@ -11,8 +11,6 @@ test.describe("policy adjustment flow", () => {
   test("complete adjustment flow with 25%/75% rule validation", async ({
     page,
   }) => {
-    await loginAs(page, demoUsers.broker);
-
     // 1. Navigate to Taken policies
     await page.goto("/policies?status=2");
 
@@ -242,8 +240,6 @@ test.describe("policy adjustment flow", () => {
   });
 
   test("handles adjustment cancellation correctly", async ({ page }) => {
-    await loginAs(page, demoUsers.broker);
-
     // Navigate to adjustment flow
     await page.goto("/policies?status=2");
     const takenRow = page.getByRole("row", { name: /^open policy/i });
@@ -294,8 +290,6 @@ test.describe("policy adjustment flow", () => {
   });
 
   test("validates adjustment dates correctly", async ({ page }) => {
-    await loginAs(page, demoUsers.broker);
-
     // Navigate to adjustment
     await page.goto("/policies?status=2");
     const takenRow = page.getByRole("row", { name: /^open policy/i });
@@ -359,8 +353,6 @@ test.describe("policy adjustment flow", () => {
   test("handles large adjustment that triggers manual review", async ({
     page,
   }) => {
-    await loginAs(page, demoUsers.broker);
-
     // Navigate to adjustment
     await page.goto("/policies?status=2");
     const takenRow = page.getByRole("row", { name: /^open policy/i });
@@ -418,8 +410,6 @@ test.describe("policy adjustment flow", () => {
   });
 
   test("maintains adjustment history audit trail", async ({ page }) => {
-    await loginAs(page, demoUsers.broker);
-
     // Find a policy that has been adjusted
     await page.goto("/policies");
 

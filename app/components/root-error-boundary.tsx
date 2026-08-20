@@ -83,6 +83,22 @@ function formatErrorDetails(error: unknown): {
   }
 
   if (error instanceof Error) {
+    const isNetworkFetchFailure =
+      error.message.toLowerCase().includes("failed to fetch") ||
+      error.message.toLowerCase().includes("networkerror") ||
+      error.message.toLowerCase().includes("load failed");
+
+    if (isNetworkFetchFailure) {
+      return {
+        heading: "Connection interrupted",
+        subheading: "Could not reach the server",
+        details:
+          "The request did not complete — often because the tab was in the background or the network blipped. Refresh or try again.",
+        status: 503,
+        stack: showDebugDetails ? error.stack : undefined,
+      };
+    }
+
     return {
       heading: "Oops!",
       subheading: "Unexpected Server Error",

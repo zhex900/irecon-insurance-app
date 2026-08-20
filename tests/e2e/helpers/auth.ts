@@ -1,4 +1,25 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { expect, type Page } from "@playwright/test";
+
+const helpersDir = path.dirname(fileURLToPath(import.meta.url));
+
+/** Persisted browser state — gitignored; see `tests/e2e/auth.setup.ts`. */
+export const authDir = path.resolve(helpersDir, "../../../playwright/.auth");
+
+/** Relative paths for `test.use({ storageState })` and `playwright.config.ts`. */
+export const authFiles = {
+  broker: "playwright/.auth/broker.json",
+  admin: "playwright/.auth/admin.json",
+  superAdmin: "playwright/.auth/super-admin.json",
+} as const;
+
+export const authPaths = {
+  broker: path.join(authDir, "broker.json"),
+  admin: path.join(authDir, "admin.json"),
+  superAdmin: path.join(authDir, "super-admin.json"),
+} as const;
 
 export const demoUsers = {
   broker: {
@@ -10,24 +31,35 @@ export const demoUsers = {
     password: "broker@demo.local",
   },
   superAdmin: {
-    email: "",
-    password: "password123",
+    email: process.env.E2E_SUPER_ADMIN_EMAIL?.trim() ?? "",
+    password: process.env.E2E_SUPER_ADMIN_PASSWORD?.trim() ?? "password123",
   },
 } as const;
 
-export async function loginAs(
-  page: Page,
-  user: { email: string; password: string },
-) {
+export type DemoUser = { email: string; password: string };
+
+/** UI login used by auth setup and auth.spec (not needed when using `storageState`). */
+export async function performLogin(page: Page, user: DemoUser) {
   await page.goto("/login");
   await page.getByLabel(/email/i).fill(user.email);
   await page.getByLabel(/^password$/i).fill(user.password);
-  await page.getByRole("button", { name: /sign in/i }).click();
+
+  const signIn = page.getByRole("button", { name: /sign in/i });
+  await expect(signIn).toBeEnabled({ timeout: 15_000 });
+  await signIn.click();
+  await page.waitForURL(/\/dashboard/, { timeout: 30_000 });
+}
+
+export async function loginAs(page: Page, user: DemoUser) {
+  await performLogin(page, user);
   await expect(page).toHaveURL(/\/dashboard/);
 }
 
+export async function saveAuthState(page: Page, filePath: string) {
+  await page.context().storageState({ path: filePath });
+}
+
 export async function logout(page: Page) {
-  // Prefer an accessible logout control; fall back to direct navigation.
   const logoutLink = page.getByRole("link", { name: /log ?out|sign out/i });
   if (await logoutLink.count()) {
     await logoutLink.first().click();

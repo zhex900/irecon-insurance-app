@@ -19,6 +19,8 @@ import {
   ensureHyperdrive,
   ensureR2Buckets,
   syncPreviewSecrets,
+  warmupDatabaseOrigin,
+  warmupDeployedWorker,
   writePreviewWranglerConfigs,
   writeUatWranglerConfigs,
 } from "./lib/preview-cloudflare.mjs";
@@ -137,6 +139,7 @@ async function deployUat() {
 
   if (!skipMigrate) {
     await runUatMigrations(supabase.sessionUrl);
+    await warmupDatabaseOrigin(supabase.sessionUrl);
   } else {
     console.log("→ Skipping database migrations (--skip-migrate)");
   }
@@ -169,6 +172,8 @@ async function deployUat() {
 
   await deployPreviewWorkers({ names, configs });
   await syncPreviewSecrets({ names, supabase, appUrl: names.appUrl });
+
+  await warmupDeployedWorker(names.appUrl);
 
   if (process.env.SUPABASE_ACCESS_TOKEN?.trim()) {
     try {
@@ -220,6 +225,7 @@ async function deployPreview(envName) {
   const skipR2 = hasFlag("--skip-r2");
   const skipBuild = hasFlag("--skip-build");
   const skipMigrate = hasFlag("--skip-migrate");
+  const skipHyperdrive = hasFlag("--skip-hyperdrive");
   const secretOnly = hasFlag("--secret-only");
 
   console.log(`Preview environment: ${names.label}`);
@@ -260,6 +266,7 @@ async function deployPreview(envName) {
 
   if (!skipMigrate) {
     await runPreviewMigrations(supabase.sessionUrl);
+    await warmupDatabaseOrigin(supabase.sessionUrl);
   } else {
     console.log("→ Skipping database migrations (--skip-migrate)");
   }
@@ -282,7 +289,7 @@ async function deployPreview(envName) {
   const hyperdriveId = await ensureHyperdrive({
     names,
     connectionString: supabase.sessionUrl,
-    forceUpdate: !skipDb,
+    forceUpdate: !skipHyperdrive,
     originConnectionLimit: HYPERDRIVE_ORIGIN_CONNECTION_LIMIT.pr,
   });
 
@@ -314,6 +321,8 @@ async function deployPreview(envName) {
     appUrl: names.appUrl,
     turnstile: false,
   });
+
+  await warmupDeployedWorker(names.appUrl);
 
   await saveState(names.label, {
     env: names.label,

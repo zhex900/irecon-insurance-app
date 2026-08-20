@@ -37,6 +37,7 @@ coverage/
 test-results/
 playwright-report/
 blob-report/
+playwright/.auth/
 playwright/.cache/
 workers/excel/test-output/
 

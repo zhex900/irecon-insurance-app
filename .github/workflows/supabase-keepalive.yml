@@ -1,0 +1,41 @@
+name: Supabase keepalive
+
+# Free-tier Supabase projects pause after ~7 days without database activity.
+# Daily REST SELECTs reset the inactivity window for UAT and PR projects.
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+jobs:
+  uat:
+    name: UAT Supabase
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: uat
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Ping UAT database
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: node deployment/supabase-keepalive.mjs --label UAT
+
+  pr:
+    name: PR Supabase
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: pr
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Ping PR database
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: node deployment/supabase-keepalive.mjs --label PR

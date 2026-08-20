@@ -2,6 +2,9 @@ import { expect, test } from "@playwright/test";
 
 import { demoUsers, loginAs, logout } from "./helpers/auth";
 
+// Exercises login/logout — must not reuse saved storage state.
+test.use({ storageState: { cookies: [], origins: [] } });
+
 test.describe("auth", () => {
   test("login then logout", async ({ page }) => {
     await loginAs(page, demoUsers.broker);

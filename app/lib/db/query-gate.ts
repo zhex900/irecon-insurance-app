@@ -2,32 +2,73 @@ import type postgres from "postgres";
 
 import { logger } from "~/lib/observability/logger.server";
 
-/** Worker postgres pool size (request-scoped, one pool per Worker request). */
-export const WORKER_POOL_MAX = 5;
-/** In-flight query cap — one below pool max to avoid postgres.js pool queueing. */
-export const WORKER_QUERY_GATE_MAX = 4;
+/** Worker postgres pool size (request-scoped; Hyperdrive pools origins). */
+export const WORKER_POOL_MAX = 1;
+/** Dev-only cap on parallel in-flight queries (local postgres pool allows more). */
 export const DEV_QUERY_GATE_MAX = 3;
 
-/** Initial attempt + one retry after pool reset. */
-const TRANSIENT_RETRY_ATTEMPTS = 2;
-const TRANSIENT_RETRY_BASE_MS = 50;
+/** Three attempts with backoff before surfacing a transient Hyperdrive/Postgres error. */
+const TRANSIENT_RETRY_ATTEMPTS = 3;
+const TRANSIENT_RETRY_DELAYS_MS = [50, 150] as const;
 const SLOW_QUEUE_WAIT_MS = 500;
 
 let poolResetHandler: (() => void | Promise<void>) | undefined;
 
-/** Called by `app/lib/db/client.ts` to drop stale shared pools before retry. */
+/** Called by `app/lib/db/client.ts` to drop stale pools before retry. */
 export function registerPoolResetHandler(handler: () => void | Promise<void>) {
   poolResetHandler = handler;
 }
 
-export class QueryGate {
+/** Runs postgres queries with optional dev concurrency limiting + transient retry. */
+export type DbExecutor = {
+  run<T>(fn: () => Promise<T>): Promise<T>;
+  drain(): Promise<void>;
+};
+
+/** Tracks in-flight wrapped queries so pool reset can wait for them (Workers + dev). */
+class InFlightTracker {
+  private inFlight = 0;
+  private readonly drainWaiters: Array<() => void> = [];
+
+  async track<T>(fn: () => Promise<T>): Promise<T> {
+    this.inFlight += 1;
+    try {
+      return await fn();
+    } finally {
+      this.inFlight = Math.max(0, this.inFlight - 1);
+      this.notifyDrained();
+    }
+  }
+
+  drain(): Promise<void> {
+    if (this.inFlight === 0) return Promise.resolve();
+    return new Promise((resolve) => {
+      this.drainWaiters.push(resolve);
+    });
+  }
+
+  private notifyDrained() {
+    if (this.inFlight > 0) return;
+    const waiters = this.drainWaiters.splice(0);
+    for (const resolve of waiters) resolve();
+  }
+}
+
+function createRetryExecutor(tracker: InFlightTracker): DbExecutor {
+  return {
+    run: (fn) => tracker.track(() => runWithTransientRetry(fn)),
+    drain: () => tracker.drain(),
+  };
+}
+
+/** Dev-only: limit parallel queries; Workers rely on postgres `max: 1` instead. */
+export class QueryConcurrencyGate {
   private inFlight = 0;
   private readonly queue: Array<() => void> = [];
   private readonly drainWaiters: Array<() => void> = [];
 
   constructor(private readonly maxConcurrent: number) {}
 
-  /** Wait until no queries are in-flight or queued (safe before pool reset). */
   drain(): Promise<void> {
     if (this.inFlight === 0 && this.queue.length === 0) {
       return Promise.resolve();
@@ -47,30 +88,11 @@ export class QueryGate {
         });
       }
       try {
-        return await this.runWithTransientRetry(fn);
+        return await fn();
       } finally {
         this.release();
       }
     });
-  }
-
-  private runWithTransientRetry<T>(fn: () => Promise<T>): Promise<T> {
-    const attempt = async (tryIndex: number): Promise<T> => {
-      try {
-        return await fn();
-      } catch (error) {
-        if (
-          tryIndex >= TRANSIENT_RETRY_ATTEMPTS - 1 ||
-          !isTransientDbError(error)
-        ) {
-          throw error;
-        }
-        await poolResetHandler?.();
-        await sleep(TRANSIENT_RETRY_BASE_MS * (tryIndex + 1));
-        return attempt(tryIndex + 1);
-      }
-    };
-    return attempt(0);
   }
 
   private acquire(): Promise<number> {
@@ -101,6 +123,52 @@ export class QueryGate {
   }
 }
 
+export function createDbExecutor(limitConcurrency: boolean): DbExecutor {
+  const tracker = new InFlightTracker();
+  if (!limitConcurrency) {
+    return createRetryExecutor(tracker);
+  }
+
+  const gate = new QueryConcurrencyGate(DEV_QUERY_GATE_MAX);
+  return {
+    run: (fn) => gate.run(() => tracker.track(() => runWithTransientRetry(fn))),
+    drain: async () => {
+      await gate.drain();
+      await tracker.drain();
+    },
+  };
+}
+
+export async function runWithTransientRetry<T>(
+  fn: () => Promise<T>,
+): Promise<T> {
+  const attempt = async (tryIndex: number): Promise<T> => {
+    try {
+      return await fn();
+    } catch (error) {
+      if (
+        tryIndex >= TRANSIENT_RETRY_ATTEMPTS - 1 ||
+        !isTransientDbError(error)
+      ) {
+        throw error;
+      }
+      logger.warn("db.transient_retry", {
+        attempt: tryIndex + 1,
+        maxAttempts: TRANSIENT_RETRY_ATTEMPTS,
+        error: error instanceof Error ? error.message.slice(0, 200) : "unknown",
+      });
+      await poolResetHandler?.();
+      const delayMs =
+        TRANSIENT_RETRY_DELAYS_MS[tryIndex] ??
+        TRANSIENT_RETRY_DELAYS_MS.at(-1) ??
+        150;
+      await sleep(delayMs);
+      return attempt(tryIndex + 1);
+    }
+  };
+  return attempt(0);
+}
+
 export function isTransientDbError(error: unknown): boolean {
   if (error == null) return false;
 
@@ -110,7 +178,8 @@ export function isTransientDbError(error: unknown): boolean {
 
   if (!(error instanceof Error)) return false;
 
-  const message = error.message.toLowerCase().replaceAll("_", " ");
+  const rawMessage = error.message.toLowerCase();
+  const message = rawMessage.replaceAll("_", " ");
   const code = (error as { code?: string }).code?.toUpperCase();
   if (
     code === "ECONNRESET" ||
@@ -126,6 +195,8 @@ export function isTransientDbError(error: unknown): boolean {
     message.includes("connection terminated") ||
     message.includes("connection reset") ||
     message.includes("connection closed") ||
+    rawMessage.includes("connection_closed") ||
+    message.includes("idle connection closed by hyperdrive") ||
     message.includes("connection lost") ||
     message.includes("connection refused") ||
     message.includes("after calling end on the pool") ||
@@ -133,7 +204,8 @@ export function isTransientDbError(error: unknown): boolean {
     message.includes("broken pipe") ||
     message.includes("timeout") ||
     message.includes("too many clients") ||
-    message.includes("econnrefused")
+    message.includes("econnrefused") ||
+    message.includes("network connection lost")
   );
 }
 
@@ -160,69 +232,69 @@ type Sql = ReturnType<typeof postgres>;
 
 /**
  * postgres.js returns Query objects (thenables with `.values()`, etc.).
- * Drizzle calls `client.unsafe(sql, params).values()` — the gate must wrap
- * the Query, not replace it with a bare Promise.
+ * Drizzle calls `client.unsafe(sql, params).values()` — wrap the Query,
+ * not a bare Promise. `createQuery` runs again on each retry attempt.
  */
-function wrapPostgresQuery<T extends object>(gate: QueryGate, query: T): T {
-  return new Proxy(query, {
-    get(target, prop, receiver) {
+function wrapPostgresQuery<T extends object>(
+  executor: DbExecutor,
+  createQuery: () => T,
+): T {
+  const runQuery = () =>
+    executor.run(async () => {
+      const query = createQuery();
+      return await (query as PromiseLike<unknown>);
+    });
+
+  return new Proxy({} as T, {
+    get(_target, prop) {
       if (prop === "then") {
         return (
           onFulfilled?: ((value: unknown) => unknown) | null,
           onRejected?: ((reason: unknown) => unknown) | null,
-        ) =>
-          gate.run(() =>
-            Promise.resolve(target as PromiseLike<unknown>).then(
-              onFulfilled,
-              onRejected,
-            ),
-          );
+        ) => runQuery().then(onFulfilled, onRejected);
       }
 
       if (prop === "catch") {
         return (onRejected?: ((reason: unknown) => unknown) | null) =>
-          gate.run(() =>
-            Promise.resolve(target as PromiseLike<unknown>).catch(onRejected),
-          );
+          runQuery().catch(onRejected);
       }
 
       if (prop === "finally") {
         return (onFinally?: (() => void) | null) =>
-          gate.run(() =>
-            Promise.resolve(target as PromiseLike<unknown>).finally(onFinally),
-          );
+          runQuery().finally(onFinally);
       }
 
-      const value = Reflect.get(target, prop, receiver);
+      const sample = createQuery();
+      const value = Reflect.get(sample, prop, sample);
       if (typeof value !== "function") return value;
 
-      return (...args: unknown[]) => {
-        const result: unknown = value.apply(target, args);
-        if (result === target) return receiver;
-        if (result != null && typeof result === "object") {
-          return wrapPostgresQuery(gate, result as object);
-        }
-        return result;
-      };
+      return (...args: unknown[]) =>
+        wrapPostgresQuery(executor, () => {
+          const query = createQuery();
+          const method = Reflect.get(query, prop, query);
+          if (typeof method !== "function") {
+            throw new Error(`postgres query.${String(prop)} is not a function`);
+          }
+          return Reflect.apply(method, query, args) as T;
+        });
     },
   }) as T;
 }
 
-/** Limit concurrent postgres queries for one request-scoped pool. */
-export function wrapPostgresWithGate(sql: Sql, gate: QueryGate): Sql {
+/** Retry all postgres queries; optionally limit concurrency (dev only). */
+export function wrapPostgresSql(sql: Sql, executor: DbExecutor): Sql {
   return new Proxy(sql, {
     apply(_target, _thisArg, argArray) {
-      const query = Reflect.apply(sql, undefined, argArray);
-      return wrapPostgresQuery(gate, query as object);
+      return wrapPostgresQuery(executor, () =>
+        Reflect.apply(sql, undefined, argArray),
+      );
     },
     get(target, prop, receiver) {
       if (prop === "unsafe") {
-        return (...args: unknown[]) => {
-          const query = (target as Sql).unsafe(
-            ...(args as Parameters<Sql["unsafe"]>),
+        return (...args: unknown[]) =>
+          wrapPostgresQuery(executor, () =>
+            (target as Sql).unsafe(...(args as Parameters<Sql["unsafe"]>)),
           );
-          return wrapPostgresQuery(gate, query as object);
-        };
       }
 
       if (prop === "begin") {
@@ -230,9 +302,9 @@ export function wrapPostgresWithGate(sql: Sql, gate: QueryGate): Sql {
           const wrapTx = (
             tx: postgres.TransactionSql,
           ): postgres.TransactionSql =>
-            wrapPostgresWithGate(
+            wrapPostgresSql(
               tx as unknown as Sql,
-              gate,
+              executor,
             ) as unknown as postgres.TransactionSql;
           if (typeof args[0] === "function") {
             const cb = args[0] as (tx: postgres.TransactionSql) => unknown;

@@ -3,11 +3,14 @@
 
 import { defineConfig, devices } from "@playwright/test";
 
+import { authFiles } from "./tests/e2e/helpers/auth";
+
 const baseURL = process.env.E2E_BASE_URL ?? "http://127.0.0.1:5173";
 
 /**
  * Playwright config (Phase 7).
  * baseURL from E2E_BASE_URL; local webServer starts `npm run dev` unless E2E_SKIP_WEBSERVER=1.
+ * Auth: `tests/e2e/auth.setup.ts` saves sessions under `playwright/.auth/` (see Playwright auth docs).
  */
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -33,16 +36,30 @@ export default defineConfig({
         timeout: 120_000,
       },
   projects: [
+    // List e2e/smoke before setup — Playwright UI selects the first project by default;
+    // if setup were first, the sidebar would only show auth.setup.ts (see playwright.dev/docs/test-ui-mode).
     {
       name: "e2e",
       testMatch: /.*\.spec\.ts/,
       testIgnore: /smoke\.spec\.ts/,
-      use: { ...devices["Desktop Chrome"] },
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: authFiles.broker,
+      },
+      dependencies: ["setup"],
     },
     {
       name: "smoke",
       testMatch: /smoke\.spec\.ts/,
-      use: { ...devices["Desktop Chrome"] },
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: authFiles.broker,
+      },
+      dependencies: ["setup"],
+    },
+    {
+      name: "setup",
+      testMatch: /auth\.setup\.ts/,
     },
   ],
 });
