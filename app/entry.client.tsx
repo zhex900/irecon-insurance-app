@@ -8,6 +8,9 @@ import {
   getAppRelease,
   getAppVersion,
 } from "~/lib/app-version";
+import { installReactRouterFetchRetry } from "~/lib/http/react-router-fetch-retry.client";
+
+installReactRouterFetchRetry();
 
 const dsn = import.meta.env.VITE_SENTRY_DSN?.trim();
 const release = getAppRelease();
