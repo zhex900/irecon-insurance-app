@@ -24,7 +24,7 @@
  *   --no-missing-csv          Do not write missing-documents CSV
  *   --clear-documents         Remove migrated documents (Postgres + R2 + checkpoint) before upload
  *   --no-resume               Ignore checkpoint and re-process every document row
- *   --sync-state [path]       Checkpoint file (default: _archive/data/legacy-documents-sync-state.json)
+ *   --sync-state [path]       Checkpoint file (default: _archive/data/legacy-documents-sync-state.<env>.json)
  *   --default-ar <id>         Fallback AR when client row has no mapping
  *   --confirm                 Required for uat, pr, and prod
  *   --sql <slice> <path>      Override SQL for a slice (see scripts/db/legacy/sql/)
@@ -47,11 +47,13 @@ import {
 import { loadLegacyEnvFile } from "./lib/legacy-mssql.mts";
 import {
   assertMigrateConfirmed,
+  applyPolicyDocumentsBucket,
   loadMigrateTargetEnv,
   logMigrateTarget,
   missingMigrateEnvHelp,
   parseMigrateTargetEnv,
 } from "../lib/migrate-target-env.mts";
+import { documentSyncStatePathForEnv } from "./lib/legacy-document-sync-state.mts";
 import { applyEnvFile, readEnvFile } from "../../../deployment/lib/pr-env.mjs";
 import type { LegacyDomainPayload } from "./lib/legacy-payload.ts";
 import { logMigrationScopeCounts } from "./lib/legacy-migration-scope.mts";
@@ -197,10 +199,20 @@ async function main() {
   logMigrateTarget(targetEnv, databaseUrl);
   await resetSharedDbPool();
 
+  const documentSyncStatePath =
+    args.syncStatePath ?? documentSyncStatePathForEnv(targetEnv);
+  if (includesDocumentsSlice(args.only)) {
+    applyPolicyDocumentsBucket(targetEnv);
+  }
+
   let payload: LegacyDomainPayload;
   if (args.readJson) {
     if (!existsSync(args.readJson)) {
-      throw new Error(`Export file not found: ${args.readJson}`);
+      throw new Error(
+        `Export file not found: ${args.readJson}\n` +
+          "Create it first: npm run db:export:legacy\n" +
+          "  (requires local MSSQL + MSSQL_* in .env; writes scoped CAR policies InceptionDate >= 2025-06-01)",
+      );
     }
     payload = JSON.parse(
       readFileSync(args.readJson, "utf8"),
@@ -238,7 +250,7 @@ async function main() {
         : undefined,
       clearDocuments: args.clearDocuments,
       resumeDocuments: args.resumeDocuments,
-      syncStatePath: args.syncStatePath,
+      syncStatePath: documentSyncStatePath,
       targetEnv,
       exportPath,
     });
@@ -266,7 +278,7 @@ async function main() {
       : undefined,
     clearDocuments: args.clearDocuments,
     resumeDocuments: args.resumeDocuments,
-    syncStatePath: args.syncStatePath,
+    syncStatePath: documentSyncStatePath,
     targetEnv,
     exportPath,
   });

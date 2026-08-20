@@ -15,24 +15,17 @@ import { resetSharedDbPool } from "../../../app/lib/db/client";
 import { clearLegacyDocuments } from "../legacy/lib/clear-legacy-documents.mts";
 import { maskDatabaseUrl } from "../lib/clear-domain-data.mts";
 import { loadLegacyEnvFile } from "../legacy/lib/legacy-mssql.mts";
-import type { MigrateTargetEnv } from "../lib/migrate-target-env.mts";
 import {
   assertMigrateConfirmed,
+  applyPolicyDocumentsBucket,
   loadMigrateTargetEnv,
   logMigrateTarget,
   missingMigrateEnvHelp,
   parseMigrateTargetEnv,
   readOption,
 } from "../lib/migrate-target-env.mts";
+import { documentSyncStatePathForEnv } from "../legacy/lib/legacy-document-sync-state.mts";
 import { applyEnvFile, readEnvFile } from "../../../deployment/lib/pr-env.mjs";
-import { PRODUCTION_LIBRARY_BUCKET } from "../../../deployment/lib/production-env.mjs";
-import {
-  assertPreviewEnvName,
-  LOCAL_LIBRARY_BUCKET,
-  parseEnvName,
-  resourceNames,
-  UAT_LIBRARY_BUCKET,
-} from "../../../deployment/lib/preview-env.mjs";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 const DEFAULT_EXPORT = join(repoRoot, "_archive/data/legacy-export.json");
@@ -45,32 +38,6 @@ function parseExportPath(): string {
   const file = readOption("--file");
   if (!file) return DEFAULT_EXPORT;
   return isAbsolute(file) ? file : resolve(process.cwd(), file);
-}
-
-function applyPolicyDocumentsBucket(targetEnv: MigrateTargetEnv) {
-  if (process.env.R2_POLICY_DOCUMENTS_BUCKET?.trim()) return;
-
-  if (targetEnv === "local") {
-    process.env.R2_POLICY_DOCUMENTS_BUCKET = LOCAL_LIBRARY_BUCKET;
-    return;
-  }
-  if (targetEnv === "uat") {
-    process.env.R2_POLICY_DOCUMENTS_BUCKET = UAT_LIBRARY_BUCKET;
-    return;
-  }
-  if (targetEnv === "prod") {
-    process.env.R2_POLICY_DOCUMENTS_BUCKET = PRODUCTION_LIBRARY_BUCKET;
-    return;
-  }
-  const label = parseEnvName(process.argv.slice(2));
-  if (!label) {
-    throw new Error(
-      "PR requires a preview slug. Example: npm run db:clear:legacy:documents:pr -- pr-11 --confirm",
-    );
-  }
-  process.env.R2_POLICY_DOCUMENTS_BUCKET = resourceNames(
-    assertPreviewEnvName(label),
-  ).libraryBucket;
 }
 
 async function askConfirm(prompt: string): Promise<boolean> {
@@ -111,6 +78,7 @@ async function main() {
     exportPath,
     dryRun: true,
     skipR2,
+    syncStatePath: documentSyncStatePathForEnv(targetEnv),
   });
 
   console.log(`Export snapshot: ${exportPath}`);
@@ -142,6 +110,7 @@ async function main() {
   const summary = await clearLegacyDocuments({
     exportPath,
     skipR2,
+    syncStatePath: documentSyncStatePathForEnv(targetEnv),
   });
 
   console.log(

@@ -2,7 +2,15 @@
  * Target Postgres env for migration scripts (--env=local|uat|pr|prod).
  */
 import { assertProductionDatabaseUrl } from "../../../deployment/lib/production-env.mjs";
-import { repairSupabaseDatabaseUrl } from "../../../deployment/lib/preview-env.mjs";
+import { PRODUCTION_LIBRARY_BUCKET } from "../../../deployment/lib/production-env.mjs";
+import {
+  assertPreviewEnvName,
+  LOCAL_LIBRARY_BUCKET,
+  parseEnvName,
+  repairSupabaseDatabaseUrl,
+  resourceNames,
+  UAT_LIBRARY_BUCKET,
+} from "../../../deployment/lib/preview-env.mjs";
 import { applyEnvFile, readEnvFile } from "../../../deployment/lib/pr-env.mjs";
 import { loadPrDeployEnv } from "../../../deployment/lib/pr-env.mjs";
 import { loadUatDeployEnv } from "../../../deployment/lib/uat-env.mjs";
@@ -93,6 +101,33 @@ export async function loadMigrateTargetEnv(
   }
 
   return databaseUrl;
+}
+
+/** Set R2_POLICY_DOCUMENTS_BUCKET from deploy target when not already in env. */
+export function applyPolicyDocumentsBucket(target: MigrateTargetEnv) {
+  if (process.env.R2_POLICY_DOCUMENTS_BUCKET?.trim()) return;
+
+  if (target === "local") {
+    process.env.R2_POLICY_DOCUMENTS_BUCKET = LOCAL_LIBRARY_BUCKET;
+    return;
+  }
+  if (target === "uat") {
+    process.env.R2_POLICY_DOCUMENTS_BUCKET = UAT_LIBRARY_BUCKET;
+    return;
+  }
+  if (target === "prod") {
+    process.env.R2_POLICY_DOCUMENTS_BUCKET = PRODUCTION_LIBRARY_BUCKET;
+    return;
+  }
+  const label = parseEnvName(process.argv.slice(2));
+  if (!label) {
+    throw new Error(
+      "--env=pr requires a preview slug on the command line (e.g. npm run db:migrate:legacy -- pr-11 --env=pr --confirm)",
+    );
+  }
+  process.env.R2_POLICY_DOCUMENTS_BUCKET = resourceNames(
+    assertPreviewEnvName(label),
+  ).libraryBucket;
 }
 
 export function assertMigrateConfirmed(
