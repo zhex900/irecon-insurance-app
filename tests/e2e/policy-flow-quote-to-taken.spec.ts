@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { demoUsers, loginAs, mockResendEmailApi } from "./helpers/auth";
+import { mockResendEmailApi } from "./helpers/auth";
 import { seedClients } from "./helpers/seed";
 
 test.describe("quote-to-taken workflow", () => {
@@ -12,10 +12,7 @@ test.describe("quote-to-taken workflow", () => {
   test.skip("complete quote-to-taken journey with document generation", async ({
     page,
   }) => {
-    // 1. Login as broker
-    await loginAs(page, demoUsers.broker);
-
-    // 2. Navigate to clients
+    // 1. Navigate to clients
     await page.goto("/clients");
 
     // Find or create a test client
@@ -259,8 +256,6 @@ test.describe("quote-to-taken workflow", () => {
   test("handles wizard navigation and saves drafts correctly", async ({
     page,
   }) => {
-    await loginAs(page, demoUsers.broker);
-
     // Create a new policy draft
     await page.goto("/clients");
     const clientRow = page.getByRole("row", { name: /open client/i });
@@ -319,8 +314,6 @@ test.describe("quote-to-taken workflow", () => {
   });
 
   test("validates required fields before submission", async ({ page }) => {
-    await loginAs(page, demoUsers.broker);
-
     // Try to submit incomplete form
     await page.goto("/clients");
     const clientRow = page.getByRole("row", { name: /open client/i });
@@ -357,8 +350,6 @@ test.describe("quote-to-taken workflow", () => {
   });
 
   test("calculates premium with different input values", async ({ page }) => {
-    await loginAs(page, demoUsers.broker);
-
     // Create a test scenario with different values
     await page.goto("/clients");
     const clientRow = page.getByRole("row", { name: /open client/i });

@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { demoUsers, loginAs, mockResendEmailApi } from "./helpers/auth";
+import { mockResendEmailApi } from "./helpers/auth";
 
 /**
  * Full Taken + docs + email is environment-heavy.
@@ -11,7 +11,6 @@ test.describe("policy journeys", () => {
   test("open policies list and start from an existing client when present", async ({
     page,
   }) => {
-    await loginAs(page, demoUsers.broker);
     await page.goto("/policies");
     await expect(
       page.getByRole("heading", { name: /policies/i }).first(),
@@ -36,7 +35,6 @@ test.describe("policy journeys", () => {
     page,
   }) => {
     await mockResendEmailApi(page);
-    await loginAs(page, demoUsers.broker);
     await page.goto("/policies?status=2");
     await page.waitForLoadState("networkidle");
 
@@ -65,8 +63,6 @@ test.describe("policy journeys", () => {
   test("adjustment entry exists on Taken policies when present", async ({
     page,
   }) => {
-    await loginAs(page, demoUsers.broker);
-
     // Adjust only appears on Taken policies that have a saved premium
     // (see canAdjust in $policyId.tsx) — filter to Taken status and scan a
     // bounded number of rows rather than assuming the first one qualifies.
@@ -106,8 +102,6 @@ test.describe("policy status transitions", () => {
   test.skip("pending policy can be submitted and transitions to Taken status", async ({
     page,
   }) => {
-    await loginAs(page, demoUsers.broker);
-
     // Navigate to a pending policy
     await page.goto("/policies?status=1");
     const pendingRow = page.getByRole("row", { name: /^open policy/i });
@@ -145,8 +139,6 @@ test.describe("policy status transitions", () => {
   test.skip("pending policy can be rejected and transitions to Not taken status", async ({
     page,
   }) => {
-    await loginAs(page, demoUsers.broker);
-
     // Navigate to a pending policy
     await page.goto("/policies?status=1");
     const pendingRow = page.getByRole("row", { name: /^open policy/i });
@@ -203,8 +195,6 @@ test.describe("policy status transitions", () => {
   test("Taken policy can be cloned to create new Pending draft", async ({
     page,
   }) => {
-    await loginAs(page, demoUsers.broker);
-
     // Navigate to Taken policies
     await page.goto("/policies?status=2");
     const takenRow = page.getByRole("row", { name: /^open policy/i });
@@ -235,8 +225,6 @@ test.describe("policy status transitions", () => {
   test("policy status filters work correctly in policies list", async ({
     page,
   }) => {
-    await loginAs(page, demoUsers.broker);
-
     // Test each status filter
     const statusTests = [
       { status: "pending", query: "?status=1", expectedText: /pending/i },
@@ -274,8 +262,6 @@ test.describe("policy status transitions", () => {
   });
 
   test("policy status badges display correctly", async ({ page }) => {
-    await loginAs(page, demoUsers.broker);
-
     // Go to policies list
     await page.goto("/policies");
 
@@ -303,7 +289,6 @@ test.describe("policy wizard modes", () => {
   test('new draft policy renders in "new" mode, then "edit" mode once the ?new=1 marker is gone', async ({
     page,
   }) => {
-    await loginAs(page, demoUsers.broker);
     await page.goto("/clients");
     const firstClientRow = page.getByRole("row", { name: /^open client/i });
 
@@ -335,7 +320,6 @@ test.describe("policy wizard modes", () => {
   test('terminal (Taken / Not taken) policies render in read-only "view" mode', async ({
     page,
   }) => {
-    await loginAs(page, demoUsers.broker);
     await page.goto("/policies?status=2,3");
     const terminalRow = page.getByRole("row", { name: /^open policy/i });
 
@@ -355,7 +339,6 @@ test.describe("policy wizard modes", () => {
   test("cloning a terminal policy opens an editable draft with the cloned marker", async ({
     page,
   }) => {
-    await loginAs(page, demoUsers.broker);
     await page.goto("/policies?status=2,3");
     const terminalRow = page.getByRole("row", { name: /^open policy/i });
 

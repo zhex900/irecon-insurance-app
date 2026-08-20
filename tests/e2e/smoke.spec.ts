@@ -1,14 +1,11 @@
 import { expect, test } from "@playwright/test";
 
-import { demoUsers, loginAs } from "./helpers/auth";
-
 /**
- * Post-deploy smoke subset: login, open client list, open policy list.
+ * Post-deploy smoke subset: open client and policy lists (broker session from setup).
  * Run with: npm run test:smoke
  */
 test.describe("smoke", () => {
-  test("login and open core lists", async ({ page }) => {
-    await loginAs(page, demoUsers.broker);
+  test("authenticated broker can open core lists", async ({ page }) => {
     await page.goto("/clients");
     await expect(
       page.getByRole("heading", { name: /clients/i }).first(),

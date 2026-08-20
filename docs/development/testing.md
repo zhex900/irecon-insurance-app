@@ -48,6 +48,10 @@ Config: `playwright.config.ts` — `baseURL` from `E2E_BASE_URL` (default `http:
 
 By default starts `npm run dev` unless the server is already up, or set `E2E_SKIP_WEBSERVER=1`.
 
+**Authentication:** `tests/e2e/auth.setup.ts` logs in once per role and saves cookies to `playwright/.auth/` (gitignored). The `e2e` and `smoke` projects reuse `broker.json` via `storageState` — individual tests should not call `loginAs` unless they exercise login itself (`auth.spec.ts`). Re-run setup when sessions expire: `npx playwright test --project=setup`.
+
+**UI mode:** `npm run test:e2e:ui` opens all projects. Ensure **e2e** (and **setup** if auth files are missing) are checked in the project filter in the toolbar. Run setup once if `playwright/.auth/broker.json` is absent. Override target: `E2E_BASE_URL=https://pr-7.irecon.net npm run test:e2e:ui`.
+
 Seeded demo users (`npm run db:seed`):
 
 | Email               | Password      | Role   |

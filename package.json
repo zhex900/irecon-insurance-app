@@ -78,7 +78,7 @@
     "test:integration": "vitest run tests/integration",
     "test:e2e": "playwright test --project=e2e",
     "test:e2e:local": "E2E_SKIP_WEBSERVER=1 E2E_BASE_URL=http://localhost:5173 playwright test --project=e2e",
-    "test:e2e:ui": "E2E_SKIP_WEBSERVER=1 E2E_BASE_URL=https://pr-4.irecon.net playwright test --project=e2e --ui",
+    "test:e2e:ui": "E2E_SKIP_WEBSERVER=1 playwright test --ui",
     "test:smoke": "playwright test --project=smoke",
     "verify": "npm run lint && npm run format:check && npm run typecheck && npm run test:unit && npm run check:bundle:quick",
     "check:organization": "./scripts/quality/check-organization.sh",
