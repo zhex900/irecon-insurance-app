@@ -64,5 +64,15 @@
       "bucket_name": "insurance-app-library-documents-local",
       "remote": true,
     },
+    {
+      "bucket_name": "insurance-app-avatars-local",
+      "binding": "insurance_app_avatars_local",
+      "remote": true,
+    },
+    {
+      "bucket_name": "insurance-app-library-documents-local",
+      "binding": "insurance_app_library_documents_local",
+      "remote": true,
+    },
   ],
 }

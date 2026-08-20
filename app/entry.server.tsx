@@ -10,6 +10,7 @@ import { ServerRouter } from "react-router";
 
 import { formatDbErrorChain } from "~/lib/db/query-gate";
 import { logger } from "~/lib/observability/logger.server";
+import { shouldReportRouteError } from "~/lib/observability/report-error";
 import { captureServerException } from "~/lib/observability/sentry.server";
 
 export const streamTimeout = 5_000;
@@ -61,6 +62,13 @@ async function handleRequest(
 
 export const handleError: HandleErrorFunction = (error, { request }) => {
   if (request.signal.aborted) return;
+  if (!shouldReportRouteError(error)) {
+    logger.info("route.handle_error.expected", {
+      error: formatDbErrorChain(error),
+      path: new URL(request.url).pathname,
+    });
+    return;
+  }
   logger.error("route.handle_error", {
     error: formatDbErrorChain(error),
   });

@@ -12,6 +12,21 @@ import {
 import type { CloudflareEnv } from "~/lib/cloudflare.server";
 import { getRequestContext } from "~/lib/observability/request-context.server";
 
+function isInternalRouteError(value: unknown): value is {
+  internal: true;
+  status: number;
+} {
+  return (
+    value != null &&
+    typeof value === "object" &&
+    "internal" in value &&
+    value.internal === true &&
+    "status" in value &&
+    typeof value.status === "number" &&
+    value.status < 500
+  );
+}
+
 export function sentryOptionsFromEnv(
   env: CloudflareEnv,
 ): CloudflareOptions | undefined {
@@ -41,6 +56,13 @@ export function sentryOptionsFromEnv(
           delete event.request.headers.Authorization;
         }
       }
+
+      // Safety net: internal React Router 404/405 (e.g. bot probes to /api/gql).
+      const serialized = event.extra?.__serialized__;
+      if (isInternalRouteError(serialized)) {
+        return null;
+      }
+
       return event;
     },
   };
