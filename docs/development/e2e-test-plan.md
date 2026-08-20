@@ -1,10 +1,10 @@
 # E2E Test Plan — Full Coverage (Playwright)
 
-Companion to [docs/testing.md](testing.md). That doc explains _how to run_ tests; this one defines _what "full coverage" means_ for Playwright E2E and tracks the work to get there.
+Companion to [docs/development/testing.md](testing.md). That doc explains _how to run_ tests; this one defines _what "full coverage" means_ for Playwright E2E and tracks the work to get there.
 
 ## 1. What "100% coverage" means here
 
-Statement/branch coverage is a **unit/integration** concern, not an E2E one. Driving a full browser through every `if` branch is slow, flaky, and duplicates cheaper Vitest tests. So this plan splits the goal in two, per the repo's existing split ([docs/testing.md](testing.md)):
+Statement/branch coverage is a **unit/integration** concern, not an E2E one. Driving a full browser through every `if` branch is slow, flaky, and duplicates cheaper Vitest tests. So this plan splits the goal in two, per the repo's existing split ([docs/development/testing.md](testing.md)):
 
 | Layer              | Owns                                                                                                                                                                      | Tool                                                    | Target                                                                                                                                         |
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -37,7 +37,7 @@ Existing specs:
 - Use `test.skip(condition, reason)` for environment-dependent paths (no seeded data, missing super-admin env vars) — see `policy.spec.ts` for the pattern. Prefer this over failing hard on empty seed data.
 - Mock outbound side effects the same way `mockResendEmailApi` does (`page.route`) — never send real email, never call real Resend/Turnstile/Sentry in CI.
 - Unique, timestamped test data (`E2E Client ${Date.now()}`) so specs are idempotent against a shared/UAT DB and safe to re-run without cleanup.
-- Prefer `getByRole`/`getByLabel` (accessible queries) over CSS selectors, consistent with existing specs and [docs/ui-guidelines.md](ui-guidelines.md) a11y requirements.
+- Prefer `getByRole`/`getByLabel` (accessible queries) over CSS selectors, consistent with existing specs and [docs/guidelines/ui-guidelines.md](ui-guidelines.md) a11y requirements.
 - New fixtures (roles, mocks) go in `e2e/helpers/`, not inline per-spec, so they're reused (`e2e/helpers/documents.ts`, `e2e/helpers/seed.ts` as needed — see §8).
 - Downloads (xlsx exports): use Playwright's `page.waitForEvent("download")`, assert filename/size, don't assert on binary content in E2E (leave cell-level correctness to `tests/unit/premium-excel.test.ts` style unit tests).
 - File uploads (library docs, avatars, email footer image): `locator.setInputFiles()` with a small fixture file committed under `e2e/fixtures/`.
@@ -153,7 +153,7 @@ Per [.cursor/rules/worker-bundle.mdc](../.cursor/rules/worker-bundle.mdc), the D
 
 ### 6.5 Data seeding & isolation
 
-E2E relies on `npm run db:seed` demo users (`broker@demo.local`, `admin@demo.local`, plus optional `E2E_SUPER_ADMIN_EMAIL`). Flows needing an _existing_ Taken policy or client currently `test.skip` when absent (see `policy.spec.ts`). For full coverage this is a gap: skipped tests don't count as coverage. Recommend adding a minimal deterministic seed fixture (either extend `scripts/seed-db.mts` with a guaranteed "e2e" client + Taken policy, or a `test.beforeAll` that creates one via the UI/API) so these paths always run instead of skipping. Track as an explicit follow-up (§7, Phase 2).
+E2E relies on `npm run db:seed` demo users (`broker@demo.local`, `admin@demo.local`, plus optional `E2E_SUPER_ADMIN_EMAIL`). Flows needing an _existing_ Taken policy or client currently `test.skip` when absent (see `policy.spec.ts`). For full coverage this is a gap: skipped tests don't count as coverage. Recommend adding a minimal deterministic seed fixture (either extend `scripts/db/seed/seed-db.mts` with a guaranteed "e2e" client + Taken policy, or a `test.beforeAll` that creates one via the UI/API) so these paths always run instead of skipping. Track as an explicit follow-up (§7, Phase 2).
 
 ## 7. Phased rollout
 

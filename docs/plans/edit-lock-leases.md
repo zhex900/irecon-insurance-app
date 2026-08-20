@@ -221,4 +221,4 @@ Reuse existing read-only fieldset pattern (Taken/view mode).
 - [ ] `useEditLock` hook (activity, hybrid heartbeat, acquire/release/takeover)
 - [ ] `EditLockBanner` + wire policy wizard and client form
 - [ ] Unit tests for lock service and takeover rules
-- [ ] Short section in `docs/architecture.md` (edit leases, heartbeat, takeover)
+- [ ] Short section in `docs/architecture/performance.md` (edit leases, heartbeat, takeover)

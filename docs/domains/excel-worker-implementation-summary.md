@@ -78,8 +78,7 @@ AFTER (Optimized):
 2. `workers/excel/test-precision.ts` - Precision testing utility
 3. `wrangler.excel.jsonc` - Cloudflare configuration
 4. `app/lib/reports/excel-worker-wrapper.server.ts` - Integration wrapper
-5. `scripts/test-excel-integration.js` - Integration testing
-6. `docs/excel-worker-implementation-summary.md` - This document
+5. `docs/domains/excel-worker-implementation-summary.md` - This document
 
 ### **Modified Files:**
 
@@ -157,11 +156,11 @@ curl http://localhost:8788/health
 curl http://localhost:8788/info
 ```
 
-### **2. Test Integration:**
+### **2. Test integration (both workers):**
 
 ```bash
-# Run integration test
-node scripts/test-excel-integration.js
+# Start PDF + Excel workers locally
+npm run dev:both-workers
 
 # Validate bundle impact
 npm run check:bundle

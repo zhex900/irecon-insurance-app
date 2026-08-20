@@ -1,6 +1,6 @@
 # Legacy MSSQL → Postgres CAR policy field mapping
 
-Review document for migrated policies. Source: `scripts/sql/legacy/policies.sql`, `scripts/lib/legacy-policy-mapper.mts`, and rebuild validation in `app/lib/zod/policy-car.ts`.
+Review document for migrated policies. Source: `scripts/db/legacy/sql/policies.sql`, `scripts/db/legacy/lib/legacy-policy-mapper.mts`, and rebuild validation in `app/lib/zod/policy-car.ts`.
 
 **Last audited:** local DB after legacy migration (`created_by = 'migrate:mssql'`, 5,101 policies).
 
@@ -127,22 +127,22 @@ Legacy-only period fix (superseded): `npm run db:repair:policy-periods`
 
 ### `Policy` → `policy`
 
-| Legacy (`dbo.Policy`) | Export alias     | Postgres `policy`    | Transform                     |
-| --------------------- | ---------------- | -------------------- | ----------------------------- |
-| `PolicyId`            | `policyId`       | —                    | UUID via `legacyPolicyUuid()` |
-| `ClientId`            | `clientId`       | `client_id`          | UUID via `legacyClientUuid()` |
-| `PolicyNumber`        | `policyNumber`   | `policy_number`      | Deduped suffix on collision   |
-| `PolicyAction`        | `policyAction`   | `policy_category_id` | `RWL` → 2, else 1             |
-| —                     | —                | `policy_type_id`     | Always `1` (CAR)              |
-| —                     | `policyStatusId` | `policy_status_id`   | From `PolicyCAR.Status`       |
-| —                     | `postcode`       | `postcode`           |                               |
-| —                     | `stateCode`      | `state_id`           | Code → integer 1–8            |
-| `InceptionDate`       | `dateStart`      | `date_start`         | Date only                     |
-| `ExpiryDate`          | `dateEnd`        | `date_end`           | Date only                     |
-| `UnderwriterCode`     | `insurerCode`    | `insurer_code`       | Default `ATC`                 |
-| `CreatedDate`         | `createdWhen`    | `created_when`       |                               |
-| —                     | —                | `created_by`         | `migrate:mssql`               |
-| —                     | —                | `is_draft`           | `false` when premium present  |
+| Legacy (`dbo.Policy`) | Export alias     | Postgres `policy`    | Transform                                 |
+| --------------------- | ---------------- | -------------------- | ----------------------------------------- |
+| `PolicyId`            | `policyId`       | —                    | UUID via `legacyPolicyUuid()`             |
+| `ClientId`            | `clientId`       | `client_id`          | UUID via `legacyClientUuid()`             |
+| `PolicyNumber`        | `policyNumber`   | `policy_number`      | Renewal dupes: year → month → date → hash |
+| `PolicyAction`        | `policyAction`   | `policy_category_id` | `RWL` → 2, else 1                         |
+| —                     | —                | `policy_type_id`     | Always `1` (CAR)                          |
+| —                     | `policyStatusId` | `policy_status_id`   | From `PolicyCAR.Status`                   |
+| —                     | `postcode`       | `postcode`           |                                           |
+| —                     | `stateCode`      | `state_id`           | Code → integer 1–8                        |
+| `InceptionDate`       | `dateStart`      | `date_start`         | Date only                                 |
+| `ExpiryDate`          | `dateEnd`        | `date_end`           | Date only                                 |
+| `UnderwriterCode`     | `insurerCode`    | `insurer_code`       | Default `ATC`                             |
+| `CreatedDate`         | `createdWhen`    | `created_when`       |                                           |
+| —                     | —                | `created_by`         | `migrate:mssql`                           |
+| —                     | —                | `is_draft`           | `false` when premium present              |
 
 ### `PolicyCAR` → `policy_car` (risk & limits)
 
@@ -201,7 +201,7 @@ Excess values are relocated to the active turnover band in `mapLegacyExcesses()`
 
 ### Premium & rating → `policy_car` + jsonb extras
 
-Stored on `policy_car` numeric columns and `policy` jsonb (`rating`, `premiumManualKeys`, etc.). Mapped 1:1 from legacy column names in `scripts/sql/legacy/policies.sql` lines 40–100.
+Stored on `policy_car` numeric columns and `policy` jsonb (`rating`, `premiumManualKeys`, etc.). Mapped 1:1 from legacy column names in `scripts/db/legacy/sql/policies.sql` lines 40–100.
 
 ### Adjustment → `policy_car_adjustment`
 
@@ -257,11 +257,11 @@ Expected: `18` / `12` for annual cover type 1.
 
 ## Related files
 
-- Export SQL: `scripts/sql/legacy/policies.sql`
-- Mapper: `scripts/lib/legacy-policy-mapper.mts`
-- Load: `scripts/lib/load-legacy-domain.mts`
-- Repair (all fields): `scripts/repair-migrated-policies.mts`
-- Repair helpers: `scripts/lib/repair-migrated-policy-fields.mts`
-- Repair (periods only): `scripts/repair-migrated-policy-periods.mts`
+- Export SQL: `scripts/db/legacy/sql/policies.sql`
+- Mapper: `scripts/db/legacy/lib/legacy-policy-mapper.mts`
+- Load: `scripts/db/legacy/lib/load-legacy-domain.mts`
+- Repair (all fields): `scripts/db/repair/repair-migrated-policies.mts`
+- Repair helpers: `scripts/db/legacy/lib/repair-migrated-policy-fields.mts`
+- Repair (periods only): `scripts/db/repair/repair-migrated-policy-periods.mts`
 - Rebuild validation: `app/lib/zod/policy-car.ts`
 - Legacy validation reference: `_archive/specs/CAR_FORM_VALIDATION.md`

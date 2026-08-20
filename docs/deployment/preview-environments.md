@@ -9,28 +9,50 @@ npm run destroy -- pr-11
 
 `npm run deploy` with no env name (or `uat`) deploys UAT to `https://uat.irecon.net`.
 
+## R2 buckets (per environment)
+
+Each environment has **dedicated R2 buckets** — nothing is shared between UAT, local, and production. **All PR previews share one pair of buckets** (`*-pr`); objects are not cleared or re-copied on each PR deploy.
+
+| Environment       | Avatars bucket                     | Library documents bucket                     |
+| ----------------- | ---------------------------------- | -------------------------------------------- |
+| Legacy (source)   | `insurance-app-avatars`            | `insurance-app-library-documents`            |
+| UAT               | `insurance-app-avatars-uat`        | `insurance-app-library-documents-uat`        |
+| Local dev         | `insurance-app-avatars-local`      | `insurance-app-library-documents-local`      |
+| PR previews (all) | `insurance-app-avatars-pr`         | `insurance-app-library-documents-pr`         |
+| Production        | `insurance-app-avatars-production` | `insurance-app-library-documents-production` |
+
+**One-time migration** from the legacy shared buckets (or UAT → PR):
+
+```bash
+npm run deployment:bootstrap:r2              # uat + local
+npm run deployment:bootstrap:r2 -- --only uat
+npm run deployment:bootstrap:r2 -- --from uat --only pr
+```
+
+Requires R2 S3 credentials and Cloudflare auth. Run once after upgrading; then deploy UAT so Worker bindings point at the `-uat` buckets.
+
 ## Supabase layout (free plan)
 
-| Project | Env file   | Role                                                 |
-| ------- | ---------- | ---------------------------------------------------- |
-| UAT     | `.env.uat` | Source of truth; never wiped by PR deployPREVIEW_ENV |
-| PR      | `.env.pr`  | Shared preview DB; reset + UAT copy each deploy      |
+| Project | Env file   | Role                                            |
+| ------- | ---------- | ----------------------------------------------- |
+| UAT     | `.env.uat` | Source of truth; never wiped by PR deploy       |
+| PR      | `.env.pr`  | Shared preview DB; reset + UAT copy each deploy |
 
 Supabase branching is **not** used (requires Pro). Copy `.env.pr.example` → `.env.pr` and point it at your second Supabase project.
 
 ## What gets created per PR
 
-| Resource             | Name pattern (example `pr-11`)                          |
-| -------------------- | ------------------------------------------------------- |
-| App Worker           | `insurance-app-pr-11` → `https://pr-11.irecon.net`      |
-| PDF Worker           | `insurance-pdf-worker-pr-11` (private, service binding) |
-| Excel Worker         | `insurance-excel-worker-pr-11`                          |
-| R2 avatars           | `insurance-app-avatars-pr-11` (objects copied from UAT) |
-| R2 library documents | `insurance-app-library-documents-pr-11` (from UAT)      |
-| Hyperdrive           | `insurance-app-pr-11` → shared PR Postgres              |
-| Database             | Shared PR Supabase project (same for every PR number)   |
+| Resource             | Name pattern (example `pr-11`)                                               |
+| -------------------- | ---------------------------------------------------------------------------- |
+| App Worker           | `insurance-app-pr-11` → `https://pr-11.irecon.net`                           |
+| PDF Worker           | `insurance-pdf-worker-pr-11` (private, service binding)                      |
+| Excel Worker         | `insurance-excel-worker-pr-11`                                               |
+| R2 avatars           | `insurance-app-avatars-pr` (shared; not cleared on deploy/destroy)           |
+| R2 library documents | `insurance-app-library-documents-pr` (shared; not cleared on deploy/destroy) |
+| Hyperdrive           | `insurance-app-pr-11` → shared PR Postgres                                   |
+| Database             | Shared PR Supabase project (same for every PR number)                        |
 
-Infra targets (Hyperdrive limits, Supabase pool size, Worker CPU) live in [`infra/lib/infra-settings.mjs`](../infra/lib/infra-settings.mjs). Deploy applies Hyperdrive limits automatically; Supabase pool size is set manually in each project's dashboard.
+Deployment targets (Hyperdrive limits, Supabase pool size, Worker CPU) live in [`deployment/lib/constants.mjs`](../../deployment/lib/constants.mjs). Deploy applies Hyperdrive limits automatically; Supabase pool size is set manually in each project's dashboard.
 
 Generated wrangler configs live in `.preview-envs/<env>/` (gitignored).
 
@@ -53,7 +75,7 @@ PREVIEW_ENV=pr-11 npm run deploy
 ## Prerequisites
 
 - Wrangler logged in or `CLOUDFLARE_API_TOKEN` in `.env.pr`
-- `.env.pr` only for PR deploy — includes PR Supabase, `UAT_DATABASE_URL` copy source, and Cloudflare (`[.env.pr.example](../.env.pr.example)`)
+- `.env.pr` only for PR deploy — includes PR Supabase, `UAT_DATABASE_URL` copy source, and Cloudflare ([`.env.pr.example`](../.env.pr.example))
 - R2 S3 API credentials (`R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_S3_ENDPOINT`) and [AWS CLI](https://aws.amazon.com/cli/) for UAT → preview R2 copy
 - Docker or local `psql` (for UAT → PR database copy)
 - `SUPABASE_ACCESS_TOKEN` in `.env.pr` (optional — Auth redirect URLs on PR project)
@@ -61,11 +83,11 @@ PREVIEW_ENV=pr-11 npm run deploy
 ## Commands
 
 ```bash
-# Full deploy: clear PR DB, copy UAT, migrate, copy R2, deploy Workers
+# Full deploy: clear PR DB, copy UAT, migrate, deploy Workers (R2 unchanged)
 npm run deploy -- pr-11
 
-# Redeploy code only (skip DB reset + R2)
-npm run deploy -- pr-11 -- --skip-db --skip-r2
+# Redeploy code only (skip DB reset)
+npm run deploy -- pr-11 -- --skip-db
 
 # Skip migrations after UAT copy
 npm run deploy -- pr-11 -- --skip-migrate
@@ -73,8 +95,11 @@ npm run deploy -- pr-11 -- --skip-migrate
 # Dry run
 npm run deploy -- pr-11 -- --dry-run
 
-# Tear down Workers/R2/Hyperdrive (PR Supabase project kept)
+# Tear down Workers + Hyperdrive (shared PR R2 + Supabase project kept)
 npm run destroy -- pr-11
+
+# Local: full UAT → local Supabase
+npm run db:copy:uat
 ```
 
 ## Database flow
@@ -84,7 +109,8 @@ npm run destroy -- pr-11
 3. **Restore** — into PR database
 4. **Sync migration history** — copy `supabase_migrations.schema_migrations` from UAT so old migrations are not re-run
 5. **Migrate** — `supabase db push` applies only migrations in this branch that are not yet on UAT
-6. **Hyperdrive** — preview Worker connects to PR database
+6. **R2** — shared PR buckets; created if missing, objects left as-is (populate once via `deployment:bootstrap:r2 -- --from uat --only pr`)
+7. **Hyperdrive** — preview Worker connects to PR database
 
 ## CI (GitHub Actions)
 
@@ -94,7 +120,7 @@ npm run destroy -- pr-11
 | `pr-cleanup.yml` | PR closed                    | `npm run destroy:pr`; on **merge**, `npm run deploy:uat` |
 | `release.yml`    | GitHub Release **published** | `npm run deploy:prod` (non-prerelease only)              |
 
-Workflows write `.env.pr` / `.env.uat` at runtime via `infra/ci-write-env.mjs` from GitHub **environments** + **repository** secrets (no monolithic env-file secret).
+Workflows write `.env.pr` / `.env.uat` at runtime via `deployment/ci-write-env.mjs` from GitHub **environments** + **repository** secrets (no monolithic env-file secret).
 
 ### GitHub environment: `uat`
 

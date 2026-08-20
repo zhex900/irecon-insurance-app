@@ -238,7 +238,7 @@ Development Commands:
 
 #### 3.2 Performance Testing Suite
 
-- **Bundle Analysis**: `scripts/analyze-bundle.sh`
+- **Bundle Analysis**: `scripts/bundle/analyze-bundle.sh`
 - **Cold Start Measurement**: Portals vs Documents worker
 - **Cross-Domain Latency**: Event bus communication timing
 - **Memory Usage**: Before/after isolation comparison
@@ -398,7 +398,7 @@ federation({
 
 ### Measurement Tools
 
-- **Bundle Analysis**: `scripts/analyze-bundle.sh`
+- **Bundle Analysis**: `scripts/bundle/analyze-bundle.sh`
 - **Performance Monitoring**: Custom dashboard with real-time metrics
 - **Error Tracking**: Sentry integration with cross-domain tracing
 - **User Feedback**: In-app surveys and performance monitoring

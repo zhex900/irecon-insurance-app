@@ -55,11 +55,14 @@
   "r2_buckets": [
     {
       "binding": "AVATARS",
-      "bucket_name": "insurance-app-avatars",
+      "bucket_name": "insurance-app-avatars-local",
+      // Local dev reads the dedicated local R2 bucket (populate via `npm run deployment:bootstrap:r2`).
+      "remote": true,
     },
     {
       "binding": "LIBRARY_DOCUMENTS",
-      "bucket_name": "insurance-app-library-documents",
+      "bucket_name": "insurance-app-library-documents-local",
+      "remote": true,
     },
   ],
 }

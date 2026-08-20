@@ -43,11 +43,11 @@ This monitoring system ensures that new hook files follow established organizati
 
 ### 🎯 Pre-commit Hook (Optional)
 
-Run `scripts/check-hook-grouping.sh` to detect organization issues:
+Run `scripts/quality/check-hook-grouping.sh` to detect organization issues:
 
 ```bash
 # Add to pre-commit hook
-./scripts/check-hook-grouping.sh || echo "Hook organization issues found"
+./scripts/quality/check-hook-grouping.sh || echo "Hook organization issues found"
 ```
 
 ### 🎯 CI/CD Pipeline
@@ -57,32 +57,32 @@ Add script to CI pipeline:
 ```yaml
 # In CI config
 - name: Check hook file organization
-  run: ./scripts/check-hook-grouping.sh
+  run: ./scripts/quality/check-hook-grouping.sh
 ```
 
 ### 🎯 Weekly Team Review
 
 ```bash
 # Run during team sync
-./scripts/check-hook-grouping.sh --report
+./scripts/quality/check-hook-grouping.sh --report
 ```
 
 ## Monitoring Scripts
 
-### Primary Script: `scripts/check-hook-grouping.sh`
+### Primary Script: `scripts/quality/check-hook-grouping.sh`
 
 ```bash
 # Basic usage
-./scripts/check-hook-grouping.sh
+./scripts/quality/check-hook-grouping.sh
 
 # Check specific directory
-./scripts/check-hook-grouping.sh --dir app/components/specific/hooks
+./scripts/quality/check-hook-grouping.sh --dir app/components/specific/hooks
 
 # Show verbose output
-./scripts/check-hook-grouping.sh --verbose
+./scripts/quality/check-hook-grouping.sh --verbose
 
 # Fix mode (suggests commands to fix)
-./scripts/check-hook-grouping.sh --fix
+./scripts/quality/check-hook-grouping.sh --fix
 ```
 
 ### What the Script Detects:
@@ -178,7 +178,7 @@ grep -r "use-notification-alerts" --include="*.ts" --include="*.tsx" -l .
 
 ```bash
 npm run typecheck
-./scripts/check-hook-grouping.sh
+./scripts/quality/check-hook-grouping.sh
 ```
 
 ## Integration with Development Workflows
@@ -189,7 +189,7 @@ npm run typecheck
 # .husky/pre-commit
 #!/bin/sh
 echo "Checking hook file organization..."
-./scripts/check-hook-grouping.sh || {
+./scripts/quality/check-hook-grouping.sh || {
   echo "Hook organization issues detected."
   echo "See docs/guidelines/file-organization-standards.md for guidance."
   exit 1
@@ -300,7 +300,7 @@ git diff --name-only --cached | grep -E "hooks/.*\.ts$"
 If you encounter issues with hook file organization:
 
 1. **Check Examples:** Review existing grouped hooks in `app/hooks/`
-2. **Run Script:** `./scripts/check-hook-grouping.sh --verbose`
+2. **Run Script:** `./scripts/quality/check-hook-grouping.sh --verbose`
 3. **Consult Standards:** Read `docs/guidelines/file-organization-standards.md`
 4. **Ask Team:** Post in #code-organization channel
 

@@ -74,39 +74,48 @@ export function PolicyListTableRow({
           aria-label={`Select ${policy.policyNumber}`}
         />
       </InteractiveTableActionsCell>
-      <TableCell>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="font-medium">
-            {searchQuery ? (
-              <SearchHighlight text={policy.policyNumber} query={searchQuery} />
-            ) : (
-              policy.policyNumber
-            )}
-          </span>
-          {policy.adjusted ? (
-            <Badge variant="focus-light" size="sm">
-              Adjusted
-            </Badge>
-          ) : null}
-          {showDraftBadge && policy.isDraft ? (
-            <Badge variant="warning-light" size="sm">
-              Draft
-            </Badge>
+      <TableCell className="w-0 align-top whitespace-normal">
+        <div className="inline-grid max-w-full grid-cols-[min-content]">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-medium whitespace-nowrap">
+              {searchQuery ? (
+                <SearchHighlight
+                  text={policy.policyNumber}
+                  query={searchQuery}
+                />
+              ) : (
+                policy.policyNumber
+              )}
+            </span>
+            {policy.adjusted ? (
+              <Badge variant="focus-light" size="sm">
+                Adjusted
+              </Badge>
+            ) : null}
+            {showDraftBadge && policy.isDraft ? (
+              <Badge variant="warning-light" size="sm">
+                Draft
+              </Badge>
+            ) : null}
+          </div>
+          {showInsured ? (
+            <p className="mt-0.5 line-clamp-2 min-w-0 text-xs break-words text-muted-foreground">
+              {searchQuery ? (
+                <SearchHighlight
+                  text={policy.insuredName}
+                  query={searchQuery}
+                />
+              ) : (
+                policy.insuredName
+              )}
+            </p>
           ) : null}
         </div>
-        {showInsured ? (
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            {searchQuery ? (
-              <SearchHighlight text={policy.insuredName} query={searchQuery} />
-            ) : (
-              policy.insuredName
-            )}
-          </p>
-        ) : null}
       </TableCell>
       {showClientColumn ? (
-        <InteractiveTableActionsCell>
+        <InteractiveTableActionsCell className="max-w-48 align-top whitespace-normal">
           <ClientPopover
+            className="line-clamp-2 block min-w-0 break-words whitespace-normal"
             client={{
               ...policy.client,
               accountManagerName: reference.accountManagers.find(

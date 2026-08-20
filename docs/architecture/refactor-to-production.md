@@ -63,7 +63,8 @@ After reorganisation (names can vary; structure should not):
 ├── public/
 ├── workers/                  # Cloudflare worker entry if needed
 ├── supabase/                 # migrations, seed, config (stay near app)
-├── scripts/                  # app ops: seed, deploy, migrate
+├── deployment/               # Deploy, preview envs, Cloudflare/Supabase ops
+├── scripts/                  # DB seed/migrate, dev tooling, quality checks
 ├── e2e/                      # Playwright
 ├── .github/workflows/
 ├── docs/                     # living product/tech docs (curated)
@@ -350,7 +351,7 @@ Optional: Storybook later—not required for v1 prod if Playwright covers critic
 
 - [x] Cover `calculateCarAdjustment` / `validateAdjustmentFinish` with fixtures aligned to `_archive/specs/CAR_PRICING_FORMULAS.md` (25% base refund cap, 75% floor).
 
-See [docs/testing.md](testing.md).
+See [docs/development/testing.md](testing.md).
 
 ---
 
@@ -375,7 +376,7 @@ npm run verify        # lint + format:check + typecheck + unit
 - [x] CI must not rely on local hooks alone (documented; wire in Phase 9).
 - [x] Tailwind class sorting via `prettier-plugin-tailwindcss`.
 
-Note: TypeScript 7 + typescript-eslint uses side-by-side `@typescript/typescript6` — see [docs/tooling.md](tooling.md).
+Note: TypeScript 7 + typescript-eslint uses side-by-side `@typescript/typescript6` — see [docs/guidelines/tooling.md](tooling.md).
 
 ---
 

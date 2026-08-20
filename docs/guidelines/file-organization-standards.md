@@ -245,7 +245,7 @@ git commit -m "refactor(hooks): group prefix-name hooks
 
 We have established a proactive monitoring system for hook file organization. See [Hook File Creation Monitoring](hook-file-monitoring.md) for:
 
-1. **Monitoring scripts** (`scripts/check-hook-grouping.sh`)
+1. **Monitoring scripts** (`scripts/quality/check-hook-grouping.sh`)
 2. **Integration workflows** (git hooks, CI, code review)
 3. **Decision flows** for new hook creation
 4. **Refactoring checklists** for fixing issues
@@ -301,7 +301,7 @@ The project now includes ESLint rules for enforcing directory and naming standar
 
 ### Organization Check Script
 
-A comprehensive checking script has been added at `scripts/check-organization.sh`:
+A comprehensive checking script has been added at `scripts/quality/check-organization.sh`:
 
 ```bash
 # Run organization checks
