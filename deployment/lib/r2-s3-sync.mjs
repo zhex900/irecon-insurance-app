@@ -91,12 +91,6 @@ export async function emptyR2Bucket(bucket) {
   console.log(`✓ Emptied R2 bucket ${bucket}`);
 }
 
-/** Whether an R2 bucket exists (S3 API list). */
-export async function r2BucketExists(bucket) {
-  const names = await listR2BucketNames();
-  return names.includes(bucket);
-}
-
 /** List R2 bucket names via the S3-compatible API (wrangler list needs a TTY). */
 export async function listR2BucketNames() {
   const { endpoint, accessKeyId, secretAccessKey } = r2S3Config();
@@ -119,4 +113,32 @@ export async function listR2BucketNames() {
     .split("\n")
     .map((line) => line.trim().split(/\s+/).pop())
     .filter(Boolean);
+}
+
+/** Whether an R2 bucket exists (S3 API list). */
+export async function r2BucketExists(bucket) {
+  const names = await listR2BucketNames();
+  return names.includes(bucket);
+}
+
+/** Recursive object count + total bytes (for post-sync verification). */
+export async function summarizeR2Bucket(bucket) {
+  const config = r2S3Config();
+  await ensureAwsCli();
+  const { stdout } = await capture(
+    "aws",
+    [
+      "s3",
+      "ls",
+      `s3://${bucket}/`,
+      "--recursive",
+      "--summarize",
+      "--endpoint-url",
+      config.endpoint,
+    ],
+    { env: awsEnv(config), silent: true },
+  );
+  const objectCount = Number(stdout.match(/Total Objects: (\d+)/)?.[1] ?? 0);
+  const totalBytes = Number(stdout.match(/Total Size: (\d+)/)?.[1] ?? 0);
+  return { objectCount, totalBytes };
 }

@@ -51,6 +51,10 @@ async function wranglerCapture(args, { verbose = false, silent = false } = {}) {
 }
 
 export async function r2BucketExists(bucket) {
+  if (process.env.R2_ACCESS_KEY_ID?.trim()) {
+    const names = await listR2BucketNames();
+    return names.includes(bucket);
+  }
   try {
     await wranglerCapture(["r2", "bucket", "info", bucket, "--json"], {
       silent: true,

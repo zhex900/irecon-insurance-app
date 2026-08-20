@@ -27,11 +27,13 @@ import {
   assertPreviewEnvName,
   hasFlag,
   isPrPreviewSlug,
+  loadPrSharedState,
   loadState,
   loadUatState,
   parseEnvName,
   resourceNames,
   run,
+  savePrSharedState,
   saveState,
   saveUatState,
   webRoot,
@@ -230,6 +232,11 @@ async function deployPreview(envName) {
   console.log(`  PDF     ${names.pdfWorker}`);
   console.log(`  Excel   ${names.excelWorker}`);
   console.log(`  R2      ${names.avatarsBucket}, ${names.libraryBucket}`);
+  if (isPrPreviewSlug(names.slug)) {
+    console.log(
+      `  Hyperdrive ${names.hyperdriveName} (shared by all pr-* Workers)`,
+    );
+  }
   console.log(`  Database shared PR Supabase (.env.pr) ← copy from UAT`);
 
   if (dryRun) {
@@ -277,13 +284,22 @@ async function deployPreview(envName) {
     await copyR2FromUat(names);
   }
 
+  const sharedPr = isPrPreviewSlug(names.slug);
+  const prSharedState = sharedPr ? await loadPrSharedState() : null;
   const hyperdriveId = await ensureHyperdrive({
     names,
     connectionString: supabase.sessionUrl,
-    existingId: state?.hyperdriveId,
+    existingId: sharedPr ? prSharedState?.hyperdriveId : state?.hyperdriveId,
     forceUpdate: !skipDb,
     originConnectionLimit: HYPERDRIVE_ORIGIN_CONNECTION_LIMIT.pr,
   });
+  if (sharedPr) {
+    await savePrSharedState({
+      hyperdriveId,
+      hyperdriveName: names.hyperdriveName,
+      updatedAt: new Date().toISOString(),
+    });
+  }
 
   const configs = await writePreviewWranglerConfigs({
     names,

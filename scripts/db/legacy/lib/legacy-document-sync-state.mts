@@ -18,6 +18,15 @@ export const DEFAULT_SYNC_STATE_PATH = join(
   "_archive/data/legacy-documents-sync-state.json",
 );
 
+/** Per-target checkpoint so UAT/prod/local runs do not collide. */
+export function documentSyncStatePathForEnv(env: string): string {
+  return join(
+    repoRoot,
+    "_archive/data",
+    `legacy-documents-sync-state.${env}.json`,
+  );
+}
+
 export type LegacyDocumentSyncState = {
   version: 1;
   env: string;

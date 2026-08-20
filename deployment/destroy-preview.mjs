@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Tear down a per-PR preview environment (Workers, Hyperdrive).
- * Shared PR R2 buckets and the shared PR Supabase database (.env.pr) are left intact.
+ * Tear down a per-PR preview environment (Workers only for pr-*).
+ * Shared PR Hyperdrive, R2 buckets, and Supabase (.env.pr) are left intact.
  *
  *   npm run destroy -- pr-11
  */
@@ -37,6 +37,7 @@ async function destroyPreview(envName) {
   console.log(`  App URL  ${names.appUrl}`);
   if (isPrPreviewSlug(names.slug)) {
     console.log("  R2 cleanup skipped (shared PR buckets)");
+    console.log("  Hyperdrive cleanup skipped (shared insurance-app-pr)");
   }
   console.log("  Database shared PR Supabase (.env.pr) — left intact");
 
@@ -48,11 +49,10 @@ async function destroyPreview(envName) {
   await deletePreviewWorkers(names);
   if (!isPrPreviewSlug(names.slug)) {
     await emptyAndDeleteR2Buckets(names);
+    const hyperdriveId =
+      state?.hyperdriveId || (await findHyperdriveId(names.hyperdriveName));
+    await deleteHyperdrive(hyperdriveId);
   }
-
-  const hyperdriveId =
-    state?.hyperdriveId || (await findHyperdriveId(names.hyperdriveName));
-  await deleteHyperdrive(hyperdriveId);
 
   await removeStateDir(names.label);
   console.log(`✓ Destroyed ${names.label}`);

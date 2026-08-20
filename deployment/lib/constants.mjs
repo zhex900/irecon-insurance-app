@@ -15,20 +15,22 @@ export const workerCpuLimits = {
 
 /**
  * Hyperdrive `origin_connection_limit` per deploy target.
- * Keep each value below that Supabase project's direct `max_connections` minus ~15
- * headroom (migrations, dashboard, deploy scripts). PR previews share one DB.
+ * Keep each value at or below that Supabase project's pool size (see SUPABASE_POOL_SIZE).
+ * PR previews share one Hyperdrive config and one DB — do not multiply per PR Worker.
  */
 export const HYPERDRIVE_ORIGIN_CONNECTION_LIMIT = {
   production: 100,
   uat: 80,
-  pr: 80,
+  /** Single shared Hyperdrive for all `pr-*` Workers → shared PR Supabase. */
+  pr: 15,
 };
 
 /** Supabase Dashboard → Database → Connection pooling → Pool size (manual). */
 export const SUPABASE_POOL_SIZE = {
   production: 20,
   uat: 12,
-  pr: 10,
+  /** Shared PR Supabase — align with HYPERDRIVE_ORIGIN_CONNECTION_LIMIT.pr. */
+  pr: 15,
 };
 
 /** Documented targets for app-side pooling (app/lib/db/query-gate.ts). */
@@ -101,6 +103,8 @@ export const LOCAL_LIBRARY_BUCKET = `${R2_LIBRARY_BUCKET_PREFIX}-local`;
 /** Shared by all PR preview Workers (`pr-1`, `pr-11`, …). Not deleted on PR cleanup. */
 export const PR_AVATARS_BUCKET = `${R2_AVATARS_BUCKET_PREFIX}-pr`;
 export const PR_LIBRARY_BUCKET = `${R2_LIBRARY_BUCKET_PREFIX}-pr`;
+/** Shared Hyperdrive for all `pr-*` Workers — one pool to shared PR Postgres. */
+export const PR_HYPERDRIVE_NAME = `${APP_WORKER_PREFIX}-pr`;
 export const PRODUCTION_AVATARS_BUCKET = `${R2_AVATARS_BUCKET_PREFIX}-production`;
 export const PRODUCTION_LIBRARY_BUCKET = `${R2_LIBRARY_BUCKET_PREFIX}-production`;
 
@@ -247,6 +251,8 @@ export const CI_ENV_PROFILE_KEYS = {
     "SENTRY_AUTH_TOKEN",
     "VITE_SENTRY_DSN",
     "SENTRY_DSN",
+    "VITE_TURNSTILE_SITE_KEY",
+    "TURNSTILE_SECRET_KEY",
   ],
   pr: [
     "BASE_URL",
