@@ -289,7 +289,7 @@ async function sumPolicyListPremiums(
         coalesce(${policyCar.liabilityBasePremium}, 0)
       ), 0)::float`,
       totalBrokerFeeExGst: sql<number>`coalesce(sum(
-        coalesce((${policyCar.appExtras}->>'combinedBrokerFee')::numeric, 0) * 10 / 11
+        coalesce(${policyCar.combinedBrokerFee}, 0) * 10 / 11
       ), 0)::float`,
     })
     .from(policy)

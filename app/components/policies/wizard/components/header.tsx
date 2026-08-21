@@ -2,18 +2,16 @@ import { memo } from "react";
 
 import { PolicySaveStatusBadge } from "~/components/forms/field-save-highlight";
 import { PolicyStickyHeader } from "~/components/policies/policy-form-layout";
+import { Badge } from "~/components/reui/badge";
 import { LoadingButton } from "~/components/ui/loading-button";
 import { StatusBadge } from "~/components/ui/status-badge";
 import type { Policy, ReferenceData } from "~/lib/db/types";
 import { cn } from "~/lib/utils";
 
 import type { usePolicyWizardNavigation } from "../hooks/composite/use-navigation";
-import { useMode } from "../hooks/utils/use-mode";
+import { usePolicyPhase } from "../hooks/utils/use-mode";
 import { useWizardDisplayFields } from "../hooks/wizard/use-wizard-display-fields";
-import {
-  wizardModeBadge,
-  wizardModeHeaderClass,
-} from "../shared/wizard-shared";
+import { policyPhaseHeaderClass } from "../shared/policy-phase";
 import type {
   WizardDraftSlice,
   WizardSubmitSlice,
@@ -53,16 +51,30 @@ export const Header = memo(function Header({
   sectionIssueCounts,
   onNavigateToSectionFirstIssue,
 }: HeaderProps) {
-  const { wizardMode, canShowSubmitButton } = useMode();
+  const { phase, canShowSubmitButton, canEdit } = usePolicyPhase();
   const { livePolicyNumber, coverTypeName, selectedStatus } =
     useWizardDisplayFields(policy, reference);
+
+  const statusBadge = selectedStatus ? (
+    <StatusBadge
+      statusId={selectedStatus.policyStatusId}
+      name={selectedStatus.name}
+    />
+  ) : null;
+
+  const draftBadge =
+    phase === "new" ? (
+      <Badge variant="primary-light" radius="full">
+        Draft
+      </Badge>
+    ) : null;
 
   return (
     <div
       className={cn(
         "sticky top-14 z-20 shrink-0 border-b border-border backdrop-blur",
         "xl:static xl:backdrop-blur-none",
-        wizardModeHeaderClass(wizardMode),
+        policyPhaseHeaderClass(phase),
       )}
     >
       <PolicyStickyHeader
@@ -71,7 +83,6 @@ export const Header = memo(function Header({
         clientName={clientName || "Client"}
         coverTypeName={coverTypeName || undefined}
         className="static border-0 bg-transparent backdrop-blur-none"
-        modeBadge={wizardModeBadge(wizardMode)}
         breadcrumbs={[
           { label: "Clients", to: "/clients" },
           {
@@ -81,17 +92,13 @@ export const Header = memo(function Header({
           { label: livePolicyNumber },
         ]}
         statusBadge={
-          selectedStatus ? (
-            <StatusBadge
-              statusId={selectedStatus.policyStatusId}
-              name={selectedStatus.name}
-            />
-          ) : null
+          <>
+            {draftBadge}
+            {statusBadge}
+          </>
         }
         saveStatus={
-          wizardMode !== "view" ? (
-            <PolicySaveStatusBadge status={saveStatus} />
-          ) : null
+          canEdit ? <PolicySaveStatusBadge status={saveStatus} /> : null
         }
         adjusted={Boolean(policy.car.adjusted)}
         actions={headerActions}

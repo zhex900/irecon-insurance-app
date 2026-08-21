@@ -1,7 +1,8 @@
 import type { UseFormReturn } from "react-hook-form";
 
 import type { CarWording, Policy } from "~/lib/db/types";
-import { type CarPolicyFormValues, POLICY_STATUS } from "~/lib/zod/policy-car";
+
+import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
 
 import type { usePolicyDocuments } from "../hooks/composite/use-documents";
 import type { usePolicyDraftSave } from "../hooks/composite/use-draft-save";
@@ -10,7 +11,8 @@ import type { usePolicyWizardNavigation } from "../hooks/composite/use-navigatio
 import type { usePolicyPremiumCalc } from "../hooks/composite/use-premium-calc";
 import type { usePolicySubmit } from "../hooks/composite/use-submit";
 import type { useCarPolicyWizardSubmitGate } from "../hooks/utils/use-submit-gate";
-import { wizardModeCardBorderClass } from "../shared/wizard-shared";
+import type { PolicyPhase } from "../shared/policy-phase";
+import { policyPhaseCardBorderClass } from "../shared/policy-phase";
 import type { useWizardCore, WizardStateProps } from "./use-wizard-core";
 
 type DraftSave = ReturnType<typeof usePolicyDraftSave>;
@@ -29,15 +31,8 @@ export type WizardStateParts = {
   gate: ReturnType<typeof useCarPolicyWizardSubmitGate>;
 };
 
-export function canChangeWizardStatus(
-  policy: Policy,
-  fieldsLocked: boolean,
-): boolean {
-  return (
-    !policy.isDraft &&
-    policy.policyStatusId === POLICY_STATUS.Pending &&
-    !fieldsLocked
-  );
+export function canChangeWizardStatus(phase: PolicyPhase): boolean {
+  return phase === "pending";
 }
 
 export function createIssueAttentionHandlers(options: {
@@ -123,5 +118,5 @@ export type WizardIssueHandlers = ReturnType<
 export function wizardBorderClassName(
   parts: Pick<WizardStateParts, "core">,
 ): string {
-  return wizardModeCardBorderClass(parts.core.mode.wizardMode);
+  return policyPhaseCardBorderClass(parts.core.phase.phase);
 }

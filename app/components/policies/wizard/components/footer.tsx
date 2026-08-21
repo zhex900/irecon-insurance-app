@@ -5,7 +5,7 @@ import { Button } from "~/components/ui/button";
 import { LoadingButton } from "~/components/ui/loading-button";
 
 import type { PolicyWizardActionData } from "../hooks/composite/use-premium-calc";
-import { useMode } from "../hooks/utils/use-mode";
+import { usePolicyPhase } from "../hooks/utils/use-mode";
 
 type FooterProps = {
   submitDisabled: boolean;
@@ -22,7 +22,7 @@ export const Footer = memo(function Footer({
   handleCancelClick,
   actionData,
 }: FooterProps) {
-  const { readOnly, canShowSubmitButton } = useMode();
+  const { isSavedTerminal, canShowSubmitButton } = usePolicyPhase();
   const lastToastKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -55,7 +55,7 @@ export const Footer = memo(function Footer({
   return (
     <div className="flex flex-wrap items-center gap-3">
       <Button type="button" variant="secondary" onClick={handleCancelClick}>
-        {readOnly ? "Back to client" : "Cancel"}
+        {isSavedTerminal ? "Back to client" : "Cancel"}
       </Button>
 
       {canShowSubmitButton ? (

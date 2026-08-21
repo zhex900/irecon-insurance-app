@@ -4,7 +4,7 @@ Migrate domain data from the legacy **vs434253_1** MSSQL database into Supabase 
 
 **Included in the main migrate:** account managers, authorised representatives (AR), clients, policies.
 
-**Run separately (slow):** policy documents (PDF upload to R2 + `policy_car.app_extras.documents`).
+**Run separately (slow):** policy documents (PDF upload to R2 + `policy_document` rows).
 
 ### Target scope
 
@@ -41,7 +41,7 @@ Add `-- --dry-run` to preview counts. Add `-- --confirm` to skip the interactive
 
 ### Clear documents only (migrated PDFs + checkpoint)
 
-Removes legacy document rows from `policy_car.app_extras`, deletes expected R2 keys, and resets the sync checkpoint.
+Removes legacy document rows from `policy_document`, deletes expected R2 keys, and resets the sync checkpoint.
 
 | Environment | Command                                   |
 | ----------- | ----------------------------------------- |
@@ -155,8 +155,7 @@ SELECT COUNT(*) FROM policy WHERE created_by = 'migrate:mssql';
 SELECT COUNT(*) FROM client;
 SELECT COUNT(*) FROM authorised_representative;
 
-SELECT COUNT(*) FROM policy_car
-WHERE jsonb_array_length(app_extras->'documents') > 0;
+SELECT COUNT(*) FROM policy_document;
 ```
 
 ---
@@ -183,13 +182,13 @@ npm run db:migrate:legacy:documents:uat
 
 ## What each slice does
 
-| Slice              | Legacy source                | Postgres target                                 |
-| ------------------ | ---------------------------- | ----------------------------------------------- |
-| `account-managers` | `AccountManager`             | `account_manager`                               |
-| `ar`               | `WholesaleBroker`            | `authorised_representative`                     |
-| `clients`          | `Client`                     | `client`                                        |
-| `policies`         | `Policy` + `PolicyCAR`       | `policy`, `policy_car`, `policy_car_adjustment` |
-| `documents`        | `PolicyDocument` + PDF files | R2 + `policy_car.app_extras.documents`          |
+| Slice              | Legacy source                | Postgres target                                                                                                  |
+| ------------------ | ---------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `account-managers` | `AccountManager`             | `account_manager`                                                                                                |
+| `ar`               | `WholesaleBroker`            | `authorised_representative`                                                                                      |
+| `clients`          | `Client`                     | `client`                                                                                                         |
+| `policies`         | `Policy` + `PolicyCAR`       | `policy`, `policy_car`, `policy_car_adjustment`, `policy_document`, `policy_note`, `policy_car_selected_wording` |
+| `documents`        | `PolicyDocument` + PDF files | R2 + `policy_document`                                                                                           |
 
 Load order: account managers → AR → clients → policies → documents.
 

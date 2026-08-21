@@ -42,8 +42,8 @@ test.describe("quote-to-taken workflow", () => {
     await expect(page).toHaveURL(/\/policies\/[^/]+\?new=1/);
 
     // 4. Verify wizard is in "new" mode
-    const wizardRoot = page.locator("[data-wizard-mode]");
-    await expect(wizardRoot).toHaveAttribute("data-wizard-mode", "new");
+    const wizardRoot = page.locator("[data-policy-phase]");
+    await expect(wizardRoot).toHaveAttribute("data-policy-phase", "new");
 
     // 5. Complete basic policy information
     // Look for common form fields
@@ -127,7 +127,7 @@ test.describe("quote-to-taken workflow", () => {
     await page.goto(baseUrl);
 
     // Now policy should be in "edit" mode
-    await expect(wizardRoot).toHaveAttribute("data-wizard-mode", "edit");
+    await expect(wizardRoot).toHaveAttribute("data-policy-phase", "pending");
 
     // 11. Look for document generation options
     const generateDocsBtn = page.getByRole("button", {
@@ -234,7 +234,7 @@ test.describe("quote-to-taken workflow", () => {
 
     // 16. Verify policy is now in read-only "view" mode
     await page.reload();
-    await expect(wizardRoot).toHaveAttribute("data-wizard-mode", "view");
+    await expect(wizardRoot).toHaveAttribute("data-policy-phase", "taken");
 
     // Taken policies should not have edit controls
     await expect(page.getByRole("button", { name: /^save$/i })).toHaveCount(0);
@@ -276,8 +276,8 @@ test.describe("quote-to-taken workflow", () => {
     await newPolicyBtn.first().click();
 
     // Verify in new mode
-    const wizardRoot = page.locator("[data-wizard-mode]");
-    await expect(wizardRoot).toHaveAttribute("data-wizard-mode", "new");
+    const wizardRoot = page.locator("[data-policy-phase]");
+    await expect(wizardRoot).toHaveAttribute("data-policy-phase", "new");
 
     // Fill minimal information
     const addressField = page.getByLabel(/site address|address/i);
@@ -309,7 +309,7 @@ test.describe("quote-to-taken workflow", () => {
       await draftRow.first().click();
 
       // Should be in edit mode (not new)
-      await expect(wizardRoot).toHaveAttribute("data-wizard-mode", "edit");
+      await expect(wizardRoot).toHaveAttribute("data-policy-phase", "pending");
     }
   });
 

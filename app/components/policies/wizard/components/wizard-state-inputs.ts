@@ -116,6 +116,8 @@ export function submitInput(options: {
     savedSnapshotRef: draftSave.savedSnapshotRef,
     hasUnsavedChangesRef: draftSave.hasUnsavedChangesRef,
     setHasUnsavedChanges: draftSave.setHasUnsavedChanges,
+    cancelQueuedDraftSave: draftSave.cancelQueuedDraftSave,
+    waitForDraftIdle: draftSave.waitForDraftIdle,
   };
 }
 
@@ -149,7 +151,7 @@ export function gateInput(
     values: core.deferredValues,
     premium: premiumCalc.premium,
     policyPremium: props.policy.car.premium,
-    hasSubmittedOnce: core.mode.hasSubmittedOnce,
+    premiumPinned: core.phase.premiumPinned,
     isFormValid: navigation.isFormValid,
   };
 }

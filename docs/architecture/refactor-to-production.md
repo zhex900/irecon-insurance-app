@@ -259,13 +259,13 @@ Cleared — former follow-ups split into domain folders:
 
 #### Data decision matrix
 
-| File                                                                           | Status                                                                                       |
-| ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
-| `clients.json`, `policies.json`, `users.json`, `prices.json`, `reference.json` | Seed-only under `_archive/data/` — no runtime imports                                        |
-| `authorised-representatives.json`                                              | Deleted (unused; AR from DB / CSV seed)                                                      |
-| `car-wording.json`                                                             | Deleted from archive; runtime via DB `car_wording`                                           |
-| `reference-data.ts`                                                            | Still static runtime lookups — migrate to DB tables over time                                |
-| `pdf-templates/**` (historical)                                                | Removed from `app/assets/`; live pdfme layouts are DB-only (`app_document_template_version`) |
+| File                                                                           | Status                                                                                                                 |
+| ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| `clients.json`, `policies.json`, `users.json`, `prices.json`, `reference.json` | Seed-only under `_archive/data/` — no runtime imports                                                                  |
+| `authorised-representatives.json`                                              | Deleted (unused; AR from DB / CSV seed)                                                                                |
+| `car-wording.json`                                                             | Deleted from archive; runtime via DB `car_wording`                                                                     |
+| `reference-data.ts`                                                            | Still static runtime lookups — migrate to DB tables over time ([interim-data-patterns.md](./interim-data-patterns.md)) |
+| `pdf-templates/**` (historical)                                                | Removed from `app/assets/`; live pdfme layouts are DB-only (`app_document_template_version`)                           |
 
 **Rule:** If the app reads it on every request, it belongs in Postgres (or KV/R2 for binaries), not JSON in the repo—except static PDF template layouts.
 

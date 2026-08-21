@@ -17,13 +17,13 @@ export function useCarPolicyWizardSubmitGate({
   values,
   premium,
   policyPremium,
-  hasSubmittedOnce,
+  premiumPinned,
   isFormValid,
 }: {
   values: CarPolicyFormValues;
   premium: PremiumBreakdown | undefined;
   policyPremium: PremiumBreakdown | undefined;
-  hasSubmittedOnce: boolean;
+  premiumPinned: boolean;
   isFormValid: boolean;
 }) {
   const currentFingerprint = submitFingerprint(values, premium);
@@ -32,7 +32,7 @@ export function useCarPolicyWizardSubmitGate({
   );
   const hasChangesSinceSubmit = currentFingerprint !== submittedFingerprint;
   const submitDisabled =
-    !isFormValid || (hasSubmittedOnce && !hasChangesSinceSubmit);
+    !isFormValid || (premiumPinned && !hasChangesSinceSubmit);
 
   return {
     submitDisabled,

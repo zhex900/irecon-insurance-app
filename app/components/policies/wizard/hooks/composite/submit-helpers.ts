@@ -1,6 +1,7 @@
 import type { RefObject } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import type { useFetcher } from "react-router";
+import { toast } from "sonner";
 
 import type { Policy, PremiumBreakdown } from "~/lib/db/types";
 import { focusFormIssue } from "~/lib/form-validation-ui";
@@ -121,25 +122,105 @@ export function buildSavePayload(options: {
   });
 }
 
-export function submitPolicySave(options: {
-  fetcher: ReturnType<typeof useFetcher<PolicyWizardActionData>>;
-  policyId: string;
-  payload: string;
+type PolicySaveRefs = {
   savedSnapshotRef: RefObject<string>;
   hasUnsavedChangesRef: RefObject<boolean>;
   setHasUnsavedChanges: (value: boolean) => void;
   leave: PolicyLeaveApi | null;
-}): void {
-  if (options.leave) options.leave.allowLeaveRef.current = true;
-  options.savedSnapshotRef.current = options.payload;
-  options.hasUnsavedChangesRef.current = false;
-  options.setHasUnsavedChanges(false);
+};
+
+export function markPolicySaveSucceeded(
+  refs: PolicySaveRefs,
+  payload: string,
+): void {
+  if (refs.leave) refs.leave.allowLeaveRef.current = true;
+  refs.savedSnapshotRef.current = payload;
+  refs.hasUnsavedChangesRef.current = false;
+  refs.setHasUnsavedChanges(false);
+}
+
+export function submitPolicySave(
+  fetcher: ReturnType<typeof useFetcher<PolicyWizardActionData>>,
+  policyId: string,
+  payload: string,
+): void {
   const body = new FormData();
   body.set("intent", INTENTS.SAVE);
-  body.set("payload", options.payload);
-  options.fetcher.submit(body, {
+  body.set("payload", payload);
+  fetcher.submit(body, {
     method: "post",
-    action: `/policies/${options.policyId}`,
+    action: `/policies/${policyId}`,
+  });
+}
+
+export function parsePolicySaveResponse(
+  data: PolicyWizardActionData | undefined,
+):
+  | { ok: true; data: PolicyWizardActionData & { policy: Policy } }
+  | { ok: false; data?: PolicyWizardActionData } {
+  if (!data || data.formError) return { ok: false, data };
+  const fieldErrors = data.errors
+    ? Object.entries(data.errors).flatMap(([field, messages]) =>
+        (messages ?? []).map((msg) => `${field}: ${msg}`),
+      )
+    : [];
+  if (fieldErrors.length > 0) return { ok: false, data };
+  if (data.ok === true && data.policy) {
+    return {
+      ok: true,
+      data: data as PolicyWizardActionData & { policy: Policy },
+    };
+  }
+  return { ok: false, data };
+}
+
+/** Ignore stale fetcher.data from recalculate while waiting for a save response. */
+export function isSaveActionResponse(
+  data: PolicyWizardActionData | undefined,
+): boolean {
+  if (!data) return false;
+  if (data.intent === "save") return true;
+  if (data.formError) return true;
+  if (
+    data.errors &&
+    Object.values(data.errors).some((messages) => (messages?.length ?? 0) > 0)
+  ) {
+    return true;
+  }
+  return false;
+}
+
+export function syncFormPolicyStatus(
+  form: UseFormReturn<CarPolicyFormValues>,
+  policyStatusId: number,
+): void {
+  if (Number(form.getValues("policyStatusId")) === policyStatusId) return;
+  form.setValue("policyStatusId", policyStatusId, {
+    shouldDirty: false,
+    shouldValidate: false,
+  });
+}
+
+export function reportPolicySaveFailure(
+  data: PolicyWizardActionData | undefined,
+): void {
+  if (data?.formError) {
+    toast.error(data.formError);
+    return;
+  }
+  const fieldErrors = data?.errors
+    ? Object.entries(data.errors).flatMap(([field, messages]) =>
+        (messages ?? []).map((msg) => `${field}: ${msg}`),
+      )
+    : [];
+  if (fieldErrors.length > 0) {
+    toast.error("Please fix the following errors", {
+      description: fieldErrors.slice(0, 5).join(" · "),
+    });
+    return;
+  }
+  toast.error("Could not save policy", {
+    description: "Check your connection and try again.",
   });
 }
 

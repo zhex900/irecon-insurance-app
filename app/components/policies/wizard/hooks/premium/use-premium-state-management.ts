@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 import type { Policy, PremiumBreakdown } from "~/lib/db/types";
 
-import { useMode } from "../utils/use-mode";
+import { usePolicyPhase } from "../utils/use-mode";
 import {
   createPolicySnapshot,
   hasPolicyChanged,
@@ -11,7 +11,8 @@ import {
 } from "./use-premium-utils";
 
 export function usePremiumStateManagement({ policy }: { policy: Policy }) {
-  const { fieldsLocked } = useMode();
+  const { canEdit } = usePolicyPhase();
+  const fieldsLocked = !canEdit;
 
   const [premium, setPremium] = useState<PremiumBreakdown | undefined>(() =>
     withRolledTotals(policy.car.premium),

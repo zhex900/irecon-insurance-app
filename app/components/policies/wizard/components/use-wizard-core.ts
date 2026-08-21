@@ -8,14 +8,11 @@ import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
 
 import type { PolicyWizardActionData } from "../hooks/composite/use-premium-calc";
 import type { PolicyLeaveApi } from "../hooks/draft/use-draft-types";
-import { useMode } from "../hooks/utils/use-mode";
+import { usePolicyPhase } from "../hooks/utils/use-mode";
 import { useDeferredFormValues } from "../hooks/wizard/use-deferred-form-values";
 import type { WizardProps } from "../shared/wizard-shared";
 
-export type WizardStateProps = Omit<
-  WizardProps,
-  "readOnly" | "isNew" | "freshSteps"
-> & {
+export type WizardStateProps = Omit<WizardProps, "isNew" | "freshSteps"> & {
   headerActions?: ReactNode;
 };
 
@@ -27,10 +24,10 @@ export function useWizardCore() {
   const navigate = useNavigate();
   const leaveApiRef = useRef<PolicyLeaveApi | null>(null);
   const getLeaveApi = () => leaveApiRef.current;
-  const mode = useMode();
+  const phase = usePolicyPhase();
   const navItems = useMemo(
-    () => getPolicyFormNavItems(mode.premiumPinned),
-    [mode.premiumPinned],
+    () => getPolicyFormNavItems(phase.premiumPinned),
+    [phase.premiumPinned],
   );
   const navIds = useMemo(
     () => navItems.map((item: { id: string }) => item.id),
@@ -45,7 +42,7 @@ export function useWizardCore() {
     navigate,
     leaveApiRef,
     getLeaveApi,
-    mode,
+    phase,
     navItems,
     navIds,
   };

@@ -302,7 +302,7 @@ export type Policy = {
     customWordings: CustomWordingItem[];
     /**
      * Transient PDF helper: ticked catalogue + custom `{ subject, content }` rows.
-     * Set by form snapshot; not persisted to app_extras.
+     * Set by form snapshot; not persisted to wordings.
      */
     endorsementWordings?: Array<{ subject: string; content: string }>;
     /** Derived from customWordings[0] for PDF merge fields. */
@@ -313,7 +313,7 @@ export type Policy = {
     customWordingContent2?: string;
     referralReasons?: string[];
     premium?: PremiumBreakdown;
-    /** Premium Breakdown keys the broker manually edited (persisted in app_extras). */
+    /** Premium Breakdown keys the broker manually edited (persisted on policy_car). */
     premiumManualKeys?: string[];
     rating?: RatingSnapshot;
     adjusted?: boolean;

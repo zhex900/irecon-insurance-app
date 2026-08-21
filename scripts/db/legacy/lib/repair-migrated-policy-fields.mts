@@ -33,7 +33,10 @@ export type MigratedPolicyRepairInput = {
   liabilityLimitBand: number;
   estimatedTurnover: number;
   subLimits: Record<string, string>;
-  appExtras: Record<string, unknown>;
+  excesses: CarExcesses | Record<string, string | undefined>;
+  excludedContracts1: string;
+  excludedContracts2: string;
+  excludedContracts3: string;
   siteAddress?: string;
 };
 
@@ -51,7 +54,10 @@ export type MigratedPolicyRepairPatch = {
     maximumMaintenancePeriod?: number;
     declarationConfirmed?: boolean;
     subLimits?: CarSubLimits;
-    appExtras?: Record<string, unknown>;
+    excesses?: CarExcesses;
+    excludedContracts1?: string;
+    excludedContracts2?: string;
+    excludedContracts3?: string;
   };
 };
 
@@ -248,8 +254,7 @@ export function buildMigratedPolicyRepairPatch(
     changed = true;
   }
 
-  const currentExtras = { ...input.appExtras };
-  const currentExcesses = (currentExtras.excesses ?? {}) as CarExcesses;
+  const currentExcesses = (input.excesses ?? {}) as CarExcesses;
   const repairedExcesses = repairExcesses(
     currentExcesses,
     input.estimatedTurnover,
@@ -263,23 +268,24 @@ export function buildMigratedPolicyRepairPatch(
 
   const excludedDefaults = excludedContractDefaults();
   const excludedChanged =
-    !String(currentExtras.excludedContracts1 ?? "").trim() ||
-    !String(currentExtras.excludedContracts2 ?? "").trim() ||
-    !String(currentExtras.excludedContracts3 ?? "").trim();
+    !String(input.excludedContracts1 ?? "").trim() ||
+    !String(input.excludedContracts2 ?? "").trim() ||
+    !String(input.excludedContracts3 ?? "").trim();
 
-  if (excessChanged || excludedChanged) {
-    const nextExtras = { ...currentExtras };
-    if (excessChanged) nextExtras.excesses = repairedExcesses;
-    if (!String(nextExtras.excludedContracts1 ?? "").trim()) {
-      nextExtras.excludedContracts1 = excludedDefaults.excludedContracts1;
+  if (excessChanged) {
+    carPatch.excesses = repairedExcesses;
+    changed = true;
+  }
+  if (excludedChanged) {
+    if (!String(input.excludedContracts1 ?? "").trim()) {
+      carPatch.excludedContracts1 = excludedDefaults.excludedContracts1;
     }
-    if (!String(nextExtras.excludedContracts2 ?? "").trim()) {
-      nextExtras.excludedContracts2 = excludedDefaults.excludedContracts2;
+    if (!String(input.excludedContracts2 ?? "").trim()) {
+      carPatch.excludedContracts2 = excludedDefaults.excludedContracts2;
     }
-    if (!String(nextExtras.excludedContracts3 ?? "").trim()) {
-      nextExtras.excludedContracts3 = excludedDefaults.excludedContracts3;
+    if (!String(input.excludedContracts3 ?? "").trim()) {
+      carPatch.excludedContracts3 = excludedDefaults.excludedContracts3;
     }
-    carPatch.appExtras = nextExtras;
     changed = true;
   }
 

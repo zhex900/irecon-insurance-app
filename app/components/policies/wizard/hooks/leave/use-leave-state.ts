@@ -5,7 +5,7 @@ import type { Policy } from "~/lib/db/types";
 
 import { consumeWizardLeave } from "../../wizard-step-memory";
 import type { PolicyWizardActionData } from "../composite/use-premium-calc";
-import { useMode } from "../utils/use-mode";
+import { usePolicyPhase } from "../utils/use-mode";
 import { destinationFromBlocker } from "./leave-helpers";
 
 export function useLeaveFetcherFailure(options: {
@@ -116,10 +116,10 @@ export function useLeaveState(options: {
   const [discarding, setDiscarding] = useState(false);
   const allowLeaveRef = useRef(false);
   const pendingLeaveDestinationRef = useRef<string | null>(null);
-  const { readOnly, isNew, isFormTerminal } = useMode();
+  const { isSavedTerminal, isNew, isFormTerminal } = usePolicyPhase();
 
   const blocker = useBlocker(() => {
-    if (readOnly || allowLeaveRef.current) return false;
+    if (isSavedTerminal || allowLeaveRef.current) return false;
     if (consumeWizardLeave(policy.policyId)) {
       allowLeaveRef.current = true;
       return false;
@@ -157,7 +157,7 @@ export function useLeaveState(options: {
     setDiscardConfirmOpen,
     discarding,
     setDiscarding,
-    readOnly,
+    isSavedTerminal,
     isNew,
     isFormTerminal,
   };

@@ -19,17 +19,16 @@ import {
 import type { CarPolicyWizardState } from "../components/use-wizard-state";
 import { useWizardState } from "../components/use-wizard-state";
 import { WizardContainer } from "../components/wizard-container";
-import { useMode } from "../hooks/utils/use-mode";
+import { usePolicyPhase } from "../hooks/utils/use-mode";
 
 export function WizardDefault(props: WizardStateProps) {
   const core = useWizardCore();
   usePolicySaveSync({
     fetcher: core.fetcher,
     onPolicyUpdated: props.onPolicyUpdated,
-    onSubmitted: () => core.mode.setSubmittedInSession(true),
   });
   const wizard = useWizardState(props, core);
-  const { wizardMode } = useMode();
+  const { phase } = usePolicyPhase();
   const { navigation, premiumCalc, draftSave, submit, leave, gate } = wizard;
 
   const rating =
@@ -76,7 +75,7 @@ export function WizardDefault(props: WizardStateProps) {
   );
 
   return (
-    <WizardContainer wizardMode={wizardMode}>
+    <WizardContainer phase={phase}>
       <Header
         policy={props.policy}
         reference={props.reference}
@@ -121,6 +120,7 @@ export function WizardDefault(props: WizardStateProps) {
             premiumRef={premiumCalc.premiumRef}
             isFetcherBusy={premiumCalc.isFetcherBusy}
             isCalculating={premiumCalc.isCalculating}
+            terminalStatusSaving={submit.terminalStatusSaving}
             handleFieldBlur={draftSave.handleFieldBlur}
             confirmTerminalStatusAndSave={submit.confirmTerminalStatusAndSave}
             markAttentionPaths={core.justSaved.markAttentionPaths}
@@ -178,7 +178,6 @@ export function WizardDefault(props: WizardStateProps) {
         submitDocumentNames={submit.submitDocumentNames}
         submitBusy={submit.submitting}
         confirmSubmit={submit.confirmSubmit}
-        setSubmittedInSession={core.mode.setSubmittedInSession}
         setSubmittedFingerprint={gate.setSubmittedFingerprint}
         pendingLeaveAfterSave={leave.pendingLeaveAfterSave}
         discarding={leave.discarding}

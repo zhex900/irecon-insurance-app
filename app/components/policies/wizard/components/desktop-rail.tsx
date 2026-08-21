@@ -8,9 +8,9 @@ import type { NoteAuthor } from "~/lib/services/users/service";
 
 import { usePolicyNotes } from "../hooks/composite/use-notes";
 import type { PolicyWizardActionData } from "../hooks/composite/use-premium-calc";
-import { useMode } from "../hooks/utils/use-mode";
+import { usePolicyPhase } from "../hooks/utils/use-mode";
 import type { WizardValidationIssue } from "../hooks/wizard/use-wizard-validation-state";
-import { wizardModeCardBorderClass } from "../shared/wizard-shared";
+import { policyPhaseCardBorderClass } from "../shared/policy-phase";
 
 type DesktopRailProps = {
   activeSectionId: string;
@@ -81,8 +81,8 @@ export const DesktopRail = memo(function DesktopRail({
   fetcher,
   onPolicyUpdated,
 }: DesktopRailProps) {
-  const { wizardMode, isNew } = useMode();
-  const borderClassName = wizardModeCardBorderClass(wizardMode);
+  const { phase, isNew } = usePolicyPhase();
+  const borderClassName = policyPhaseCardBorderClass(phase);
 
   return (
     <aside className="hidden min-h-0 xl:flex xl:h-full xl:flex-col xl:gap-4 xl:overflow-hidden">

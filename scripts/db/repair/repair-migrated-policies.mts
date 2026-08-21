@@ -93,7 +93,6 @@ async function main() {
       .from(policyCarAdjustment)
       .where(eq(policyCarAdjustment.policyId, p.policyId));
 
-    const extras = (car.appExtras ?? {}) as Record<string, unknown>;
     const patch = buildMigratedPolicyRepairPatch({
       policyStatusId: p.policyStatusId,
       postcode: p.postcode,
@@ -110,7 +109,10 @@ async function main() {
       liabilityLimitBand: car.liabilityLimitBand,
       estimatedTurnover: Number(car.estimatedTurnover),
       subLimits: (car.subLimits ?? {}) as Record<string, string>,
-      appExtras: extras,
+      excesses: (car.excesses ?? {}) as Record<string, string>,
+      excludedContracts1: car.excludedContracts1 ?? "",
+      excludedContracts2: car.excludedContracts2 ?? "",
+      excludedContracts3: car.excludedContracts3 ?? "",
       siteAddress: car.siteAddress,
     });
 
@@ -125,7 +127,9 @@ async function main() {
         patch.policyCar?.maximumConstructionPeriod != null
           ? `construction→${patch.policyCar.maximumConstructionPeriod}`
           : null,
-        patch.policyCar?.appExtras ? "excesses/defaults" : null,
+        patch.policyCar?.excesses || patch.policyCar?.excludedContracts1
+          ? "excesses/defaults"
+          : null,
       ].filter(Boolean);
       samples.push(`${p.policyNumber}: ${bits.join(", ") || "fields updated"}`);
     }

@@ -1,7 +1,29 @@
 import { useContext } from "react";
 
-import { ModeContext } from "../../components/mode-context";
+import { PolicyPhaseContext } from "../../components/mode-context";
 
+export function usePolicyPhase() {
+  return useContext(PolicyPhaseContext);
+}
+
+/** @deprecated Use usePolicyPhase */
 export function useMode() {
-  return useContext(ModeContext);
+  const phase = useContext(PolicyPhaseContext);
+  return {
+    ...phase,
+    /** @deprecated Use canEdit */
+    fieldsLocked: !phase.canEdit,
+    /** @deprecated Use isSavedTerminal */
+    readOnly: phase.isSavedTerminal,
+    /** @deprecated Use premiumPinned */
+    hasSubmittedOnce: phase.premiumPinned,
+    /** @deprecated Use phase */
+    wizardMode:
+      phase.phase === "new"
+        ? ("new" as const)
+        : phase.canEdit
+          ? ("edit" as const)
+          : ("view" as const),
+    setSubmittedInSession: () => {},
+  };
 }

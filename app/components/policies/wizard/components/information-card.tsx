@@ -6,7 +6,7 @@ import type { Policy, PremiumBreakdown, ReferenceData } from "~/lib/db/types";
 import { getTakenStatusIssues } from "~/lib/policies/taken-status";
 import { type CarPolicyFormValues, POLICY_STATUS } from "~/lib/zod/policy-car";
 
-import { useMode } from "../hooks/utils/use-mode";
+import { usePolicyPhase } from "../hooks/utils/use-mode";
 import { useWizardDisplayFields } from "../hooks/wizard/use-wizard-display-fields";
 import { SECTION_IDS } from "../shared/constants";
 
@@ -17,6 +17,7 @@ type InformationCardProps = {
   premiumRef: React.RefObject<PremiumBreakdown | undefined>;
   isFetcherBusy: boolean;
   isCalculating: boolean;
+  terminalStatusSaving?: boolean;
   handleFieldBlur: () => void;
   confirmTerminalStatusAndSave: (statusId: number) => void;
   markAttentionPaths: (paths: string[]) => void;
@@ -37,6 +38,7 @@ export const InformationCard = memo(function InformationCard({
   premiumRef,
   isFetcherBusy,
   isCalculating,
+  terminalStatusSaving = false,
   handleFieldBlur,
   confirmTerminalStatusAndSave,
   markAttentionPaths,
@@ -45,7 +47,7 @@ export const InformationCard = memo(function InformationCard({
   policy,
   reference,
 }: InformationCardProps) {
-  const { policyNumberEditable } = useMode();
+  const { policyNumberEditable } = usePolicyPhase();
   const { selectedStatus, insurerName, livePolicyNumber } =
     useWizardDisplayFields(policy, reference);
   const form = useFormContext<CarPolicyFormValues>();
@@ -114,7 +116,9 @@ export const InformationCard = memo(function InformationCard({
             : null) ?? document.getElementById(SECTION_IDS.PREMIUM);
         target?.scrollIntoView({ behavior: "smooth", block: "center" });
       }}
-      statusConfirmBusy={isFetcherBusy && !isCalculating}
+      statusConfirmBusy={
+        (isFetcherBusy && !isCalculating) || terminalStatusSaving
+      }
       adjusted={Boolean(policy.car.adjusted)}
       className={borderClassName}
     />

@@ -31,7 +31,7 @@ Paths are searched in order; first match wins.
 
 ### Policies on target
 
-Document metadata is written to **`policy_car.app_extras.documents`**. Policies must already exist (`npm run db:migrate:legacy:*`). Rows without a matching `policy_car` record are skipped.
+Document metadata is written to **`policy_document`**. Policies must already exist (`npm run db:migrate:legacy:*`). Rows without a matching `policy_car` record are skipped.
 
 ---
 
@@ -40,7 +40,7 @@ Document metadata is written to **`policy_car.app_extras.documents`**. Policies 
 1. Read document rows from export snapshot (~28k)
 2. For each row, find PDF under `POLICY_DOCUMENT_PATHS`
 3. Upload to R2 bucket **`insurance-app-library-documents-uat`** (override: `R2_POLICY_DOCUMENTS_BUCKET`)
-4. Update `policy_car.app_extras.documents` **per document** as uploads succeed
+4. Upsert **`policy_document`** **per document** as uploads succeed
 
 Progress:
 
@@ -108,12 +108,12 @@ npm run db:migrate:legacy -- --env=local --only documents --dry-run --file _arch
 ## Verify
 
 ```sql
-SELECT COUNT(*) FROM policy_car
-WHERE jsonb_array_length(app_extras->'documents') > 0;
+SELECT COUNT(*) FROM policy_document;
 
-SELECT policy_id, jsonb_array_length(app_extras->'documents') AS n
-FROM policy_car
-WHERE jsonb_array_length(app_extras->'documents') > 0
+SELECT policy_id, COUNT(*) AS n
+FROM policy_document
+GROUP BY policy_id
+ORDER BY n DESC
 LIMIT 10;
 ```
 

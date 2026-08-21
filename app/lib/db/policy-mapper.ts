@@ -1,4 +1,11 @@
-import type { policy, policyCar, policyCarAdjustment } from "~/lib/db/schema";
+import type {
+  policy,
+  policyCar,
+  policyCarAdjustment,
+  policyCarSelectedWording,
+  policyDocument,
+  policyNote,
+} from "~/lib/db/schema";
 import type {
   CarAdjustmentRecord,
   CarExcesses,
@@ -19,6 +26,15 @@ import { normalizeExcesses } from "~/lib/policies/excesses";
 type PolicyRow = typeof policy.$inferSelect;
 type PolicyCarRow = typeof policyCar.$inferSelect;
 type AdjustmentRow = typeof policyCarAdjustment.$inferSelect;
+type PolicyDocumentRow = typeof policyDocument.$inferSelect;
+type PolicyNoteRow = typeof policyNote.$inferSelect;
+type PolicyCarSelectedWordingRow = typeof policyCarSelectedWording.$inferSelect;
+
+export type PolicyChildRows = {
+  documents?: PolicyDocumentRow[];
+  notes?: PolicyNoteRow[];
+  selectedWordings?: PolicyCarSelectedWordingRow[];
+};
 
 function num(value: string | number | null | undefined, fallback = 0): number {
   if (value == null || value === "") return fallback;
@@ -38,37 +54,13 @@ function isoDateTime(value: Date | string | null | undefined): string {
   return value.toISOString();
 }
 
-type AppExtras = {
-  excesses?: CarExcesses;
-  documents?: PolicyDocument[];
-  notes?: PolicyNote[];
-  referralReasons?: string[];
-  selectedWordingIds?: number[];
-  customWordings?: CustomWordingItem[];
-  customWordingSubject?: string;
-  customWordingContent?: string;
-  customWordingSubject2?: string;
-  customWordingContent2?: string;
-  excludedContracts1?: string;
-  excludedContracts2?: string;
-  excludedContracts3?: string;
-  rating?: RatingSnapshot;
-  combinedBrokerFee?: number;
-  terrorismTier?: string;
-  isTerrorismRateExist?: boolean;
-  premiumManualKeys?: string[];
-};
-
 function hasPremium(car: PolicyCarRow): boolean {
   return (
     car.originalTotalPremium != null || car.contractWorksBasePremium != null
   );
 }
 
-function premiumFromRow(
-  car: PolicyCarRow,
-  extras: AppExtras,
-): PremiumBreakdown | undefined {
+function premiumFromRow(car: PolicyCarRow): PremiumBreakdown | undefined {
   if (!hasPremium(car)) return undefined;
   return {
     contractWorksCalculatedBasePremium: num(
@@ -95,7 +87,7 @@ function premiumFromRow(
     liabilityGST: num(car.liabilityGst),
     liabilityStampDuty: num(car.liabilityStampDuty),
     liabilityTotalPremium: num(car.liabilityTotalPremium),
-    combinedBrokerFee: num(extras.combinedBrokerFee),
+    combinedBrokerFee: num(car.combinedBrokerFee),
     originalTotalPremium: num(car.originalTotalPremium),
   };
 }
@@ -132,19 +124,7 @@ function normalizeRatingSnapshot(
   };
 }
 
-function ratingFromRow(
-  car: PolicyCarRow,
-  extras: AppExtras,
-): RatingSnapshot | undefined {
-  // Always coerce extras.rating through num() — raw JSON can leave string /
-  // missing rates which breaks client CalculatePremium (terror → NaN).
-  if (extras.rating) {
-    return normalizeRatingSnapshot(
-      extras.rating,
-      extras.terrorismTier ?? "",
-      Boolean(extras.isTerrorismRateExist),
-    );
-  }
+function ratingFromRow(car: PolicyCarRow): RatingSnapshot | undefined {
   if (car.priceId == null && car.plantRate == null) return undefined;
   return normalizeRatingSnapshot(
     {
@@ -163,31 +143,78 @@ function ratingFromRow(
       plantValueMin: car.plantValueMin,
       plantValueMax: car.plantValueMax,
       terrorismRate: car.terrorismRate,
-      terrorismTier: extras.terrorismTier ?? "",
-      isTerrorismRateExist: Boolean(extras.isTerrorismRateExist),
+      terrorismTier: car.terrorismTier ?? "",
+      isTerrorismRateExist: car.isTerrorismRateExist,
     },
-    extras.terrorismTier ?? "",
-    Boolean(extras.isTerrorismRateExist),
+    car.terrorismTier ?? "",
+    Boolean(car.isTerrorismRateExist),
   );
+}
+
+function customWordingsFromRow(wordings: unknown[]): CustomWordingItem[] {
+  const items = (wordings ?? []).map((entry, index) => {
+    const item = entry as {
+      id?: string;
+      subject?: string;
+      content?: string;
+    };
+    return {
+      id: item.id ?? `w-${index}`,
+      subject: item.subject ?? "",
+      content: item.content ?? "",
+    };
+  });
+  return normalizeCustomWordings(items);
+}
+
+function documentRowToDomain(row: PolicyDocumentRow): PolicyDocument {
+  return {
+    policyDocumentId: row.policyDocumentId,
+    policyId: row.policyId,
+    name: row.name,
+    filename: row.filename,
+    generationKey: row.generationKey,
+    content: row.content,
+    templateKey: row.templateKey ?? undefined,
+    libraryDocumentId: row.libraryDocumentId ?? undefined,
+    mergeInputs: row.mergeInputs ?? undefined,
+    pdfBase64: row.pdfBase64 ?? undefined,
+    generatedWhen: isoDateTime(row.generatedWhen),
+    generatedBy: row.generatedBy,
+    documentTypeCode: row.documentTypeCode ?? undefined,
+    r2Key: row.r2Key ?? undefined,
+  };
+}
+
+function noteRowToDomain(row: PolicyNoteRow): PolicyNote {
+  return {
+    policyNoteId: row.policyNoteId,
+    policyId: row.policyId,
+    policyNoteTypeId: row.policyNoteTypeId,
+    description: row.description,
+    createdWhen: isoDateTime(row.createdWhen),
+    createdBy: row.createdBy,
+  };
 }
 
 export function rowsToPolicy(
   p: PolicyRow,
   car: PolicyCarRow,
   adjustment?: AdjustmentRow | null,
+  children: PolicyChildRows = {},
 ): Policy {
-  const extras = (car.appExtras ?? {}) as AppExtras;
-  const premium = premiumFromRow(car, extras);
-  const rating = ratingFromRow(car, extras);
+  const premium = premiumFromRow(car);
+  const rating = ratingFromRow(car);
   const adj = adjustment
     ? ((adjustment.appSnapshot as CarAdjustmentRecord | null) ?? undefined)
     : undefined;
-  const customWordings = normalizeCustomWordings(extras.customWordings, {
-    subject: extras.customWordingSubject,
-    content: extras.customWordingContent,
-    subject2: extras.customWordingSubject2,
-    content2: extras.customWordingContent2,
-  });
+  const customWordings = customWordingsFromRow(car.wordings ?? []);
+  const selectedWordingIds = (children.selectedWordings ?? []).map(
+    (row) => row.carWordingId,
+  );
+  const premiumManualKeys = Array.isArray(car.premiumManualKeys)
+    ? car.premiumManualKeys.filter((key) => typeof key === "string")
+    : undefined;
 
   return {
     policyId: p.policyId,
@@ -204,8 +231,8 @@ export function rowsToPolicy(
     createdBy: p.createdBy,
     insurerCode: p.insurerCode,
     isDraft: p.isDraft,
-    notes: extras.notes,
-    documents: extras.documents,
+    notes: (children.notes ?? []).map(noteRowToDomain),
+    documents: (children.documents ?? []).map(documentRowToDomain),
     car: {
       coverTypeId: car.coverTypeId,
       annualCoverTypeId: car.annualCoverTypeId,
@@ -235,20 +262,18 @@ export function rowsToPolicy(
       ),
       subLimits: (car.subLimits ?? {}) as CarSubLimits,
       excesses: normalizeExcesses(
-        (extras.excesses ?? {}) as CarExcesses,
+        (car.excesses ?? {}) as CarExcesses,
         num(car.estimatedTurnover),
       ),
-      excludedContracts1: extras.excludedContracts1 ?? "",
-      excludedContracts2: extras.excludedContracts2 ?? "",
-      excludedContracts3: extras.excludedContracts3 ?? "",
-      selectedWordingIds: extras.selectedWordingIds ?? [],
+      excludedContracts1: car.excludedContracts1 ?? "",
+      excludedContracts2: car.excludedContracts2 ?? "",
+      excludedContracts3: car.excludedContracts3 ?? "",
+      selectedWordingIds,
       customWordings,
       ...flatCustomWordings(customWordings),
-      referralReasons: extras.referralReasons ?? [],
+      referralReasons: car.referralReasons ?? [],
       premium,
-      premiumManualKeys: Array.isArray(extras.premiumManualKeys)
-        ? extras.premiumManualKeys.filter((key) => typeof key === "string")
-        : undefined,
+      premiumManualKeys,
       rating,
       adjusted: Boolean(adjustment),
       adjustment: adj,
@@ -261,10 +286,45 @@ function dec(value: number | undefined | null): string | null {
   return String(value);
 }
 
+function documentToRow(
+  doc: PolicyDocument,
+): typeof policyDocument.$inferInsert {
+  return {
+    policyDocumentId: doc.policyDocumentId,
+    policyId: doc.policyId,
+    name: doc.name,
+    filename: doc.filename,
+    generationKey: doc.generationKey,
+    content: doc.content,
+    templateKey: doc.templateKey ?? null,
+    libraryDocumentId: doc.libraryDocumentId ?? null,
+    mergeInputs: doc.mergeInputs ?? null,
+    pdfBase64: doc.pdfBase64 ?? null,
+    generatedWhen: new Date(doc.generatedWhen),
+    generatedBy: doc.generatedBy,
+    documentTypeCode: doc.documentTypeCode ?? null,
+    r2Key: doc.r2Key ?? null,
+  };
+}
+
+function noteToRow(note: PolicyNote): typeof policyNote.$inferInsert {
+  return {
+    policyNoteId: note.policyNoteId,
+    policyId: note.policyId,
+    policyNoteTypeId: note.policyNoteTypeId,
+    description: note.description,
+    createdWhen: new Date(note.createdWhen),
+    createdBy: note.createdBy,
+  };
+}
+
 export function policyToRows(policyDoc: Policy): {
   policyValues: typeof policy.$inferInsert;
   carValues: typeof policyCar.$inferInsert;
   adjustmentValues: typeof policyCarAdjustment.$inferInsert | null;
+  documentValues: Array<typeof policyDocument.$inferInsert>;
+  noteValues: Array<typeof policyNote.$inferInsert>;
+  selectedWordingIds: number[];
 } {
   const premium = policyDoc.car.premium;
   const rating = policyDoc.car.rating;
@@ -274,26 +334,9 @@ export function policyToRows(policyDoc: Policy): {
     subject2: policyDoc.car.customWordingSubject2,
     content2: policyDoc.car.customWordingContent2,
   });
-  const flatWordings = flatCustomWordings(customWordings);
-  const extras: AppExtras = {
-    excesses: policyDoc.car.excesses,
-    documents: policyDoc.documents,
-    notes: policyDoc.notes,
-    referralReasons: policyDoc.car.referralReasons,
-    selectedWordingIds: policyDoc.car.selectedWordingIds,
-    customWordings,
-    ...flatWordings,
-    excludedContracts1: policyDoc.car.excludedContracts1,
-    excludedContracts2: policyDoc.car.excludedContracts2,
-    excludedContracts3: policyDoc.car.excludedContracts3,
-    rating: policyDoc.car.rating,
-    combinedBrokerFee: premium?.combinedBrokerFee,
-    terrorismTier: rating?.terrorismTier,
-    isTerrorismRateExist: rating?.isTerrorismRateExist,
-    premiumManualKeys: policyDoc.car.premiumManualKeys,
-  };
 
   const wordings: unknown[] = customWordings.map((item) => ({
+    id: item.id,
     subject: item.subject,
     content: item.content,
   }));
@@ -387,9 +430,17 @@ export function policyToRows(policyDoc: Policy): {
     plantValueMin: dec(rating?.plantValueMin),
     plantValueMax: dec(rating?.plantValueMax),
     terrorismRate: dec(rating?.terrorismRate),
+    excludedContracts1: policyDoc.car.excludedContracts1,
+    excludedContracts2: policyDoc.car.excludedContracts2,
+    excludedContracts3: policyDoc.car.excludedContracts3,
+    combinedBrokerFee: dec(premium?.combinedBrokerFee),
+    terrorismTier: rating?.terrorismTier ?? "",
+    isTerrorismRateExist: Boolean(rating?.isTerrorismRateExist),
+    premiumManualKeys: policyDoc.car.premiumManualKeys ?? [],
+    referralReasons: policyDoc.car.referralReasons ?? [],
+    excesses: policyDoc.car.excesses ?? {},
     subLimits: policyDoc.car.subLimits ?? {},
     wordings,
-    appExtras: extras,
   };
 
   let adjustmentValues: typeof policyCarAdjustment.$inferInsert | null = null;
@@ -415,5 +466,12 @@ export function policyToRows(policyDoc: Policy): {
     };
   }
 
-  return { policyValues, carValues, adjustmentValues };
+  return {
+    policyValues,
+    carValues,
+    adjustmentValues,
+    documentValues: (policyDoc.documents ?? []).map(documentToRow),
+    noteValues: (policyDoc.notes ?? []).map(noteToRow),
+    selectedWordingIds: policyDoc.car.selectedWordingIds ?? [],
+  };
 }

@@ -26,6 +26,7 @@ docs/
 | Coding standards             | [guidelines/coding-standards.md](guidelines/coding-standards.md)                 |
 | UI / ReUI                    | [guidelines/ui-guidelines.md](guidelines/ui-guidelines.md)                       |
 | Performance / Worker bundles | [architecture/performance.md](architecture/performance.md)                       |
+| Interim data patterns        | [architecture/interim-data-patterns.md](architecture/interim-data-patterns.md)   |
 | Testing                      | [development/testing.md](development/testing.md)                                 |
 | Preview environments         | [deployment/preview-environments.md](deployment/preview-environments.md)         |
 | Observability                | [deployment/observability.md](deployment/observability.md)                       |

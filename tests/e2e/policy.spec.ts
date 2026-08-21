@@ -110,8 +110,8 @@ test.describe("policy status transitions", () => {
     await expect(page).toHaveURL(/\/policies\/[^/?]+$/);
 
     // Verify we're in edit mode
-    const wizardRoot = page.locator("[data-wizard-mode]");
-    await expect(wizardRoot).toHaveAttribute("data-wizard-mode", "edit");
+    const wizardRoot = page.locator("[data-policy-phase]");
+    await expect(wizardRoot).toHaveAttribute("data-policy-phase", "pending");
 
     // complete the policy form
     await page.getByRole("textbox", { name: "Insured Name" }).fill("John Doe");
@@ -133,7 +133,10 @@ test.describe("policy status transitions", () => {
     await page.reload();
 
     // After submission, policy should be in Taken status and in view mode
-    await expect(wizardRoot).toHaveAttribute("data-wizard-mode", "view");
+    await expect(wizardRoot).toHaveAttribute(
+      "data-policy-phase",
+      /taken|not-taken/,
+    );
   });
 
   test.skip("pending policy can be rejected and transitions to Not taken status", async ({
@@ -188,8 +191,11 @@ test.describe("policy status transitions", () => {
 
     // After rejection, policy should be in Not taken status (terminal) and in view mode
     await page.reload();
-    const wizardRoot = page.locator("[data-wizard-mode]");
-    await expect(wizardRoot).toHaveAttribute("data-wizard-mode", "view");
+    const wizardRoot = page.locator("[data-policy-phase]");
+    await expect(wizardRoot).toHaveAttribute(
+      "data-policy-phase",
+      /taken|not-taken/,
+    );
   });
 
   test("Taken policy can be cloned to create new Pending draft", async ({
@@ -203,8 +209,11 @@ test.describe("policy status transitions", () => {
     await expect(page).toHaveURL(/\/policies\/[^/?]+$/);
 
     // Wait for view mode
-    const wizardRoot = page.locator("[data-wizard-mode]");
-    await expect(wizardRoot).toHaveAttribute("data-wizard-mode", "view");
+    const wizardRoot = page.locator("[data-policy-phase]");
+    await expect(wizardRoot).toHaveAttribute(
+      "data-policy-phase",
+      /taken|not-taken/,
+    );
 
     // Clone the policy
     const cloneButton = page.getByRole("button", { name: /clone/i });
@@ -214,7 +223,7 @@ test.describe("policy status transitions", () => {
     await expect(page).toHaveURL(/\/policies\/[^/]+\?cloned=1/);
 
     // New clone should be in edit mode
-    await expect(wizardRoot).toHaveAttribute("data-wizard-mode", "edit");
+    await expect(wizardRoot).toHaveAttribute("data-policy-phase", "pending");
 
     // Should have submit button available
     await expect(
@@ -300,8 +309,11 @@ test.describe("policy wizard modes", () => {
     await newPolicyButton.first().click();
     await expect(page).toHaveURL(/\/policies\/[^/]+\?new=1/);
 
-    const wizardRoot = page.locator("[data-wizard-mode]");
-    await expect(wizardRoot).toHaveAttribute("data-wizard-mode", "new");
+    const wizardRoot = page.locator("[data-policy-phase]");
+    await expect(wizardRoot).toHaveAttribute("data-policy-phase", "new");
+    await expect(page.getByText(/^Editing$/i)).toHaveCount(0);
+    await expect(page.getByText(/^View only$/i)).toHaveCount(0);
+    await expect(page.getByText(/^Draft$/i)).toBeVisible();
     await expect(
       page.getByRole("button", { name: /^submit$/i }).first(),
     ).toBeVisible();
@@ -311,7 +323,7 @@ test.describe("policy wizard modes", () => {
     // Pending/non-terminal draft should now render in "edit" mode.
     const policyUrl = page.url().split("?")[0];
     await page.goto(policyUrl);
-    await expect(wizardRoot).toHaveAttribute("data-wizard-mode", "edit");
+    await expect(wizardRoot).toHaveAttribute("data-policy-phase", "pending");
     await expect(
       page.getByRole("button", { name: /^submit$/i }).first(),
     ).toBeVisible();
@@ -326,8 +338,11 @@ test.describe("policy wizard modes", () => {
     await terminalRow.first().click();
     await expect(page).toHaveURL(/\/policies\/[^/?]+$/);
 
-    const wizardRoot = page.locator("[data-wizard-mode]");
-    await expect(wizardRoot).toHaveAttribute("data-wizard-mode", "view");
+    const wizardRoot = page.locator("[data-policy-phase]");
+    await expect(wizardRoot).toHaveAttribute(
+      "data-policy-phase",
+      /taken|not-taken/,
+    );
     await expect(page.getByRole("button", { name: /^submit$/i })).toHaveCount(
       0,
     );
@@ -347,8 +362,11 @@ test.describe("policy wizard modes", () => {
     // Wait for the "view" mode header (and its actions) to actually render —
     // `.count()` on the Clone button right after a client-side nav would race
     // the loaderData-driven header actions.
-    const wizardRoot = page.locator("[data-wizard-mode]");
-    await expect(wizardRoot).toHaveAttribute("data-wizard-mode", "view");
+    const wizardRoot = page.locator("[data-policy-phase]");
+    await expect(wizardRoot).toHaveAttribute(
+      "data-policy-phase",
+      /taken|not-taken/,
+    );
 
     const cloneButton = page.getByRole("button", { name: /clone/i });
 
@@ -356,7 +374,7 @@ test.describe("policy wizard modes", () => {
     await expect(page).toHaveURL(/\/policies\/[^/]+\?cloned=1/);
 
     // A fresh clone is a new Pending draft — editable, not the source's "view" mode.
-    await expect(wizardRoot).toHaveAttribute("data-wizard-mode", "edit");
+    await expect(wizardRoot).toHaveAttribute("data-policy-phase", "pending");
     await expect(
       page.getByRole("button", { name: /^submit$/i }).first(),
     ).toBeVisible();

@@ -21,7 +21,7 @@ export function useLeaveActions(options: {
   setDraftSaveError: (error: string | null) => void;
   saveDraftNow: () => Promise<boolean | void>;
   savePolicy: (overrides?: Partial<CarPolicyFormValues>) => Promise<boolean>;
-  readOnly: boolean;
+  isSavedTerminal: boolean;
   isNew: boolean;
   isFormTerminal: boolean;
 }) {
@@ -38,7 +38,7 @@ export function useLeaveActions(options: {
     setDraftSaveError,
     saveDraftNow,
     savePolicy,
-    readOnly,
+    isSavedTerminal,
     isNew,
     isFormTerminal,
   } = options;
@@ -124,7 +124,7 @@ export function useLeaveActions(options: {
   }
 
   function handleCancelClick() {
-    if (readOnly || !isNew) {
+    if (isSavedTerminal || !isNew) {
       navigate(clientPath);
       return;
     }
