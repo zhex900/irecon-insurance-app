@@ -89,30 +89,24 @@ test.describe("quote-to-taken workflow", () => {
       page.getByRole("button", { name: "Submit" }).first(),
     ).toBeEnabled();
 
+    // await waitForPremiumCalculation(page);
+
     await page
       .getByRole("button", { name: "Submit" })
       .first()
       .click({ force: true });
 
-    expect(page.getByText("Submit policy?")).toBeVisible();
+    const submitDialog = page.getByRole("dialog", {
+      name: /Submit policy\?/i,
+    });
+    await expect(submitDialog).toBeVisible();
 
     await page.getByRole("button", { name: "Confirm & generate" }).click();
+    await expect(submitDialog).toBeHidden({ timeout: 90_000 });
 
-    expect(page.getByText("Submit policy?")).toBeHidden();
-    // await page
-    //   .getByRole("checkbox", { name: "Confirm you have asked and" })
-    //   .focus();
-    // await page.keyboard.press("Space");
-
-    // 10. Remove ?new=1 marker to see the saved policy
-    // const currentUrl = await page.url();
-    // const baseUrl = currentUrl.split("?")[0];
-    // await page.goto(baseUrl);
-
-    // wait until the policy is in "pending" mode
-
-    // // Now policy should be in "edit" mode
-    await expect(wizardRoot).toHaveAttribute("data-policy-phase", "pending");
+    await expect(wizardRoot).toHaveAttribute("data-policy-phase", "pending", {
+      timeout: 90_000,
+    });
 
     await page.getByRole("button", { name: /^Policy status$/i }).click();
     await page

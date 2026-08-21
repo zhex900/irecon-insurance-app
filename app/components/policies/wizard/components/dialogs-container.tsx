@@ -12,6 +12,7 @@ type DialogsContainerProps = {
   premiumRef: React.RefObject<PremiumBreakdown | undefined>;
   submitConfirmOpen: boolean;
   setSubmitConfirmOpen: (open: boolean) => void;
+  dismissSubmitConfirm: () => void;
   submitDocumentNames: string[];
   submitBusy: boolean;
   confirmSubmit: () => Promise<boolean>;
@@ -30,6 +31,7 @@ export const DialogsContainer = memo(function DialogsContainer({
   premiumRef,
   submitConfirmOpen,
   setSubmitConfirmOpen,
+  dismissSubmitConfirm,
   submitDocumentNames,
   submitBusy,
   confirmSubmit,
@@ -48,8 +50,9 @@ export const DialogsContainer = memo(function DialogsContainer({
         onOpenChange={setSubmitConfirmOpen}
         documentNames={submitDocumentNames}
         busy={submitBusy}
-        onCancel={() => setSubmitConfirmOpen(false)}
+        onCancel={dismissSubmitConfirm}
         onConfirm={() => {
+          dismissSubmitConfirm();
           void confirmSubmit().then((ok) => {
             if (!ok) return;
             setSubmittedFingerprint(

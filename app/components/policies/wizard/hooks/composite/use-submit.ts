@@ -82,8 +82,9 @@ export function usePolicySubmit({
 }) {
   const saveWaitRef = useRef<SaveWaiter | null>(null);
   const saveSawBusyRef = useRef(false);
+  const ignoreSubmitConfirmReopenRef = useRef(false);
 
-  const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
+  const [submitConfirmOpen, setSubmitConfirmOpenState] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [terminalStatusSaving, setTerminalStatusSaving] = useState(false);
   const [submitDocumentNames, setSubmitDocumentNames] = useState<string[]>([]);
@@ -136,7 +137,27 @@ export function usePolicySubmit({
     await waitForDraftIdle();
   }
 
+  function dismissSubmitConfirm() {
+    ignoreSubmitConfirmReopenRef.current = true;
+    setSubmitConfirmOpenState(false);
+    requestAnimationFrame(() => {
+      ignoreSubmitConfirmReopenRef.current = false;
+    });
+  }
+
+  function handleSubmitConfirmOpenChange(open: boolean) {
+    if (submitting && !open) return;
+    if (!open) {
+      dismissSubmitConfirm();
+      return;
+    }
+    if (ignoreSubmitConfirmReopenRef.current) return;
+    setSubmitConfirmOpenState(true);
+  }
+
   async function requestSubmit() {
+    if (ignoreSubmitConfirmReopenRef.current) return;
+    if (submitConfirmOpen) return;
     const valid = await form.trigger();
     if (!valid) {
       focusFirstWizardIssue(issueFocus);
@@ -154,7 +175,7 @@ export function usePolicySubmit({
       });
       return;
     }
-    setSubmitConfirmOpen(true);
+    setSubmitConfirmOpenState(true);
   }
 
   async function confirmSubmit() {
@@ -169,7 +190,6 @@ export function usePolicySubmit({
         setReferralReasons,
       });
       if (premiumForDocs === false) {
-        setSubmitConfirmOpen(false);
         await form.trigger([...pricingFields]);
         return false;
       }
@@ -179,7 +199,6 @@ export function usePolicySubmit({
         force: true,
       });
       const saved = await savePolicy();
-      setSubmitConfirmOpen(false);
       if (saved) rememberPremiumAfterSubmit(policy.policyId);
       return saved;
     } finally {
@@ -259,7 +278,8 @@ export function usePolicySubmit({
 
   return {
     submitConfirmOpen,
-    setSubmitConfirmOpen,
+    setSubmitConfirmOpen: handleSubmitConfirmOpenChange,
+    dismissSubmitConfirm,
     submitting,
     terminalStatusSaving,
     submitDocumentNames,

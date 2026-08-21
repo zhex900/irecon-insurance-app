@@ -175,6 +175,7 @@ export function WizardDefault(props: WizardStateProps) {
         premiumRef={premiumCalc.premiumRef}
         submitConfirmOpen={submit.submitConfirmOpen}
         setSubmitConfirmOpen={submit.setSubmitConfirmOpen}
+        dismissSubmitConfirm={submit.dismissSubmitConfirm}
         submitDocumentNames={submit.submitDocumentNames}
         submitBusy={submit.submitting}
         confirmSubmit={submit.confirmSubmit}

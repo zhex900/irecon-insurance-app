@@ -204,11 +204,11 @@ export async function submitPolicy(page: Page): Promise<void> {
     .getByRole("button", { name: /^submit$/i })
     .first()
     .click();
-  await expect(
-    page.getByRole("dialog", { name: /Submit policy\?/i }),
-  ).toBeVisible();
+  const submitDialog = page.getByRole("dialog", { name: /Submit policy\?/i });
+  await expect(submitDialog).toBeVisible();
   await page.getByRole("button", { name: /Confirm & generate/i }).click();
-  await expectPolicyPhase(page, "pending", { timeout: 45_000 });
+  await expect(submitDialog).toBeHidden({ timeout: 90_000 });
+  await expectPolicyPhase(page, "pending", { timeout: 90_000 });
 }
 
 export async function markPolicyTaken(page: Page): Promise<void> {

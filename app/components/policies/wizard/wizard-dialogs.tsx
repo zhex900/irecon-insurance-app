@@ -32,7 +32,7 @@ export function SubmitConfirmDialog({
     <Dialog
       open={open}
       onOpenChange={(next) => {
-        if (busy) return;
+        if (busy && !next) return;
         onOpenChange(next);
       }}
     >
@@ -58,10 +58,16 @@ export function SubmitConfirmDialog({
             variant="outline"
             onClick={onCancel}
             disabled={busy}
+            onMouseDown={(event) => event.preventDefault()}
           >
             Cancel
           </Button>
-          <LoadingButton type="button" loading={busy} onClick={onConfirm}>
+          <LoadingButton
+            type="button"
+            loading={busy}
+            onClick={onConfirm}
+            onMouseDown={(event) => event.preventDefault()}
+          >
             Confirm & generate
           </LoadingButton>
         </DialogFooter>
