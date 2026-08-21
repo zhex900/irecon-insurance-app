@@ -32,6 +32,30 @@ import {
 } from "~/lib/services/reference.service";
 import { POLICY_STATUS } from "~/lib/zod/policy-car";
 
+const POLICY_NUMBER_ALLOCATE_MAX_ATTEMPTS = 25;
+
+/**
+ * Next human-facing policy number from {@link policy_number_seq}, skipping values
+ * already held by another policy (seq can lag after imports or manual inserts).
+ */
+export async function allocatePolicyNumber(policyId: string): Promise<string> {
+  const db = getDb();
+  for (
+    let attempt = 0;
+    attempt < POLICY_NUMBER_ALLOCATE_MAX_ATTEMPTS;
+    attempt++
+  ) {
+    const [seqRow] = await db.execute<{ seq: number | string }>(
+      sql`SELECT nextval('policy_number_seq') AS "seq"`,
+    );
+    const policyNumber = formatPolicyNumberFromSeq(Number(seqRow?.seq ?? 1000));
+    if (!(await isPolicyNumberTaken(policyNumber, policyId))) {
+      return policyNumber;
+    }
+  }
+  throw new Error("Could not allocate a unique policy number");
+}
+
 /**
  * True when another policy already holds this number (case-insensitive).
  * `excludePolicyId` keeps a policy from colliding with itself.
@@ -437,13 +461,8 @@ export async function createPolicyDraft(
   const existingClient = await getClient(clientId);
   if (!existingClient) throw new Error("Client not found");
 
-  const db = getDb();
   const policyId = crypto.randomUUID();
-  // Human policy numbers come from their own sequence, not the UUID key.
-  const [seqRow] = await db.execute<{ seq: number | string }>(
-    sql`SELECT nextval('policy_number_seq') AS "seq"`,
-  );
-  const policyNumber = formatPolicyNumberFromSeq(Number(seqRow?.seq ?? 1000));
+  const policyNumber = await allocatePolicyNumber(policyId);
   const today = new Date();
   const nextYear = new Date(today);
   nextYear.setFullYear(nextYear.getFullYear() + 1);

@@ -1,18 +1,23 @@
 import { describe, expect, it } from "vitest";
 
-import type { Policy } from "~/lib/db/types";
 import { derivePolicyPhase } from "~/components/policies/wizard/shared/policy-phase";
+import type { Policy, PremiumBreakdown } from "~/lib/db/types";
 import { POLICY_STATUS } from "~/lib/zod/policy-car";
 
-function makePolicy(overrides: Partial<Policy> = {}): Policy {
+function makePolicy(
+  overrides: Partial<Omit<Policy, "car">> & {
+    car?: Partial<Policy["car"]>;
+  } = {},
+): Policy {
+  const { car: carOverrides, ...rest } = overrides;
   return {
     policyId: "p1",
     policyNumber: "TEST-1",
     clientId: "c1",
     policyStatusId: POLICY_STATUS.Pending,
     isDraft: true,
-    car: { premium: null },
-    ...overrides,
+    car: { premium: null, ...carOverrides },
+    ...rest,
   } as Policy;
 }
 
@@ -26,7 +31,9 @@ describe("derivePolicyPhase", () => {
       derivePolicyPhase(
         makePolicy({
           isDraft: false,
-          car: { premium: { total: 100 } } as Policy["car"],
+          car: {
+            premium: { originalTotalPremium: 100 } as PremiumBreakdown,
+          },
         }),
         false,
       ),

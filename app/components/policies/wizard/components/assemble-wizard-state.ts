@@ -1,7 +1,6 @@
 import type { UseFormReturn } from "react-hook-form";
 
-import type { CarWording, Policy } from "~/lib/db/types";
-
+import type { CarWording } from "~/lib/db/types";
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
 
 import type { usePolicyDocuments } from "../hooks/composite/use-documents";

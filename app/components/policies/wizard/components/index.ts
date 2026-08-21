@@ -1,4 +1,4 @@
-export { usePolicyPhase, useMode } from "../hooks/utils/use-mode";
+export { useMode, usePolicyPhase } from "../hooks/utils/use-mode";
 export { DesktopRail } from "./desktop-rail";
 export { DialogsContainer } from "./dialogs-container";
 export { Footer } from "./footer";

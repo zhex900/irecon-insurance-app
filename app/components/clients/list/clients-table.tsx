@@ -115,6 +115,7 @@ export function ClientsTable({
               return (
                 <InteractiveTableRow
                   key={client.clientId}
+                  data-client-id={client.clientId}
                   aria-label={`Open client ${client.name || client.clientId}`}
                   onActivate={() => navigate(`/clients/${client.clientId}`)}
                 >
