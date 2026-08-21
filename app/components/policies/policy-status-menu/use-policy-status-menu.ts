@@ -78,9 +78,7 @@ export function usePolicyStatusMenu({
     onTerminalInvalid?.(statusId);
   }
 
-  function runTerminalValidation(
-    statusId: number,
-  ): TerminalStatusValidation {
+  function runTerminalValidation(statusId: number): TerminalStatusValidation {
     if (!validateTerminal) return { ok: true };
     return validateTerminal(statusId);
   }
