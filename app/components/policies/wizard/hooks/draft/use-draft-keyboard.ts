@@ -1,18 +1,18 @@
 import { useEffect, useRef } from "react";
 
-import { useMode } from "../utils/use-mode";
+import { usePolicyPhase } from "../utils/use-mode";
 
 /** Cmd/Ctrl+S — same draft save path as blur autosave. */
 export function usePolicyDraftKeyboardSave(saveDraftNow: () => void) {
   const saveDraftNowRef = useRef(saveDraftNow);
-  const { fieldsLocked } = useMode();
+  const { canEdit } = usePolicyPhase();
 
   useEffect(() => {
     saveDraftNowRef.current = saveDraftNow;
   }, [saveDraftNow]);
 
   useEffect(() => {
-    if (fieldsLocked) return;
+    if (!canEdit) return;
 
     function onKeyDown(event: KeyboardEvent) {
       if (event.key && event.key.toLowerCase() !== "s") return;
@@ -23,5 +23,5 @@ export function usePolicyDraftKeyboardSave(saveDraftNow: () => void) {
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [fieldsLocked]);
+  }, [canEdit]);
 }

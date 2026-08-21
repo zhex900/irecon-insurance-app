@@ -8,17 +8,17 @@ Implementation: `scripts/db/legacy/lib/legacy-policy-mapper.mts`, `scripts/db/le
 
 ## Domain tables
 
-| Legacy (MSSQL)         | Postgres table                       | Notes                                       |
-| ---------------------- | ------------------------------------ | ------------------------------------------- |
-| `AccountManager`       | `account_manager`                    | 7 rows; deduped by ID                       |
-| `WholesaleBroker`      | `authorised_representative`          | All rows (`689`)                            |
-| `Client`               | `client`                             | UUID from `legacyClientUuid(clientId)`      |
-| `Policy`               | `policy`                             | UUID from `legacyPolicyUuid(policyId)`      |
-| `PolicyCAR`            | `policy_car`                         | Premium/rating columns + `app_extras` jsonb |
-| `PolicyCAR` (adjusted) | `policy_car_adjustment`              | When `Adjusted = 1`                         |
-| `PolicyDocument`       | `policy_car.app_extras.documents`    | Separate documents slice; PDFs in R2        |
-| `PolicyNote`           | `policy_car.app_extras.notes`        | In policy export                            |
-| `PolicyCARWording`     | `app_extras` wordings / selected IDs | In policy export                            |
+| Legacy (MSSQL)         | Postgres table                             | Notes                                  |
+| ---------------------- | ------------------------------------------ | -------------------------------------- |
+| `AccountManager`       | `account_manager`                          | 7 rows; deduped by ID                  |
+| `WholesaleBroker`      | `authorised_representative`                | All rows (`689`)                       |
+| `Client`               | `client`                                   | UUID from `legacyClientUuid(clientId)` |
+| `Policy`               | `policy`                                   | UUID from `legacyPolicyUuid(policyId)` |
+| `PolicyCAR`            | `policy_car`                               | Premium/rating + typed columns / jsonb |
+| `PolicyCAR` (adjusted) | `policy_car_adjustment`                    | When `Adjusted = 1`                    |
+| `PolicyDocument`       | `policy_document`                          | Separate documents slice; PDFs in R2   |
+| `PolicyNote`           | `policy_note`                              | In policy export                       |
+| `PolicyCARWording`     | `policy_car_selected_wording` + `wordings` | Catalogue IDs + custom wordings jsonb  |
 
 ---
 
@@ -42,7 +42,7 @@ Implementation: `scripts/db/legacy/lib/legacy-policy-mapper.mts`, `scripts/db/le
 | `dateStart` / `dateEnd`                      | `InceptionDate` / `ExpiryDate`                                                                          |
 | `insuredName`, `siteAddress`, turnover, etc. | `PolicyCAR.*`                                                                                           |
 | Premium columns                              | `PolicyCAR` premium fields → `policy_car` numerics                                                      |
-| Excesses                                     | `PolicyCARExcess` → `app_extras.excesses`                                                               |
+| Excesses                                     | `PolicyCARExcess` → `policy_car.excesses`                                                               |
 | Period fields                                | `MaximumConstructionPeriod` / `MaximumMaintenancePeriod` — `0` treated as unset; defaults by cover type |
 
 ---
@@ -51,7 +51,7 @@ Implementation: `scripts/db/legacy/lib/legacy-policy-mapper.mts`, `scripts/db/le
 
 | Legacy               | Target                                                                         |
 | -------------------- | ------------------------------------------------------------------------------ |
-| `PolicyDocument` row | `PolicyDocument` object in `app_extras.documents[]`                            |
+| `PolicyDocument` row | `policy_document` table row                                                    |
 | PDF on disk          | R2 key `policies/{policyUuid}/{docId}-{filename}`                              |
 | Bucket               | `insurance-app-library-documents-uat` (override: `R2_POLICY_DOCUMENTS_BUCKET`) |
 

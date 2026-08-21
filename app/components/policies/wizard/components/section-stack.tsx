@@ -3,7 +3,7 @@ import { memo } from "react";
 import { PolicyCollapsibleSection } from "~/components/policies/policy-form-layout";
 import type { CarWording, RatingSnapshot, ReferenceData } from "~/lib/db/types";
 
-import { useMode } from "../hooks/utils/use-mode";
+import { usePolicyPhase } from "../hooks/utils/use-mode";
 import { ClaimsWording } from "../sections/claims-wording";
 import { Excesses } from "../sections/excesses";
 import { Limits } from "../sections/limits";
@@ -45,7 +45,7 @@ export const SectionStack = memo(function SectionStack({
   rating,
   premiumSectionProps,
 }: SectionStackProps) {
-  const { fieldsLocked, premiumPinned } = useMode();
+  const { canEdit, premiumPinned } = usePolicyPhase();
 
   const premiumSection = (
     <PremiumSection
@@ -57,14 +57,14 @@ export const SectionStack = memo(function SectionStack({
       reference={reference}
       referenceFeeNamesPending={referenceFeeNamesPending}
       rating={rating}
-      fieldsLocked={fieldsLocked}
+      fieldsLocked={!canEdit}
       {...premiumSectionProps}
     />
   );
 
   return (
     <fieldset
-      disabled={fieldsLocked}
+      disabled={!canEdit}
       className="flex min-w-0 flex-col gap-4 border-0 p-0"
       onBlurCapture={handleFieldBlur}
     >

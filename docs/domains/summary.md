@@ -15,6 +15,7 @@ Domain-specific docs live under `docs/domains/`.
 | Topic                               | Location                                                                                       |
 | ----------------------------------- | ---------------------------------------------------------------------------------------------- |
 | MSSQL → Postgres migration workflow | [../legacy-db-migration/README.md](../legacy-db-migration/README.md)                           |
+| Interim schema / JSONB patterns     | [../architecture/interim-data-patterns.md](../architecture/interim-data-patterns.md)           |
 | pdfme / template editor migration   | [../migration/](../migration/)                                                                 |
 | PDF worker architecture             | [../PDF_TEMPLATE_EDITOR_WORKER_ARCHITECTURE.md](../PDF_TEMPLATE_EDITOR_WORKER_ARCHITECTURE.md) |
 | Excel worker notes                  | [excel-worker-implementation-summary.md](excel-worker-implementation-summary.md)               |

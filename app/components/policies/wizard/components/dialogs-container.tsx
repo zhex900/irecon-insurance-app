@@ -15,7 +15,6 @@ type DialogsContainerProps = {
   submitDocumentNames: string[];
   submitBusy: boolean;
   confirmSubmit: () => Promise<boolean>;
-  setSubmittedInSession: (value: boolean) => void;
   setSubmittedFingerprint: (fingerprint: string) => void;
   pendingLeaveAfterSave: boolean;
   discarding: boolean;
@@ -34,7 +33,6 @@ export const DialogsContainer = memo(function DialogsContainer({
   submitDocumentNames,
   submitBusy,
   confirmSubmit,
-  setSubmittedInSession,
   setSubmittedFingerprint,
   pendingLeaveAfterSave,
   discarding,
@@ -54,7 +52,6 @@ export const DialogsContainer = memo(function DialogsContainer({
         onConfirm={() => {
           void confirmSubmit().then((ok) => {
             if (!ok) return;
-            setSubmittedInSession(true);
             setSubmittedFingerprint(
               JSON.stringify({
                 values: form.getValues(),

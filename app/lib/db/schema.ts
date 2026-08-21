@@ -20,6 +20,8 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
+import type { CarExcesses } from "~/lib/db/types";
+
 export const authorisedRepresentative = pgTable("authorised_representative", {
   authorisedRepresentativeId: serial(
     "authorised_representative_id",
@@ -132,7 +134,7 @@ export const policy = pgTable("policy", {
 
 /**
  * 1:1 with policy. Premium columns match db.txt PolicyCAR;
- * jsonb holds sub-limits, wordings, and interim app fields (excesses, docs, notes, rating).
+ * jsonb holds sub-limits and custom wordings; documents/notes are child tables.
  */
 export const policyCar = pgTable("policy_car", {
   policyId: uuid("policy_id").primaryKey(),
@@ -284,21 +286,37 @@ export const policyCar = pgTable("policy_car", {
   terrorismRate: numeric("terrorism_rate", { precision: 18, scale: 8 }),
   manualTaxOverride: boolean("manual_tax_override").notNull().default(false),
 
+  excludedContracts1: text("excluded_contracts_1").notNull().default(""),
+  excludedContracts2: text("excluded_contracts_2").notNull().default(""),
+  excludedContracts3: text("excluded_contracts_3").notNull().default(""),
+  combinedBrokerFee: numeric("combined_broker_fee", {
+    precision: 18,
+    scale: 4,
+  }),
+  terrorismTier: varchar("terrorism_tier", { length: 64 })
+    .notNull()
+    .default(""),
+  isTerrorismRateExist: boolean("is_terrorism_rate_exist")
+    .notNull()
+    .default(false),
+  premiumManualKeys: jsonb("premium_manual_keys")
+    .$type<string[]>()
+    .notNull()
+    .default([]),
+  referralReasons: jsonb("referral_reasons")
+    .$type<string[]>()
+    .notNull()
+    .default([]),
+  excesses: jsonb("excesses")
+    .$type<Partial<CarExcesses>>()
+    .notNull()
+    .default({}),
+
   subLimits: jsonb("sub_limits")
     .$type<Record<string, string>>()
     .notNull()
     .default({}),
   wordings: jsonb("wordings").$type<unknown[]>().notNull().default([]),
-
-  /**
-   * Interim bag for app fields not yet normalized:
-   * excesses, documents, notes, referralReasons, selectedWordingIds,
-   * custom wording, rating extras, combinedBrokerFee, excludedContracts*.
-   */
-  appExtras: jsonb("app_extras")
-    .$type<Record<string, unknown>>()
-    .notNull()
-    .default({}),
 });
 
 export const policyCarAdjustment = pgTable("policy_car_adjustment", {
@@ -382,7 +400,7 @@ export const policyCarAdjustment = pgTable("policy_car_adjustment", {
 
 /**
  * Default excess catalogue for new CAR policies (db.txt PolicyCARExcessDefault; was CARExcess).
- * Per-policy values still live in policy_car.app_extras until PolicyCARExcess is normalized.
+ * Per-policy overrides live in policy_car.excesses.
  */
 export const policyCarExcessDefault = pgTable("policy_car_excess_default", {
   policyCarExcessDefaultId: integer(
@@ -412,6 +430,58 @@ export const carWording = pgTable("car_wording", {
   subject: text("subject").notNull(),
   content: text("content").notNull(),
 });
+
+/** Generated / library policy pack documents (legacy PolicyDocument). */
+export const policyDocument = pgTable("policy_document", {
+  policyDocumentId: bigint("policy_document_id", {
+    mode: "number",
+  }).primaryKey(),
+  policyId: uuid("policy_id")
+    .notNull()
+    .references(() => policy.policyId, { onDelete: "cascade" }),
+  name: varchar("name", { length: 512 }).notNull().default(""),
+  filename: varchar("filename", { length: 512 }).notNull().default(""),
+  generationKey: text("generation_key").notNull().default(""),
+  content: text("content").notNull().default(""),
+  templateKey: varchar("template_key", { length: 64 }),
+  libraryDocumentId: bigint("library_document_id", { mode: "number" }),
+  mergeInputs: jsonb("merge_inputs").$type<Record<string, string>>(),
+  pdfBase64: text("pdf_base64"),
+  generatedWhen: timestamp("generated_when", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  generatedBy: varchar("generated_by", { length: 255 }).notNull().default(""),
+  documentTypeCode: varchar("document_type_code", { length: 32 }),
+  r2Key: varchar("r2_key", { length: 512 }),
+});
+
+/** Policy notes (legacy PolicyNote). */
+export const policyNote = pgTable("policy_note", {
+  policyNoteId: bigint("policy_note_id", { mode: "number" }).primaryKey(),
+  policyId: uuid("policy_id")
+    .notNull()
+    .references(() => policy.policyId, { onDelete: "cascade" }),
+  policyNoteTypeId: integer("policy_note_type_id").notNull().default(1),
+  description: text("description").notNull().default(""),
+  createdWhen: timestamp("created_when", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  createdBy: varchar("created_by", { length: 255 }).notNull().default(""),
+});
+
+/** Selected catalogue wordings for a policy (legacy PolicyCARWording). */
+export const policyCarSelectedWording = pgTable(
+  "policy_car_selected_wording",
+  {
+    policyId: uuid("policy_id")
+      .notNull()
+      .references(() => policy.policyId, { onDelete: "cascade" }),
+    carWordingId: integer("car_wording_id")
+      .notNull()
+      .references(() => carWording.carWordingId),
+  },
+  (table) => [primaryKey({ columns: [table.policyId, table.carWordingId] })],
+);
 
 /** Runtime feature flags (Settings → Features, super-admin only). */
 export const appFeatureFlag = pgTable("app_feature_flag", {

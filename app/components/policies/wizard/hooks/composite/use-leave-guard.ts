@@ -62,7 +62,7 @@ export function usePolicyLeaveGuard({
     setDraftSaveError,
     saveDraftNow,
     savePolicy,
-    readOnly: state.readOnly,
+    isSavedTerminal: state.isSavedTerminal,
     isNew: state.isNew,
     isFormTerminal: state.isFormTerminal,
   });

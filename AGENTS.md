@@ -15,6 +15,7 @@ This file is **behavior only**. Engineering rules live in `docs/`.
 | UI / forms / a11y                           | [docs/guidelines/ui-guidelines.md](docs/guidelines/ui-guidelines.md)                                                 |
 | Before finishing any change                 | [docs/guidelines/code-review.md](docs/guidelines/code-review.md)                                                     |
 | Production roadmap                          | [docs/architecture/refactor-to-production.md](docs/architecture/refactor-to-production.md)                           |
+| Interim schema / JSONB normalization        | [docs/architecture/interim-data-patterns.md](docs/architecture/interim-data-patterns.md)                             |
 | Testing                                     | [docs/development/testing.md](docs/development/testing.md)                                                           |
 | Lint / format                               | [docs/guidelines/tooling.md](docs/guidelines/tooling.md)                                                             |
 | CAR premium / terrorism formulas            | [docs/domains/pricing/car-premium-formulas.md](docs/domains/pricing/car-premium-formulas.md)                         |

@@ -10,7 +10,7 @@ import {
   readStoredStep,
   rememberWizardStep,
 } from "../../wizard-step-memory";
-import { useMode } from "../utils/use-mode";
+import { usePolicyPhase } from "../utils/use-mode";
 import { calculateMaxStep } from "./use-wizard-navigation-utils";
 
 export function useWizardStepManagement({
@@ -20,7 +20,7 @@ export function useWizardStepManagement({
   policyId: string;
   policyPremium: PremiumBreakdown | null | undefined;
 }) {
-  const { readOnly, fieldsLocked, freshSteps } = useMode();
+  const { isSavedTerminal, canEdit, freshSteps } = usePolicyPhase();
 
   const [step, setStep] = useState(() =>
     freshSteps ? 0 : (readStoredStep(policyId) ?? 0),
@@ -28,7 +28,7 @@ export function useWizardStepManagement({
   const [maxStep, setMaxStep] = useState(() =>
     calculateMaxStep(
       policyId,
-      readOnly,
+      isSavedTerminal,
       freshSteps,
       policyPremium,
       readStoredStep,
@@ -36,27 +36,24 @@ export function useWizardStepManagement({
     ),
   );
 
-  // SSR renders step 0; restore remembered step before paint (read-only — do not write).
-  // When policyId changes, re-derive from that policy — never carry over step/maxStep
-  // from the previous policy.
   const lastNavRef = useRef<{
     policyId: string;
-    readOnly: boolean;
+    isSavedTerminal: boolean;
     policyPremium: PremiumBreakdown | null | undefined;
   } | null>(null);
 
   useLayoutEffect(() => {
-    if (freshSteps) return; // Fresh steps mode — keep step at 0
+    if (freshSteps) return;
     const prev = lastNavRef.current;
     const changed =
       !prev ||
       prev.policyId !== policyId ||
-      prev.readOnly !== readOnly ||
+      prev.isSavedTerminal !== isSavedTerminal ||
       prev.policyPremium !== policyPremium;
     if (!changed) return;
-    lastNavRef.current = { policyId, readOnly, policyPremium };
+    lastNavRef.current = { policyId, isSavedTerminal, policyPremium };
     const current = lastNavRef.current;
-    if (current.readOnly) {
+    if (current.isSavedTerminal) {
       setStep(readStoredStep(current.policyId) ?? 0);
       setMaxStep(wizardSteps.length - 1);
       return;
@@ -72,12 +69,11 @@ export function useWizardStepManagement({
         Math.max(storedStep, unlockedByPremium),
       ),
     );
-  }, [policyId, policyPremium, readOnly, freshSteps]);
+  }, [policyId, policyPremium, isSavedTerminal, freshSteps]);
 
-  // Validation for step navigation
   function canNavigateToStep(index: number, unlock: boolean): boolean {
     if (index < 0 || index >= wizardSteps.length) return false;
-    if (!fieldsLocked && !unlock && index > maxStep) return false;
+    if (canEdit && !unlock && index > maxStep) return false;
     return true;
   }
 

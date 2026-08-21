@@ -3,10 +3,10 @@
  */
 import { existsSync, readFileSync } from "node:fs";
 
+import { like } from "drizzle-orm";
+
 import { getDb } from "../../../../app/lib/db/client";
-import { policyCar } from "../../../../app/lib/db/schema";
-import type { PolicyDocument } from "../../../../app/lib/db/types";
-import { eq } from "drizzle-orm";
+import { policyDocument } from "../../../../app/lib/db/schema";
 import {
   clearSyncStateFile,
   DEFAULT_SYNC_STATE_PATH,
@@ -33,10 +33,6 @@ export type ClearLegacyDocumentsSummary = {
   r2KeysRemoved: number;
   syncStateCleared: boolean;
 };
-
-function isLegacyMigratedDocument(doc: PolicyDocument): boolean {
-  return doc.generationKey?.startsWith("legacy:") ?? false;
-}
 
 function loadExportPayload(
   exportPath: string | undefined,
@@ -69,38 +65,21 @@ export async function clearLegacyDocuments(
   const r2Keys = r2KeysFromExport(payload);
 
   const db = getDb();
-  const rows = await db
+  const legacyDocs = await db
     .select({
-      policyId: policyCar.policyId,
-      appExtras: policyCar.appExtras,
+      policyId: policyDocument.policyId,
+      policyDocumentId: policyDocument.policyDocumentId,
     })
-    .from(policyCar);
+    .from(policyDocument)
+    .where(like(policyDocument.generationKey, "legacy:%"));
 
-  let policiesCleared = 0;
-  let legacyDocumentsRemoved = 0;
+  const policiesCleared = new Set(legacyDocs.map((row) => row.policyId)).size;
+  const legacyDocumentsRemoved = legacyDocs.length;
 
-  for (const row of rows) {
-    const documents = row.appExtras?.documents ?? [];
-    const legacyDocs = documents.filter(isLegacyMigratedDocument);
-    if (legacyDocs.length === 0) continue;
-
-    legacyDocumentsRemoved += legacyDocs.length;
-    policiesCleared += 1;
-
-    if (options.dryRun) continue;
-
-    const remaining = documents.filter((doc) => !isLegacyMigratedDocument(doc));
-    const nextExtras = { ...(row.appExtras ?? {}) };
-    if (remaining.length > 0) {
-      nextExtras.documents = remaining;
-    } else {
-      delete nextExtras.documents;
-    }
-
+  if (!options.dryRun && legacyDocumentsRemoved > 0) {
     await db
-      .update(policyCar)
-      .set({ appExtras: nextExtras })
-      .where(eq(policyCar.policyId, row.policyId));
+      .delete(policyDocument)
+      .where(like(policyDocument.generationKey, "legacy:%"));
   }
 
   let r2KeysRemoved = 0;

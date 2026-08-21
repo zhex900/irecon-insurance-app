@@ -5,7 +5,7 @@ import type { PolicySaveStatus } from "~/components/forms/field-save-highlight";
 import type { PremiumBreakdown } from "~/lib/db/types";
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
 
-import { useMode } from "../utils/use-mode";
+import { usePolicyPhase } from "../utils/use-mode";
 import { SaveEpochTracker } from "./use-draft-utils";
 
 export function useDraftStateManagement({
@@ -17,7 +17,8 @@ export function useDraftStateManagement({
   premiumRef: React.RefObject<PremiumBreakdown | undefined>;
   premiumManualKeysRef: React.RefObject<string[]>;
 }) {
-  const { fieldsLocked } = useMode();
+  const { canEdit } = usePolicyPhase();
+  const fieldsLocked = !canEdit;
 
   // State
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);

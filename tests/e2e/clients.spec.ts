@@ -10,9 +10,13 @@ test.describe("clients", () => {
     await page.getByRole("button", { name: /new client/i }).click();
     await expect(page).toHaveURL(/\/clients\/[^/]+\/edit/);
 
-    await page.getByLabel(/registered name/i).fill(registeredName);
-    await page.getByLabel(/trading name/i).fill(tradingName);
+    await page
+      .getByRole("textbox", { name: "Registered Name" })
+      .fill(registeredName);
+    await page.getByRole("textbox", { name: "Trading Name" }).fill(tradingName);
 
+    await page.getByRole("textbox", { name: "ABN" }).fill("12345678901");
+    await page.getByRole("textbox", { name: "Email" }).fill("test@test.com");
     const accountManager = page.getByLabel(/account manager/i);
     if (await accountManager.count()) {
       await accountManager.click();
@@ -29,13 +33,6 @@ test.describe("clients", () => {
 
     const save = page.getByRole("button", { name: /^save$/i });
     await save.click();
-
-    await Promise.race([
-      page.waitForURL(/\/clients\/\d+$/, { timeout: 15_000 }).catch(() => null),
-      page
-        .waitForURL(/\/clients\/\d+\/edit/, { timeout: 15_000 })
-        .catch(() => null),
-    ]);
 
     await page.goto(`/clients?q=${encodeURIComponent(registeredName)}`);
     await expect(

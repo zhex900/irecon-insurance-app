@@ -1,14 +1,15 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect } from "react";
 import { FormProvider, type Resolver, useForm } from "react-hook-form";
 
 import { JustSavedProvider } from "~/components/forms/field-save-highlight";
 import {
   type CarPolicyFormValues,
   carPolicySchema,
-  isTerminalStatus,
 } from "~/lib/zod/policy-car";
 
-import { ModeProvider } from "../components/mode-context";
+import { PolicyPhaseProvider } from "../components/mode-context";
+import { syncFormPolicyStatus } from "../hooks/composite/submit-helpers";
 import { policyToFormValues } from "../shared/policy-to-values";
 import type { WizardProps } from "../shared/wizard-shared";
 import { WizardDefault } from "./wizard-default";
@@ -17,7 +18,6 @@ export function PolicyWizard({
   policy,
   reference,
   referenceFeeNamesPending = false,
-  readOnly = false,
   freshSteps = false,
   isNew = false,
   clientName = "",
@@ -48,19 +48,17 @@ export function PolicyWizard({
     reValidateMode: "onChange",
   });
 
-  const policyAlreadyTerminal = isTerminalStatus(policy.policyStatusId);
-  // Persisted only — ModeProvider ORs this with in-session submit.
-  const hasSubmittedOnce = !policy.isDraft;
+  useEffect(() => {
+    syncFormPolicyStatus(form, policy.policyStatusId);
+  }, [form, policy.policyStatusId]);
 
   return (
     <FormProvider {...form}>
       <JustSavedProvider>
-        <ModeProvider
-          readOnly={readOnly}
+        <PolicyPhaseProvider
+          policy={policy}
           isNew={isNew}
           freshSteps={freshSteps}
-          policyAlreadyTerminal={policyAlreadyTerminal}
-          hasSubmittedOnce={hasSubmittedOnce}
         >
           <WizardDefault
             policy={policy}
@@ -71,7 +69,7 @@ export function PolicyWizard({
             onPolicyUpdated={onPolicyUpdated}
             headerActions={headerActions}
           />
-        </ModeProvider>
+        </PolicyPhaseProvider>
       </JustSavedProvider>
     </FormProvider>
   );

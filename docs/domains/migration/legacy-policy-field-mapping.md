@@ -114,7 +114,7 @@ Backfills using app defaults from `app/lib/reference-data.ts`:
 | `insuredContracts`          | Annual transfer / single project text                                             |
 | `geographicalScopes`        | Annual scope or site address                                                      |
 | `subLimits`                 | `defaultSubLimits.annual` or `.ownerBuilder`                                      |
-| `appExtras.excesses`        | `referenceData.defaultExcesses` for visible band fields                           |
+| `policy_car.excesses`       | `referenceData.defaultExcesses` for visible band fields                           |
 | `excludedContracts1–3`      | `referenceData.defaultTexts`                                                      |
 | `postcode`                  | First 4 digits if invalid (e.g. `35000` → `3500`)                                 |
 | `dateEnd`                   | Capped to 18 months (Annual/Single) or 12 months (Owner Builder) from `dateStart` |
@@ -189,7 +189,7 @@ Legacy-only period fix (superseded): `npm run db:repair:policy-periods`
 | `Transit`                           | `transit`                                           |
 | `ExcludedContracts1–3`              | `excludedContracts1–3` (also top-level on `Policy`) |
 
-### Excesses → `policy.excesses` (jsonb on policy row)
+### Excesses → `policy_car.excesses` (jsonb)
 
 | Legacy (`PolicyCARExcess`) | App key                 |
 | -------------------------- | ----------------------- |
@@ -199,9 +199,9 @@ Legacy-only period fix (superseded): `npm run db:repair:policy-periods`
 
 Excess values are relocated to the active turnover band in `mapLegacyExcesses()`.
 
-### Premium & rating → `policy_car` + jsonb extras
+### Premium & rating → `policy_car` columns
 
-Stored on `policy_car` numeric columns and `policy` jsonb (`rating`, `premiumManualKeys`, etc.). Mapped 1:1 from legacy column names in `scripts/db/legacy/sql/policies.sql` lines 40–100.
+Stored on `policy_car` numeric columns plus `combined_broker_fee`, `terrorism_tier`, `is_terrorism_rate_exist`, and `premium_manual_keys`. Mapped 1:1 from legacy column names in `scripts/db/legacy/sql/policies.sql` lines 40–100.
 
 ### Adjustment → `policy_car_adjustment`
 
@@ -209,16 +209,16 @@ When `PolicyCAR.Adjusted = 1`, adjustment deltas load into `policy_car_adjustmen
 
 ### Wordings & notes (separate SQL slices)
 
-| Legacy table       | Target                                        |
-| ------------------ | --------------------------------------------- |
-| `PolicyCARWording` | `selectedWordingIds` + `customWordings` jsonb |
-| `PolicyNote`       | `policy.notes` jsonb                          |
+| Legacy table       | Target                                                      |
+| ------------------ | ----------------------------------------------------------- |
+| `PolicyCARWording` | `policy_car_selected_wording` + `policy_car.wordings` jsonb |
+| `PolicyNote`       | `policy_note` table                                         |
 
 ### Documents (separate slice)
 
-| Legacy                             | Target                                                  |
-| ---------------------------------- | ------------------------------------------------------- |
-| `PolicyDocument` + filesystem PDFs | R2 `policy-documents` bucket + `policy.documents` jsonb |
+| Legacy                             | Target                                                 |
+| ---------------------------------- | ------------------------------------------------------ |
+| `PolicyDocument` + filesystem PDFs | R2 `policy-documents` bucket + `policy_document` table |
 
 ---
 

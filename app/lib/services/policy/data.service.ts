@@ -1,12 +1,23 @@
 import { and, desc, eq, inArray, ne, sql } from "drizzle-orm";
 
 import { getDb } from "~/lib/db/client";
-import { policyToRows, rowsToPolicy } from "~/lib/db/policy-mapper";
+import {
+  type PolicyChildRows,
+  policyToRows,
+  rowsToPolicy,
+} from "~/lib/db/policy-mapper";
+import {
+  resolvePolicyDocumentIds,
+  resolvePolicyNoteIds,
+} from "~/lib/db/resolve-global-ids";
 import {
   appUserRecentRoute,
   policy,
   policyCar,
   policyCarAdjustment,
+  policyCarSelectedWording,
+  policyDocument,
+  policyNote,
 } from "~/lib/db/schema";
 import type { Policy, PolicySummary } from "~/lib/db/types";
 import { trackUsage } from "~/lib/observability/metrics.server";
@@ -20,6 +31,30 @@ import {
   getReferenceData,
 } from "~/lib/services/reference.service";
 import { POLICY_STATUS } from "~/lib/zod/policy-car";
+
+const POLICY_NUMBER_ALLOCATE_MAX_ATTEMPTS = 25;
+
+/**
+ * Next human-facing policy number from {@link policy_number_seq}, skipping values
+ * already held by another policy (seq can lag after imports or manual inserts).
+ */
+export async function allocatePolicyNumber(policyId: string): Promise<string> {
+  const db = getDb();
+  for (
+    let attempt = 0;
+    attempt < POLICY_NUMBER_ALLOCATE_MAX_ATTEMPTS;
+    attempt++
+  ) {
+    const [seqRow] = await db.execute<{ seq: number | string }>(
+      sql`SELECT nextval('policy_number_seq') AS "seq"`,
+    );
+    const policyNumber = formatPolicyNumberFromSeq(Number(seqRow?.seq ?? 1000));
+    if (!(await isPolicyNumberTaken(policyNumber, policyId))) {
+      return policyNumber;
+    }
+  }
+  throw new Error("Could not allocate a unique policy number");
+}
 
 /**
  * True when another policy already holds this number (case-insensitive).
@@ -135,6 +170,46 @@ export async function deletePolicies(
   return rows;
 }
 
+async function loadPolicyChildren(
+  policyIds: string[],
+): Promise<Map<string, PolicyChildRows>> {
+  const byPolicy = new Map<string, PolicyChildRows>();
+  if (policyIds.length === 0) return byPolicy;
+
+  const db = getDb();
+  const [documents, notes, selectedWordings] = await Promise.all([
+    db
+      .select()
+      .from(policyDocument)
+      .where(inArray(policyDocument.policyId, policyIds)),
+    db.select().from(policyNote).where(inArray(policyNote.policyId, policyIds)),
+    db
+      .select()
+      .from(policyCarSelectedWording)
+      .where(inArray(policyCarSelectedWording.policyId, policyIds)),
+  ]);
+
+  for (const policyId of policyIds) {
+    byPolicy.set(policyId, {
+      documents: [],
+      notes: [],
+      selectedWordings: [],
+    });
+  }
+
+  for (const row of documents) {
+    byPolicy.get(row.policyId)?.documents?.push(row);
+  }
+  for (const row of notes) {
+    byPolicy.get(row.policyId)?.notes?.push(row);
+  }
+  for (const row of selectedWordings) {
+    byPolicy.get(row.policyId)?.selectedWordings?.push(row);
+  }
+
+  return byPolicy;
+}
+
 async function loadPolicyById(policyId: string): Promise<Policy | null> {
   const db = getDb();
   const [row] = await db
@@ -149,8 +224,14 @@ async function loadPolicyById(policyId: string): Promise<Policy | null> {
     .limit(1);
 
   if (!row) return null;
+  const children = await loadPolicyChildren([policyId]);
   return normalizePolicy(
-    rowsToPolicy(row.policy, row.policy_car, row.policy_car_adjustment),
+    rowsToPolicy(
+      row.policy,
+      row.policy_car,
+      row.policy_car_adjustment,
+      children.get(policyId),
+    ),
   );
 }
 
@@ -167,9 +248,18 @@ export async function listPolicies(clientId?: string) {
     .where(clientId ? eq(policy.clientId, clientId) : undefined)
     .orderBy(desc(policy.createdWhen));
 
+  const childrenByPolicy = await loadPolicyChildren(
+    rows.map((row) => row.policy.policyId),
+  );
+
   return rows.map((row) =>
     normalizePolicy(
-      rowsToPolicy(row.policy, row.policy_car, row.policy_car_adjustment),
+      rowsToPolicy(
+        row.policy,
+        row.policy_car,
+        row.policy_car_adjustment,
+        childrenByPolicy.get(row.policy.policyId),
+      ),
     ),
   );
 }
@@ -250,7 +340,14 @@ export async function savePolicy(
   options?: { actor?: string },
 ) {
   const db = getDb();
-  const { policyValues, carValues, adjustmentValues } = policyToRows(policyDoc);
+  const {
+    policyValues,
+    carValues,
+    adjustmentValues,
+    documentValues,
+    noteValues,
+    selectedWordingIds,
+  } = policyToRows(policyDoc);
 
   await db.transaction(async (tx) => {
     const [existing] = await tx
@@ -306,6 +403,34 @@ export async function savePolicy(
         set: { ...carValues },
       });
 
+    await tx
+      .delete(policyDocument)
+      .where(eq(policyDocument.policyId, policyDoc.policyId));
+    if (documentValues.length > 0) {
+      const documents = await resolvePolicyDocumentIds(tx, documentValues);
+      await tx.insert(policyDocument).values(documents);
+    }
+
+    await tx
+      .delete(policyNote)
+      .where(eq(policyNote.policyId, policyDoc.policyId));
+    if (noteValues.length > 0) {
+      const notes = await resolvePolicyNoteIds(tx, noteValues);
+      await tx.insert(policyNote).values(notes);
+    }
+
+    await tx
+      .delete(policyCarSelectedWording)
+      .where(eq(policyCarSelectedWording.policyId, policyDoc.policyId));
+    if (selectedWordingIds.length > 0) {
+      await tx.insert(policyCarSelectedWording).values(
+        selectedWordingIds.map((carWordingId) => ({
+          policyId: policyDoc.policyId,
+          carWordingId,
+        })),
+      );
+    }
+
     if (adjustmentValues) {
       await tx
         .insert(policyCarAdjustment)
@@ -336,13 +461,8 @@ export async function createPolicyDraft(
   const existingClient = await getClient(clientId);
   if (!existingClient) throw new Error("Client not found");
 
-  const db = getDb();
   const policyId = crypto.randomUUID();
-  // Human policy numbers come from their own sequence, not the UUID key.
-  const [seqRow] = await db.execute<{ seq: number | string }>(
-    sql`SELECT nextval('policy_number_seq') AS "seq"`,
-  );
-  const policyNumber = formatPolicyNumberFromSeq(Number(seqRow?.seq ?? 1000));
+  const policyNumber = await allocatePolicyNumber(policyId);
   const today = new Date();
   const nextYear = new Date(today);
   nextYear.setFullYear(nextYear.getFullYear() + 1);

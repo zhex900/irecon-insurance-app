@@ -112,10 +112,7 @@ export function useWizardState(
     await documents.exportPremiumExcel();
   }, [draftSave, documents]);
 
-  const canChangeStatus = canChangeWizardStatus(
-    props.policy,
-    core.mode.fieldsLocked,
-  );
+  const canChangeStatus = canChangeWizardStatus(core.phase.phase);
 
   return {
     core,

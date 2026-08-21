@@ -6,8 +6,8 @@ import type { NoteAuthor } from "~/lib/services/users/service";
 
 import { usePolicyNotes } from "../hooks/composite/use-notes";
 import type { PolicyWizardActionData } from "../hooks/composite/use-premium-calc";
-import { useMode } from "../hooks/utils/use-mode";
-import { wizardModeCardBorderClass } from "../shared/wizard-shared";
+import { usePolicyPhase } from "../hooks/utils/use-mode";
+import { policyPhaseCardBorderClass } from "../shared/policy-phase";
 
 type MobileNotesProps = {
   policy: Policy;
@@ -22,7 +22,7 @@ export function MobileNotes({
   fetcher,
   onPolicyUpdated,
 }: MobileNotesProps) {
-  const { isNew, wizardMode } = useMode();
+  const { isNew, phase } = usePolicyPhase();
   const notesState = usePolicyNotes({
     policy,
     noteAuthors,
@@ -42,7 +42,7 @@ export function MobileNotes({
         onUpdateNote={notesState.updateNote}
         noteBusy={notesState.isSavingNote}
         noteError={notesState.noteError}
-        className={wizardModeCardBorderClass(wizardMode)}
+        className={policyPhaseCardBorderClass(phase)}
       />
     </div>
   );

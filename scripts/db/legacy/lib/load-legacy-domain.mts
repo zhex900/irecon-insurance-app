@@ -14,6 +14,9 @@ import {
   policy,
   policyCar,
   policyCarAdjustment,
+  policyCarSelectedWording,
+  policyDocument,
+  policyNote,
 } from "../../../../app/lib/db/schema";
 import type { PolicyDocument } from "../../../../app/lib/db/types";
 import { accountManagerIdForCode } from "./legacy-account-manager-map.mts";
@@ -168,30 +171,47 @@ function addDocumentToPolicyMap(
 async function upsertPolicyDocumentInPostgres(entry: PolicyDocument) {
   const db = getDb();
   const [existing] = await db
-    .select({ appExtras: policyCar.appExtras })
+    .select({ policyId: policyCar.policyId })
     .from(policyCar)
     .where(eq(policyCar.policyId, entry.policyId))
     .limit(1);
   if (!existing) return false;
 
-  const current = existing.appExtras?.documents ?? [];
-  const index = current.findIndex(
-    (doc) => doc.policyDocumentId === entry.policyDocumentId,
-  );
-  const documents =
-    index >= 0
-      ? current.map((doc, i) => (i === index ? entry : doc))
-      : [...current, entry];
-
   await db
-    .update(policyCar)
-    .set({
-      appExtras: {
-        ...(existing.appExtras ?? {}),
-        documents,
-      },
+    .insert(policyDocument)
+    .values({
+      policyDocumentId: entry.policyDocumentId,
+      policyId: entry.policyId,
+      name: entry.name,
+      filename: entry.filename,
+      generationKey: entry.generationKey,
+      content: entry.content,
+      templateKey: entry.templateKey ?? null,
+      libraryDocumentId: entry.libraryDocumentId ?? null,
+      mergeInputs: entry.mergeInputs ?? null,
+      pdfBase64: entry.pdfBase64 ?? null,
+      generatedWhen: new Date(entry.generatedWhen),
+      generatedBy: entry.generatedBy,
+      documentTypeCode: entry.documentTypeCode ?? null,
+      r2Key: entry.r2Key ?? null,
     })
-    .where(eq(policyCar.policyId, entry.policyId));
+    .onConflictDoUpdate({
+      target: policyDocument.policyDocumentId,
+      set: {
+        name: entry.name,
+        filename: entry.filename,
+        generationKey: entry.generationKey,
+        content: entry.content,
+        templateKey: entry.templateKey ?? null,
+        libraryDocumentId: entry.libraryDocumentId ?? null,
+        mergeInputs: entry.mergeInputs ?? null,
+        pdfBase64: entry.pdfBase64 ?? null,
+        generatedWhen: new Date(entry.generatedWhen),
+        generatedBy: entry.generatedBy,
+        documentTypeCode: entry.documentTypeCode ?? null,
+        r2Key: entry.r2Key ?? null,
+      },
+    });
   return true;
 }
 
@@ -641,6 +661,9 @@ export async function loadLegacyDomain(options: LoadLegacyDomainOptions) {
     if (options.replace) {
       await db.execute(sql`
         TRUNCATE TABLE
+          policy_car_selected_wording,
+          policy_note,
+          policy_document,
           policy_car_adjustment,
           policy_car,
           policy
@@ -657,8 +680,14 @@ export async function loadLegacyDomain(options: LoadLegacyDomainOptions) {
         if (docs?.length) {
           policyDoc.documents = docs;
         }
-        const { policyValues, carValues, adjustmentValues } =
-          policyToRows(policyDoc);
+        const {
+          policyValues,
+          carValues,
+          adjustmentValues,
+          documentValues,
+          noteValues,
+          selectedWordingIds,
+        } = policyToRows(policyDoc);
         await db.insert(policy).values({
           ...policyValues,
           createdBy,
@@ -669,6 +698,20 @@ export async function loadLegacyDomain(options: LoadLegacyDomainOptions) {
         });
         if (adjustmentValues) {
           await db.insert(policyCarAdjustment).values(adjustmentValues);
+        }
+        if (documentValues.length > 0) {
+          await db.insert(policyDocument).values(documentValues);
+        }
+        if (noteValues.length > 0) {
+          await db.insert(policyNote).values(noteValues);
+        }
+        if (selectedWordingIds.length > 0) {
+          await db.insert(policyCarSelectedWording).values(
+            selectedWordingIds.map((carWordingId) => ({
+              policyId: policyDoc.policyId,
+              carWordingId,
+            })),
+          );
         }
       }
       if ((i + chunkSize) % 500 === 0 || i + chunkSize >= policyRows.length) {

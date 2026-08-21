@@ -520,7 +520,6 @@ export default function PolicyDetailRoute({
         onPolicyUpdated={setPolicy}
         reference={reference}
         referenceFeeNamesPending={feeNamesPending}
-        readOnly={readOnly}
         freshSteps={wasCloned}
         isNew={isNew}
         clientName={loaderData.clientName}

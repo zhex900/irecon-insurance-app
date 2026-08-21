@@ -15,6 +15,9 @@ import {
   policy,
   policyCar,
   policyCarAdjustment,
+  policyCarSelectedWording,
+  policyDocument,
+  policyNote,
 } from "../../../app/lib/db/schema";
 import { policyToRows } from "../../../app/lib/db/policy-mapper";
 import type { Policy } from "../../../app/lib/db/types";
@@ -139,7 +142,14 @@ async function main() {
 
   console.log(`Seeding ${policies.length} policies…`);
   for (const p of policies) {
-    const { policyValues, carValues, adjustmentValues } = policyToRows({
+    const {
+      policyValues,
+      carValues,
+      adjustmentValues,
+      documentValues,
+      noteValues,
+      selectedWordingIds,
+    } = policyToRows({
       ...p,
       insurerCode: p.insurerCode ?? "ATC",
       isDraft: p.isDraft ?? !p.car?.premium,
@@ -148,6 +158,20 @@ async function main() {
     await db.insert(policyCar).values(carValues);
     if (adjustmentValues) {
       await db.insert(policyCarAdjustment).values(adjustmentValues);
+    }
+    if (documentValues.length > 0) {
+      await db.insert(policyDocument).values(documentValues);
+    }
+    if (noteValues.length > 0) {
+      await db.insert(policyNote).values(noteValues);
+    }
+    if (selectedWordingIds.length > 0) {
+      await db.insert(policyCarSelectedWording).values(
+        selectedWordingIds.map((carWordingId) => ({
+          policyId: p.policyId,
+          carWordingId,
+        })),
+      );
     }
   }
 

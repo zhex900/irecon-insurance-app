@@ -9,7 +9,7 @@ import {
 } from "~/components/ui/dialog";
 import { LoadingButton } from "~/components/ui/loading-button";
 
-import { useMode } from "./hooks/utils/use-mode";
+import { usePolicyPhase } from "./hooks/utils/use-mode";
 
 export type SubmitConfirmDialogProps = {
   open: boolean;
@@ -87,7 +87,7 @@ export function LeaveDiscardDialog({
   onLeaveWithoutSaving,
   onSaveAndLeave,
 }: LeaveDiscardDialogProps) {
-  const { isNew } = useMode();
+  const { isNew } = usePolicyPhase();
   return (
     <Dialog
       open={open}
