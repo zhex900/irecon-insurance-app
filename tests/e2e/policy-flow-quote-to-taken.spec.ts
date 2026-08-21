@@ -94,7 +94,11 @@ test.describe("quote-to-taken workflow", () => {
       .first()
       .click({ force: true });
 
+    expect(page.getByText("Submit policy?")).toBeVisible();
+
     await page.getByRole("button", { name: "Confirm & generate" }).click();
+
+    expect(page.getByText("Submit policy?")).toBeHidden();
     // await page
     //   .getByRole("checkbox", { name: "Confirm you have asked and" })
     //   .focus();
@@ -104,6 +108,8 @@ test.describe("quote-to-taken workflow", () => {
     // const currentUrl = await page.url();
     // const baseUrl = currentUrl.split("?")[0];
     // await page.goto(baseUrl);
+
+    // wait until the policy is in "pending" mode
 
     // // Now policy should be in "edit" mode
     await expect(wizardRoot).toHaveAttribute("data-policy-phase", "pending");
