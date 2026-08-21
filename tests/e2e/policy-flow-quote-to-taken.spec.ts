@@ -1,7 +1,6 @@
 import { expect, test } from "@playwright/test";
 
 import { mockResendEmailApi } from "./helpers/auth";
-import { seedClients } from "./helpers/seed";
 
 test.describe("quote-to-taken workflow", () => {
   test.beforeEach(async ({ page }) => {
@@ -9,21 +8,14 @@ test.describe("quote-to-taken workflow", () => {
     await mockResendEmailApi(page);
   });
 
-  test.skip("complete quote-to-taken journey with document generation", async ({
+  test("complete quote-to-taken journey with document generation", async ({
     page,
   }) => {
     // 1. Navigate to clients
     await page.goto("/clients");
-
+    await page.waitForLoadState("networkidle");
     // Find or create a test client
     const clientRow = page.getByRole("row", { name: /open client/i });
-
-    // Skip if no clients available
-    test.skip(
-      (await clientRow.count()) === 0,
-      "No clients available. Expected: " +
-        seedClients.map((c) => c.name).join(", "),
-    );
 
     // Open first available client
     await clientRow.first().click();
@@ -31,10 +23,6 @@ test.describe("quote-to-taken workflow", () => {
 
     // 3. Start new policy
     const newPolicyBtn = page.getByRole("button", { name: /new policy/i });
-    test.skip(
-      (await newPolicyBtn.count()) === 0,
-      "No 'New Policy' button available",
-    );
 
     await newPolicyBtn.first().click();
 
@@ -46,211 +34,212 @@ test.describe("quote-to-taken workflow", () => {
     await expect(wizardRoot).toHaveAttribute("data-policy-phase", "new");
 
     // 5. Complete basic policy information
-    // Look for common form fields
-    const addressField = page.getByLabel(/site address|address/i);
-    const turnoverField = page.getByLabel(/estimated turnover|turnover/i);
-    const sumInsuredField = page.getByLabel(
-      /contract works sum insured|sum insured/i,
-    );
 
-    // Fill basic information
-    if (await addressField.count()) {
-      await addressField.fill("123 E2E Test Street, Sydney NSW 2000");
-    }
+    await page
+      .getByRole("textbox", { name: "Insured Name" })
+      .fill("E2E Test Insured");
+    await page.getByRole("combobox", { name: "Annual Type of Cover" }).click();
+    await page.getByRole("option", { name: "Contract Commencing" }).click();
+    //select contract commencing
 
-    if (await turnoverField.count()) {
-      await turnoverField.fill("1000000");
-    }
+    await page
+      .getByRole("textbox", { name: "Site Address" })
+      .fill("123 E2E Test Street, Sydney ");
+    await page.getByRole("textbox", { name: "Postcode" }).fill("2000");
+    await page.getByRole("combobox", { name: "State" }).click();
+    await page.getByRole("option", { name: "NSW" }).click();
+    await page
+      .getByRole("textbox", { name: "Estimated Turnover / Project" })
+      .fill("1000000");
 
-    if (await sumInsuredField.count()) {
-      await sumInsuredField.fill("3000000");
-    }
+    await page.getByRole("combobox", { name: "Do you hold a current" }).click();
+    await page.getByRole("option", { name: "No" }).click();
+    await page.getByRole("textbox", { name: "Contract Works" }).fill("1500000");
+    await page.getByRole("textbox", { name: "Display Homes" }).fill("10");
+    await page.getByRole("textbox", { name: "Existing Structures" }).fill("30");
 
-    // 6. Fill business activities
-    const businessActivitiesField = page.getByLabel(/business activities/i);
-    if (await businessActivitiesField.count()) {
-      await businessActivitiesField.fill("Commercial Construction");
-    }
+    //<input id="plantEquipment" type="text" data-slot="input-group-control" inputmode="decimal" autocomplete="off" aria-invalid="false" class="h-8 w-full min-w-0 border-input px-2.5 py-1 text-base transition-colors outline-none file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive md:text-sm dark:aria-invalid:border-destructive/50 flex-1 rounded-none border-0 bg-transparent shadow-none ring-0 focus-visible:ring-0 disabled:bg-transparent aria-invalid:ring-0 dark:bg-transparent dark:disabled:bg-transparent" name="plantEquipment" value="">
 
-    // 7. Navigate through wizard sections (if multi-step)
-    const nextButtons = page.getByRole("button", { name: /next|continue/i });
-    if (await nextButtons.count()) {
-      // Try to click through wizard steps
-      for (let i = 0; i < 3; i++) {
-        if (await nextButtons.first().isEnabled()) {
-          await nextButtons.first().click();
-        } else {
-          break;
-        }
-      }
-    }
+    await page.locator('input[name="plantEquipment"]').fill("40");
 
-    // 8. Calculate premium
-    const calculatePremiumBtn = page.getByRole("button", {
-      name: /calculate premium/i,
-    });
-    const saveBtn = page.getByRole("button", {
-      name: /^save|save as pending/i,
-    });
+    await page.getByRole("combobox", { name: "Limit of Liability" }).click();
+    await page.getByRole("option", { name: "$10 Million" }).click();
+    await page
+      .getByRole("combobox", { name: /Have any claims exceeded \$20/i })
+      .click();
+    await page
+      .getByRole("listbox")
+      .getByRole("option", { name: "No", exact: true })
+      .click();
 
-    if (await calculatePremiumBtn.count()) {
-      await calculatePremiumBtn.click();
+    await page
+      .getByRole("textbox", { name: "Number of claims last 3 years" })
+      .fill("1");
 
-      // Wait for premium calculation
-      await expect(
-        page.getByText(/premium calculated|calculating/i),
-      ).toBeVisible({
-        timeout: 10000,
-      });
+    await expect(
+      page.getByRole("button", { name: "Submit" }).first(),
+    ).toBeDisabled();
 
-      // Verify premium amounts are visible
-      await expect(page.getByText(/\$?[\d,]+\.\d{2}/)).toBeVisible({
-        timeout: 5000,
-      });
-    }
+    await page.getByText(/confirm you have asked and/i).click({ force: true });
+    await page
+      .getByRole("checkbox", { name: "Unsealed Roadworks The" })
+      .click({ force: true });
 
-    // 9. Save as Pending
-    if (await saveBtn.count()) {
-      await saveBtn.click();
+    await expect(
+      page.getByRole("button", { name: "Submit" }).first(),
+    ).toBeEnabled();
 
-      // Wait for save confirmation
-      await expect(
-        page.getByText(/policy saved|draft saved|success/i),
-      ).toBeVisible({
-        timeout: 5000,
-      });
-    }
+    await page
+      .getByRole("button", { name: "Submit" })
+      .first()
+      .click({ force: true });
+
+    await page.getByRole("button", { name: "Confirm & generate" }).click();
+    // await page
+    //   .getByRole("checkbox", { name: "Confirm you have asked and" })
+    //   .focus();
+    // await page.keyboard.press("Space");
 
     // 10. Remove ?new=1 marker to see the saved policy
-    const currentUrl = await page.url();
-    const baseUrl = currentUrl.split("?")[0];
-    await page.goto(baseUrl);
+    // const currentUrl = await page.url();
+    // const baseUrl = currentUrl.split("?")[0];
+    // await page.goto(baseUrl);
 
-    // Now policy should be in "edit" mode
+    // // Now policy should be in "edit" mode
     await expect(wizardRoot).toHaveAttribute("data-policy-phase", "pending");
 
-    // 11. Look for document generation options
-    const generateDocsBtn = page.getByRole("button", {
-      name: /generate documents|create documents/i,
-    });
-    const documentSection = page.getByRole("heading", {
-      name: /documents|attachments/i,
-    });
+    await page.getByRole("button", { name: /^Policy status$/i }).click();
+    await page
+      .getByRole("menuitem", { name: "Not taken", exact: true })
+      .click();
 
-    // Navigate to documents section if present
-    if (await documentSection.count()) {
-      await documentSection.click();
-    }
+    await expect(
+      page.getByRole("dialog", { name: /Mark policy as Not taken/i }),
+    ).toBeVisible();
+    await expect(page.getByRole("menu")).toBeHidden();
 
-    // 12. Generate documents if button is available
-    if (
-      (await generateDocsBtn.count()) &&
-      (await generateDocsBtn.isVisible())
-    ) {
-      await generateDocsBtn.click();
+    await page.getByRole("button", { name: /^Confirm$/i }).click();
 
-      // Wait for document generation
-      await expect(
-        page.getByText(/documents generated|generating/i),
-      ).toBeVisible({
-        timeout: 15000,
-      });
-    }
+    await expect(
+      page.locator('[data-slot="badge"]', { hasText: /^Not taken$/ }),
+    ).toHaveCount(2);
 
-    // 13. Check for generated documents
-    const documentList = page.locator(
-      '[data-testid*="document"], [class*="document"], [role="document"]',
-    );
-    if (await documentList.count()) {
-      // Verify at least one document exists
-      await expect(documentList.first()).toBeVisible();
-    }
+    // await page.getByRole("menuitem", { name: "Taken", exact: true }).click({
+    //   delay: 100,
+    //   noWaitAfter: true,
+    // });
 
-    // 14. Email documents (using mocked Resend API)
-    const emailBtn = page.getByRole("button", {
-      name: /email selected|email documents/i,
-    });
-    const selectAllCheckbox = page.getByRole("checkbox", {
-      name: /select all/i,
-    });
+    // await page.locator("body").click();
+    // await expect(
+    //   page.getByText("Existing Structure premium", { exact: true }),
+    // ).toBeVisible();
 
-    if (await selectAllCheckbox.count()) {
-      await selectAllCheckbox.check();
-    }
+    // await page
+    //   .getByRole("button", { name: "Review highlighted fields" })
+    //   .click();
 
-    if ((await emailBtn.count()) && (await emailBtn.isEnabled())) {
-      await emailBtn.click();
+    // await page.getByText("Premium Breakdown").focus();
 
-      // Look for email dialog
-      const emailDialog = page.locator('[role="dialog"], dialog');
-      if (await emailDialog.count()) {
-        // Fill recipient email
-        const recipientField = page.getByLabel(/to|recipient/i);
-        if (await recipientField.count()) {
-          await recipientField.fill("test@example.com");
-        }
+    // // 11. Look for document generation options
+    // const generateDocsBtn = page.getByRole("button", {
+    //   name: /generate documents|create documents/i,
+    // });
+    // const documentSection = page.getByRole("heading", {
+    //   name: /documents|attachments/i,
+    // });
 
-        // Send email
-        const sendBtn = page.getByRole("button", { name: /send|email now/i });
-        if (await sendBtn.count()) {
-          await sendBtn.click();
+    // // Navigate to documents section if present
+    // if (await documentSection.count()) {
+    //   await documentSection.click();
+    // }
 
-          // Verify success message
-          await expect(page.getByText(/email sent|success/i)).toBeVisible({
-            timeout: 5000,
-          });
-        }
-      }
-    }
+    // // 12. Generate documents if button is available
+    // if (
+    //   (await generateDocsBtn.count()) &&
+    //   (await generateDocsBtn.isVisible())
+    // ) {
+    //   await generateDocsBtn.click();
+
+    //   // Wait for document generation
+    //   await expect(
+    //     page.getByText(/documents generated|generating/i),
+    //   ).toBeVisible({
+    //     timeout: 15000,
+    //   });
+    // }
+
+    // // 13. Check for generated documents
+    // const documentList = page.locator(
+    //   '[data-testid*="document"], [class*="document"], [role="document"]',
+    // );
+    // if (await documentList.count()) {
+    //   // Verify at least one document exists
+    //   await expect(documentList.first()).toBeVisible();
+    // }
+
+    // // 14. Email documents (using mocked Resend API)
+    // const emailBtn = page.getByRole("button", {
+    //   name: /email selected|email documents/i,
+    // });
+    // const selectAllCheckbox = page.getByRole("checkbox", {
+    //   name: /select all/i,
+    // });
+
+    // if (await selectAllCheckbox.count()) {
+    //   await selectAllCheckbox.check();
+    // }
+
+    // if ((await emailBtn.count()) && (await emailBtn.isEnabled())) {
+    //   await emailBtn.click();
+
+    //   // Look for email dialog
+    //   const emailDialog = page.locator('[role="dialog"], dialog');
+    //   if (await emailDialog.count()) {
+    //     // Fill recipient email
+    //     const recipientField = page.getByLabel(/to|recipient/i);
+    //     if (await recipientField.count()) {
+    //       await recipientField.fill("test@example.com");
+    //     }
+
+    //     // Send email
+    //     const sendBtn = page.getByRole("button", { name: /send|email now/i });
+    //     if (await sendBtn.count()) {
+    //       await sendBtn.click();
+
+    //       // Verify success message
+    //       await expect(page.getByText(/email sent|success/i)).toBeVisible({
+    //         timeout: 5000,
+    //       });
+    //     }
+    //   }
+    // }
 
     // 15. Mark policy as Taken
-    const markTakenBtn = page.getByRole("button", {
-      name: /mark as taken|finalize|submit/i,
-    });
-    const submitBtn = page.getByRole("button", { name: /^submit$/i });
 
-    // Try different button names
-    const finalizePolicyBtn = markTakenBtn.or(submitBtn);
+    // const policyStatusBtn = page.getByRole("button", { name: "Policy status" });
+    // await policyStatusBtn.click();
+    // await page.getByRole("option", { name: "Taken" }).click();
 
-    if (
-      (await finalizePolicyBtn.count()) &&
-      (await finalizePolicyBtn.first().isEnabled())
-    ) {
-      await finalizePolicyBtn.first().click();
+    //   // Handle confirmation dialog if present
+    //   const confirmBtn = page.getByRole("button", {
+    //     name: /confirm|yes|proceed/i,
+    //   });
+    //   if (await confirmBtn.count()) {
+    //     await confirmBtn.click();
+    //   }
 
-      // Handle confirmation dialog if present
-      const confirmBtn = page.getByRole("button", {
-        name: /confirm|yes|proceed/i,
-      });
-      if (await confirmBtn.count()) {
-        await confirmBtn.click();
-      }
+    //   // Verify success message
+    //   await expect(page.getByText(/taken|submitted|finalized/i)).toBeVisible({
+    //     timeout: 5000,
+    //   });
+    // }
 
-      // Verify success message
-      await expect(page.getByText(/taken|submitted|finalized/i)).toBeVisible({
-        timeout: 5000,
-      });
-    }
+    // // 16. Verify policy is now in read-only "view" mode
+    // await page.reload();
+    // await expect(wizardRoot).toHaveAttribute("data-policy-phase", "taken");
 
-    // 16. Verify policy is now in read-only "view" mode
-    await page.reload();
-    await expect(wizardRoot).toHaveAttribute("data-policy-phase", "taken");
-
-    // Taken policies should not have edit controls
-    await expect(page.getByRole("button", { name: /^save$/i })).toHaveCount(0);
-
-    // 17. Verify audit trail entry if available
-    const auditSection = page.getByRole("heading", { name: /audit|history/i });
-    const activityLog = page.getByText(/created|updated|taken/i);
-
-    if (await auditSection.count()) {
-      await auditSection.click();
-    }
-
-    // Check for recent activity
-    if (await activityLog.count()) {
-      await expect(activityLog).toBeVisible();
-    }
+    // // Taken policies should not have edit controls
+    // await expect(page.getByRole("button", { name: /^save$/i })).toHaveCount(0);
   });
 
   test("handles wizard navigation and saves drafts correctly", async ({

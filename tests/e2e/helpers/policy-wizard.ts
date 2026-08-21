@@ -23,15 +23,18 @@ export async function openFirstClientAndStartPolicy(page: Page): Promise<void> {
     page.getByRole("heading", { name: /clients directory/i }),
   ).toBeVisible();
 
+  await page.waitForLoadState("networkidle");
   const clientRow = page.getByRole("row", { name: /^open client/i }).first();
-  await expect(clientRow).toBeVisible();
+  await clientRow.click();
+  await expect(page).toHaveURL(/\/clients\/[^/]+$/);
+  // await expect(clientRow).toBeVisible();
 
-  const clientId = await clientRow.getAttribute("data-client-id");
-  if (!clientId) {
-    throw new Error("Expected client row to expose data-client-id");
-  }
-  await page.goto(`/clients/${clientId}`);
-  await expect(page).toHaveURL(new RegExp(`/clients/${clientId}`));
+  // const clientId = await clientRow.getAttribute("data-client-id");
+  // if (!clientId) {
+  //   throw new Error("Expected client row to expose data-client-id");
+  // }
+  // await page.goto(`/clients/${clientId}`);
+  // await expect(page).toHaveURL(new RegExp(`/clients/${clientId}`));
 
   const newPolicyButton = page.getByRole("button", { name: /new policy/i });
   await expect(newPolicyButton.first()).toBeVisible();
