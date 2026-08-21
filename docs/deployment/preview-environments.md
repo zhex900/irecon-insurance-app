@@ -118,12 +118,12 @@ npm run db:copy:uat
 
 ## CI (GitHub Actions)
 
-| Workflow                 | Trigger                      | What runs                                                |
-| ------------------------ | ---------------------------- | -------------------------------------------------------- |
-| `pr-preview.yml`         | PR opened / updated          | Quality → `npm run deploy:pr` → E2E → PR comment         |
-| `pr-cleanup.yml`         | PR closed                    | `npm run destroy:pr`; on **merge**, `npm run deploy:uat` |
-| `release.yml`            | GitHub Release **published** | `npm run deploy:prod` (non-prerelease only)              |
-| `supabase-keepalive.yml` | Daily + manual               | REST ping on UAT + PR Supabase (free-tier pause guard)   |
+| Workflow                 | Trigger                      | What runs                                                           |
+| ------------------------ | ---------------------------- | ------------------------------------------------------------------- |
+| `pr-preview.yml`         | PR opened / updated          | Quality → `npm run deploy:pr` → E2E → PR comment                    |
+| `pr-cleanup.yml`         | PR closed                    | `npm run destroy:pr`; on **merge**, `npm run deploy:uat`            |
+| `release.yml`            | GitHub Release **published** | `npm run deploy:prod` (non-prerelease only)                         |
+| `supabase-keepalive.yml` | Daily + manual               | Direct Postgres SELECT on UAT + PR Supabase (free-tier pause guard) |
 
 Workflows write `.env.pr` / `.env.uat` at runtime via `deployment/ci-write-env.mjs` from GitHub **environments** + **repository** secrets (no monolithic env-file secret).
 
