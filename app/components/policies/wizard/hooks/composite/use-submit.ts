@@ -82,9 +82,10 @@ export function usePolicySubmit({
 }) {
   const saveWaitRef = useRef<SaveWaiter | null>(null);
   const saveSawBusyRef = useRef(false);
-  const ignoreSubmitConfirmReopenRef = useRef(false);
+  const confirmSaveStartedRef = useRef(false);
 
-  const [submitConfirmOpen, setSubmitConfirmOpenState] = useState(false);
+  const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
+  const [submitConfirmLoading, setSubmitConfirmLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [terminalStatusSaving, setTerminalStatusSaving] = useState(false);
   const [submitDocumentNames, setSubmitDocumentNames] = useState<string[]>([]);
@@ -115,6 +116,18 @@ export function usePolicySubmit({
     resolve(parsePolicySaveResponse(fetcher.data));
   }, [fetcher.state, fetcher.data]);
 
+  // Close after confirm finishes — same pattern as policy status menu.
+  useEffect(() => {
+    if (!submitConfirmOpen) {
+      confirmSaveStartedRef.current = false;
+      return;
+    }
+    if (submitting) return;
+    if (!confirmSaveStartedRef.current) return;
+    confirmSaveStartedRef.current = false;
+    setSubmitConfirmOpen(false);
+  }, [submitConfirmOpen, submitting]);
+
   function saveRefs() {
     return {
       savedSnapshotRef,
@@ -137,48 +150,33 @@ export function usePolicySubmit({
     await waitForDraftIdle();
   }
 
-  function dismissSubmitConfirm() {
-    ignoreSubmitConfirmReopenRef.current = true;
-    setSubmitConfirmOpenState(false);
-    requestAnimationFrame(() => {
-      ignoreSubmitConfirmReopenRef.current = false;
-    });
-  }
-
-  function handleSubmitConfirmOpenChange(open: boolean) {
-    if (submitting && !open) return;
-    if (!open) {
-      dismissSubmitConfirm();
-      return;
-    }
-    if (ignoreSubmitConfirmReopenRef.current) return;
-    setSubmitConfirmOpenState(true);
-  }
-
   async function requestSubmit() {
-    if (ignoreSubmitConfirmReopenRef.current) return;
-    if (submitConfirmOpen) return;
+    if (submitConfirmOpen || submitConfirmLoading || submitting) return;
     const valid = await form.trigger();
     if (!valid) {
       focusFirstWizardIssue(issueFocus);
       return;
     }
+    setSubmitConfirmLoading(true);
     try {
       const names = await listReviewDocumentsForConfirmClient(
         policyForDocumentConfirm(policy, form.getValues()),
       );
       setSubmitDocumentNames(names);
+      setSubmitConfirmOpen(true);
     } catch {
       setSubmitDocumentNames([]);
       toast.error("Could not load document list", {
         description: "Check your connection and try again.",
       });
-      return;
+    } finally {
+      setSubmitConfirmLoading(false);
     }
-    setSubmitConfirmOpenState(true);
   }
 
   async function confirmSubmit() {
+    if (submitting) return false;
+    confirmSaveStartedRef.current = true;
     setSubmitting(true);
     try {
       const premiumForDocs = await ensurePremiumForSubmit({
@@ -201,6 +199,11 @@ export function usePolicySubmit({
       const saved = await savePolicy();
       if (saved) rememberPremiumAfterSubmit(policy.policyId);
       return saved;
+    } catch {
+      toast.error("Could not submit policy", {
+        description: "Check your connection and try again.",
+      });
+      return false;
     } finally {
       setSubmitting(false);
     }
@@ -239,7 +242,6 @@ export function usePolicySubmit({
     markPolicySaveSucceeded(saveRefs(), payload);
     applyFormOverrides(form, overrides);
     syncFormPolicyStatus(form, result.data.policy.policyStatusId);
-    // onPolicyUpdated + success toast handled by usePolicySaveSync on fetcher.data
     return true;
   }
 
@@ -276,10 +278,13 @@ export function usePolicySubmit({
     })();
   }
 
+  const submitBlocked = submitConfirmOpen || submitConfirmLoading || submitting;
+
   return {
     submitConfirmOpen,
-    setSubmitConfirmOpen: handleSubmitConfirmOpenChange,
-    dismissSubmitConfirm,
+    submitConfirmLoading,
+    submitBlocked,
+    dismissSubmitConfirm: () => setSubmitConfirmOpen(false),
     submitting,
     terminalStatusSaving,
     submitDocumentNames,

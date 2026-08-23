@@ -82,8 +82,8 @@ export function WizardDefault(props: WizardStateProps) {
         clientName={props.clientName}
         headerActions={props.headerActions}
         saveStatus={draftSave.saveStatus}
-        submitDisabled={gate.submitDisabled}
-        submitBusy={submit.submitting}
+        submitDisabled={gate.submitDisabled || submit.submitBlocked}
+        submitBusy={submit.submitting || submit.submitConfirmLoading}
         requestSubmit={submit.requestSubmit}
         navItems={core.navItems}
         activeSectionId={navigation.activeSectionId}
@@ -152,8 +152,8 @@ export function WizardDefault(props: WizardStateProps) {
             premiumSectionProps={premiumSectionProps}
           />
           <Footer
-            submitDisabled={gate.submitDisabled}
-            submitBusy={submit.submitting}
+            submitDisabled={gate.submitDisabled || submit.submitBlocked}
+            submitBusy={submit.submitting || submit.submitConfirmLoading}
             requestSubmit={submit.requestSubmit}
             handleCancelClick={leave.handleCancelClick}
             actionData={core.fetcher.data}
@@ -174,7 +174,6 @@ export function WizardDefault(props: WizardStateProps) {
         premium={premiumCalc.premium}
         premiumRef={premiumCalc.premiumRef}
         submitConfirmOpen={submit.submitConfirmOpen}
-        setSubmitConfirmOpen={submit.setSubmitConfirmOpen}
         dismissSubmitConfirm={submit.dismissSubmitConfirm}
         submitDocumentNames={submit.submitDocumentNames}
         submitBusy={submit.submitting}

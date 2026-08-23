@@ -99,7 +99,6 @@ export type WizardDraftSlice = Pick<
 export type WizardSubmitSlice = Pick<
   Submit,
   | "submitConfirmOpen"
-  | "setSubmitConfirmOpen"
   | "submitting"
   | "submitDocumentNames"
   | "requestSubmit"
