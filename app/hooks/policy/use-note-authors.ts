@@ -98,7 +98,11 @@ export function usePolicyNoteAuthors(policyId: string, hasNotes: boolean) {
 
   const hasCachedAuthors = noteAuthors !== EMPTY_NOTE_AUTHORS;
   const pending =
-    hasNotes && hydrated && !hasCachedAuthors && !noteAuthorsFailed.has(policyId) && isLoading;
+    hasNotes &&
+    hydrated &&
+    !hasCachedAuthors &&
+    !noteAuthorsFailed.has(policyId) &&
+    isLoading;
 
   return { noteAuthors, pending };
 }
