@@ -19,13 +19,21 @@ test.describe("quote-to-taken workflow", () => {
 
     // Open first available client
     await clientRow.first().click();
+
     await expect(page).toHaveURL(/\/clients\/[^/]+$/);
 
     // 3. Start new policy
+    const newPolicyPromise = page.waitForResponse(
+      (response) =>
+        response.url().includes("policies/new.data?clientId=") &&
+        response.request().method() === "POST",
+    );
+    // const notePromise = page.waitForResponse("**api/policies/**/note-authors");
     const newPolicyBtn = page.getByRole("button", { name: /new policy/i });
 
     await newPolicyBtn.first().click();
-
+    await newPolicyPromise;
+    // await notePromise;
     // Should be redirected to new policy wizard with ?new=1 marker
     await expect(page).toHaveURL(/\/policies\/[^/]+\?new=1/);
 
@@ -100,8 +108,29 @@ test.describe("quote-to-taken workflow", () => {
       name: /Submit policy\?/i,
     });
     await expect(submitDialog).toBeVisible();
+    //policies
+    const submitPolicyPromise = page.waitForResponse(
+      (response) =>
+        response.url().includes("policies/") &&
+        response.request().method() === "POST",
+    );
+    const submitPolicyDataPromise = page.waitForResponse(
+      (response) =>
+        response.url().endsWith(".data") &&
+        response.request().method() === "POST",
+    );
+    const submitPolicyNotePromise = page.waitForResponse(
+      "**policyId.note-authors",
+    );
+    await new Promise((resolve) => setTimeout(resolve, 3000));
 
     await page.getByRole("button", { name: "Confirm & generate" }).click();
+    //wait for 3 seconds
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+
+    await submitPolicyPromise;
+    await submitPolicyDataPromise;
+    await submitPolicyNotePromise;
     await expect(submitDialog).toBeHidden({ timeout: 90_000 });
 
     await expect(wizardRoot).toHaveAttribute("data-policy-phase", "pending", {

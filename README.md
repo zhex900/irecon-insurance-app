@@ -23,17 +23,29 @@ Clients, policies, prices, and users persist in **Supabase Postgres** via Drizzl
 
 ## Stack
 
-- React Router 8 (framework mode) + Cloudflare Workers
-- React 19 + TypeScript
-- Tailwind CSS 4
-- React Hook Form + Zod
-- Supabase (Postgres + Auth) + Drizzle ORM
-- [shadcn/ui](https://ui.shadcn.com) (`base-nova`) + [ReUI](https://reui.io)
+| Layer             | Technology                                                                                                                                           |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Runtime**       | [Cloudflare Workers](https://developers.cloudflare.com/workers/) (main SSR app) + dedicated PDF and Excel Workers                                    |
+| **Framework**     | [React Router 8](https://reactrouter.com) (framework mode) on [Vite 8](https://vite.dev)                                                             |
+| **UI**            | [React 19](https://react.dev), [TypeScript](https://www.typescriptlang.org), [Tailwind CSS 4](https://tailwindcss.com)                               |
+| **Components**    | [shadcn/ui](https://ui.shadcn.com) (`base-nova`) + [ReUI](https://reui.io) on [Base UI](https://base-ui.com)                                         |
+| **Forms**         | [React Hook Form](https://react-hook-form.com) + [Zod 4](https://zod.dev)                                                                            |
+| **Database**      | [Supabase](https://supabase.com) Postgres via [Hyperdrive](https://developers.cloudflare.com/hyperdrive/) + [Drizzle ORM](https://orm.drizzle.team)  |
+| **Auth**          | Supabase Auth (SSR cookies)                                                                                                                          |
+| **Storage**       | Cloudflare R2 (avatars, generated documents)                                                                                                         |
+| **PDF**           | [pdfme](https://pdfme.com) (client-only dynamic import), [pdf-lib](https://pdf-lib.js.org); generation in a private PDF Worker                       |
+| **Email**         | [Resend](https://resend.com) + [React Email](https://react.email) editor (TipTap, client-only)                                                       |
+| **Excel**         | [ExcelJS](https://github.com/exceljs/exceljs) in a dedicated Excel Worker                                                                            |
+| **Observability** | [Sentry](https://sentry.io) + Cloudflare Workers Observability                                                                                       |
+| **Testing**       | [Vitest](https://vitest.dev) (unit/integration), [Playwright](https://playwright.dev) (e2e/smoke), [@faker-js/faker](https://fakerjs.dev) (fixtures) |
+
+Requires **Node.js 24+**. Local Postgres via Supabase CLI (Docker).
 
 ## Repo layout
 
 ```text
 app/           React Router application
+workers/       PDF and Excel Cloudflare Workers (private services)
 deployment/    Deploy, preview envs, Cloudflare/Supabase ops
 public/        Static assets
 scripts/       DB seed/migrate, dev tooling, quality checks — see scripts/README.md
