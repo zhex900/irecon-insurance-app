@@ -7,6 +7,7 @@ import type { Policy, PremiumBreakdown } from "~/lib/db/types";
 import { listReviewDocumentsForConfirmClient } from "~/lib/services/policy/documents/documents.client";
 import {
   type CarPolicyFormValues,
+  carPolicyPricingSchema,
   POLICY_STATUS,
   pricingFields,
 } from "~/lib/zod/policy-car";
@@ -17,7 +18,6 @@ import {
   applyFormOverrides,
   buildSavePayload,
   clearPendingLeaveOnInvalid,
-  ensurePremiumForSubmit,
   focusFirstWizardIssue,
   isSaveActionResponse,
   markPolicySaveSucceeded,
@@ -40,8 +40,6 @@ export function usePolicySubmit({
   step,
   premium,
   premiumRef,
-  setPremium,
-  setReferralReasons,
   regenerateDocumentsIfNeeded,
   formDataChangedForDocuments,
   goToStep,
@@ -62,8 +60,6 @@ export function usePolicySubmit({
   step: number;
   premium: PremiumBreakdown | undefined;
   premiumRef: RefObject<PremiumBreakdown | undefined>;
-  setPremium: (premium: PremiumBreakdown | undefined) => void;
-  setReferralReasons: (reasons: string[]) => void;
   regenerateDocumentsIfNeeded: (
     options?: RegenerateDocumentsOptions,
   ) => Promise<void>;
@@ -150,6 +146,20 @@ export function usePolicySubmit({
     await waitForDraftIdle();
   }
 
+  /** Premium must already be on the client (Premium Summary open / calculated). */
+  function resolvePremiumForSubmit(): PremiumBreakdown | false {
+    const existing = premiumRef.current ?? premium ?? policy.car.premium;
+    if (existing) return existing;
+
+    const parsed = carPolicyPricingSchema.safeParse(form.getValues());
+    if (!parsed.success) return false;
+
+    toast.error("Premium not calculated yet", {
+      description: "Open Premium Summary, wait for totals, then submit.",
+    });
+    return false;
+  }
+
   async function requestSubmit() {
     if (submitConfirmOpen || submitConfirmLoading || submitting) return;
     const valid = await form.trigger();
@@ -179,19 +189,16 @@ export function usePolicySubmit({
     confirmSaveStartedRef.current = true;
     setSubmitting(true);
     try {
-      const premiumForDocs = await ensurePremiumForSubmit({
-        premium,
-        fallbackPremium: policy.car.premium,
-        form,
-        policyId: policy.policyId,
-        setPremium,
-        setReferralReasons,
-      });
+      await quiesceDraftSaves();
+      const premiumForDocs = resolvePremiumForSubmit();
       if (premiumForDocs === false) {
         await form.trigger([...pricingFields]);
+        if (carPolicyPricingSchema.safeParse(form.getValues()).success) {
+          return false;
+        }
+        toast.error("Complete the pricing fields before submitting.");
         return false;
       }
-      await quiesceDraftSaves();
       await regenerateDocumentsIfNeeded({
         premiumOverride: premiumForDocs,
         force: true,
@@ -199,9 +206,12 @@ export function usePolicySubmit({
       const saved = await savePolicy();
       if (saved) rememberPremiumAfterSubmit(policy.policyId);
       return saved;
-    } catch {
+    } catch (error) {
       toast.error("Could not submit policy", {
-        description: "Check your connection and try again.",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Check your connection and try again.",
       });
       return false;
     } finally {

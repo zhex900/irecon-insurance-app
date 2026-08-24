@@ -35,10 +35,15 @@ export async function openFirstClientAndStartPolicy(page: Page): Promise<void> {
   // }
   // await page.goto(`/clients/${clientId}`);
   // await expect(page).toHaveURL(new RegExp(`/clients/${clientId}`));
-
+  const newPolicyPromise = page.waitForResponse(
+    (response) =>
+      response.url().includes("policies/new.data?clientId=") &&
+      response.request().method() === "POST",
+  );
   const newPolicyButton = page.getByRole("button", { name: /new policy/i });
   await expect(newPolicyButton.first()).toBeVisible();
   await newPolicyButton.first().click();
+  await newPolicyPromise;
   await expect(page).toHaveURL(/\/policies\/[^/]+\?new=1/);
   await expectPolicyPhase(page, "new");
 }

@@ -79,7 +79,13 @@ test.describe("quote-to-taken workflow", () => {
       .getByRole("listbox")
       .getByRole("option", { name: "No", exact: true })
       .click();
+    const policyId = page.url().split("/").pop()?.split("?")[0];
 
+    const postPolicyDataPromise = page.waitForResponse(
+      (response) =>
+        response.url().endsWith(`policies/${policyId}.data`) &&
+        response.request().method() === "POST",
+    );
     await page
       .getByRole("textbox", { name: "Number of claims last 3 years" })
       .fill("1");
@@ -99,6 +105,10 @@ test.describe("quote-to-taken workflow", () => {
 
     // await waitForPremiumCalculation(page);
 
+    // https://pr-9.irecon.net/policies/c02211a3-77de-4a14-adca-c94760aa96b8.data
+    // get policy id from the url
+
+    await postPolicyDataPromise;
     await page
       .getByRole("button", { name: "Submit" })
       .first()
@@ -120,13 +130,13 @@ test.describe("quote-to-taken workflow", () => {
         response.request().method() === "POST",
     );
     const submitPolicyNotePromise = page.waitForResponse(
-      "**policyId.note-authors",
+      "**reference.fee-names",
     );
-    await new Promise((resolve) => setTimeout(resolve, 3000));
+    // await new Promise((resolve) => setTimeout(resolve, 3000));
 
     await page.getByRole("button", { name: "Confirm & generate" }).click();
     //wait for 3 seconds
-    await new Promise((resolve) => setTimeout(resolve, 3000));
+    // await new Promise((resolve) => setTimeout(resolve, 3000));
 
     await submitPolicyPromise;
     await submitPolicyDataPromise;

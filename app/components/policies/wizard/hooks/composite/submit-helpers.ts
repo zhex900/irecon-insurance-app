@@ -6,10 +6,8 @@ import { toast } from "sonner";
 import type { Policy, PremiumBreakdown } from "~/lib/db/types";
 import { focusFormIssue } from "~/lib/form-validation-ui";
 import { getTakenStatusErrors } from "~/lib/policies/taken-status";
-import { rollupPremiumTotals } from "~/lib/pricing/premium-totals";
 import {
   type CarPolicyFormValues,
-  carPolicyPricingSchema,
   POLICY_STATUS,
   wizardStepFields,
 } from "~/lib/zod/policy-car";
@@ -62,39 +60,6 @@ export function policyForDocumentConfirm(
           : null,
     },
   };
-}
-
-export async function ensurePremiumForSubmit(options: {
-  premium: PremiumBreakdown | undefined;
-  fallbackPremium: PremiumBreakdown | undefined;
-  form: UseFormReturn<CarPolicyFormValues>;
-  policyId: string;
-  setPremium: (premium: PremiumBreakdown | undefined) => void;
-  setReferralReasons: (reasons: string[]) => void;
-}): Promise<PremiumBreakdown | undefined | false> {
-  const existing = options.premium ?? options.fallbackPremium;
-  if (existing) return existing;
-  const parsed = carPolicyPricingSchema.safeParse(options.form.getValues());
-  if (!parsed.success) {
-    return false;
-  }
-  const body = new FormData();
-  body.set("intent", INTENTS.RECALCULATE);
-  body.set("payload", JSON.stringify(parsed.data));
-  const response = await fetch(`/policies/${options.policyId}`, {
-    method: "post",
-    body,
-  });
-  const data = (await response.json()) as PolicyWizardActionData;
-  let premiumForDocs: PremiumBreakdown | undefined = existing;
-  if (data.premium) {
-    premiumForDocs = rollupPremiumTotals(data.premium);
-    options.setPremium(premiumForDocs);
-  }
-  if (data.referralReasons) {
-    options.setReferralReasons(data.referralReasons);
-  }
-  return premiumForDocs;
 }
 
 export function applyFormOverrides(

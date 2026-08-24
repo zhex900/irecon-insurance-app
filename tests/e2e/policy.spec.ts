@@ -63,7 +63,7 @@ test.describe("policy journeys", () => {
     // (see canAdjust in $policyId.tsx) — filter to Taken status and scan a
     // bounded number of rows rather than assuming the first one qualifies.
     await page.goto("/policies?status=2");
-    await page.waitForLoadState("networkidle");
+    // await page.waitForLoadState("networkidle");
     const takenRows = page.getByRole("row", { name: /^open policy/i });
     const rowCount = await takenRows.count();
 
