@@ -27,14 +27,6 @@ export async function openFirstClientAndStartPolicy(page: Page): Promise<void> {
   const clientRow = page.getByRole("row", { name: /^open client/i }).first();
   await clientRow.click();
   await expect(page).toHaveURL(/\/clients\/[^/]+$/);
-  // await expect(clientRow).toBeVisible();
-
-  // const clientId = await clientRow.getAttribute("data-client-id");
-  // if (!clientId) {
-  //   throw new Error("Expected client row to expose data-client-id");
-  // }
-  // await page.goto(`/clients/${clientId}`);
-  // await expect(page).toHaveURL(new RegExp(`/clients/${clientId}`));
   const newPolicyPromise = page.waitForResponse(
     (response) =>
       response.url().includes("policies/new.data?clientId=") &&
@@ -46,6 +38,8 @@ export async function openFirstClientAndStartPolicy(page: Page): Promise<void> {
   await newPolicyPromise;
   await expect(page).toHaveURL(/\/policies\/[^/]+\?new=1/);
   await expectPolicyPhase(page, "new");
+  const wizardRoot = page.locator("[data-policy-phase]");
+  await expect(wizardRoot).toHaveAttribute("data-policy-phase", "new");
 }
 
 /** Radix select wired through `FieldLabel` + `AppSelect`. */

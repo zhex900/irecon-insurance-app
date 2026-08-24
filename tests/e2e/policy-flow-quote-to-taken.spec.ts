@@ -86,6 +86,9 @@ test.describe("quote-to-taken workflow", () => {
         response.url().endsWith(`policies/${policyId}.data`) &&
         response.request().method() === "POST",
     );
+    const getReferenceFeeNamesPromise = page.waitForResponse(
+      "**/api/reference/fee-names.data*",
+    );
     await page
       .getByRole("textbox", { name: "Number of claims last 3 years" })
       .fill("1");
@@ -109,6 +112,7 @@ test.describe("quote-to-taken workflow", () => {
     // get policy id from the url
 
     await postPolicyDataPromise;
+    await getReferenceFeeNamesPromise;
     await page
       .getByRole("button", { name: "Submit" })
       .first()
