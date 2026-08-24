@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { mockResendEmailApi } from "./helpers/auth";
+import { openFirstClientAndStartPolicy } from "./helpers/policy-wizard";
 
 test.describe("quote-to-taken workflow", () => {
   test.beforeEach(async ({ page }) => {
@@ -11,36 +12,7 @@ test.describe("quote-to-taken workflow", () => {
   test("complete quote-to-taken journey with document generation", async ({
     page,
   }) => {
-    // 1. Navigate to clients
-    await page.goto("/clients");
-    await page.waitForLoadState("networkidle");
-    // Find or create a test client
-    const clientRow = page.getByRole("row", { name: /open client/i });
-
-    // Open first available client
-    await clientRow.first().click();
-
-    await expect(page).toHaveURL(/\/clients\/[^/]+$/);
-
-    // 3. Start new policy
-    const newPolicyPromise = page.waitForResponse(
-      (response) =>
-        response.url().includes("policies/new.data?clientId=") &&
-        response.request().method() === "POST",
-    );
-    // const notePromise = page.waitForResponse("**api/policies/**/note-authors");
-    const newPolicyBtn = page.getByRole("button", { name: /new policy/i });
-
-    await newPolicyBtn.first().click();
-    await newPolicyPromise;
-    // await notePromise;
-    // Should be redirected to new policy wizard with ?new=1 marker
-    await expect(page).toHaveURL(/\/policies\/[^/]+\?new=1/);
-
-    // 4. Verify wizard is in "new" mode
-    const wizardRoot = page.locator("[data-policy-phase]");
-    await expect(wizardRoot).toHaveAttribute("data-policy-phase", "new");
-
+    await openFirstClientAndStartPolicy(page);
     // 5. Complete basic policy information
 
     await page
@@ -146,6 +118,7 @@ test.describe("quote-to-taken workflow", () => {
     await submitPolicyDataPromise;
     await submitPolicyNotePromise;
     await expect(submitDialog).toBeHidden({ timeout: 90_000 });
+    const wizardRoot = page.locator("[data-policy-phase]");
 
     await expect(wizardRoot).toHaveAttribute("data-policy-phase", "pending", {
       timeout: 90_000,

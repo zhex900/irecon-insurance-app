@@ -22,10 +22,14 @@ export async function openFirstClientAndStartPolicy(page: Page): Promise<void> {
   await expect(
     page.getByRole("heading", { name: /clients directory/i }),
   ).toBeVisible();
-
-  await page.waitForLoadState("networkidle");
+  const recentRoutesPromise = page.waitForResponse(
+    (response) =>
+      response.url().includes("api/recent-routes") &&
+      response.request().method() === "POST",
+  );
   const clientRow = page.getByRole("row", { name: /^open client/i }).first();
   await clientRow.click();
+  await recentRoutesPromise;
   await expect(page).toHaveURL(/\/clients\/[^/]+$/);
   const newPolicyPromise = page.waitForResponse(
     (response) =>

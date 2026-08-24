@@ -32,11 +32,9 @@ test.describe("policy journeys", () => {
   }) => {
     await mockResendEmailApi(page);
     await page.goto("/policies?status=2");
-    await page.waitForLoadState("networkidle");
 
     const policyRow = page.getByRole("row", { name: /^open policy/i });
 
-    await page.waitForLoadState("networkidle");
     await policyRow.first().click();
     await expect(page).toHaveURL(/\/policies\/[^/?]+$/);
 
@@ -63,7 +61,6 @@ test.describe("policy journeys", () => {
     // (see canAdjust in $policyId.tsx) — filter to Taken status and scan a
     // bounded number of rows rather than assuming the first one qualifies.
     await page.goto("/policies?status=2");
-    // await page.waitForLoadState("networkidle");
     const takenRows = page.getByRole("row", { name: /^open policy/i });
     const rowCount = await takenRows.count();
 
@@ -71,7 +68,6 @@ test.describe("policy journeys", () => {
     const maxRowsToScan = Math.min(rowCount, 10);
     for (let i = 0; i < maxRowsToScan; i++) {
       await page.goto("/policies?status=2");
-      await page.waitForLoadState("networkidle");
       await takenRows.nth(i).click();
       await expect(page).toHaveURL(/\/policies\/[^/?]+$/);
       const candidate = page.getByRole("link", { name: /adjust/i });
