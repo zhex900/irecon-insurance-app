@@ -1,4 +1,9 @@
-import { expect, type Locator, type Page } from "@playwright/test";
+import {
+  expect,
+  type Locator,
+  type Page,
+  type Response,
+} from "@playwright/test";
 
 /** Root element carrying `data-policy-phase`. */
 export function wizardRoot(page: Page): Locator {
@@ -100,118 +105,151 @@ export async function fillAmountField(
   await page.getByLabel(label).fill(value);
 }
 
-async function goToSectionId(page: Page, sectionId: string): Promise<void> {
-  await page.locator(`a[href="#${sectionId}"]`).first().click();
-  await page.locator(`#${sectionId}`).scrollIntoViewIfNeeded();
-}
-
-export async function fillVisibleEmptyInputs(
-  section: Locator,
-  value: string,
-): Promise<void> {
-  const inputs = section.locator('input:not([type="hidden"])');
-  const count = await inputs.count();
-  for (let i = 0; i < count; i++) {
-    const input = inputs.nth(i);
-    if ((await input.inputValue()) === "") {
-      await input.fill(value);
-    }
-  }
-}
-
 export type FillPolicyOptions = {
   insuredName: string;
-  siteAddress?: string;
-  turnover?: string;
+  siteAddress: string;
+  turnover: number;
+  annualTypeCover?: "Contract Commencing" | "Contract Ending";
+  contractWorks: number;
+  displayHomes: number;
+  existingStructures: number;
+  plantEquipment: number;
+  limitOfLiability?: "$10 Million" | "$20 Million" | "Not Insured";
+  state?: "NSW" | "VIC" | "QLD" | "SA" | "WA" | "TAS" | "NT";
+  postcode?: string;
 };
 
 /** Fill required CAR wizard fields for a Single / New policy. */
 export async function fillRequiredPolicyForm(
   page: Page,
-  options: FillPolicyOptions,
-): Promise<void> {
-  const {
+  {
     insuredName,
-    siteAddress = "123 E2E Test Street, Sydney NSW 2000",
-    turnover = "1000000",
-  } = options;
-
-  await selectFieldOption(page, /^Insurer$/i, /^ATC$/i);
-  await page.getByLabel(/^Insured Name$/i).fill(insuredName);
-  await selectFieldOption(page, /^Type of Cover$/i, /^Single$/i);
-  await selectFieldOption(page, /^Policy Category$/i, /^New$/i);
-
-  await page.getByLabel(/^Site Address$/i).fill(siteAddress);
-  await fillState(page, "NSW");
-  await page.getByLabel(/^Postcode$/i).fill("2000");
-
-  await fillAmountField(
-    page,
-    /^Estimated Turnover \/ Project Value$/i,
+    siteAddress,
+    postcode = "2000",
+    state = "NSW",
     turnover,
-  );
+    annualTypeCover = "Contract Commencing",
+    contractWorks,
+    displayHomes,
+    existingStructures,
+    plantEquipment,
+    limitOfLiability = "$10 Million",
+  }: FillPolicyOptions,
+): Promise<{
+  newPolicyResponsePromises: Promise<Response>[];
+  policyId: string;
+}> {
+  await page.getByRole("textbox", { name: "Insured Name" }).fill(insuredName);
+  await page.getByRole("combobox", { name: "Annual Type of Cover" }).click();
+  await page.getByRole("option", { name: annualTypeCover }).click();
+  await page.getByRole("textbox", { name: "Site Address" }).fill(siteAddress);
+  await page.getByRole("textbox", { name: "Postcode" }).fill(postcode);
+  await page.getByRole("combobox", { name: "State" }).click();
+  await page.getByRole("option", { name: state }).click();
   await page
-    .getByLabel(/^Business Activities$/i)
-    .fill("Commercial construction and associated civil works");
+    .getByRole("textbox", { name: "Estimated Turnover / Project" })
+    .fill(turnover.toString());
 
-  await page.getByLabel(/^Maximum Maintenance Period \(months\)$/i).fill("12");
-
-  await fillPolicyDates(page);
-
-  await selectFieldOption(
-    page,
-    /^Do you hold a current contract works\/liability policy\?$/i,
-    /^No$/i,
-  );
-
-  await goToSectionId(page, "limits-of-liability");
-  await fillAmountField(page, /^Contract Works$/i, "1500000");
-  await fillAmountField(page, /^Display Homes$/i, "0");
-  await fillAmountField(page, /^Existing Structures$/i, "0");
-  await fillAmountField(
-    page,
-    /^Named Insureds Construction Plant & Equipment$/i,
-    "10000",
-  );
-  await selectFieldOption(page, /^Limit of Liability$/i, /\$10 Million/i);
-
-  await goToSectionId(page, "excesses");
-  await fillVisibleEmptyInputs(page.locator("#excesses"), "1000");
-
-  await goToSectionId(page, "claims");
-  await page.getByLabel(/^Number of claims last 3 years$/i).fill("0");
-  await selectFieldOption(
-    page,
-    /^Have any claims exceeded \$20,000 in value\?$/i,
-    /^No$/i,
-  );
+  await page.getByRole("combobox", { name: "Do you hold a current" }).click();
+  await page.getByRole("option", { name: "No" }).click();
   await page
-    .getByRole("checkbox", {
-      name: /Confirm you have asked and received responses/i,
-    })
-    .check();
-}
-
-export async function waitForPremiumCalculation(page: Page): Promise<void> {
-  await goToSectionId(page, "premium");
-  await expect(
-    page.getByText(/Premium has not been calculated yet/i),
-  ).not.toBeVisible({ timeout: 45_000 });
-  await expect(page.getByText(/\$[\d,]+\.\d{2}/).first()).toBeVisible({
-    timeout: 45_000,
-  });
-}
-
-export async function submitPolicy(page: Page): Promise<void> {
+    .getByRole("textbox", { name: "Contract Works" })
+    .fill(contractWorks.toString());
   await page
-    .getByRole("button", { name: /^submit$/i })
-    .first()
+    .getByRole("textbox", { name: "Display Homes" })
+    .fill(displayHomes.toString());
+  await page
+    .getByRole("textbox", { name: "Existing Structures" })
+    .fill(existingStructures.toString());
+
+  await page
+    .locator('input[name="plantEquipment"]')
+    .fill(plantEquipment.toString());
+
+  await page.getByRole("combobox", { name: "Limit of Liability" }).click();
+  await page.getByRole("option", { name: limitOfLiability }).click();
+  await page
+    .getByRole("combobox", { name: /Have any claims exceeded \$20/i })
     .click();
-  const submitDialog = page.getByRole("dialog", { name: /Submit policy\?/i });
+  await page
+    .getByRole("listbox")
+    .getByRole("option", { name: "No", exact: true })
+    .click();
+  const policyId = page.url().split("/").pop()?.split("?")[0];
+  if (!policyId) {
+    throw new Error(`Expected policy id in URL, got ${page.url()}`);
+  }
+
+  const postPolicyDataPromise = page.waitForResponse(
+    (response) =>
+      response.url().endsWith(`policies/${policyId}.data`) &&
+      response.request().method() === "POST",
+  );
+  const getReferenceFeeNamesPromise = page.waitForResponse(
+    "**/api/reference/fee-names.data*",
+  );
+  await page
+    .getByRole("textbox", { name: "Number of claims last 3 years" })
+    .fill("1");
+
+  await expect(
+    page.getByRole("button", { name: "Submit" }).first(),
+  ).toBeDisabled();
+
+  await page.getByText(/confirm you have asked and/i).click({ force: true });
+  await page
+    .getByRole("checkbox", { name: "Unsealed Roadworks The" })
+    .click({ force: true });
+  await expect(
+    page.getByRole("button", { name: "Submit" }).first(),
+  ).toBeEnabled();
+  return {
+    newPolicyResponsePromises: [
+      postPolicyDataPromise,
+      getReferenceFeeNamesPromise,
+    ],
+    policyId,
+  };
+}
+
+export async function submitPolicy(
+  page: Page,
+  {
+    newPolicyResponsePromises,
+    policyId,
+  }: { newPolicyResponsePromises: Promise<Response>[]; policyId: string },
+): Promise<void> {
+  await Promise.all(newPolicyResponsePromises);
+  await page
+    .getByRole("button", { name: "Submit" })
+    .first()
+    .click({ force: true });
+
+  const submitDialog = page.getByRole("dialog", {
+    name: /Submit policy\?/i,
+  });
   await expect(submitDialog).toBeVisible();
-  await page.getByRole("button", { name: /Confirm & generate/i }).click();
-  await expect(submitDialog).toBeHidden({ timeout: 90_000 });
-  await expectPolicyPhase(page, "pending", { timeout: 90_000 });
+
+  const submitPolicyPromise = page.waitForResponse(
+    (response) =>
+      response.url().includes(`/policies/${policyId}`) &&
+      response.request().method() === "POST",
+  );
+  const submitPolicyDataPromise = page.waitForResponse(
+    (response) =>
+      response.url().endsWith(`/policies/${policyId}.data`) &&
+      response.request().method() === "POST",
+  );
+  const submitPolicyNotePromise = page.waitForResponse("**reference.fee-names");
+
+  await page.getByRole("button", { name: "Confirm & generate" }).click();
+
+  await Promise.all([
+    submitPolicyPromise,
+    submitPolicyDataPromise,
+    submitPolicyNotePromise,
+  ]);
+  await expect(submitDialog).toBeHidden();
 }
 
 export async function markPolicyTaken(page: Page): Promise<void> {
