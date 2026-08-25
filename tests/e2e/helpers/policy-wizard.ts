@@ -83,6 +83,13 @@ export type FillPolicyOptions =
       typeOfCover: "Single" | "Owner Builder";
     });
 
+export function policyIdFromUrl(page: Page): string {
+  const policyId = page.url().split("/").pop()?.split("?")[0];
+  if (!policyId) {
+    throw new Error(`Expected policy id in URL, got ${page.url()}`);
+  }
+  return policyId;
+}
 /** Fill required CAR wizard fields for a Single / New policy. */
 export async function fillRequiredPolicyForm(
   page: Page,
@@ -153,10 +160,7 @@ export async function fillRequiredPolicyForm(
     .getByRole("listbox")
     .getByRole("option", { name: "No", exact: true })
     .click();
-  const policyId = page.url().split("/").pop()?.split("?")[0];
-  if (!policyId) {
-    throw new Error(`Expected policy id in URL, got ${page.url()}`);
-  }
+  const policyId = policyIdFromUrl(page);
 
   const postPolicyDataPromise = page.waitForResponse(
     (response) =>
@@ -259,5 +263,13 @@ export async function markPolicyNotTaken(page: Page): Promise<void> {
   await expect(
     page.getByRole("dialog", { name: /Mark policy as Not taken/i }),
   ).toBeVisible();
+
+  const policyId = policyIdFromUrl(page);
+  const markPolicyNotTakenPromise = page.waitForResponse(
+    (response) =>
+      response.url().includes(`/policies/${policyId}.data`) &&
+      response.request().method() === "POST",
+  );
   await page.getByRole("button", { name: /^Confirm$/i }).click();
+  await markPolicyNotTakenPromise;
 }

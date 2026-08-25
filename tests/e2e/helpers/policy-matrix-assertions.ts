@@ -3,7 +3,11 @@ import { expect, type Page } from "@playwright/test";
 import { formatCurrency } from "~/lib/pricing/premium-utils";
 
 import type { PremiumBreakdownExpected } from "../scenarios/policy-matrix/types";
-import { dismissBlockedTakenDialog, markPolicyNotTaken } from "./policy-wizard";
+import {
+  dismissBlockedTakenDialog,
+  markPolicyNotTaken,
+  policyIdFromUrl,
+} from "./policy-wizard";
 
 type PremiumCellAssertion = {
   cellName: string;
@@ -299,7 +303,14 @@ async function confirmMarkPolicyTaken(page: Page) {
 
   const dialog = page.getByRole("dialog", { name: "Mark policy as Taken?" });
   await expect(dialog).toBeVisible();
+  const policyId = policyIdFromUrl(page);
+  const confirmMarkPolicyTakenPromise = page.waitForResponse(
+    (response) =>
+      response.url().includes(`/policies/${policyId}.data`) &&
+      response.request().method() === "POST",
+  );
   await page.getByRole("button", { name: /^Confirm$/i }).click();
+  await confirmMarkPolicyTakenPromise;
   await expect(dialog).not.toBeVisible();
 }
 
