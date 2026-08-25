@@ -127,7 +127,9 @@ async function assertPremiumMatchesExpected(
   page: Page,
   expected: PremiumBreakdownExpected,
 ) {
-  await page.getByText("True Base Premium").scrollIntoViewIfNeeded();
+  // await page.getBy;
+  //#premium
+  await page.locator("#premium").scrollIntoViewIfNeeded();
 
   await Promise.all(
     PREMIUM_CELL_ASSERTIONS.map(({ cellName, expected: getValue, exact }) =>

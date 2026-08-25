@@ -244,15 +244,12 @@ Add remaining matrix rows. Tag: `@policy-matrix`.
 ### Phase 3 — Hardening
 
 - Deterministic E2E client in DB seed (fixed client id) so “pick first client” is stable
-- Parallel sharding: matrix tests in isolated worker or serial `@policy-matrix` project (avoid policy number collisions)
+- Parallel: dedicated `policy-matrix` Playwright project with `workers: 2` and `fullyParallel: true`
 - CI artifact: dump mismatch diff when scenario assert fails
 
 ## 8. Playwright conventions
 
-- File: `tests/e2e/policy-matrix.spec.ts`
-- Project: `e2e` (reuse `broker.json` auth)
-- Timeout: 120s per matrix test (document generation)
-- `test.describe.configure({ mode: "serial" })` for matrix file if shared DB causes contention
+- Project: `policy-matrix` (2 workers, 120s timeout) — run alone via `npm run test:e2e:policy-matrix`
 - Tag slow tests: `{ tag: ["@policy-matrix", "@p0"] }` for selective runs:
 
 ```bash

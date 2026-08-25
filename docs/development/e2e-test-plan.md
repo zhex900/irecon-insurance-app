@@ -19,15 +19,15 @@ Config: [playwright.config.ts](../playwright.config.ts) — `e2e` project (all `
 
 Existing specs:
 
-| File                            | Covers                                                                                                          |
-| ------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `e2e/auth.spec.ts`              | Login, logout, unauthenticated redirect, invalid credentials                                                    |
-| `e2e/clients.spec.ts`           | Create client draft → save → appears in list                                                                    |
-| `e2e/policy.spec.ts`            | Policies list filters/badges, email-documents dialog validation (Resend mocked)                                   |
-| `e2e/policy-matrix.spec.ts`     | Annual policy matrix: create → premium → documents → taken / not taken                                          |
-| `e2e/pagination.spec.ts`        | `page`/`pageSize` query params on clients + policies lists                                                      |
-| `e2e/settings-features.spec.ts` | Broker/admin blocked from `/settings/features`                                                                  |
-| `e2e/smoke.spec.ts`             | Post-deploy: login + open clients + open policies                                                               |
+| File                            | Covers                                                                          |
+| ------------------------------- | ------------------------------------------------------------------------------- |
+| `e2e/auth.spec.ts`              | Login, logout, unauthenticated redirect, invalid credentials                    |
+| `e2e/clients.spec.ts`           | Create client draft → save → appears in list                                    |
+| `e2e/policy.spec.ts`            | Policies list filters/badges, email-documents dialog validation (Resend mocked) |
+| `e2e/policy-matrix.spec.ts`     | Annual policy matrix: create → premium → documents → taken / not taken          |
+| `e2e/pagination.spec.ts`        | `page`/`pageSize` query params on clients + policies lists                      |
+| `e2e/settings-features.spec.ts` | Broker/admin blocked from `/settings/features`                                  |
+| `e2e/smoke.spec.ts`             | Post-deploy: login + open clients + open policies                               |
 
 **Gap**: everything in `/settings/*` except `features` (ar-brokers, account-managers, car-wording, users, email-templates, document-templates, library-documents, prices, audit-log), `/reports/*` exports, `/profile`, `/dashboard`, policy detail deep flows (status transitions, document generation, adjustment save), client detail, global search, recent-routes/sidebar persistence, 404/error boundary, and the full RBAC × feature-flag matrix (§6.1).
 

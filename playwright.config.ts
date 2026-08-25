@@ -41,7 +41,19 @@ export default defineConfig({
     {
       name: "e2e",
       testMatch: /.*\.spec\.ts/,
-      testIgnore: /smoke\.spec\.ts/,
+      testIgnore: /smoke\.spec\.ts|policy-matrix\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: authFiles.broker,
+      },
+      dependencies: ["setup"],
+    },
+    {
+      name: "policy-matrix",
+      testMatch: /policy-matrix\.spec\.ts/,
+      fullyParallel: true,
+      workers: 2,
+      timeout: 120_000,
       use: {
         ...devices["Desktop Chrome"],
         storageState: authFiles.broker,

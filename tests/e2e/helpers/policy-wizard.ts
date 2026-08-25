@@ -197,11 +197,17 @@ export async function submitPolicy(
     expectedDocuments,
   }: { policyId: string; expectedDocuments: string[] },
 ): Promise<void> {
+  const libraryDocumentsPromise = page.waitForResponse(
+    "**/api/library-documents",
+  );
+  const documentTempalatePromise = page.waitForResponse(
+    "**/api/document-templates**",
+  );
   await page
     .getByRole("button", { name: "Submit" })
     .first()
     .click({ force: true });
-
+  await Promise.all([libraryDocumentsPromise, documentTempalatePromise]);
   const submitDialog = page.getByRole("dialog", { name: "Submit policy?" });
 
   // 1. Verify dialog & heading are visible
