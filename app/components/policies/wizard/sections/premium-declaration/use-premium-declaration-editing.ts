@@ -1,4 +1,10 @@
-import { type Dispatch, type SetStateAction, useMemo, useState } from "react";
+import {
+  type Dispatch,
+  type SetStateAction,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useFormContext } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -20,6 +26,7 @@ function applyPremiumPatch(options: {
   key: keyof PremiumBreakdown;
   value: number;
   sessionRates: ManualPremiumSessionRates | undefined;
+  manualKeys: Set<string>;
   onPremiumChange: (next: PremiumBreakdown) => void;
   onManualKeysChange?: (keys: string[]) => void;
   setManualKeys: Dispatch<SetStateAction<Set<string>>>;
@@ -37,12 +44,10 @@ function applyPremiumPatch(options: {
       return;
     }
   }
-  options.setManualKeys((prev) => {
-    const next = new Set(prev);
-    next.add(options.key);
-    options.onManualKeysChange?.([...next]);
-    return next;
-  });
+  const nextManualKeys = new Set(options.manualKeys);
+  nextManualKeys.add(options.key);
+  options.setManualKeys(nextManualKeys);
+  options.onManualKeysChange?.([...nextManualKeys]);
   const result = applyManualPremiumEdit({
     premium: options.premium,
     rating: options.rating,
@@ -133,11 +138,11 @@ export function usePremiumDeclarationEditing(options: {
   const [manualKeys, setManualKeys] = useState<Set<string>>(
     () => new Set(initialKeys),
   );
-  const [prevInitialKeysKey, setPrevInitialKeysKey] = useState(initialKeysKey);
-  if (initialKeysKey !== prevInitialKeysKey) {
-    setPrevInitialKeysKey(initialKeysKey);
-    setManualKeys(new Set(initialKeysKey ? initialKeysKey.split("\0") : []));
-  }
+
+  useEffect(() => {
+    setManualKeys(new Set(initialKeys));
+  }, [initialKeysKey]);
+
   const [sessionRates, setSessionRates] = useState<
     ManualPremiumSessionRates | undefined
   >(undefined);

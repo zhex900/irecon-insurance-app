@@ -4,6 +4,7 @@ import { expect, type Page, test } from "@playwright/test";
 import { formatCurrency } from "~/lib/pricing/premium-utils";
 
 import {
+  dismissBlockedTakenDialog,
   type FillPolicyOptions,
   fillRequiredPolicyForm,
   markPolicyNotTaken,
@@ -13,37 +14,39 @@ import {
 
 test.describe.configure({ mode: "serial" });
 
+type PremiumBreakdown = {
+  basePremium: { contractWorks: number; legalLiability: number };
+  trueBasePremium: {
+    contractWorks: number;
+    legalLiability: number;
+    combined: number;
+  };
+  terrorismLevy: number;
+  displayHomes: number;
+  existingStructures: number;
+  plantEquipment: number;
+  terrorismLevyPlantEquipment: number;
+  ESLPlantEquipment: number;
+  ESL: { contractWorks: number; legalLiability: number; combined: number };
+  GST: { contractWorks: number; legalLiability: number; combined: number };
+  stampDuty: {
+    contractWorks: number;
+    legalLiability: number;
+    combined: number;
+  };
+  insurerAdmin: number;
+  IAAAdminFee: number;
+  totalPremium: {
+    contractWorks: number;
+    legalLiability: number;
+    combined: number;
+  };
+};
 type PremiumMatrixExpected = {
   documents: string[];
   referralReasons: string[];
-  premiumBreakdown: {
-    basePremium: { contractWorks: number; legalLiability: number };
-    trueBasePremium: {
-      contractWorks: number;
-      legalLiability: number;
-      combined: number;
-    };
-    terrorismLevy: number;
-    displayHomes: number;
-    existingStructures: number;
-    plantEquipment: number;
-    terrorismLevyPlantEquipment: number;
-    ESLPlantEquipment: number;
-    ESL: { contractWorks: number; legalLiability: number; combined: number };
-    GST: { contractWorks: number; legalLiability: number; combined: number };
-    stampDuty: {
-      contractWorks: number;
-      legalLiability: number;
-      combined: number;
-    };
-    insurerAdmin: number;
-    IAAAdminFee: number;
-    totalPremium: {
-      contractWorks: number;
-      legalLiability: number;
-      combined: number;
-    };
-  };
+  premiumBreakdown: PremiumBreakdown;
+  premiumBreakdownTaken?: PremiumBreakdown;
 };
 
 type PremiumBreakdownExpected = PremiumMatrixExpected["premiumBreakdown"];
@@ -175,12 +178,13 @@ const PREMIUM_SUMMARY_ASSERTIONS: PremiumSummaryAssertion[] = [
 
 async function assertPremiumSummaryAndReferralReasons(
   page: Page,
-  expected: Pick<PremiumMatrixExpected, "premiumBreakdown" | "referralReasons">,
+  premiumBreakdown: PremiumBreakdownExpected,
+  referralReasons: string[],
 ) {
   await Promise.all(
     PREMIUM_SUMMARY_ASSERTIONS.map(({ label, expected: getValue }) =>
       expect(page.getByLabel(label)).toHaveText(
-        formatCurrency(getValue(expected.premiumBreakdown)),
+        formatCurrency(getValue(premiumBreakdown)),
       ),
     ),
   );
@@ -190,7 +194,7 @@ async function assertPremiumSummaryAndReferralReasons(
     .locator("..")
     .getByRole("listitem");
 
-  await expect(listItems).toHaveText(expected.referralReasons);
+  await expect(listItems).toHaveText(referralReasons);
 }
 
 async function assertSectionAppearsBefore(
@@ -265,13 +269,129 @@ async function assertPremiumIsFirstInSectionStack(page: Page) {
   expect(firstSectionId).toBe("premium");
 }
 
+async function assertPolicyNotTaken(page: Page) {
+  const wizardRoot = page.locator("[data-policy-phase]");
+  const header = page.getByLabel("Policy wizard header");
+
+  await expect(wizardRoot).toHaveAttribute("data-policy-phase", "not-taken");
+  await expect(header.getByLabel("policy status badge")).toHaveText(
+    "Not taken",
+  );
+  await expect(header).toHaveClass(/border-l-muted-foreground\/40/);
+}
+
+async function assertPolicyTaken(page: Page) {
+  const header = page.getByLabel("Policy wizard header");
+
+  await expect(header).toHaveClass(/border-l-success/);
+  await expect(header.getByLabel("policy status badge")).toHaveText("Taken");
+}
+
+async function assertBlockedTakenDialog(page: Page) {
+  const dialog = page.getByRole("dialog", {
+    name: "Cannot mark as Taken",
+  });
+
+  await expect(dialog).toBeVisible();
+  await expect(
+    dialog.getByRole("heading", {
+      level: 2,
+      name: "Cannot mark as Taken",
+    }),
+  ).toBeVisible();
+
+  const errorItem = dialog.getByRole("listitem");
+  await expect(errorItem).toContainText("Existing Structure premium");
+  await expect(errorItem).toContainText(
+    "Existing Structures is declared on Limits",
+  );
+}
+
+async function assertExistingStructureHighlighted(page: Page) {
+  await expect(
+    page.getByText("Existing Structure", { exact: true }),
+  ).toHaveClass(/text-warning/);
+}
+
+async function setExistingStructurePremium(page: Page, amount: number) {
+  await page
+    .getByLabel("contractWorksExistingStructurePremium")
+    .getByRole("button", { name: "$" })
+    .click();
+  await page
+    .getByRole("textbox", { name: "Edit premium value" })
+    .fill(String(amount));
+  await page.keyboard.press("Enter");
+}
+
+async function confirmMarkPolicyTaken(page: Page) {
+  await page.getByRole("button", { name: /^Policy status$/i }).click();
+  await page.getByRole("menuitem", { name: /^Taken$/i }).click();
+
+  const dialog = page.getByRole("dialog", { name: "Mark policy as Taken?" });
+  await expect(dialog).toBeVisible();
+  await page.getByRole("button", { name: /^Confirm$/i }).click();
+  await expect(dialog).not.toBeVisible();
+}
+
+async function assertTakenPremiumExpectations(
+  page: Page,
+  premiumBreakdown: PremiumBreakdownExpected,
+  referralReasons: string[],
+) {
+  await assertPremiumMatchesExpected(page, premiumBreakdown);
+  await assertPremiumSummaryAndReferralReasons(
+    page,
+    premiumBreakdown,
+    referralReasons,
+  );
+}
+
+async function completeTakenTerminalFlow(
+  page: Page,
+  {
+    premiumBreakdownTaken,
+    referralReasons,
+  }: {
+    premiumBreakdownTaken: PremiumBreakdownExpected;
+    referralReasons: string[];
+  },
+) {
+  await page.getByRole("button", { name: /^Policy status$/i }).click();
+  await page.getByRole("menuitem", { name: /^Taken$/i }).click();
+
+  await assertBlockedTakenDialog(page);
+  await dismissBlockedTakenDialog(page);
+  await assertExistingStructureHighlighted(page);
+  await setExistingStructurePremium(page, 100);
+  await assertTakenPremiumExpectations(
+    page,
+    premiumBreakdownTaken,
+    referralReasons,
+  );
+
+  await confirmMarkPolicyTaken(page);
+  await assertPolicyTaken(page);
+
+  await page.reload();
+
+  await assertTakenPremiumExpectations(
+    page,
+    premiumBreakdownTaken,
+    referralReasons,
+  );
+  await assertPolicyTaken(page);
+}
+
 const scenarios: Array<{
   name: string;
+  terminalState: "not-taken" | "taken";
   input: FillPolicyOptions;
   expected: PremiumMatrixExpected;
 }> = [
   {
-    name: "annual-pending",
+    name: "annual-not-taken",
+    terminalState: "not-taken",
     input: {
       insuredName: faker.company.name(),
       siteAddress: `${faker.location.streetAddress()}, ${faker.location.city()}`,
@@ -283,6 +403,7 @@ const scenarios: Array<{
       displayHomes: 10,
       existingStructures: 30,
       plantEquipment: 40,
+      existingStructurePremium: 100,
     },
     expected: {
       documents: [
@@ -340,6 +461,117 @@ const scenarios: Array<{
       },
     },
   },
+  {
+    name: "annual-taken",
+    terminalState: "taken",
+    input: {
+      insuredName: faker.company.name(),
+      siteAddress: `${faker.location.streetAddress()}, ${faker.location.city()}`,
+      turnover: 1_000_000,
+      typeOfCover: "Annual",
+      policyCategory: "New",
+      annualTypeCover: "Contract Commencing",
+      contractWorks: 1_500_000,
+      displayHomes: 10,
+      existingStructures: 30,
+      plantEquipment: 40,
+      existingStructurePremium: 100,
+    },
+    expected: {
+      documents: [
+        "ROA",
+        "Schedule",
+        "ATC stamp duty",
+        "IA annual CAR TPL 1-2026",
+        "Policy comparison 6-2024",
+        "Policy highlights 2020",
+      ],
+      referralReasons: [
+        "Display Homes has a value of $10.00",
+        "Existing Structure has a value of $30.00",
+        "Any claims exceeded $20,000 in value is stated as no",
+        "Do not hold a current Contract Works/Liability policy",
+      ],
+      premiumBreakdown: {
+        basePremium: {
+          contractWorks: 1610,
+          legalLiability: 1550,
+        },
+        trueBasePremium: {
+          contractWorks: 1610,
+          legalLiability: 1550,
+          combined: 3418.41,
+        },
+        terrorismLevy: 257.6,
+        displayHomes: 0,
+        existingStructures: 0,
+        plantEquipment: 0.7,
+        terrorismLevyPlantEquipment: 0.11,
+        ESLPlantEquipment: 0.22,
+        ESL: {
+          contractWorks: 504.25,
+          legalLiability: 0,
+          combined: 504.47,
+        },
+        GST: {
+          contractWorks: 237.29,
+          legalLiability: 155,
+          combined: 392.29,
+        },
+        stampDuty: {
+          contractWorks: 234.92,
+          legalLiability: 153.45,
+          combined: 388.37,
+        },
+        insurerAdmin: 220,
+        IAAAdminFee: 88,
+        totalPremium: {
+          contractWorks: 2845.09,
+          legalLiability: 1858.45,
+          combined: 5011.54,
+        },
+      },
+      premiumBreakdownTaken: {
+        basePremium: {
+          contractWorks: 1610,
+          legalLiability: 1550,
+        },
+        trueBasePremium: {
+          contractWorks: 1610,
+          legalLiability: 1550,
+          combined: 3534.41,
+        },
+        terrorismLevy: 273.6,
+        displayHomes: 0,
+        existingStructures: 100,
+        plantEquipment: 0.7,
+        terrorismLevyPlantEquipment: 0.11,
+        ESLPlantEquipment: 0.22,
+        ESL: {
+          contractWorks: 535.57,
+          legalLiability: 0,
+          combined: 535.79,
+        },
+        GST: {
+          contractWorks: 252.02,
+          legalLiability: 155,
+          combined: 407.02,
+        },
+        stampDuty: {
+          contractWorks: 249.5,
+          legalLiability: 153.45,
+          combined: 402.95,
+        },
+        insurerAdmin: 220,
+        IAAAdminFee: 88,
+        totalPremium: {
+          contractWorks: 3021.72,
+          legalLiability: 1858.45,
+          combined: 5188.17,
+        },
+      },
+    },
+  },
 ];
 
 test.describe("policy matrix @policy-matrix", () => {
@@ -368,7 +600,11 @@ test.describe("policy matrix @policy-matrix", () => {
         scenario.expected.premiumBreakdown,
       );
 
-      await assertPremiumSummaryAndReferralReasons(page, scenario.expected);
+      await assertPremiumSummaryAndReferralReasons(
+        page,
+        scenario.expected.premiumBreakdown,
+        scenario.expected.referralReasons,
+      );
 
       await assertPremiumIsLastInSectionStack(page);
 
@@ -386,41 +622,31 @@ test.describe("policy matrix @policy-matrix", () => {
 
       await assertPremiumIsFirstInSectionStack(page);
 
-      await markPolicyNotTaken(page);
-      await expect(wizardRoot).toHaveAttribute(
-        "data-policy-phase",
-        "not-taken",
-      );
-      await expect(
-        page
-          .getByLabel("Policy wizard header")
-          .getByLabel("policy status badge"),
-      ).toHaveText("Not taken");
-      await expect(page.getByLabel("Policy wizard header")).toHaveClass(
-        /border-l-muted-foreground\/40/,
-      );
+      if (scenario.terminalState === "taken") {
+        await completeTakenTerminalFlow(page, {
+          premiumBreakdownTaken: scenario.expected.premiumBreakdownTaken!,
+          referralReasons: scenario.expected.referralReasons,
+        });
+      }
+      if (scenario.terminalState === "not-taken") {
+        await markPolicyNotTaken(page);
+        await assertPolicyNotTaken(page);
 
-      await page.reload();
+        await page.reload();
 
-      await expect(wizardRoot).toHaveAttribute(
-        "data-policy-phase",
-        "not-taken",
-      );
-      await expect(
-        page
-          .getByLabel("Policy wizard header")
-          .getByLabel("policy status badge"),
-      ).toHaveText("Not taken");
-      await expect(page.getByLabel("Policy wizard header")).toHaveClass(
-        /border-l-muted-foreground\/40/,
-      );
+        await assertPolicyNotTaken(page);
 
-      await assertPremiumMatchesExpected(
-        page,
-        scenario.expected.premiumBreakdown,
-      );
+        await assertPremiumMatchesExpected(
+          page,
+          scenario.expected.premiumBreakdown,
+        );
 
-      await assertPremiumSummaryAndReferralReasons(page, scenario.expected);
+        await assertPremiumSummaryAndReferralReasons(
+          page,
+          scenario.expected.premiumBreakdown,
+          scenario.expected.referralReasons,
+        );
+      }
     });
   }
 });

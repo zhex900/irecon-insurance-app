@@ -26,7 +26,7 @@ export function BlockedTakenDialog({
         if (!nextOpen) onClose(true);
       }}
     >
-      <DialogContent className="sm:max-w-md" showCloseButton>
+      <DialogContent className="sm:max-w-md" showCloseButton={false}>
         <DialogHeader>
           <DialogTitle>Cannot mark as Taken</DialogTitle>
           <DialogDescription>

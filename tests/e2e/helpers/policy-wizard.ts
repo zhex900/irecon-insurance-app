@@ -118,6 +118,7 @@ type FillPolicyOptionsCommon = {
   insuredName: string;
   siteAddress: string;
   turnover: number;
+  existingStructurePremium: number;
   contractWorks: number;
   displayHomes: number;
   existingStructures: number;
@@ -290,6 +291,17 @@ export async function submitPolicy(
   await expect(submitDialog).toBeHidden();
 }
 
+export async function dismissBlockedTakenDialog(page: Page): Promise<void> {
+  const dialog = page.getByRole("dialog", {
+    name: "Cannot mark as Taken",
+  });
+  await expect(dialog).toBeVisible();
+  await dialog
+    .getByRole("button", { name: "Review highlighted fields" })
+    .click();
+  await expect(dialog).toBeHidden();
+}
+
 export async function markPolicyTaken(page: Page): Promise<void> {
   await page.getByRole("button", { name: /^Policy status$/i }).click();
   await page.getByRole("menuitem", { name: /^Taken$/i }).click();
@@ -299,6 +311,7 @@ export async function markPolicyTaken(page: Page): Promise<void> {
   await page.getByRole("button", { name: /^Confirm$/i }).click();
   await expectPolicyPhase(page, "taken");
 }
+
 export async function markPolicyNotTaken(page: Page): Promise<void> {
   await page.getByRole("button", { name: /^Policy status$/i }).click();
   await page.getByRole("menuitem", { name: "Not taken", exact: true }).click();
