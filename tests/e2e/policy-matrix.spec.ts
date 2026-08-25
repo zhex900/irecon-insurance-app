@@ -152,6 +152,118 @@ async function assertPremiumMatchesExpected(
   );
 }
 
+type PremiumSummaryAssertion = {
+  label: string;
+  expected: (values: PremiumBreakdownExpected) => number;
+};
+
+const PREMIUM_SUMMARY_ASSERTIONS: PremiumSummaryAssertion[] = [
+  {
+    label: "premium summary Contract works total",
+    expected: (e) => e.totalPremium.contractWorks,
+  },
+  {
+    label: "premium summary Legal liability total",
+    expected: (e) => e.totalPremium.legalLiability,
+  },
+  {
+    label: "premium summary Total premium",
+    expected: (e) => e.totalPremium.combined,
+  },
+];
+
+async function assertPremiumSummaryAndReferralReasons(
+  page: Page,
+  expected: Pick<PremiumMatrixExpected, "premiumBreakdown" | "referralReasons">,
+) {
+  await Promise.all(
+    PREMIUM_SUMMARY_ASSERTIONS.map(({ label, expected: getValue }) =>
+      expect(page.getByLabel(label)).toHaveText(
+        formatCurrency(getValue(expected.premiumBreakdown)),
+      ),
+    ),
+  );
+
+  const listItems = page
+    .getByText("Referral reasons")
+    .locator("..")
+    .getByRole("listitem");
+
+  await expect(listItems).toHaveText(expected.referralReasons);
+}
+
+async function assertSectionAppearsBefore(
+  page: Page,
+  beforeSectionId: string,
+  afterSectionId: string,
+) {
+  await expect(page.locator(`#${beforeSectionId}`)).toBeVisible();
+  await expect(page.locator(`#${afterSectionId}`)).toBeVisible();
+
+  const beforePrecedesAfter = await page.evaluate(
+    ([beforeId, afterId]) => {
+      const beforeEl = document.getElementById(beforeId);
+      const afterEl = document.getElementById(afterId);
+      if (!beforeEl || !afterEl) return false;
+
+      return Boolean(
+        afterEl.compareDocumentPosition(beforeEl) &
+        Node.DOCUMENT_POSITION_PRECEDING,
+      );
+    },
+    [beforeSectionId, afterSectionId] as const,
+  );
+
+  expect(beforePrecedesAfter).toBe(true);
+}
+
+const SECTION_STACK_SECTION_IDS = [
+  "premium",
+  "risk-details",
+  "limits-of-liability",
+  "excesses",
+  "claims",
+] as const;
+
+async function assertPremiumIsLastInSectionStack(page: Page) {
+  const sectionsBeforePremium = SECTION_STACK_SECTION_IDS.filter(
+    (id) => id !== "premium",
+  );
+
+  await Promise.all(
+    sectionsBeforePremium.map((sectionId) =>
+      assertSectionAppearsBefore(page, sectionId, "premium"),
+    ),
+  );
+}
+
+async function assertPremiumIsFirstInSectionStack(page: Page) {
+  const sectionStack = page.getByLabel("Policy wizard section stack");
+  await expect(sectionStack).toBeVisible();
+
+  const firstSectionId = await sectionStack.evaluate((stack, sectionIds) => {
+    let first: HTMLElement | null = null;
+
+    for (const id of sectionIds) {
+      const el = stack.querySelector<HTMLElement>(`#${id}`);
+      if (!el) continue;
+
+      if (
+        !first ||
+        Boolean(
+          el.compareDocumentPosition(first) & Node.DOCUMENT_POSITION_FOLLOWING,
+        )
+      ) {
+        first = el;
+      }
+    }
+
+    return first?.id ?? null;
+  }, SECTION_STACK_SECTION_IDS);
+
+  expect(firstSectionId).toBe("premium");
+}
+
 const scenarios: Array<{
   name: string;
   input: FillPolicyOptions;
@@ -240,6 +352,11 @@ test.describe("policy matrix @policy-matrix", () => {
     }) => {
       await openFirstClientAndStartPolicy(page);
 
+      // assert new policy should have primary border
+      await expect(page.getByLabel("Policy wizard header")).toHaveClass(
+        /border-l-primary/,
+      );
+
       const { newPolicyResponsePromises, policyId } =
         await fillRequiredPolicyForm(page, scenario.input);
 
@@ -250,34 +367,10 @@ test.describe("policy matrix @policy-matrix", () => {
         scenario.expected.premiumBreakdown,
       );
 
-      await Promise.all(
-        [
-          {
-            label: "premium summary Contract works total",
-            expected: (e: PremiumBreakdownExpected) =>
-              e.totalPremium.contractWorks,
-          },
-          {
-            label: "premium summary Legal liability total",
-            expected: (e: PremiumBreakdownExpected) =>
-              e.totalPremium.legalLiability,
-          },
-          {
-            label: "premium summary Total premium",
-            expected: (e: PremiumBreakdownExpected) => e.totalPremium.combined,
-          },
-        ].map(({ label, expected }) =>
-          expect(page.getByLabel(label)).toHaveText(
-            formatCurrency(expected(scenario.expected.premiumBreakdown)),
-          ),
-        ),
-      );
-      const listItems = page
-        .getByText("Referral reasons")
-        .locator("..")
-        .getByRole("listitem");
+      await assertPremiumSummaryAndReferralReasons(page, scenario.expected);
 
-      await expect(listItems).toHaveText(scenario.expected.referralReasons);
+      await assertPremiumIsLastInSectionStack(page);
+
       await submitPolicy(page, {
         policyId,
         expectedDocuments: scenario.expected.documents,
@@ -286,19 +379,11 @@ test.describe("policy matrix @policy-matrix", () => {
       const wizardRoot = page.locator("[data-policy-phase]");
       await expect(wizardRoot).toHaveAttribute("data-policy-phase", "pending");
 
-      // await page.getByRole("button", { name: /^Policy status$/i }).click();
-      // await page
-      //   .getByRole("menuitem", { name: "Not taken", exact: true })
-      //   .click();
+      await expect(page.getByLabel("Policy wizard header")).toHaveClass(
+        /border-l-warning/,
+      );
 
-      // await expect(
-      //   page.getByRole("dialog", { name: /Mark policy as Not taken/i }),
-      // ).toBeVisible();
-      // await page.getByRole("button", { name: /^Confirm$/i }).click();
-
-      // await expect(
-      //   page.locator('[data-slot="badge"]', { hasText: /^Not taken$/ }),
-      // ).toHaveCount(2);
+      await assertPremiumIsFirstInSectionStack(page);
     });
   }
 });
