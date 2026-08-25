@@ -121,7 +121,9 @@ function PremiumRow({
       className={`flex items-center justify-between gap-4 text-foreground ${strong ? "font-semibold" : ""}`}
     >
       <span>{label}</span>
-      <span>{formatCurrency(value)}</span>
+      <span aria-label={`premium summary ${label}`}>
+        {formatCurrency(value)}
+      </span>
     </div>
   );
 }

@@ -71,6 +71,7 @@ export const Header = memo(function Header({
 
   return (
     <div
+      aria-label="Policy wizard header"
       className={cn(
         "sticky top-14 z-20 shrink-0 border-b border-border backdrop-blur",
         "xl:static xl:backdrop-blur-none",

@@ -20,6 +20,7 @@ function applyPremiumPatch(options: {
   key: keyof PremiumBreakdown;
   value: number;
   sessionRates: ManualPremiumSessionRates | undefined;
+  manualKeys: Set<string>;
   onPremiumChange: (next: PremiumBreakdown) => void;
   onManualKeysChange?: (keys: string[]) => void;
   setManualKeys: Dispatch<SetStateAction<Set<string>>>;
@@ -37,12 +38,10 @@ function applyPremiumPatch(options: {
       return;
     }
   }
-  options.setManualKeys((prev) => {
-    const next = new Set(prev);
-    next.add(options.key);
-    options.onManualKeysChange?.([...next]);
-    return next;
-  });
+  const nextManualKeys = new Set(options.manualKeys);
+  nextManualKeys.add(options.key);
+  options.setManualKeys(nextManualKeys);
+  options.onManualKeysChange?.([...nextManualKeys]);
   const result = applyManualPremiumEdit({
     premium: options.premium,
     rating: options.rating,
@@ -134,10 +133,12 @@ export function usePremiumDeclarationEditing(options: {
     () => new Set(initialKeys),
   );
   const [prevInitialKeysKey, setPrevInitialKeysKey] = useState(initialKeysKey);
-  if (initialKeysKey !== prevInitialKeysKey) {
+
+  if (prevInitialKeysKey !== initialKeysKey) {
     setPrevInitialKeysKey(initialKeysKey);
-    setManualKeys(new Set(initialKeysKey ? initialKeysKey.split("\0") : []));
+    setManualKeys(new Set(initialKeys));
   }
+
   const [sessionRates, setSessionRates] = useState<
     ManualPremiumSessionRates | undefined
   >(undefined);

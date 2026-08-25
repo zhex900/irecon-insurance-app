@@ -19,6 +19,7 @@ import {
 import type { CarPolicyWizardState } from "../components/use-wizard-state";
 import { useWizardState } from "../components/use-wizard-state";
 import { WizardContainer } from "../components/wizard-container";
+import { useDismissNewPolicyOnDraftSave } from "../hooks/utils/use-dismiss-new-on-draft-save";
 import { usePolicyPhase } from "../hooks/utils/use-mode";
 
 export function WizardDefault(props: WizardStateProps) {
@@ -30,6 +31,8 @@ export function WizardDefault(props: WizardStateProps) {
   const wizard = useWizardState(props, core);
   const { phase } = usePolicyPhase();
   const { navigation, premiumCalc, draftSave, submit, leave, gate } = wizard;
+
+  useDismissNewPolicyOnDraftSave(draftSave.draftSavedAt);
 
   const rating =
     core.fetcher.data?.rating ?? props.policy.car.rating ?? undefined;
@@ -82,8 +85,8 @@ export function WizardDefault(props: WizardStateProps) {
         clientName={props.clientName}
         headerActions={props.headerActions}
         saveStatus={draftSave.saveStatus}
-        submitDisabled={gate.submitDisabled}
-        submitBusy={submit.submitting}
+        submitDisabled={gate.submitDisabled || submit.submitBlocked}
+        submitBusy={submit.submitting || submit.submitConfirmLoading}
         requestSubmit={submit.requestSubmit}
         navItems={core.navItems}
         activeSectionId={navigation.activeSectionId}
@@ -152,8 +155,8 @@ export function WizardDefault(props: WizardStateProps) {
             premiumSectionProps={premiumSectionProps}
           />
           <Footer
-            submitDisabled={gate.submitDisabled}
-            submitBusy={submit.submitting}
+            submitDisabled={gate.submitDisabled || submit.submitBlocked}
+            submitBusy={submit.submitting || submit.submitConfirmLoading}
             requestSubmit={submit.requestSubmit}
             handleCancelClick={leave.handleCancelClick}
             actionData={core.fetcher.data}
@@ -174,7 +177,7 @@ export function WizardDefault(props: WizardStateProps) {
         premium={premiumCalc.premium}
         premiumRef={premiumCalc.premiumRef}
         submitConfirmOpen={submit.submitConfirmOpen}
-        setSubmitConfirmOpen={submit.setSubmitConfirmOpen}
+        dismissSubmitConfirm={submit.dismissSubmitConfirm}
         submitDocumentNames={submit.submitDocumentNames}
         submitBusy={submit.submitting}
         confirmSubmit={submit.confirmSubmit}

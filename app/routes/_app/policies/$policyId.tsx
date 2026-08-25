@@ -413,11 +413,12 @@ export default function PolicyDetailRoute({
     setPrevLoaderPolicy(loaderData.policy);
     setPolicy(loaderData.policy);
   }
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const submit = useSubmit();
   const navigation = useNavigation();
   const actionData = useActionData<typeof action>();
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [initialIsNew] = useState(() => searchParams.get("new") === "1");
 
   const { feeNames, pending: feeNamesPending } = usePolicyFeeNames(
     policy.dateStart,
@@ -445,10 +446,16 @@ export default function PolicyDetailRoute({
     navigation.state !== "idle" &&
     navigation.formData?.get("intent") === "delete";
   const wasCloned = searchParams.get("cloned") === "1";
-  const isNew = searchParams.get("new") === "1";
   const clearedCloneForPolicyId = useRef<string | null>(null);
   const deleteError =
     actionData && "formError" in actionData ? actionData.formError : null;
+
+  useEffect(() => {
+    if (searchParams.get("new") !== "1") return;
+    const next = new URLSearchParams(searchParams);
+    next.delete("new");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     if (!wasCloned) return;
@@ -521,7 +528,7 @@ export default function PolicyDetailRoute({
         reference={reference}
         referenceFeeNamesPending={feeNamesPending}
         freshSteps={wasCloned}
-        isNew={isNew}
+        initialIsNew={initialIsNew}
         clientName={loaderData.clientName}
         noteAuthors={noteAuthors}
         headerActions={headerActions}

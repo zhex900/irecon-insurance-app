@@ -7,6 +7,7 @@ import type { Policy, PremiumBreakdown } from "~/lib/db/types";
 import { listReviewDocumentsForConfirmClient } from "~/lib/services/policy/documents/documents.client";
 import {
   type CarPolicyFormValues,
+  carPolicyPricingSchema,
   POLICY_STATUS,
   pricingFields,
 } from "~/lib/zod/policy-car";
@@ -17,7 +18,6 @@ import {
   applyFormOverrides,
   buildSavePayload,
   clearPendingLeaveOnInvalid,
-  ensurePremiumForSubmit,
   focusFirstWizardIssue,
   isSaveActionResponse,
   markPolicySaveSucceeded,
@@ -40,8 +40,6 @@ export function usePolicySubmit({
   step,
   premium,
   premiumRef,
-  setPremium,
-  setReferralReasons,
   regenerateDocumentsIfNeeded,
   formDataChangedForDocuments,
   goToStep,
@@ -62,8 +60,6 @@ export function usePolicySubmit({
   step: number;
   premium: PremiumBreakdown | undefined;
   premiumRef: RefObject<PremiumBreakdown | undefined>;
-  setPremium: (premium: PremiumBreakdown | undefined) => void;
-  setReferralReasons: (reasons: string[]) => void;
   regenerateDocumentsIfNeeded: (
     options?: RegenerateDocumentsOptions,
   ) => Promise<void>;
@@ -82,8 +78,10 @@ export function usePolicySubmit({
 }) {
   const saveWaitRef = useRef<SaveWaiter | null>(null);
   const saveSawBusyRef = useRef(false);
+  const confirmSaveStartedRef = useRef(false);
 
   const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
+  const [submitConfirmLoading, setSubmitConfirmLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [terminalStatusSaving, setTerminalStatusSaving] = useState(false);
   const [submitDocumentNames, setSubmitDocumentNames] = useState<string[]>([]);
@@ -114,6 +112,18 @@ export function usePolicySubmit({
     resolve(parsePolicySaveResponse(fetcher.data));
   }, [fetcher.state, fetcher.data]);
 
+  // Close after confirm finishes — same pattern as policy status menu.
+  useEffect(() => {
+    if (!submitConfirmOpen) {
+      confirmSaveStartedRef.current = false;
+      return;
+    }
+    if (submitting) return;
+    if (!confirmSaveStartedRef.current) return;
+    confirmSaveStartedRef.current = false;
+    setSubmitConfirmOpen(false);
+  }, [submitConfirmOpen, submitting]);
+
   function saveRefs() {
     return {
       savedSnapshotRef,
@@ -136,52 +146,74 @@ export function usePolicySubmit({
     await waitForDraftIdle();
   }
 
+  /** Premium must already be on the client (Premium Summary open / calculated). */
+  function resolvePremiumForSubmit(): PremiumBreakdown | false {
+    const existing = premiumRef.current ?? premium ?? policy.car.premium;
+    if (existing) return existing;
+
+    const parsed = carPolicyPricingSchema.safeParse(form.getValues());
+    if (!parsed.success) return false;
+
+    toast.error("Premium not calculated yet", {
+      description: "Open Premium Summary, wait for totals, then submit.",
+    });
+    return false;
+  }
+
   async function requestSubmit() {
+    if (submitConfirmOpen || submitConfirmLoading || submitting) return;
     const valid = await form.trigger();
     if (!valid) {
       focusFirstWizardIssue(issueFocus);
       return;
     }
+    setSubmitConfirmLoading(true);
     try {
       const names = await listReviewDocumentsForConfirmClient(
         policyForDocumentConfirm(policy, form.getValues()),
       );
       setSubmitDocumentNames(names);
+      setSubmitConfirmOpen(true);
     } catch {
       setSubmitDocumentNames([]);
       toast.error("Could not load document list", {
         description: "Check your connection and try again.",
       });
-      return;
+    } finally {
+      setSubmitConfirmLoading(false);
     }
-    setSubmitConfirmOpen(true);
   }
 
   async function confirmSubmit() {
+    if (submitting) return false;
+    confirmSaveStartedRef.current = true;
     setSubmitting(true);
     try {
-      const premiumForDocs = await ensurePremiumForSubmit({
-        premium,
-        fallbackPremium: policy.car.premium,
-        form,
-        policyId: policy.policyId,
-        setPremium,
-        setReferralReasons,
-      });
+      await quiesceDraftSaves();
+      const premiumForDocs = resolvePremiumForSubmit();
       if (premiumForDocs === false) {
-        setSubmitConfirmOpen(false);
         await form.trigger([...pricingFields]);
+        if (carPolicyPricingSchema.safeParse(form.getValues()).success) {
+          return false;
+        }
+        toast.error("Complete the pricing fields before submitting.");
         return false;
       }
-      await quiesceDraftSaves();
       await regenerateDocumentsIfNeeded({
         premiumOverride: premiumForDocs,
         force: true,
       });
       const saved = await savePolicy();
-      setSubmitConfirmOpen(false);
       if (saved) rememberPremiumAfterSubmit(policy.policyId);
       return saved;
+    } catch (error) {
+      toast.error("Could not submit policy", {
+        description:
+          error instanceof Error
+            ? error.message
+            : "Check your connection and try again.",
+      });
+      return false;
     } finally {
       setSubmitting(false);
     }
@@ -220,7 +252,6 @@ export function usePolicySubmit({
     markPolicySaveSucceeded(saveRefs(), payload);
     applyFormOverrides(form, overrides);
     syncFormPolicyStatus(form, result.data.policy.policyStatusId);
-    // onPolicyUpdated + success toast handled by usePolicySaveSync on fetcher.data
     return true;
   }
 
@@ -257,9 +288,13 @@ export function usePolicySubmit({
     })();
   }
 
+  const submitBlocked = submitConfirmOpen || submitConfirmLoading || submitting;
+
   return {
     submitConfirmOpen,
-    setSubmitConfirmOpen,
+    submitConfirmLoading,
+    submitBlocked,
+    dismissSubmitConfirm: () => setSubmitConfirmOpen(false),
     submitting,
     terminalStatusSaving,
     submitDocumentNames,

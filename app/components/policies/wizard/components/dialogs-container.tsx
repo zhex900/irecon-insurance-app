@@ -11,7 +11,7 @@ type DialogsContainerProps = {
   premium: PremiumBreakdown | undefined;
   premiumRef: React.RefObject<PremiumBreakdown | undefined>;
   submitConfirmOpen: boolean;
-  setSubmitConfirmOpen: (open: boolean) => void;
+  dismissSubmitConfirm: () => void;
   submitDocumentNames: string[];
   submitBusy: boolean;
   confirmSubmit: () => Promise<boolean>;
@@ -29,7 +29,7 @@ export const DialogsContainer = memo(function DialogsContainer({
   premium,
   premiumRef,
   submitConfirmOpen,
-  setSubmitConfirmOpen,
+  dismissSubmitConfirm,
   submitDocumentNames,
   submitBusy,
   confirmSubmit,
@@ -45,10 +45,9 @@ export const DialogsContainer = memo(function DialogsContainer({
     <>
       <SubmitConfirmDialog
         open={submitConfirmOpen}
-        onOpenChange={setSubmitConfirmOpen}
         documentNames={submitDocumentNames}
         busy={submitBusy}
-        onCancel={() => setSubmitConfirmOpen(false)}
+        onCancel={dismissSubmitConfirm}
         onConfirm={() => {
           void confirmSubmit().then((ok) => {
             if (!ok) return;

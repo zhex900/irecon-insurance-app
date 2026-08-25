@@ -27,6 +27,7 @@ export function StatusBadge({
       size="default"
       radius="full"
       className={className}
+      aria-label={`policy status badge`}
     >
       {name}
     </Badge>

@@ -16,6 +16,7 @@ test.describe("clients", () => {
     await page.getByRole("textbox", { name: "Trading Name" }).fill(tradingName);
 
     await page.getByRole("textbox", { name: "ABN" }).fill("12345678901");
+    await page.getByRole("textbox", { name: "Phone" }).fill("0412 345 678");
     await page.getByRole("textbox", { name: "Email" }).fill("test@test.com");
     const accountManager = page.getByLabel(/account manager/i);
     if (await accountManager.count()) {

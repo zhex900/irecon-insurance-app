@@ -2,7 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import type { useFetcher } from "react-router";
 import { toast } from "sonner";
 
-import { EMPTY_NOTE_AUTHORS } from "~/hooks/policy/use-note-authors";
+import {
+  EMPTY_NOTE_AUTHORS,
+  primePolicyNoteAuthorsCache,
+} from "~/hooks/policy/use-note-authors";
 import type { Policy } from "~/lib/db/types";
 import type { NoteAuthor } from "~/lib/services/users/service";
 
@@ -52,7 +55,10 @@ export function usePolicyNotes({
   if (prevFetcherNotes !== fetcher.data?.notes) {
     setPrevFetcherNotes(fetcher.data?.notes);
     if (fetcher.data?.notes) setNotes(fetcher.data.notes);
-    if (fetcher.data?.noteAuthors) setNoteAuthors(fetcher.data.noteAuthors);
+    if (fetcher.data?.noteAuthors) {
+      primePolicyNoteAuthorsCache(policy.policyId, fetcher.data.noteAuthors);
+      setNoteAuthors(fetcher.data.noteAuthors);
+    }
   }
 
   useEffect(() => {

@@ -78,6 +78,7 @@ function PremiumRowLabel({
 }
 
 function PremiumRowValueCells({
+  rowLabel,
   s1,
   s2,
   combined,
@@ -95,6 +96,7 @@ function PremiumRowValueCells({
   PremiumBreakdownRowProps,
   "s1" | "s2" | "combined" | "s1Key" | "s2Key" | "combinedKey" | "onChange"
 > & {
+  rowLabel: string;
   editable: boolean;
   s1Manual: boolean;
   s2Manual: boolean;
@@ -105,6 +107,7 @@ function PremiumRowValueCells({
   return (
     <>
       <PremiumValueCell
+        label={s1Key ?? `${rowLabel} contract works`.toLowerCase()}
         value={s1}
         editable={editable && Boolean(s1Key && onChange)}
         manual={s1Manual}
@@ -115,6 +118,7 @@ function PremiumRowValueCells({
         }
       />
       <PremiumValueCell
+        label={s2Key ?? `${rowLabel} legal liability`.toLowerCase()}
         value={s2}
         editable={editable && Boolean(s2Key && onChange)}
         manual={s2Manual}
@@ -123,6 +127,7 @@ function PremiumRowValueCells({
         }
       />
       <PremiumValueCell
+        label={`${rowLabel} combined`.toLowerCase()}
         value={combined}
         editable={editable && Boolean(combinedKey && onChange)}
         manual={combinedManual}
@@ -163,6 +168,7 @@ export function PremiumBreakdownRow(props: PremiumBreakdownRowProps) {
       />
       <PremiumRowValueCells
         {...props}
+        rowLabel={label}
         editable={editable}
         s1Manual={s1Manual}
         s2Manual={s2Manual}

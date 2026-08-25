@@ -69,4 +69,9 @@ Resend is mocked in the email dialog path (`mockResendEmailApi`).
 
 ## Full E2E coverage plan
 
-See [docs/e2e-test-plan.md](e2e-test-plan.md) for the route × role coverage matrix, critical-workflow list, and phased rollout to close remaining Playwright gaps.
+| Plan                                                   | Scope                                                                                            |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| [e2e-test-plan.md](e2e-test-plan.md)                   | Route × role matrix, settings/reports gaps, phased rollout                                       |
+| [e2e-policy-matrix-plan.md](e2e-policy-matrix-plan.md) | **Policy critical paths**: cover type × status (9 combos), scenario modules, premium + documents |
+
+Scenarios: `tests/e2e/scenarios/policy-matrix/` (TypeScript modules per terminal state, shared expected values in `annual-shared.ts`).

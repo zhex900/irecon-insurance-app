@@ -103,8 +103,6 @@ export function submitInput(options: {
     step: navigation.step,
     premium: premiumCalc.premium,
     premiumRef: premiumCalc.premiumRef,
-    setPremium: premiumCalc.setPremium,
-    setReferralReasons: premiumCalc.setReferralReasons,
     regenerateDocumentsIfNeeded: documents.regenerateDocumentsIfNeeded,
     formDataChangedForDocuments: documents.formDataChangedForDocuments,
     goToStep: navigation.goToStep,

@@ -13,7 +13,6 @@ import { usePolicyPhase } from "./hooks/utils/use-mode";
 
 export type SubmitConfirmDialogProps = {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
   documentNames: string[];
   busy: boolean;
   onCancel: () => void;
@@ -22,7 +21,6 @@ export type SubmitConfirmDialogProps = {
 
 export function SubmitConfirmDialog({
   open,
-  onOpenChange,
   documentNames,
   busy,
   onCancel,
@@ -31,12 +29,17 @@ export function SubmitConfirmDialog({
   return (
     <Dialog
       open={open}
-      onOpenChange={(next) => {
-        if (busy) return;
-        onOpenChange(next);
+      disablePointerDismissal
+      onOpenChange={(next, details) => {
+        // Fully controlled — only Cancel / post-submit effect may set open=false.
+        if (!next) details.cancel();
       }}
     >
-      <DialogContent className="sm:max-w-md" showCloseButton>
+      <DialogContent
+        className="sm:max-w-md"
+        showCloseButton={false}
+        finalFocus={false}
+      >
         <DialogHeader>
           <DialogTitle>Submit policy?</DialogTitle>
           <DialogDescription>
@@ -61,7 +64,11 @@ export function SubmitConfirmDialog({
           >
             Cancel
           </Button>
-          <LoadingButton type="button" loading={busy} onClick={onConfirm}>
+          <LoadingButton
+            type="button"
+            loading={busy}
+            onClick={() => onConfirm()}
+          >
             Confirm & generate
           </LoadingButton>
         </DialogFooter>

@@ -44,6 +44,7 @@ function PremiumValueEditor({
 }
 
 function PremiumValueDisplay({
+  label,
   value,
   cellClass,
   valueClass,
@@ -51,6 +52,7 @@ function PremiumValueDisplay({
   manual,
   onEdit,
 }: {
+  label: string;
   value: number;
   cellClass: string;
   valueClass: string;
@@ -59,7 +61,7 @@ function PremiumValueDisplay({
   onEdit: () => void;
 }) {
   return (
-    <TableCell className={cellClass}>
+    <TableCell className={cellClass} aria-label={label}>
       <button
         type="button"
         className={cn(
@@ -77,6 +79,7 @@ function PremiumValueDisplay({
 }
 
 export function PremiumValueCell({
+  label,
   value,
   editable = false,
   manual = false,
@@ -84,6 +87,7 @@ export function PremiumValueCell({
   className = "",
   onChange,
 }: {
+  label: string;
   value?: number;
   editable?: boolean;
   manual?: boolean;
@@ -101,7 +105,10 @@ export function PremiumValueCell({
   );
   if (!editable || !onChange) {
     return (
-      <TableCell className={cn(cellClass, valueClass, className)}>
+      <TableCell
+        className={cn(cellClass, valueClass, className)}
+        aria-label={label}
+      >
         {formatCurrency(value)}
       </TableCell>
     );
@@ -123,6 +130,7 @@ export function PremiumValueCell({
   }
   return (
     <PremiumValueDisplay
+      label={label}
       value={value}
       cellClass={cellClass}
       valueClass={valueClass}

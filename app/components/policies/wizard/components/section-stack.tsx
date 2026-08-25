@@ -64,6 +64,7 @@ export const SectionStack = memo(function SectionStack({
 
   return (
     <fieldset
+      aria-label="Policy wizard section stack"
       disabled={!canEdit}
       className="flex min-w-0 flex-col gap-4 border-0 p-0"
       onBlurCapture={handleFieldBlur}
