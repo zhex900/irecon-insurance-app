@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "~/components/ui/dialog";
 import { LoadingButton } from "~/components/ui/loading-button";
+import { markRecentEntityRemoved } from "~/lib/services/navigation/recent-routes";
 
 export type DeletablePolicyRef = {
   policyId: string;
@@ -84,6 +85,12 @@ export function DeletePoliciesDialog({
             method="post"
             action={formAction}
             onSubmit={() => {
+              for (const policy of policies) {
+                markRecentEntityRemoved({
+                  kind: "policy",
+                  id: policy.policyId,
+                });
+              }
               onBeforeSubmit?.();
             }}
           >

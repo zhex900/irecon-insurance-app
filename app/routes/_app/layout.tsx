@@ -68,6 +68,13 @@ export function shouldRevalidate({
   ) {
     return true;
   }
+  // Client/policy deletes remove rows from Recents — refresh the shell stack.
+  if (
+    formData?.get("intent") === "delete" ||
+    formData?.get("intent") === "delete-policies"
+  ) {
+    return true;
+  }
   // Keep broker + side nav stable across child route navigations.
   return false;
 }

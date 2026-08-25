@@ -147,6 +147,7 @@ export async function action({ request, params }: Route.ActionArgs) {
       const [deleted] = await deletePolicies([policyId], {
         userId: actor.userId,
       });
+
       await writeAuditLog({
         actor,
         action: "policy.delete",

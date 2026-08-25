@@ -12,7 +12,7 @@ import type { Route } from "./+types/clients.$clientId.draft";
 
 /** Browser client draft-save / discard endpoint (Postgres via Drizzle). */
 export async function action({ request, params }: Route.ActionArgs) {
-  await requireAuth(request);
+  const actor = await requireAuth(request);
   const clientId = parseUuid(params.clientId);
   if (!clientId) {
     return Response.json(
@@ -23,7 +23,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 
   if (request.method === "DELETE") {
     try {
-      await deleteClient(clientId);
+      await deleteClient(clientId, { userId: actor.userId });
       return Response.json({ ok: true });
     } catch (error) {
       return Response.json(

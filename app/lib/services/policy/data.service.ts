@@ -11,7 +11,6 @@ import {
   resolvePolicyNoteIds,
 } from "~/lib/db/resolve-global-ids";
 import {
-  appUserRecentRoute,
   policy,
   policyCar,
   policyCarAdjustment,
@@ -26,6 +25,10 @@ import { createInformationalNote } from "~/lib/policies/policy-notes";
 import { formatPolicyNumberFromSeq } from "~/lib/policies/policy-number";
 import { normalizeSubLimits } from "~/lib/policies/sub-limits";
 import { getClient, listClients } from "~/lib/services/clients/service";
+import {
+  removeRecentRoutesForEntity,
+  removeRecentRoutesForPolicies,
+} from "~/lib/services/navigation/recent-routes.server";
 import {
   getDefaultExcesses,
   getReferenceData,
@@ -92,17 +95,8 @@ export async function deletePolicyDraft(policyId: string, userId?: string) {
   const db = getDb();
   await db.delete(policy).where(eq(policy.policyId, policyId));
 
-  // Clean up recent navigation entry for deleted draft policy
   if (userId) {
-    const policyPath = `/policies/${policyId}`;
-    await db
-      .delete(appUserRecentRoute)
-      .where(
-        and(
-          eq(appUserRecentRoute.userId, userId),
-          eq(appUserRecentRoute.path, policyPath),
-        ),
-      );
+    await removeRecentRoutesForEntity(userId, { kind: "policy", id: policyId });
   }
 
   return existing;
@@ -154,17 +148,8 @@ export async function deletePolicies(
     .delete(policy)
     .where(and(inArray(policy.policyId, ids), eq(policy.policyStatusId, 1)));
 
-  // Clean up recent navigation entries for deleted policies
   if (options?.userId) {
-    const policyPaths = ids.map((id) => `/policies/${id}`);
-    await db
-      .delete(appUserRecentRoute)
-      .where(
-        and(
-          eq(appUserRecentRoute.userId, options.userId),
-          inArray(appUserRecentRoute.path, policyPaths),
-        ),
-      );
+    await removeRecentRoutesForPolicies(options.userId, ids);
   }
 
   return rows;

@@ -34,6 +34,7 @@ import {
   deleteClient,
   getClient,
 } from "~/lib/services/clients/service";
+import { markRecentEntityRemoved } from "~/lib/services/navigation/recent-routes";
 import { listPoliciesPage } from "~/lib/services/policies/list.service";
 import { deletePolicies } from "~/lib/services/policy/data.service";
 import { getReferenceDataAsync } from "~/lib/services/reference.service";
@@ -172,7 +173,7 @@ export async function action({ request, params }: Route.ActionArgs) {
   }
 
   try {
-    const deleted = await deleteClient(clientId);
+    const deleted = await deleteClient(clientId, { userId: actor.userId });
     await writeAuditLog({
       actor,
       action: "client.delete",
@@ -378,7 +379,15 @@ export default function ClientDetailRoute({
             >
               Cancel
             </Button>
-            <Form method="post">
+            <Form
+              method="post"
+              onSubmit={() => {
+                markRecentEntityRemoved({
+                  kind: "client",
+                  id: client.clientId,
+                });
+              }}
+            >
               <input type="hidden" name="intent" value="delete" />
               <LoadingButton
                 type="submit"

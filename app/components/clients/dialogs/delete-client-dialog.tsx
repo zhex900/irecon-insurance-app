@@ -11,6 +11,7 @@ import {
 } from "~/components/ui/dialog";
 import { LoadingButton } from "~/components/ui/loading-button";
 import type { ClientListItem } from "~/lib/services/clients/list.service";
+import { markRecentEntityRemoved } from "~/lib/services/navigation/recent-routes";
 
 export type DeleteClientDialogProps = {
   client: ClientListItem | null;
@@ -42,7 +43,14 @@ export function DeleteClientDialog({
           >
             Cancel
           </Button>
-          <Form method="post">
+          <Form
+            method="post"
+            onSubmit={() => {
+              if (client) {
+                markRecentEntityRemoved({ kind: "client", id: client.clientId });
+              }
+            }}
+          >
             <input type="hidden" name="intent" value="delete" />
             <input type="hidden" name="id" value={client?.clientId ?? ""} />
             <LoadingButton

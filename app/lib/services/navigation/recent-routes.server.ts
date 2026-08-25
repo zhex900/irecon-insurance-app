@@ -1,17 +1,21 @@
 /**
  * Per-user route history for the side nav Recents stack.
  */
-import { and, desc, eq, notInArray, sql } from "drizzle-orm";
+import { and, desc, eq, like, notInArray, or, sql } from "drizzle-orm";
 
 import { getDb } from "~/lib/db/client";
 import { appUserRecentRoute, client, policy, policyCar } from "~/lib/db/schema";
 import { formatDocumentTemplateTitle } from "~/lib/documents/template-title";
 import { getLatestDocumentTemplate } from "~/lib/services/documents/document-templates";
 import {
+  CLIENT_PATH_PATTERN,
   matchRecentLeafSection,
   normalizeRecentPath,
+  POLICY_PATH_PATTERN,
   RECENT_ROUTES_MAX,
   recentCaptionForPath,
+  recentEntityBasePath,
+  type RecentEntityRef,
   recentIdForPath,
   type RecentLeafSection,
   recentTemplateNameFromKey,
@@ -22,11 +26,45 @@ import type { SideNavLink } from "~/lib/services/navigation/side-nav.service";
 export {
   normalizeRecentPath,
   RECENT_ROUTES_MAX,
+  type RecentEntityRef,
 } from "~/lib/services/navigation/recent-routes";
 
-const UUID_SEGMENT = "[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}";
-const CLIENT_PATH_PATTERN = new RegExp(`^/clients/(${UUID_SEGMENT})(?:/|$)`);
-const POLICY_PATH_PATTERN = new RegExp(`^/policies/(${UUID_SEGMENT})(?:/|$)`);
+function recentEntityPathConditions(entity: RecentEntityRef) {
+  const basePath = recentEntityBasePath(entity);
+  return or(
+    eq(appUserRecentRoute.path, basePath),
+    like(appUserRecentRoute.path, `${basePath}/%`),
+  );
+}
+
+/** Remove all Recents rows for a deleted client or policy. */
+export async function removeRecentRoutesForEntity(
+  userId: string,
+  entity: RecentEntityRef,
+): Promise<void> {
+  const db = getDb();
+  await db
+    .delete(appUserRecentRoute)
+    .where(
+      and(eq(appUserRecentRoute.userId, userId), recentEntityPathConditions(entity)),
+    );
+}
+
+export async function removeRecentRoutesForPolicies(
+  userId: string,
+  policyIds: string[],
+): Promise<void> {
+  const ids = [...new Set(policyIds.map((id) => id.trim()).filter(Boolean))];
+  if (ids.length === 0) return;
+
+  const db = getDb();
+  await db.delete(appUserRecentRoute).where(
+    and(
+      eq(appUserRecentRoute.userId, userId),
+      or(...ids.map((id) => recentEntityPathConditions({ kind: "policy", id }))),
+    ),
+  );
+}
 
 /**
  * Optional async leaf-label resolvers keyed by `RecentLeafSection.rootPath`.
@@ -101,11 +139,6 @@ export async function resolveRecentRouteLabel(path: string): Promise<string> {
   );
 }
 
-/** Secondary Recents line — parent nav section or entity type. */
-export function resolveRecentRouteCaption(path: string): string {
-  return recentCaptionForPath(path);
-}
-
 async function toSideNavLink(
   path: string,
   label: string,
@@ -114,7 +147,7 @@ async function toSideNavLink(
     id: recentIdForPath(path),
     label,
     href: path,
-    caption: resolveRecentRouteCaption(path),
+    caption: recentCaptionForPath(path),
   };
 }
 

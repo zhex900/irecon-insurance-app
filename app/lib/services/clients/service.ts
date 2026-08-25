@@ -6,6 +6,7 @@ import type { Client } from "~/lib/db/types";
 import { ConflictError, NotFoundError } from "~/lib/errors";
 import { trackUsage } from "~/lib/observability/metrics.server";
 import { normalizeClient } from "~/lib/services/clients/normalize";
+import { removeRecentRoutesForEntity } from "~/lib/services/navigation/recent-routes.server";
 import { getReferenceDataAsync } from "~/lib/services/reference.service";
 import { isDigitSearchQuery } from "~/lib/services/shared/list-query";
 
@@ -187,7 +188,10 @@ export async function countClientPolicies(clientId: string) {
 }
 
 /** Delete a client only when they have no policies. */
-export async function deleteClient(clientId: string) {
+export async function deleteClient(
+  clientId: string,
+  options?: { userId?: string },
+) {
   const existing = await getClient(clientId);
   if (!existing) throw new NotFoundError("Client not found");
 
@@ -198,6 +202,14 @@ export async function deleteClient(clientId: string) {
 
   const db = getDb();
   await db.delete(client).where(eq(client.clientId, clientId));
+
+  if (options?.userId) {
+    await removeRecentRoutesForEntity(options.userId, {
+      kind: "client",
+      id: clientId,
+    });
+  }
+
   trackUsage("client.delete");
   return existing;
 }
