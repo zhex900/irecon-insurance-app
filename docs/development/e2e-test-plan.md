@@ -23,9 +23,10 @@ Existing specs:
 | ------------------------------- | --------------------------------------------------------------------------------------------------------------- |
 | `e2e/auth.spec.ts`              | Login, logout, unauthenticated redirect, invalid credentials                                                    |
 | `e2e/clients.spec.ts`           | Create client draft → save → appears in list                                                                    |
-| `e2e/policy.spec.ts`            | Policies list, client → new policy link, email-documents dialog validation (Resend mocked), adjust entry point  |
+| `e2e/policy.spec.ts`            | Policies list filters/badges, email-documents dialog validation (Resend mocked)                                   |
+| `e2e/policy-matrix.spec.ts`     | Annual policy matrix: create → premium → documents → taken / not taken                                          |
 | `e2e/pagination.spec.ts`        | `page`/`pageSize` query params on clients + policies lists                                                      |
-| `e2e/settings-features.spec.ts` | Broker/admin blocked from `/settings/features`; super-admin toggle (skipped unless `E2E_SUPER_ADMIN_EMAIL` set) |
+| `e2e/settings-features.spec.ts` | Broker/admin blocked from `/settings/features`                                                                  |
 | `e2e/smoke.spec.ts`             | Post-deploy: login + open clients + open policies                                                               |
 
 **Gap**: everything in `/settings/*` except `features` (ar-brokers, account-managers, car-wording, users, email-templates, document-templates, library-documents, prices, audit-log), `/reports/*` exports, `/profile`, `/dashboard`, policy detail deep flows (status transitions, document generation, adjustment save), client detail, global search, recent-routes/sidebar persistence, 404/error boundary, and the full RBAC × feature-flag matrix (§6.1).
@@ -34,7 +35,6 @@ Existing specs:
 
 - One `describe` per domain, file name matches domain (`e2e/<domain>.spec.ts`), mirrors existing files.
 - Always go through `loginAs(page, demoUsers.<role>)` from `e2e/helpers/auth.ts` — never re-implement login.
-- Use `test.skip(condition, reason)` for environment-dependent paths (no seeded data, missing super-admin env vars) — see `policy.spec.ts` for the pattern. Prefer this over failing hard on empty seed data.
 - Mock outbound side effects the same way `mockResendEmailApi` does (`page.route`) — never send real email, never call real Resend/Turnstile/Sentry in CI.
 - Unique, timestamped test data (`E2E Client ${Date.now()}`) so specs are idempotent against a shared/UAT DB and safe to re-run without cleanup.
 - Prefer `getByRole`/`getByLabel` (accessible queries) over CSS selectors, consistent with existing specs and [docs/guidelines/ui-guidelines.md](ui-guidelines.md) a11y requirements.
@@ -153,7 +153,7 @@ Per [.cursor/rules/worker-bundle.mdc](../.cursor/rules/worker-bundle.mdc), the D
 
 ### 6.5 Data seeding & isolation
 
-E2E relies on `npm run db:seed` demo users (`broker@demo.local`, `admin@demo.local`, plus optional `E2E_SUPER_ADMIN_EMAIL`). Flows needing an _existing_ Taken policy or client currently `test.skip` when absent (see `policy.spec.ts`). For full coverage this is a gap: skipped tests don't count as coverage. Recommend adding a minimal deterministic seed fixture (either extend `scripts/db/seed/seed-db.mts` with a guaranteed "e2e" client + Taken policy, or a `test.beforeAll` that creates one via the UI/API) so these paths always run instead of skipping. Track as an explicit follow-up (§7, Phase 2).
+E2E relies on `npm run db:seed` demo users (`broker@demo.local`, `admin@demo.local`). Policy depth (create → premium → documents → status) is covered by `policy-matrix.spec.ts`; list/email smoke by `policy.spec.ts`.
 
 ## 7. Phased rollout
 

@@ -25,12 +25,3 @@ setup("authenticate admin", async ({ page }) => {
   await performLogin(page, demoUsers.admin);
   await saveAuthState(page, authPaths.admin);
 });
-
-// setup("authenticate super-admin", async ({ page }) => {
-//   setup.skip(
-//     !demoUsers.superAdmin.email,
-//     "Set E2E_SUPER_ADMIN_EMAIL to save super-admin auth state",
-//   );
-//   await performLogin(page, demoUsers.superAdmin);
-//   await saveAuthState(page, authPaths.superAdmin);
-// });

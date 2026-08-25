@@ -270,7 +270,7 @@ E2E_SKIP_WEBSERVER=1 E2E_BASE_URL=http://localhost:5173 \
 
 ## 10. Out of scope (explicit)
 
-- Adjustment / cancellation flows ([`policy-adjustment-flow.spec.ts`](../../tests/e2e/policy-adjustment-flow.spec.ts) — separate plan)
+- Adjustment save flow (not yet covered in E2E)
 - Email send content (mock only)
 - PDF byte identity (unit golden fixtures)
 - Every validation error message
