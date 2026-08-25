@@ -299,5 +299,13 @@ export async function markPolicyTaken(page: Page): Promise<void> {
     page.getByRole("dialog", { name: /Mark policy as Taken\?/i }),
   ).toBeVisible();
   await page.getByRole("button", { name: /^Confirm$/i }).click();
-  await expectPolicyPhase(page, "taken", { timeout: 45_000 });
+  await expectPolicyPhase(page, "taken");
+}
+export async function markPolicyNotTaken(page: Page): Promise<void> {
+  await page.getByRole("button", { name: /^Policy status$/i }).click();
+  await page.getByRole("menuitem", { name: "Not taken", exact: true }).click();
+  await expect(
+    page.getByRole("dialog", { name: /Mark policy as Not taken/i }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: /^Confirm$/i }).click();
 }

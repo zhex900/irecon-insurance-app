@@ -6,6 +6,7 @@ import { formatCurrency } from "~/lib/pricing/premium-utils";
 import {
   type FillPolicyOptions,
   fillRequiredPolicyForm,
+  markPolicyNotTaken,
   openFirstClientAndStartPolicy,
   submitPolicy,
 } from "./helpers/policy-wizard";
@@ -384,6 +385,42 @@ test.describe("policy matrix @policy-matrix", () => {
       );
 
       await assertPremiumIsFirstInSectionStack(page);
+
+      await markPolicyNotTaken(page);
+      await expect(wizardRoot).toHaveAttribute(
+        "data-policy-phase",
+        "not-taken",
+      );
+      await expect(
+        page
+          .getByLabel("Policy wizard header")
+          .getByLabel("policy status badge"),
+      ).toHaveText("Not taken");
+      await expect(page.getByLabel("Policy wizard header")).toHaveClass(
+        /border-l-muted-foreground\/40/,
+      );
+
+      // await page.reload();
+
+      // await expect(wizardRoot).toHaveAttribute(
+      //   "data-policy-phase",
+      //   "not-taken",
+      // );
+      // await expect(
+      //   page
+      //     .getByLabel("Policy wizard header")
+      //     .getByLabel("policy status badge"),
+      // ).toHaveText("Not taken");
+      // await expect(page.getByLabel("Policy wizard header")).toHaveClass(
+      //   /border-l-muted-foreground\/40/,
+      // );
+
+      // await assertPremiumMatchesExpected(
+      //   page,
+      //   scenario.expected.premiumBreakdown,
+      // );
+
+      // await assertPremiumSummaryAndReferralReasons(page, scenario.expected);
     });
   }
 });
