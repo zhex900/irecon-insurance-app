@@ -36,7 +36,7 @@ export const demoUsers = {
   },
 } as const;
 
-export type DemoUser = { email: string; password: string };
+type DemoUser = { email: string; password: string };
 
 /** UI login used by auth setup and auth.spec (not needed when using `storageState`). */
 export async function performLogin(page: Page, user: DemoUser) {

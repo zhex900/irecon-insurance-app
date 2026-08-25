@@ -1,7 +1,6 @@
 import { expect, test } from "@playwright/test";
 
 import { mockResendEmailApi } from "./helpers/auth";
-import { seedPolicies } from "./helpers/seed";
 
 test.describe("policy adjustment flow", () => {
   test.beforeEach(async ({ page }) => {
@@ -17,11 +16,7 @@ test.describe("policy adjustment flow", () => {
     const takenRow = page.getByRole("row", { name: /^open policy/i });
     test.skip(
       (await takenRow.count()) === 0,
-      "No Taken policies available for adjustment test. Use seed: " +
-        seedPolicies
-          .filter((p) => p.policyStatusId === 2)
-          .map((p) => p.policyNumber)
-          .join(", "),
+      "No Taken policies available for adjustment test",
     );
 
     // Find a policy with adjustment capability

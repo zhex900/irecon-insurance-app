@@ -38,7 +38,7 @@ Existing specs:
 - Mock outbound side effects the same way `mockResendEmailApi` does (`page.route`) — never send real email, never call real Resend/Turnstile/Sentry in CI.
 - Unique, timestamped test data (`E2E Client ${Date.now()}`) so specs are idempotent against a shared/UAT DB and safe to re-run without cleanup.
 - Prefer `getByRole`/`getByLabel` (accessible queries) over CSS selectors, consistent with existing specs and [docs/guidelines/ui-guidelines.md](ui-guidelines.md) a11y requirements.
-- New fixtures (roles, mocks) go in `e2e/helpers/`, not inline per-spec, so they're reused (`e2e/helpers/documents.ts`, `e2e/helpers/seed.ts` as needed — see §8).
+- New fixtures (roles, mocks) go in `e2e/helpers/`, not inline per-spec, so they're reused (see §8).
 - Downloads (xlsx exports): use Playwright's `page.waitForEvent("download")`, assert filename/size, don't assert on binary content in E2E (leave cell-level correctness to `tests/unit/premium-excel.test.ts` style unit tests).
 - File uploads (library docs, avatars, email footer image): `locator.setInputFiles()` with a small fixture file committed under `e2e/fixtures/`.
 
@@ -169,7 +169,6 @@ E2E relies on `npm run db:seed` demo users (`broker@demo.local`, `admin@demo.loc
 
 ## 8. New fixtures/helpers needed
 
-- `e2e/helpers/seed.ts` — create-if-missing e2e client + Taken policy via API/UI, used by Phase 1.
 - `e2e/fixtures/` — small binary fixtures for upload tests (avatar PNG, library-doc PDF, email-footer image).
 - Extend `e2e/helpers/auth.ts` with a `loginAsAny(role)` convenience if the per-role login pattern repeats a lot across new specs (only add if duplication actually shows up — don't pre-abstract, per [AGENTS.md](../AGENTS.md) "prefer deletion over adding abstractions").
 

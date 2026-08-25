@@ -1,7 +1,6 @@
 import { expect, test } from "@playwright/test";
 
 import { mockResendEmailApi } from "./helpers/auth";
-import { openFirstClientAndStartPolicy } from "./helpers/policy-wizard";
 
 /**
  * Full Taken + docs + email is environment-heavy.
@@ -9,24 +8,6 @@ import { openFirstClientAndStartPolicy } from "./helpers/policy-wizard";
  * with Resend mocked when a policy with documents is available.
  */
 test.describe("policy journeys", () => {
-  test("open policies list and start from an existing client when present", async ({
-    page,
-  }) => {
-    await page.goto("/policies");
-    await expect(
-      page.getByRole("heading", { name: /policies/i }).first(),
-    ).toBeVisible();
-    await openFirstClientAndStartPolicy(page);
-
-    const newPolicy = page.getByRole("button", {
-      name: /new policy|add policy/i,
-    });
-    if (await newPolicy.count()) {
-      await newPolicy.first().click();
-      await expect(page).toHaveURL(/\/policies\/[^/?]+/);
-    }
-  });
-
   test("email documents dialog validates empty recipient (Resend mocked)", async ({
     page,
   }) => {

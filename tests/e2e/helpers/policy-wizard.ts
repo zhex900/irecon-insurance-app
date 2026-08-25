@@ -5,12 +5,11 @@ import {
   type Response,
 } from "@playwright/test";
 
-/** Root element carrying `data-policy-phase`. */
-export function wizardRoot(page: Page): Locator {
+function wizardRoot(page: Page): Locator {
   return page.locator("[data-policy-phase]");
 }
 
-export async function expectPolicyPhase(
+async function expectPolicyPhase(
   page: Page,
   phase: string | RegExp,
   options?: { timeout?: number },
@@ -58,60 +57,6 @@ export async function openFirstClientAndStartPolicy(page: Page): Promise<void> {
   await newPolicyPromise;
   await expect(page).toHaveURL(/\/policies\/[^/]+$/);
   await expectPolicyPhase(page, "new");
-}
-
-/** Radix select wired through `FieldLabel` + `AppSelect`. */
-export async function selectFieldOption(
-  page: Page,
-  label: RegExp,
-  option: RegExp,
-): Promise<void> {
-  await page.getByLabel(label).click();
-  await page.getByRole("option", { name: option }).click();
-}
-
-export async function fillState(page: Page, code: string): Promise<void> {
-  const stateInput = page.getByRole("combobox", { name: /^State$/i });
-  await stateInput.click();
-  await stateInput.fill(code);
-  await page
-    .locator("#stateId-listbox")
-    .getByRole("button", { name: code })
-    .click();
-}
-
-async function pickDateButton(page: Page, index: number): Promise<void> {
-  await page
-    .getByRole("button", { name: /^Pick a date$/i })
-    .nth(index)
-    .click();
-}
-
-export async function fillPolicyDates(page: Page): Promise<void> {
-  const start = new Date();
-  start.setDate(1);
-  const end = new Date(start);
-  end.setMonth(end.getMonth() + 6);
-
-  await pickDateButton(page, 0);
-  await page
-    .getByRole("gridcell", { name: String(start.getDate()), exact: true })
-    .first()
-    .click();
-
-  await pickDateButton(page, 0);
-  await page
-    .getByRole("gridcell", { name: String(end.getDate()), exact: true })
-    .first()
-    .click();
-}
-
-export async function fillAmountField(
-  page: Page,
-  label: RegExp,
-  value: string,
-): Promise<void> {
-  await page.getByLabel(label).fill(value);
 }
 
 type FillPolicyOptionsCommon = {
@@ -300,16 +245,6 @@ export async function dismissBlockedTakenDialog(page: Page): Promise<void> {
     .getByRole("button", { name: "Review highlighted fields" })
     .click();
   await expect(dialog).toBeHidden();
-}
-
-export async function markPolicyTaken(page: Page): Promise<void> {
-  await page.getByRole("button", { name: /^Policy status$/i }).click();
-  await page.getByRole("menuitem", { name: /^Taken$/i }).click();
-  await expect(
-    page.getByRole("dialog", { name: /Mark policy as Taken\?/i }),
-  ).toBeVisible();
-  await page.getByRole("button", { name: /^Confirm$/i }).click();
-  await expectPolicyPhase(page, "taken");
 }
 
 export async function markPolicyNotTaken(page: Page): Promise<void> {

@@ -123,7 +123,7 @@ const SECTION_STACK_SECTION_IDS = [
   "claims",
 ] as const;
 
-export async function assertPremiumMatchesExpected(
+async function assertPremiumMatchesExpected(
   page: Page,
   expected: PremiumBreakdownExpected,
 ) {
@@ -138,7 +138,7 @@ export async function assertPremiumMatchesExpected(
   );
 }
 
-export async function assertPremiumSummaryAndReferralReasons(
+async function assertPremiumSummaryAndReferralReasons(
   page: Page,
   premiumBreakdown: PremiumBreakdownExpected,
   referralReasons: string[],
@@ -236,7 +236,7 @@ export async function assertPremiumIsFirstInSectionStack(page: Page) {
   expect(firstSectionId).toBe("premium");
 }
 
-export async function assertPolicyNotTaken(page: Page) {
+async function assertPolicyNotTaken(page: Page) {
   const wizardRoot = page.locator("[data-policy-phase]");
   const header = page.getByLabel("Policy wizard header");
 
@@ -247,7 +247,7 @@ export async function assertPolicyNotTaken(page: Page) {
   await expect(header).toHaveClass(/border-l-muted-foreground\/40/);
 }
 
-export async function assertPolicyTaken(page: Page) {
+async function assertPolicyTaken(page: Page) {
   const header = page.getByLabel("Policy wizard header");
 
   await expect(header).toHaveClass(/border-l-success/);
