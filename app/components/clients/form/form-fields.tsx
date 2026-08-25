@@ -54,18 +54,21 @@ export function FormFields({
           <div className="grid gap-4 md:grid-cols-2">
             <FieldInput
               label="Registered Name"
+              required={isNew}
               error={errors.name?.message}
               {...register("name")}
             />
             <FieldInput
               label="Trading Name"
+              required={isNew}
               error={errors.tradingName?.message}
               {...register("tradingName")}
             />
             <FieldInput
               label="ABN"
               inputMode="numeric"
-              hint="11 digits (optional)"
+              required={isNew}
+              hint={isNew ? "11 digits" : "11 digits (optional)"}
               error={errors.abn?.message}
               {...register("abn")}
             />
@@ -76,12 +79,14 @@ export function FormFields({
               label="Phone"
               type="tel"
               autoComplete="tel"
+              required={isNew}
               error={errors.phone?.message}
               {...register("phone")}
             />
             <FieldInput
               label="Email"
               type="email"
+              required={isNew}
               error={errors.email?.message}
               {...register("email")}
             />

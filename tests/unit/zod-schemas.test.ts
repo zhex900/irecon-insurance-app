@@ -24,7 +24,7 @@ describe("clientDraftSchema", () => {
 });
 
 describe("clientSchema", () => {
-  it("requires name, trading name, account manager, and AR", () => {
+  it("requires name, trading name, contact fields, account manager, and AR", () => {
     const result = clientSchema.safeParse({
       name: "",
       tradingName: "",
@@ -42,6 +42,9 @@ describe("clientSchema", () => {
         expect.arrayContaining([
           "name",
           "tradingName",
+          "abn",
+          "phone",
+          "email",
           "accountManagerId",
           "authorisedRepresentativeId",
         ]),
@@ -54,7 +57,7 @@ describe("clientSchema", () => {
       name: "Acme Pty Ltd",
       tradingName: "Acme",
       abn: "51824753556",
-      phone: "",
+      phone: "0412 345 678",
       email: "a@b.co",
       accountManagerId: 1,
       clientSourceId: 16,
