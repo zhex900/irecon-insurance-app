@@ -56,47 +56,42 @@ Final statuses after submit / transition:
 
 **P0** runs on every PR. **P1** runs in full E2E CI. **P2** can follow once P0/P1 are stable.
 
-Each row = one Playwright test parametrized from fixture files under `tests/e2e/fixtures/policy-matrix/`.
+Each row = one Playwright test driven from scenario modules under `tests/e2e/scenarios/policy-matrix/`.
 
 ## 3. Critical path (every scenario)
 
-Execute in order. Steps marked **assert** must compare against the scenario’s `expected.json`.
+Execute in order. Steps marked **assert** must compare against the scenario's `expected` values.
 
 ```
 1. Login (broker storageState — no per-test login)
 2. Open client → New policy                    → expect data-policy-phase = "new"
-3. Select cover type from fixture.input         → cover-specific fields visible
-4. Fill form from fixture.input.form            → all required fields + declarations
+3. Select cover type from scenario.input         → cover-specific fields visible
+4. Fill form from scenario.input            → all required fields + declarations
 5. Open Premium Summary                         → trigger recalculate (auto or explicit)
-6. **assert** premium UI totals ≈ fixture.expected.premiumDisplay
-7. **assert** recalculate / .data response premium keys ≈ fixture.expected.premium
-8. Submit → Confirm & generate                  → expect phase = "pending" (unless testing draft-only — not in matrix)
-9. **assert** document list: templateKeys + count match fixture.expected.documents.pack
-10. **assert** merge fields (see §5) match fixture.expected.documents.mergeFields
-11. If finalStatus = "taken"     → mark Taken     → expect phase = "taken"
-    If finalStatus = "not_taken"  → mark Not taken → expect badges
-    If finalStatus = "pending"    → stop
-12. **assert** final phase / badge matches fixture.expected.status
+6. **assert** premium UI totals match scenario.expected.premiumBreakdown
+7. Submit → Confirm & generate                  → expect phase = "pending" (unless testing draft-only — not in matrix)
+8. **assert** document list matches scenario.expected.documents
+9. If terminalState = "taken"     → mark Taken     → expect phase = "taken"
+   If terminalState = "not-taken"  → mark Not taken → expect badges
+10. **assert** final phase / premium matches scenario.expected
 ```
 
 **Resend** stays mocked (`mockResendEmailApi`). Do not send real email in matrix tests.
 
-## 4. Static JSON fixtures
+## 4. Scenario modules
 
 ### Layout
 
 ```
-tests/e2e/fixtures/policy-matrix/
+tests/e2e/scenarios/policy-matrix/
   types.ts                      # shared types
-  manifest.ts                   # all 9 scenario ids + priorities
-  single-pending.ts             # input + expected exports
-  annual-pending.ts
-  index.ts                      # registry + getPolicyMatrixFixture()
+  annual-shared.ts              # shared input factory + premium/doc expectations
+  annual-not-taken.ts
+  annual-taken.ts
+  index.ts                      # policyMatrixScenarios registry
 ```
 
-Example: `single-pending.ts` exports `singlePendingInput` and `singlePendingExpected`.
-
-See committed examples: `single-pending.*`, `annual-pending.*`.
+Example: `annual-not-taken.ts` exports a `PolicyMatrixScenario` with `input`, `expected`, and `terminalState`.
 
 ### Input shape (`<scenario>.ts` → `*Input`)
 
@@ -229,20 +224,16 @@ Formula edge cases (zero turnover, min premium, terrorism tiers) remain in Vites
 
 - [x] `policy-wizard.ts` helpers: fill, submit, phase assertions
 - [x] `policy-flow-quote-to-taken.spec.ts` — single path (Single-ish defaults → Pending → Not taken)
-- [x] Fixture directory + manifest + example JSON
-- [ ] `loadPolicyMatrixFixture(scenarioId)` helper
-- [ ] `fillPolicyFormFromFixture(page, input)` — extend wizard helper for all cover types
-- [ ] `assertPremiumFromFixture(page, expected)`
-- [ ] `assertDocumentsFromFixture(page, expected)`
-- [ ] `transitionToFinalStatus(page, finalStatus)`
+- [x] Scenario modules under `tests/e2e/scenarios/policy-matrix/`
+- [x] `policy-matrix-flow.ts` + `policy-matrix-assertions.ts`
 
 ### Phase 1 — P0 (2 tests)
 
 Parametrized spec: `tests/e2e/policy-matrix.spec.ts`
 
 ```ts
-for (const id of ["single-pending", "annual-pending"]) {
-  test(`${id}: create → premium → documents → status`, …);
+for (const scenario of policyMatrixScenarios) {
+  test(`${scenario.name}: create → premium → documents → status`, …);
 }
 ```
 
@@ -254,7 +245,7 @@ Add remaining matrix rows. Tag: `@policy-matrix`.
 
 - Deterministic E2E client in DB seed (fixed client id) so “pick first client” is stable
 - Parallel sharding: matrix tests in isolated worker or serial `@policy-matrix` project (avoid policy number collisions)
-- CI artifact: dump mismatch diff when fixture assert fails
+- CI artifact: dump mismatch diff when scenario assert fails
 
 ## 8. Playwright conventions
 
