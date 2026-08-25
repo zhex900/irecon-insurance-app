@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { FormProvider, type Resolver, useForm } from "react-hook-form";
 
 import { JustSavedProvider } from "~/components/forms/field-save-highlight";
@@ -19,17 +19,19 @@ export function PolicyWizard({
   reference,
   referenceFeeNamesPending = false,
   freshSteps = false,
-  isNew = false,
+  initialIsNew = false,
   clientName = "",
   noteAuthors: initialNoteAuthors,
   onPolicyUpdated,
   headerActions,
 }: WizardProps) {
+  const [blankInitialFields] = useState(initialIsNew);
+
   const form = useForm<CarPolicyFormValues>({
     resolver: zodResolver(carPolicySchema) as Resolver<CarPolicyFormValues>,
     defaultValues: {
       ...policyToFormValues(policy),
-      ...(isNew
+      ...(blankInitialFields
         ? {
             hasExistingContractWorksCover: undefined,
             contractWorksSumInsured: undefined,
@@ -57,7 +59,7 @@ export function PolicyWizard({
       <JustSavedProvider>
         <PolicyPhaseProvider
           policy={policy}
-          isNew={isNew}
+          initialIsNew={initialIsNew}
           freshSteps={freshSteps}
         >
           <WizardDefault

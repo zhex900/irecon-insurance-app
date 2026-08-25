@@ -1,4 +1,10 @@
-import { createContext, type ReactNode, useMemo } from "react";
+import {
+  createContext,
+  type ReactNode,
+  useCallback,
+  useMemo,
+  useState,
+} from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import type { Policy } from "~/lib/db/types";
@@ -21,6 +27,8 @@ export type PolicyPhaseContextValue = {
   policyNumberEditable: boolean;
   premiumPinned: boolean;
   isNew: boolean;
+  /** Clears session-new state after the first successful draft save. */
+  dismissNewPolicy: () => void;
   freshSteps: boolean;
   /** Saved policy status is terminal (Taken / Not taken). */
   isSavedTerminal: boolean;
@@ -36,6 +44,7 @@ const defaultValue: PolicyPhaseContextValue = {
   policyNumberEditable: true,
   premiumPinned: false,
   isNew: false,
+  dismissNewPolicy: () => {},
   freshSteps: false,
   isSavedTerminal: false,
   isFormTerminal: false,
@@ -45,17 +54,19 @@ const PolicyPhaseContext = createContext<PolicyPhaseContextValue>(defaultValue);
 
 export function PolicyPhaseProvider({
   policy,
-  isNew,
+  initialIsNew,
   freshSteps,
   children,
 }: {
   policy: Policy;
-  isNew: boolean;
+  initialIsNew: boolean;
   freshSteps: boolean;
   children: ReactNode;
 }) {
   const { control } = useFormContext<CarPolicyFormValues>();
   const formStatusId = Number(useWatch({ control, name: "policyStatusId" }));
+  const [isNew, setIsNew] = useState(initialIsNew);
+  const dismissNewPolicy = useCallback(() => setIsNew(false), []);
 
   const value = useMemo<PolicyPhaseContextValue>(() => {
     const phase = derivePolicyPhase(policy, isNew, formStatusId);
@@ -71,11 +82,12 @@ export function PolicyPhaseProvider({
       policyNumberEditable: !isSavedTerminal,
       premiumPinned: phase !== "new",
       isNew,
+      dismissNewPolicy,
       freshSteps,
       isSavedTerminal,
       isFormTerminal,
     };
-  }, [policy, isNew, freshSteps, formStatusId]);
+  }, [policy, isNew, dismissNewPolicy, freshSteps, formStatusId]);
 
   return (
     <PolicyPhaseContext.Provider value={value}>

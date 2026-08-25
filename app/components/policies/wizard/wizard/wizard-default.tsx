@@ -19,6 +19,7 @@ import {
 import type { CarPolicyWizardState } from "../components/use-wizard-state";
 import { useWizardState } from "../components/use-wizard-state";
 import { WizardContainer } from "../components/wizard-container";
+import { useDismissNewPolicyOnDraftSave } from "../hooks/utils/use-dismiss-new-on-draft-save";
 import { usePolicyPhase } from "../hooks/utils/use-mode";
 
 export function WizardDefault(props: WizardStateProps) {
@@ -30,6 +31,8 @@ export function WizardDefault(props: WizardStateProps) {
   const wizard = useWizardState(props, core);
   const { phase } = usePolicyPhase();
   const { navigation, premiumCalc, draftSave, submit, leave, gate } = wizard;
+
+  useDismissNewPolicyOnDraftSave(draftSave.draftSavedAt);
 
   const rating =
     core.fetcher.data?.rating ?? props.policy.car.rating ?? undefined;

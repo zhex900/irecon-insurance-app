@@ -400,27 +400,27 @@ test.describe("policy matrix @policy-matrix", () => {
         /border-l-muted-foreground\/40/,
       );
 
-      // await page.reload();
+      await page.reload();
 
-      // await expect(wizardRoot).toHaveAttribute(
-      //   "data-policy-phase",
-      //   "not-taken",
-      // );
-      // await expect(
-      //   page
-      //     .getByLabel("Policy wizard header")
-      //     .getByLabel("policy status badge"),
-      // ).toHaveText("Not taken");
-      // await expect(page.getByLabel("Policy wizard header")).toHaveClass(
-      //   /border-l-muted-foreground\/40/,
-      // );
+      await expect(wizardRoot).toHaveAttribute(
+        "data-policy-phase",
+        "not-taken",
+      );
+      await expect(
+        page
+          .getByLabel("Policy wizard header")
+          .getByLabel("policy status badge"),
+      ).toHaveText("Not taken");
+      await expect(page.getByLabel("Policy wizard header")).toHaveClass(
+        /border-l-muted-foreground\/40/,
+      );
 
-      // await assertPremiumMatchesExpected(
-      //   page,
-      //   scenario.expected.premiumBreakdown,
-      // );
+      await assertPremiumMatchesExpected(
+        page,
+        scenario.expected.premiumBreakdown,
+      );
 
-      // await assertPremiumSummaryAndReferralReasons(page, scenario.expected);
+      await assertPremiumSummaryAndReferralReasons(page, scenario.expected);
     });
   }
 });

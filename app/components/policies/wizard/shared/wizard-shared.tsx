@@ -17,7 +17,8 @@ export type WizardProps = {
   /** Live broker fee schedule still loading (`usePolicyFeeNames`). */
   referenceFeeNamesPending?: boolean;
   freshSteps?: boolean;
-  isNew?: boolean;
+  /** True only when arriving from /policies/new (?new=1); cleared from URL immediately. */
+  initialIsNew?: boolean;
   clientName?: string;
   noteAuthors?: Record<string, NoteAuthor>;
   onPolicyUpdated?: (policy: Policy) => void;

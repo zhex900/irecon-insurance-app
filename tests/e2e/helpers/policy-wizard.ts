@@ -56,10 +56,8 @@ export async function openFirstClientAndStartPolicy(page: Page): Promise<void> {
   await expect(newPolicyButton.first()).toBeVisible();
   await newPolicyButton.first().click();
   await newPolicyPromise;
-  await expect(page).toHaveURL(/\/policies\/[^/]+\?new=1/);
+  await expect(page).toHaveURL(/\/policies\/[^/]+$/);
   await expectPolicyPhase(page, "new");
-  const wizardRoot = page.locator("[data-policy-phase]");
-  await expect(wizardRoot).toHaveAttribute("data-policy-phase", "new");
 }
 
 /** Radix select wired through `FieldLabel` + `AppSelect`. */

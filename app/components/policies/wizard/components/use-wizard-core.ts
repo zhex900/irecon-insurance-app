@@ -12,7 +12,10 @@ import { usePolicyPhase } from "../hooks/utils/use-mode";
 import { useDeferredFormValues } from "../hooks/wizard/use-deferred-form-values";
 import type { WizardProps } from "../shared/wizard-shared";
 
-export type WizardStateProps = Omit<WizardProps, "isNew" | "freshSteps"> & {
+export type WizardStateProps = Omit<
+  WizardProps,
+  "initialIsNew" | "freshSteps"
+> & {
   headerActions?: ReactNode;
 };
 
