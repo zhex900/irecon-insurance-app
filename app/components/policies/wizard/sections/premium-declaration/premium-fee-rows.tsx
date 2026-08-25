@@ -71,7 +71,10 @@ export function PremiumFeeRows({
           </TableCell>
           <TableCell className="py-2 pl-4" />
           <TableCell className="py-2 pl-4" />
-          <TableCell className="py-2 pl-4 text-right whitespace-nowrap tabular-nums">
+          <TableCell
+            aria-label={fee.name}
+            className="py-2 pl-4 text-right whitespace-nowrap tabular-nums"
+          >
             {formatCurrency(fee.fee + fee.feeGst)}
           </TableCell>
         </TableRow>

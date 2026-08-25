@@ -118,7 +118,7 @@ These return JSON only and are primarily exercised **indirectly** through the UI
 
 These are the "start to finish" journeys the plan's original overview asked for — each spans multiple routes:
 
-1. **Quote-to-Taken**: new client → new policy (Pending) → generate documents → email documents (Resend mocked) → mark Taken → verify audit log entry (as admin/super-admin).
+1. **Quote-to-Taken / policy matrix**: new client → new policy (Pending) → premium calc → generate documents → email documents (Resend mocked) → mark Taken / Not taken. Full **3 cover types × 3 statuses** matrix with static JSON fixtures: [e2e-policy-matrix-plan.md](e2e-policy-matrix-plan.md). Existing smoke: `policy-flow-quote-to-taken.spec.ts`.
 2. **Adjustment**: existing Taken policy → adjust → recalculate premium → save → verify new premium totals + audit trail.
 3. **Client lifecycle**: create → edit → view linked policies → (if delete exists) delete, confirming referential UI updates.
 4. **Document template publish**: super-admin edits a document template → publishes → confirms the published version is what a policy document generation uses (ties into worker-bundle rule: Designer must load via dynamic import, not break SSR — flag as a manual bundle-size check in CI, not a Playwright assertion).

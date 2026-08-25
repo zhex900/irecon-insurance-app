@@ -23,17 +23,28 @@ export async function expectPolicyPhase(
 }
 
 export async function openFirstClientAndStartPolicy(page: Page): Promise<void> {
+  const referenceListResponsePromise = page.waitForResponse(
+    "**/api/reference/list.data**",
+  );
   await page.goto("/clients");
   await expect(
     page.getByRole("heading", { name: /clients directory/i }),
   ).toBeVisible();
+  await referenceListResponsePromise;
+  const clientRow = page.getByRole("row", { name: /^open client/i }).first();
+  await expect(clientRow).toBeVisible();
+
+  const navigationPromise = page.waitForURL(/\/clients\/[^/]+$/);
   const recentRoutesPromise = page.waitForResponse(
     (response) =>
-      response.url().includes("api/recent-routes") &&
+      response.url().includes("/api/recent-routes") &&
       response.request().method() === "POST",
   );
-  const clientRow = page.getByRole("row", { name: /^open client/i }).first();
+
+  // Click name column — avoids the delete button in the actions cell.
   await clientRow.click();
+
+  await navigationPromise;
   await recentRoutesPromise;
   await expect(page).toHaveURL(/\/clients\/[^/]+$/);
   const newPolicyPromise = page.waitForResponse(
@@ -105,43 +116,66 @@ export async function fillAmountField(
   await page.getByLabel(label).fill(value);
 }
 
-export type FillPolicyOptions = {
+type FillPolicyOptionsCommon = {
   insuredName: string;
   siteAddress: string;
   turnover: number;
-  annualTypeCover?: "Contract Commencing" | "Contract Ending";
   contractWorks: number;
   displayHomes: number;
   existingStructures: number;
+  policyCategory: "New" | "Renewal";
   plantEquipment: number;
   limitOfLiability?: "$10 Million" | "$20 Million" | "Not Insured";
-  state?: "NSW" | "VIC" | "QLD" | "SA" | "WA" | "TAS" | "NT";
+  state?: "NSW" | "VIC" | "QLD" | "SA" | "TAS" | "NT";
   postcode?: string;
 };
+
+export type FillPolicyOptions =
+  | (FillPolicyOptionsCommon & {
+      typeOfCover: "Annual";
+      annualTypeCover: "Contract Commencing" | "Contract Ending";
+    })
+  | (FillPolicyOptionsCommon & {
+      typeOfCover: "Single" | "Owner Builder";
+    });
 
 /** Fill required CAR wizard fields for a Single / New policy. */
 export async function fillRequiredPolicyForm(
   page: Page,
-  {
+  options: FillPolicyOptions,
+): Promise<{
+  newPolicyResponsePromises: Promise<Response>[];
+  policyId: string;
+}> {
+  const {
     insuredName,
     siteAddress,
     postcode = "2000",
     state = "NSW",
     turnover,
-    annualTypeCover = "Contract Commencing",
     contractWorks,
     displayHomes,
     existingStructures,
     plantEquipment,
+    policyCategory = "New",
     limitOfLiability = "$10 Million",
-  }: FillPolicyOptions,
-): Promise<{
-  newPolicyResponsePromises: Promise<Response>[];
-  policyId: string;
-}> {
+  } = options;
+
   await page.getByRole("textbox", { name: "Insured Name" }).fill(insuredName);
-  await page.getByRole("combobox", { name: "Annual Type of Cover" }).click();
-  await page.getByRole("option", { name: annualTypeCover }).click();
+
+  await page
+    .getByRole("combobox", { name: "Type of Cover", exact: true })
+    .click();
+  await page.getByRole("option", { name: options.typeOfCover }).click();
+
+  if (options.typeOfCover === "Annual") {
+    await page.getByRole("combobox", { name: "Annual Type of Cover" }).click();
+    await page.getByRole("option", { name: options.annualTypeCover }).click();
+  }
+
+  await page.getByRole("combobox", { name: "Policy Category" }).click();
+  await page.getByRole("option", { name: policyCategory, exact: true }).click();
+
   await page.getByRole("textbox", { name: "Site Address" }).fill(siteAddress);
   await page.getByRole("textbox", { name: "Postcode" }).fill(postcode);
   await page.getByRole("combobox", { name: "State" }).click();
@@ -215,21 +249,27 @@ export async function fillRequiredPolicyForm(
 export async function submitPolicy(
   page: Page,
   {
-    newPolicyResponsePromises,
     policyId,
-  }: { newPolicyResponsePromises: Promise<Response>[]; policyId: string },
+    expectedDocuments,
+  }: { policyId: string; expectedDocuments: string[] },
 ): Promise<void> {
-  await Promise.all(newPolicyResponsePromises);
   await page
     .getByRole("button", { name: "Submit" })
     .first()
     .click({ force: true });
 
-  const submitDialog = page.getByRole("dialog", {
-    name: /Submit policy\?/i,
-  });
-  await expect(submitDialog).toBeVisible();
+  const submitDialog = page.getByRole("dialog", { name: "Submit policy?" });
 
+  // 1. Verify dialog & heading are visible
+  await expect(submitDialog).toBeVisible();
+  await expect(
+    submitDialog.getByRole("heading", { level: 2, name: "Submit policy?" }),
+  ).toBeVisible();
+
+  // 2. Assert list items inside the dialog
+  await expect(submitDialog.getByRole("listitem")).toHaveText(
+    expectedDocuments,
+  );
   const submitPolicyPromise = page.waitForResponse(
     (response) =>
       response.url().includes(`/policies/${policyId}`) &&

@@ -31,9 +31,13 @@ test.describe("policy journeys", () => {
     page,
   }) => {
     await mockResendEmailApi(page);
+    const listPoliciesPromise = page.waitForResponse(
+      "**/api/policies/list-stats.data?**",
+    );
     await page.goto("/policies?status=2");
 
     const policyRow = page.getByRole("row", { name: /^open policy/i });
+    await listPoliciesPromise;
     await policyRow.first().click();
     await expect(page).toHaveURL(/\/policies\/[^/?]+$/);
 
@@ -55,8 +59,12 @@ test.describe("policy journeys", () => {
   test("adjustment entry exists on Taken policies when present", async ({
     page,
   }) => {
+    const listPoliciesPromise = page.waitForResponse(
+      "**/api/policies/list-stats.data?**",
+    );
     await page.goto("/policies?status=2");
     const takenRows = page.getByRole("row", { name: /^open policy/i });
+    await listPoliciesPromise;
     const rowCount = await takenRows.count();
 
     let adjustLink = null;
