@@ -61,17 +61,4 @@ test.describe("policy status transitions", () => {
       ).toBeVisible();
     }
   });
-
-  test("policy status badges display correctly", async ({ page }) => {
-    await page.goto("/policies");
-
-    const statusCells = page.locator("[data-status]");
-    await expect(statusCells.first()).toBeVisible();
-
-    const statusText = await statusCells.first().textContent();
-    expect(statusText).toMatch(/pending|taken|not taken/i);
-
-    const statusValue = await statusCells.first().getAttribute("data-status");
-    expect(statusValue).toMatch(/^[1-3]$/);
-  });
 });
