@@ -1,10 +1,4 @@
-import {
-  type Dispatch,
-  type SetStateAction,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { type Dispatch, type SetStateAction, useMemo, useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -138,10 +132,12 @@ export function usePremiumDeclarationEditing(options: {
   const [manualKeys, setManualKeys] = useState<Set<string>>(
     () => new Set(initialKeys),
   );
+  const [prevInitialKeysKey, setPrevInitialKeysKey] = useState(initialKeysKey);
 
-  useEffect(() => {
+  if (prevInitialKeysKey !== initialKeysKey) {
+    setPrevInitialKeysKey(initialKeysKey);
     setManualKeys(new Set(initialKeys));
-  }, [initialKeysKey]);
+  }
 
   const [sessionRates, setSessionRates] = useState<
     ManualPremiumSessionRates | undefined

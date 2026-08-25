@@ -41,6 +41,7 @@ export function usePremiumStateManagement({ policy }: { policy: Policy }) {
     prevPolicySnapshotRef.current = currentSnapshot;
     setPremium(withRolledTotals(policy.car.premium));
     setPremiumManualKeys(policy.car.premiumManualKeys ?? []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on loader premium snapshot fields
   }, [policy.policyId, policy.car.premium, policy.car.premiumManualKeys]);
 
   useEffect(() => {
