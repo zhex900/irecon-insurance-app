@@ -2,6 +2,8 @@
 
 Slow, run **after** policies are on the target Postgres.
 
+**Production cutover:** follow [production-runbook.md](./production-runbook.md) — do **not** use `--skip-r2` on prod.
+
 ---
 
 ## Commands
@@ -39,7 +41,15 @@ Document metadata is written to **`policy_document`**. Policies must already exi
 
 1. Read document rows from export snapshot (~28k)
 2. For each row, find PDF under `POLICY_DOCUMENT_PATHS`
-3. Upload to R2 bucket **`insurance-app-library-documents-uat`** (override: `R2_POLICY_DOCUMENTS_BUCKET`)
+3. Upload to R2 bucket (set automatically by `--env`):
+
+   | `--env` | Bucket |
+   | ------- | ------ |
+   | `local` | `insurance-app-library-documents-local` |
+   | `uat`   | `insurance-app-library-documents-uat` |
+   | `prod`  | `insurance-app-library-documents-production` |
+
+   Override: `R2_POLICY_DOCUMENTS_BUCKET`
 4. Upsert **`policy_document`** **per document** as uploads succeed
 
 Progress:
@@ -96,7 +106,7 @@ npm run db:migrate:legacy -- --env=local --only documents --sync-state /tmp/doc-
 # Clear migrated documents, then upload from scratch
 npm run db:migrate:legacy -- --env=local --only documents --clear-documents --file _archive/data/legacy-export.json
 
-# Skip R2 (metadata only — files must still exist on disk for the scan)
+# Skip R2 (metadata only — UAT/dev debugging; NOT for production)
 npm run db:migrate:legacy -- --env=local --only documents --skip-r2 --file _archive/data/legacy-export.json
 
 # Dry-run (scan + missing CSV, no R2/Postgres)
@@ -121,6 +131,12 @@ App serves migrated PDFs via `/api/policies/:policyId/documents/r2?key=...`.
 
 ### Local dev
 
-The document migration uploads PDFs to **remote** R2 (`insurance-app-library-documents-uat` for UAT; `insurance-app-library-documents-local` for local dev). Local `npm run dev` uses **remote bindings** for `LIBRARY_DOCUMENTS` in `wrangler.jsonc` (`"remote": true`) pointing at the `-local` bucket. Populate local R2 via `npm run deployment:bootstrap:r2 -- --only local` or `npm run db:copy:uat`. You also need Cloudflare auth for remote bindings (`npx wrangler login` or `CLOUDFLARE_API_TOKEN` in the environment Wrangler reads).
+The document migration uploads PDFs to **remote** R2. Bucket per environment (see table above). Local `npm run dev` uses **remote bindings** for `LIBRARY_DOCUMENTS` in `wrangler.jsonc` (`"remote": true`) pointing at the `-local` bucket. Populate local R2 via `npm run deployment:bootstrap:r2 -- --only local` or `npm run db:copy:uat`. You also need Cloudflare auth for remote bindings (`npx wrangler login` or `CLOUDFLARE_API_TOKEN` in the environment Wrangler reads).
 
 Without remote R2, migrated rows appear in Postgres but `/api/policies/:policyId/documents/r2` returns 404 (`File not found in storage`) because the local Miniflare bucket is empty.
+
+---
+
+## Related
+
+- [production-runbook.md](./production-runbook.md) — full prod sequence including R2 backfill

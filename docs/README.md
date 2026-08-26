@@ -31,6 +31,7 @@ docs/
 | Preview environments         | [deployment/preview-environments.md](deployment/preview-environments.md)         |
 | Observability                | [deployment/observability.md](deployment/observability.md)                       |
 | Legacy DB migration          | [legacy-db-migration/README.md](legacy-db-migration/README.md)                   |
+| **Legacy → production**      | [legacy-db-migration/production-runbook.md](legacy-db-migration/production-runbook.md) |
 | Production roadmap           | [architecture/refactor-to-production.md](architecture/refactor-to-production.md) |
 
 ## Repo layout (code)

@@ -6,6 +6,10 @@
  *   npm run db:repair:policy-document-r2 -- --env=local --dry-run
  *   npm run db:repair:policy-document-r2 -- --env=uat --confirm --limit 50
  */
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+
+import { type Font, getDefaultFont } from "@pdfme/common";
 import { and, eq, isNotNull, isNull, or, sql } from "drizzle-orm";
 
 import { getDb, resetSharedDbPool } from "../../../app/lib/db/client";
@@ -27,6 +31,34 @@ import {
   hasR2Credentials,
   uploadPolicyDocumentBytesToR2,
 } from "../legacy/lib/legacy-document-upload.mts";
+
+const REPAIR_FONT_FILES = {
+  "Roboto Bold": "Roboto-Bold.ttf",
+  "Roboto Italic": "Roboto-Italic.ttf",
+  "Roboto Bold Italic": "Roboto-BoldItalic.ttf",
+  "Times New Roman": "Tinos-Regular.ttf",
+  "Times New Roman Bold": "Tinos-Bold.ttf",
+  "Times New Roman Italic": "Tinos-Italic.ttf",
+  "Times New Roman Bold Italic": "Tinos-BoldItalic.ttf",
+} as const;
+
+async function loadRepairScriptFonts(): Promise<Font> {
+  const defaults = getDefaultFont();
+  const entries = await Promise.all(
+    Object.entries(REPAIR_FONT_FILES).map(async ([name, filename]) => [
+      name,
+      {
+        data: (
+          await readFile(join(process.cwd(), "public/fonts", filename))
+        ).buffer.slice() as ArrayBuffer,
+      },
+    ]),
+  );
+  return {
+    Roboto: { data: defaults.Roboto.data, fallback: true },
+    ...Object.fromEntries(entries),
+  };
+}
 
 function readFlag(name: string): boolean {
   return process.argv.includes(name);
@@ -88,7 +120,10 @@ async function main() {
 
   console.log(`Found ${missingRows.length} document(s) to backfill.`);
 
-  const [wordingCatalogue] = await Promise.all([getCarWording()]);
+  const [wordingCatalogue, font] = await Promise.all([
+    getCarWording(),
+    loadRepairScriptFonts(),
+  ]);
 
   const byPolicy = new Map<string, typeof missingRows>();
   for (const row of missingRows) {
@@ -145,7 +180,7 @@ async function main() {
           policy,
           undefined,
           resolved,
-          { wordingCatalogue, brokerFeeLines },
+          { wordingCatalogue, brokerFeeLines, font },
         );
 
         uploadPolicyDocumentBytesToR2({ bytes: pdf, r2Key });
