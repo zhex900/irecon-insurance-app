@@ -5,12 +5,25 @@ import {
   computeLeaveNavigation,
   consumeRemovedRecentEntities,
   excludeRecentRoute,
+  type LeaveNavigationUpdate,
   normalizeRecentPath,
   readLastRecordedPath,
   RECENT_ROUTES_CHANGED_EVENT,
   writeLastRecordedPath,
 } from "~/lib/services/navigation/recent-routes";
 import type { SideNavLink } from "~/lib/services/navigation/side-nav.service";
+
+type RecentRoutesState = {
+  routes: SideNavLink[];
+  enteringId: string | null;
+  spilledRoute: SideNavLink | null;
+};
+
+type RecentRoutesAction =
+  | { type: "sync"; routes: SideNavLink[]; pathname: string }
+  | { type: "leave"; update: LeaveNavigationUpdate }
+  | { type: "mergeLabels"; routes: SideNavLink[] }
+  | { type: "clearAnimation" };
 
 function mergeRecentRouteLabels(
   current: SideNavLink[],
@@ -27,11 +40,53 @@ function mergeRecentRouteLabels(
   });
 }
 
-function visibleRecentRoutes(
-  routes: SideNavLink[],
+function recentRoutesKey(routes: SideNavLink[]): string {
+  return routes.map((route) => route.href).join("|");
+}
+
+function recentRoutesReducer(
+  state: RecentRoutesState,
+  action: RecentRoutesAction,
+): RecentRoutesState {
+  switch (action.type) {
+    case "sync":
+      return {
+        ...state,
+        routes: excludeRecentRoute(action.routes, action.pathname),
+        enteringId: null,
+        spilledRoute: null,
+      };
+    case "leave":
+      return {
+        routes: action.update.routes,
+        enteringId: action.update.enteringId,
+        spilledRoute: action.update.spilled,
+      };
+    case "mergeLabels":
+      return {
+        ...state,
+        routes: mergeRecentRouteLabels(state.routes, action.routes),
+      };
+    case "clearAnimation":
+      return {
+        ...state,
+        enteringId: null,
+        spilledRoute: null,
+      };
+    default:
+      return state;
+  }
+}
+
+function createInitialState(
+  loaderRoutes: SideNavLink[],
   pathname: string,
-): SideNavLink[] {
-  return excludeRecentRoute(routes, pathname);
+): RecentRoutesState {
+  return {
+    routes: excludeRecentRoute(loaderRoutes, pathname),
+    enteringId: null,
+    spilledRoute: null,
+  };
 }
 
 async function fetchRecentRoutes(): Promise<SideNavLink[] | null> {
@@ -42,28 +97,22 @@ async function fetchRecentRoutes(): Promise<SideNavLink[] | null> {
 }
 
 export function useRecentRoutes(loaderRoutes: SideNavLink[], pathname: string) {
-  const initialRecentRoutes = visibleRecentRoutes(loaderRoutes, pathname);
-  const recentRoutesRef = React.useRef(initialRecentRoutes);
+  const [state, dispatch] = React.useReducer(
+    recentRoutesReducer,
+    { loaderRoutes, pathname },
+    ({ loaderRoutes: routes, pathname: path }) =>
+      createInitialState(routes, path),
+  );
+  const stateRef = React.useRef(state);
   const enterClearTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
   const pathnameRef = React.useRef(pathname);
-
-  const [recentRoutes, setRecentRoutes] = React.useState(initialRecentRoutes);
-  const [enteringId, setEnteringId] = React.useState<string | null>(null);
-  const [spilledRoute, setSpilledRoute] = React.useState<SideNavLink | null>(
-    null,
-  );
-
-  const applyVisibleRoutes = React.useCallback((routes: SideNavLink[]) => {
-    const visible = visibleRecentRoutes(routes, pathnameRef.current);
-    recentRoutesRef.current = visible;
-    setRecentRoutes(visible);
-  }, []);
+  const loaderRoutesKeyValue = recentRoutesKey(loaderRoutes);
 
   React.useEffect(() => {
-    recentRoutesRef.current = recentRoutes;
-  }, [recentRoutes]);
+    stateRef.current = state;
+  }, [state]);
 
   React.useEffect(
     () => () => {
@@ -80,14 +129,23 @@ export function useRecentRoutes(loaderRoutes: SideNavLink[], pathname: string) {
 
   // Shell loader refetches after delete — apply fresh Recents from the server.
   React.useEffect(() => {
-    applyVisibleRoutes(loaderRoutes);
-  }, [applyVisibleRoutes, loaderRoutes]);
+    dispatch({
+      type: "sync",
+      routes: loaderRoutes,
+      pathname: pathnameRef.current,
+    });
+  }, [loaderRoutesKeyValue, loaderRoutes]);
 
   React.useEffect(() => {
     function refreshFromApi() {
       void fetchRecentRoutes()
         .then((routes) => {
-          if (routes) applyVisibleRoutes(routes);
+          if (!routes) return;
+          dispatch({
+            type: "sync",
+            routes,
+            pathname: pathnameRef.current,
+          });
         })
         .catch(() => {});
     }
@@ -95,7 +153,7 @@ export function useRecentRoutes(loaderRoutes: SideNavLink[], pathname: string) {
     window.addEventListener(RECENT_ROUTES_CHANGED_EVENT, refreshFromApi);
     return () =>
       window.removeEventListener(RECENT_ROUTES_CHANGED_EVENT, refreshFromApi);
-  }, [applyVisibleRoutes]);
+  }, []);
 
   React.useEffect(() => {
     const path = normalizeRecentPath(pathname);
@@ -108,24 +166,20 @@ export function useRecentRoutes(loaderRoutes: SideNavLink[], pathname: string) {
     if (!previousPath) return;
 
     const update = computeLeaveNavigation(
-      recentRoutesRef.current,
+      stateRef.current.routes,
       previousPath,
       path,
       consumeRemovedRecentEntities(),
     );
 
-    recentRoutesRef.current = update.routes;
-    setRecentRoutes(update.routes);
-    setSpilledRoute(update.spilled);
-    setEnteringId(update.enteringId);
+    dispatch({ type: "leave", update });
 
     if (update.enteringId) {
       if (enterClearTimerRef.current !== null) {
         clearTimeout(enterClearTimerRef.current);
       }
       enterClearTimerRef.current = setTimeout(() => {
-        setEnteringId(null);
-        setSpilledRoute(null);
+        dispatch({ type: "clearAnimation" });
         enterClearTimerRef.current = null;
       }, RECENTS_ENTER_MS + 40);
     }
@@ -146,14 +200,14 @@ export function useRecentRoutes(loaderRoutes: SideNavLink[], pathname: string) {
         if (!apiRoutes?.length) return;
         if (pathnameRef.current !== path) return;
         if (apiRoutes[0]?.href !== update.recordPath) return;
-        setRecentRoutes((prev) => {
-          const merged = mergeRecentRouteLabels(prev, apiRoutes);
-          recentRoutesRef.current = merged;
-          return merged;
-        });
+        dispatch({ type: "mergeLabels", routes: apiRoutes });
       })
       .catch(() => {});
   }, [pathname]);
 
-  return { recentRoutes, enteringId, spilledRoute };
+  return {
+    recentRoutes: state.routes,
+    enteringId: state.enteringId,
+    spilledRoute: state.spilledRoute,
+  };
 }
