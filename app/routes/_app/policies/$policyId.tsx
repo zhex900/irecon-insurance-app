@@ -218,11 +218,7 @@ export async function action({ request, params }: Route.ActionArgs) {
       return { formError: "Invalid note." };
     }
     try {
-      const policy = await updatePolicyNote(
-        policyId,
-        noteId,
-        description,
-      );
+      const policy = await updatePolicyNote(policyId, noteId, description);
       await writeAuditLog({
         actor,
         action: "policy.note_update",

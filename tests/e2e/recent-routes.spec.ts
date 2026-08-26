@@ -92,10 +92,14 @@ test.describe("recent routes", () => {
     const clientId = page.url().match(/\/clients\/([^/?]+)/)?.[1];
     expect(clientId).toBeTruthy();
 
-    let routes = await fetchRecentRoutesFromApi(page);
-    expect(
-      routes.some((route) => route.href === `/clients/${clientId}/edit`),
-    ).toBe(true);
+    await expect
+      .poll(async () => {
+        const routes = await fetchRecentRoutesFromApi(page);
+        return routes.some(
+          (route) => route.href === `/clients/${clientId}/edit`,
+        );
+      })
+      .toBe(true);
 
     await page.getByRole("button", { name: "Delete" }).click();
     await page
@@ -107,7 +111,7 @@ test.describe("recent routes", () => {
       timeout: 15_000,
     });
 
-    routes = await fetchRecentRoutesFromApi(page);
+    const routes = await fetchRecentRoutesFromApi(page);
     expect(
       routes.some((route) => route.href.startsWith(`/clients/${clientId}`)),
     ).toBe(false);

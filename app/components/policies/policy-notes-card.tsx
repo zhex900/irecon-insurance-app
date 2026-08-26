@@ -80,8 +80,7 @@ export function PolicyNotesCard({
   const selectedNote =
     selectedNoteId == null
       ? null
-      : (orderedNotes.find((note) => note.noteId === selectedNoteId) ??
-        null);
+      : (orderedNotes.find((note) => note.noteId === selectedNoteId) ?? null);
 
   useEffect(() => {
     if (wasBusyRef.current && !noteBusy && !noteError) {
@@ -179,7 +178,12 @@ export function PolicyNotesCard({
                   noteAuthors,
                 );
                 return (
-                  <li key={note.noteId ?? `${note.createdWhen}-${note.policyNoteTypeId}`}>
+                  <li
+                    key={
+                      note.noteId ??
+                      `${note.createdWhen}-${note.policyNoteTypeId}`
+                    }
+                  >
                     <button
                       type="button"
                       className="flex w-full flex-col gap-1 px-(--card-spacing) py-2.5 text-left transition-colors hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none focus-visible:ring-inset"
