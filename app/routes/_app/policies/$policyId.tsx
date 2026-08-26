@@ -1,7 +1,6 @@
 import { CopyIcon, SlidersHorizontalIcon, Trash2Icon } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Link,
   redirect,
   type ShouldRevalidateFunctionArgs,
   useActionData,
@@ -11,6 +10,7 @@ import {
 } from "react-router";
 import { toast } from "sonner";
 
+import { AppLink } from "~/components/navigation/app-link";
 import { DeletePoliciesDialog } from "~/components/policies/delete-policies-dialog";
 import { PolicyWizard } from "~/components/policies/wizard/wizard";
 import {
@@ -489,12 +489,12 @@ export default function PolicyDetailRoute({
           </Button>
         ) : null}
         {canAdjust ? (
-          <Link to={`/policies/${policy.policyId}/adjust`}>
+          <AppLink to={`/policies/${policy.policyId}/adjust`}>
             <Button size="sm">
               <SlidersHorizontalIcon data-icon="inline-start" />
               {policy.car.adjusted ? "Re-adjust" : "Adjust"}
             </Button>
-          </Link>
+          </AppLink>
         ) : null}
         {canClone ? (
           <Tooltip>

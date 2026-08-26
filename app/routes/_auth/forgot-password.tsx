@@ -1,6 +1,7 @@
-import { Form, Link, useNavigation, useSearchParams } from "react-router";
+import { Form, useNavigation, useSearchParams } from "react-router";
 
 import { AuthShell } from "~/components/auth/auth-shell";
+import { AppLink } from "~/components/navigation/app-link";
 import { buttonVariants } from "~/components/ui/button";
 import {
   Field,
@@ -140,12 +141,12 @@ export default function ForgotPasswordRoute({
       {success ? (
         <div className="mt-8 flex flex-col gap-4">
           <p className="text-sm text-muted-foreground">{success}</p>
-          <Link
+          <AppLink
             to="/login"
             className={cn(buttonVariants({ variant: "secondary" }), "w-full")}
           >
             Back to sign in
-          </Link>
+          </AppLink>
         </div>
       ) : (
         <Form method="post" className="mt-8">
@@ -172,12 +173,12 @@ export default function ForgotPasswordRoute({
               Send reset link
             </LoadingButton>
             <p className="text-center text-sm text-muted-foreground">
-              <Link
+              <AppLink
                 to="/login"
                 className="hover:text-foreground hover:underline"
               >
                 Back to sign in
-              </Link>
+              </AppLink>
             </p>
           </FieldGroup>
         </Form>

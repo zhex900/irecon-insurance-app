@@ -1,14 +1,9 @@
 import { useState } from "react";
-import {
-  Form,
-  Link,
-  redirect,
-  useActionData,
-  useNavigation,
-} from "react-router";
+import { Form, redirect, useActionData, useNavigation } from "react-router";
 
 import { ClientPolicies } from "~/components/clients/summary";
 import { PageHeader } from "~/components/layout/app-layout";
+import { AppLink } from "~/components/navigation/app-link";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import {
@@ -248,11 +243,11 @@ export default function ClientDetailRoute({
         ]}
         action={
           <div className="flex flex-wrap gap-2">
-            <Link to={`/clients/${client.clientId}/edit`}>
+            <AppLink to={`/clients/${client.clientId}/edit`}>
               <Button type="button" variant="outline">
                 Edit Client
               </Button>
-            </Link>
+            </AppLink>
             {policyCount === 0 ? (
               <Button
                 type="button"

@@ -1,8 +1,9 @@
 import * as React from "react";
-import { Form, Link, useNavigation, useSearchParams } from "react-router";
+import { Form, useNavigation, useSearchParams } from "react-router";
 
 import { AuthShell } from "~/components/auth/auth-shell";
 import { TurnstileWidget } from "~/components/auth/turnstile-widget";
+import { AppLink } from "~/components/navigation/app-link";
 import {
   Field,
   FieldError,
@@ -226,12 +227,12 @@ export default function LoginRoute({
           <Field>
             <div className="flex items-center justify-between gap-2">
               <FieldLabel htmlFor="password">Password</FieldLabel>
-              <Link
+              <AppLink
                 to="/forgot-password"
                 className="text-xs text-muted-foreground hover:text-foreground hover:underline"
               >
                 Forgot password?
-              </Link>
+              </AppLink>
             </div>
             <Input
               id="password"

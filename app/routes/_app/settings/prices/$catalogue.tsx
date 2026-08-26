@@ -1,8 +1,9 @@
 import { PlusIcon, Trash2Icon } from "lucide-react";
 import type { ReactNode } from "react";
-import { Link, Outlet, redirect, useNavigate } from "react-router";
+import { Outlet, redirect, useNavigate } from "react-router";
 
 import { PageHeader } from "~/components/layout/app-layout";
+import { AppLink } from "~/components/navigation/app-link";
 import { Badge } from "~/components/reui/badge";
 import {
   Card,
@@ -133,7 +134,7 @@ export default function SettingsPricesCatalogueRoute({
           {PRICE_CATALOGUE_SLUGS.map((item) => {
             const href = pricesListHref(item);
             return (
-              <Link
+              <AppLink
                 key={item}
                 to={href}
                 role="tab"
@@ -146,18 +147,18 @@ export default function SettingsPricesCatalogueRoute({
                 )}
               >
                 {slugLabel(item)}
-              </Link>
+              </AppLink>
             );
           })}
         </div>
         {canEdit ? (
-          <Link
+          <AppLink
             to={pricesNewHref(slug)}
             className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg bg-primary px-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/80"
           >
             <PlusIcon className="size-4" />
             Add schedule
-          </Link>
+          </AppLink>
         ) : null}
       </div>
 
@@ -217,24 +218,24 @@ function ClickableScheduleRow({
       onActivate={() => void navigate(href)}
     >
       <TableCell className="text-foreground tabular-nums">
-        <Link
+        <AppLink
           to={href}
           className="font-medium text-foreground hover:underline"
           aria-label={`View schedule ${id}`}
         >
           {id}
-        </Link>
+        </AppLink>
       </TableCell>
       {children}
       {canEdit ? (
         <InteractiveTableActionsCell className="w-12 text-right">
-          <Link
+          <AppLink
             to={deleteHref}
             aria-label={deleteLabel}
             className="inline-flex size-7 items-center justify-center rounded-lg text-destructive hover:bg-destructive/10"
           >
             <Trash2Icon className="size-4" />
-          </Link>
+          </AppLink>
         </InteractiveTableActionsCell>
       ) : null}
     </InteractiveTableRow>

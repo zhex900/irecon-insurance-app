@@ -1,12 +1,12 @@
 import { CheckIcon, ChevronDownIcon } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router";
 
 import { FilterAutocomplete } from "~/components/forms/autocomplete";
 import {
   AppBreadcrumb,
   type AppBreadcrumbItem,
 } from "~/components/layout/app-breadcrumb";
+import { AppLink } from "~/components/navigation/app-link";
 import { PolicyNumberField } from "~/components/policies/policy-number-field";
 import {
   PolicyStatusMenu,
@@ -553,12 +553,12 @@ export function PolicyStickyHeader({
             </div>
             <p className="truncate text-sm text-muted-foreground">
               CAR policy for{" "}
-              <Link
+              <AppLink
                 to={`/clients/${clientId}`}
                 className="font-medium text-foreground underline-offset-4 hover:underline"
               >
                 {clientName}
-              </Link>
+              </AppLink>
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">

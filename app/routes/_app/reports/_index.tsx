@@ -1,7 +1,7 @@
 import { ArrowRightIcon, FileBarChart2Icon, RefreshCwIcon } from "lucide-react";
-import { Link } from "react-router";
 
 import { PageHeader } from "~/components/layout/app-layout";
+import { AppLink } from "~/components/navigation/app-link";
 import {
   Card,
   CardDescription,
@@ -42,7 +42,7 @@ export default function ReportsIndexRoute() {
 
       <div className="grid gap-4 sm:grid-cols-2">
         {reports.map((report) => (
-          <Link
+          <AppLink
             key={report.to}
             to={report.to}
             className="group rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
@@ -59,7 +59,7 @@ export default function ReportsIndexRoute() {
                 <CardDescription>{report.description}</CardDescription>
               </CardHeader>
             </Card>
-          </Link>
+          </AppLink>
         ))}
       </div>
     </div>

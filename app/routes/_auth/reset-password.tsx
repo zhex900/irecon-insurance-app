@@ -1,7 +1,8 @@
-import { Form, Link, useNavigation, useSearchParams } from "react-router";
+import { Form, useNavigation, useSearchParams } from "react-router";
 
 import { AuthHashSessionBridge } from "~/components/auth/auth-hash-session-bridge";
 import { AuthShell } from "~/components/auth/auth-shell";
+import { AppLink } from "~/components/navigation/app-link";
 import { buttonVariants } from "~/components/ui/button";
 import {
   Field,
@@ -98,16 +99,19 @@ export default function ResetPasswordRoute({
           <p className="mt-4 text-sm text-destructive">{error}</p>
         ) : null}
         <div className="mt-8">
-          <Link
+          <AppLink
             to="/forgot-password"
             className={cn(buttonVariants(), "w-full")}
           >
             Request reset link
-          </Link>
+          </AppLink>
           <p className="mt-4 text-center text-sm text-muted-foreground">
-            <Link to="/login" className="hover:text-foreground hover:underline">
+            <AppLink
+              to="/login"
+              className="hover:text-foreground hover:underline"
+            >
               Back to sign in
-            </Link>
+            </AppLink>
           </p>
         </div>
       </AuthShell>

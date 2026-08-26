@@ -7,8 +7,9 @@ import {
   type Resolver,
   useForm,
 } from "react-hook-form";
-import { Form, Link, useFetcher, useNavigation } from "react-router";
+import { Form, useFetcher, useNavigation } from "react-router";
 
+import { AppLink } from "~/components/navigation/app-link";
 import { Alert, AlertDescription } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
@@ -275,12 +276,12 @@ export function CarAdjustmentWizard({
             </Form>
           ) : null}
 
-          <Link
+          <AppLink
             to={`/policies/${policy.policyId}`}
             className="inline-flex h-10 items-center justify-center rounded-md px-4 text-sm font-medium hover:bg-muted"
           >
             Cancel
-          </Link>
+          </AppLink>
         </div>
       </div>
     </FormProvider>

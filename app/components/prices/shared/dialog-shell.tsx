@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
-import { Link, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 
+import { AppLink } from "~/components/navigation/app-link";
 import { Badge } from "~/components/reui/badge";
 import { Button } from "~/components/ui/button";
 import { DateInput } from "~/components/ui/date-input";
@@ -301,7 +302,7 @@ export function FooterButton({
       type="button"
       variant={variant}
       nativeButton={false}
-      render={<Link to={href ?? ".."} />}
+      render={<AppLink to={href ?? ".."} />}
     >
       {children}
     </Button>

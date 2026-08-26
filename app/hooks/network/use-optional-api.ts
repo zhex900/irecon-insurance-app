@@ -12,46 +12,44 @@ export function useOptionalApi<T>(url: string | null) {
   const fetcher = useFetcher<T>();
   const loadRef = useRef(fetcher.load);
   const pendingUrlRef = useRef<string | null>(null);
+  const inflightUrlRef = useRef<string | null>(null);
   const prevFetcherStateRef = useRef(fetcher.state);
   const [settledUrl, setSettledUrl] = useState<string | null>(null);
-  const [trackedUrl, setTrackedUrl] = useState<string | null>(url);
 
   useEffect(() => {
     loadRef.current = fetcher.load;
   });
 
-  if (url !== trackedUrl) {
-    setTrackedUrl(url);
-    setSettledUrl(null);
-  }
-
   useEffect(() => {
-    pendingUrlRef.current = null;
-  }, [url]);
+    if (!url) return;
+    if (inflightUrlRef.current === url) return;
 
-  useEffect(() => {
-    if (!url || fetcher.state !== "idle") return;
-    if (settledUrl === url) return;
+    inflightUrlRef.current = url;
     pendingUrlRef.current = url;
     loadRef.current(url);
-  }, [url, fetcher.state, settledUrl]);
+  }, [url]);
 
   useEffect(() => {
     const wasLoading = prevFetcherStateRef.current === "loading";
     prevFetcherStateRef.current = fetcher.state;
     if (!wasLoading || fetcher.state !== "idle") return;
+
     const pending = pendingUrlRef.current;
     if (!pending) return;
+
     if (import.meta.env.DEV && fetcher.data === undefined) {
       console.warn(
         `[useOptionalApi] Request failed or returned no data: ${pending}`,
       );
     }
+
+    inflightUrlRef.current = null;
     setSettledUrl(pending);
     pendingUrlRef.current = null;
   }, [fetcher.state, fetcher.data]);
 
-  const pending = url != null && settledUrl !== url;
+  const pending =
+    url != null && (settledUrl !== url || fetcher.state === "loading");
   const data =
     url != null && settledUrl === url ? (fetcher.data ?? null) : null;
 

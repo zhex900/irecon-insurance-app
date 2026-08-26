@@ -1,6 +1,6 @@
 import { Fragment } from "react";
-import { Link } from "react-router";
 
+import { AppLink } from "~/components/navigation/app-link";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -41,7 +41,7 @@ export function AppBreadcrumb({ items }: { items: AppBreadcrumbItem[] }) {
                       item.reloadDocument ? (
                         <a href={item.to} />
                       ) : (
-                        <Link to={item.to} />
+                        <AppLink to={item.to} />
                       )
                     }
                   >
