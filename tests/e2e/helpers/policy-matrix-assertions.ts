@@ -335,7 +335,18 @@ export async function completeTakenTerminalFlow(
   await confirmMarkPolicyTaken(page);
   await assertPolicyTaken(page);
 
+  const libraryDocumentsPromise = page.waitForResponse(
+    "**/api/library-documents",
+  );
+  const policeId = policyIdFromUrl(page);
+  const noteAuthorPromise = page.waitForResponse(
+    `**/api/policies/${policeId}/note-authors`,
+  );
+
   await page.reload();
+
+  await Promise.all([libraryDocumentsPromise, noteAuthorPromise]);
+  await page.waitForURL(`/policies/${policeId}`);
 
   await assertPremiumExpectations(page, premiumBreakdownTaken, referralReasons);
   await assertPolicyTaken(page);
