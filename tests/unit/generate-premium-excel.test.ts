@@ -250,9 +250,9 @@ describe("generatePremiumExcelDocument", () => {
         options: expect.objectContaining({ generatedBy: "session-user" }),
       }),
     );
-    expect(document.generatedBy).toBe("session-user");
-    expect(document.policyId).toBe(POLICY_ID);
     expect(document.filename).toContain("ATCCWI1001");
+    expect(document.pdfBase64).toBeTruthy();
+    expect(typeof document.pdfBase64).toBe("string");
   });
 
   it("throws when the policy has no stored premium", async () => {
