@@ -90,6 +90,30 @@ export function policyIdFromUrl(page: Page): string {
   }
   return policyId;
 }
+
+/** React Router policy action POST (save / terminal status). */
+export function isPolicyRouteSavePost(response: Response, policyId: string) {
+  if (response.request().method() !== "POST") return false;
+  const url = response.url();
+  return (
+    url.includes(`policies/${policyId}`) &&
+    url.includes(".data") &&
+    !url.includes("/api/policies/")
+  );
+}
+
+export function waitForPolicyRouteSave(page: Page, policyId: string) {
+  return page.waitForResponse((response) =>
+    isPolicyRouteSavePost(response, policyId),
+  );
+}
+
+/** Premium recalculate / draft save must finish before terminal status save. */
+export async function waitForPremiumCalculationIdle(page: Page) {
+  await expect(page.getByRole("button", { name: "Reset premium" })).toBeEnabled(
+    { timeout: 30_000 },
+  );
+}
 /** Fill required CAR wizard fields for a Single / New policy. */
 export async function fillRequiredPolicyForm(
   page: Page,
@@ -265,11 +289,15 @@ export async function markPolicyNotTaken(page: Page): Promise<void> {
   ).toBeVisible();
 
   const policyId = policyIdFromUrl(page);
-  const markPolicyNotTakenPromise = page.waitForResponse(
-    (response) =>
-      response.url().includes(`/policies/${policyId}.data`) &&
-      response.request().method() === "POST",
-  );
+  const markPolicyNotTakenPromise = waitForPolicyRouteSave(page, policyId);
   await page.getByRole("button", { name: /^Confirm$/i }).click();
-  await markPolicyNotTakenPromise;
+  await Promise.race([
+    markPolicyNotTakenPromise,
+    expect(page.getByLabel("policy status badge")).toHaveText("Not taken", {
+      timeout: 90_000,
+    }),
+  ]);
+  await expect(
+    page.getByRole("dialog", { name: /Mark policy as Not taken/i }),
+  ).toBeHidden();
 }

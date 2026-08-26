@@ -7,6 +7,8 @@ import {
   dismissBlockedTakenDialog,
   markPolicyNotTaken,
   policyIdFromUrl,
+  waitForPolicyRouteSave,
+  waitForPremiumCalculationIdle,
 } from "./policy-wizard";
 
 type PremiumCellAssertion = {
@@ -294,6 +296,7 @@ async function setExistingStructurePremium(page: Page, amount: number) {
     .getByRole("textbox", { name: "Edit premium value" })
     .fill(String(amount));
   await page.keyboard.press("Enter");
+  await waitForPremiumCalculationIdle(page);
 }
 
 async function confirmMarkPolicyTaken(page: Page) {
@@ -303,19 +306,13 @@ async function confirmMarkPolicyTaken(page: Page) {
   const dialog = page.getByRole("dialog", { name: "Mark policy as Taken?" });
   await expect(dialog).toBeVisible();
   const policyId = policyIdFromUrl(page);
-  const confirmMarkPolicyTakenPromise = page.waitForResponse(
-    (response) =>
-      response.url().includes(`/policies/${policyId}.data`) &&
-      response.request().method() === "POST",
-  );
-  const putDocumentsPromise = page.waitForResponse(
-    (response) =>
-      response.url().includes(`/api/policies/${policyId}/documents`) &&
-      response.request().method() === "PUT",
-  );
+  const confirmMarkPolicyTakenPromise = waitForPolicyRouteSave(page, policyId);
   await page.getByRole("button", { name: /^Confirm$/i }).click();
-  await Promise.all([confirmMarkPolicyTakenPromise, putDocumentsPromise]);
+  // Taken confirm may regenerate documents (slow on preview) before the save POST.
+  // Prefer the terminal UI outcome over waiting on every network hop.
+  await Promise.race([confirmMarkPolicyTakenPromise, assertPolicyTaken(page)]);
   await expect(dialog).not.toBeVisible();
+  await assertPolicyTaken(page);
 }
 
 export async function completeTakenTerminalFlow(
