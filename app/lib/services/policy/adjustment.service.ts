@@ -16,7 +16,6 @@ import {
   calculateCarAdjustment,
   validateAdjustmentFinish,
 } from "~/server/pricing/car-adjustment-calculator";
-import { resolveBrokerFeeLines } from "~/server/pricing/rate-resolver";
 
 export class AdjustmentError extends ValidationError {}
 
@@ -119,10 +118,7 @@ export async function submitPolicyAdjustment(
   };
 
   // Adjustment saved → adjustment document only (append-only).
-  const [templates, brokerFeeLines] = await Promise.all([
-    listPublishedForAdjustment(),
-    resolveBrokerFeeLines(policy.dateStart),
-  ]);
+  const templates = await listPublishedForAdjustment();
   const templateMeta = templates.map((t) => ({
     key: t.key,
     title: t.title,
@@ -133,7 +129,6 @@ export async function submitPolicyAdjustment(
     createdBy,
     templateMeta,
     policy.documents ?? [],
-    { brokerFeeLines },
   );
   const merged = mergeReviewDocuments(policy.documents, pack);
   const documents = syncPolicyDocumentLabels(merged, {
