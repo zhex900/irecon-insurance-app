@@ -102,6 +102,7 @@ export function applyManualPremiumEdit({
   let plantEslRate = sessionRates.plantEslRate;
 
   // Tax line edit: keep the typed value; refresh only dependent tax lines.
+  // ESL and Stamp Duty do not recalculate each other on manual edit.
   // Does NOT freeze future auto-recalc (fixes legacy Quirk 4).
   if (TAX_LINE_KEYS.has(key)) {
     const next: PremiumBreakdown = { ...premium, [key]: value };
@@ -113,8 +114,10 @@ export function applyManualPremiumEdit({
       applyContractWorksTaxDependents(next, {
         eslRate,
         sd1,
-        preserveEsl: key === "contractWorksESL",
-        preserveSd: key === "contractWorksStampDuty",
+        preserveEsl:
+          key === "contractWorksESL" || key === "contractWorksStampDuty",
+        preserveSd:
+          key === "contractWorksStampDuty" || key === "contractWorksESL",
         preserveGst: key === "contractWorksGST",
       });
     }
@@ -125,10 +128,10 @@ export function applyManualPremiumEdit({
     ) {
       const liabBase = asRate(next.liabilityBasePremium);
       const liabEsl = asRate(next.liabilityESL);
-      if (key !== "liabilityGST") {
+      if (key !== "liabilityGST" && key !== "liabilityStampDuty") {
         next.liabilityGST = roundMoney((liabBase + liabEsl) * GST_RATE);
       }
-      if (key !== "liabilityStampDuty") {
+      if (key !== "liabilityStampDuty" && key !== "liabilityESL") {
         next.liabilityStampDuty = roundMoney(
           (liabBase + liabEsl + next.liabilityGST) * sd2,
         );
