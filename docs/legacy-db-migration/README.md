@@ -210,7 +210,7 @@ Alternative: validate on UAT, then `npm run db:copy:prod -- --confirm` — see r
 | `ar`               | `WholesaleBroker`            | `authorised_representative`                                                                                      |
 | `clients`          | `Client`                     | `client`                                                                                                         |
 | `policies`         | `Policy` + `PolicyCAR`       | `policy`, `policy_car`, `policy_car_adjustment`, `policy_document`, `policy_note`, `policy_car_selected_wording` |
-| `documents`        | `PolicyDocument` + PDF files | R2 + `policy_document` (`r2_key`; no inline blobs) |
+| `documents`        | `PolicyDocument` + PDF files | R2 + `policy_document` (`r2_key`; no inline blobs)                                                               |
 
 Load order: account managers → AR → clients → policies → documents.
 

@@ -8,9 +8,9 @@ Step-by-step guide for loading **production** Supabase from legacy MSSQL (or fro
 
 ## Choose a path
 
-| Path | When to use |
-| ---- | ----------- |
-| **A — Legacy → prod directly** | First production cutover; UAT not yet trusted |
+| Path                            | When to use                                                         |
+| ------------------------------- | ------------------------------------------------------------------- |
+| **A — Legacy → prod directly**  | First production cutover; UAT not yet trusted                       |
 | **B — UAT first, then copy DB** | UAT fully validated (app, documents, R2); faster prod Postgres load |
 
 Both paths need **R2 policy PDFs** in `insurance-app-library-documents-production`. Path B copies Postgres only — you still need document bytes in prod R2 (re-run document migrate to prod, or sync buckets manually).
@@ -281,19 +281,19 @@ Watch for 500s on `GET /policies/*.data` after deploy — usually code/schema mi
 
 ## Command cheat sheet (production)
 
-| Step              | Command |
-| ----------------- | ------- |
-| Export MSSQL      | `npm run db:export:legacy` |
-| Dry-run domain    | `npm run db:migrate:legacy -- --env=prod --dry-run --only account-managers,ar,clients,policies` |
-| Clear domain      | `npm run db:clear:legacy:prod -- --confirm` |
-| Migrate domain    | `npm run db:migrate:legacy:prod` |
-| Repair periods    | `npm run db:repair:policy-periods -- --env=prod --confirm` |
-| Repair policies   | `npm run db:repair:migrated-policies -- --env=prod --confirm` |
-| Migrate documents | `npm run db:migrate:legacy:documents:prod` |
-| R2 backfill       | `npm run db:repair:policy-document-r2 -- --env=prod --confirm` |
-| Copy UAT → prod DB | `npm run db:copy:prod -- --confirm` |
-| Schema migrations | `npx supabase db push --yes --db-url "<session url :5432>"` |
-| Deploy app        | `npm run deploy:prod` |
+| Step               | Command                                                                                         |
+| ------------------ | ----------------------------------------------------------------------------------------------- |
+| Export MSSQL       | `npm run db:export:legacy`                                                                      |
+| Dry-run domain     | `npm run db:migrate:legacy -- --env=prod --dry-run --only account-managers,ar,clients,policies` |
+| Clear domain       | `npm run db:clear:legacy:prod -- --confirm`                                                     |
+| Migrate domain     | `npm run db:migrate:legacy:prod`                                                                |
+| Repair periods     | `npm run db:repair:policy-periods -- --env=prod --confirm`                                      |
+| Repair policies    | `npm run db:repair:migrated-policies -- --env=prod --confirm`                                   |
+| Migrate documents  | `npm run db:migrate:legacy:documents:prod`                                                      |
+| R2 backfill        | `npm run db:repair:policy-document-r2 -- --env=prod --confirm`                                  |
+| Copy UAT → prod DB | `npm run db:copy:prod -- --confirm`                                                             |
+| Schema migrations  | `npx supabase db push --yes --db-url "<session url :5432>"`                                     |
+| Deploy app         | `npm run deploy:prod`                                                                           |
 
 All `db:migrate:legacy:*:prod` and `db:clear:legacy:*:prod` scripts include `--confirm`.
 
@@ -301,14 +301,14 @@ All `db:migrate:legacy:*:prod` and `db:clear:legacy:*:prod` scripts include `--c
 
 ## Common mistakes
 
-| Mistake | Consequence |
-| ------- | ----------- |
-| `--skip-r2` on document migrate (prod) | Metadata only; PDF preview/email fails until R2 backfill |
-| Run blob-drop migrations before R2 upload | Permanent loss of stored PDF bytes |
-| `supabase db push` before new Workers deploy | Policy pages 500 until new code is live |
-| Document migrate before domain migrate | Rows skipped (no matching policy) |
-| Missing `POLICY_DOCUMENT_PATHS` | High missing count in CSV; empty R2 |
-| Using localhost `DATABASE_URL` in `.env.production` | Scripts refuse to run |
+| Mistake                                             | Consequence                                              |
+| --------------------------------------------------- | -------------------------------------------------------- |
+| `--skip-r2` on document migrate (prod)              | Metadata only; PDF preview/email fails until R2 backfill |
+| Run blob-drop migrations before R2 upload           | Permanent loss of stored PDF bytes                       |
+| `supabase db push` before new Workers deploy        | Policy pages 500 until new code is live                  |
+| Document migrate before domain migrate              | Rows skipped (no matching policy)                        |
+| Missing `POLICY_DOCUMENT_PATHS`                     | High missing count in CSV; empty R2                      |
+| Using localhost `DATABASE_URL` in `.env.production` | Scripts refuse to run                                    |
 
 ---
 

@@ -43,13 +43,14 @@ Document metadata is written to **`policy_document`**. Policies must already exi
 2. For each row, find PDF under `POLICY_DOCUMENT_PATHS`
 3. Upload to R2 bucket (set automatically by `--env`):
 
-   | `--env` | Bucket |
-   | ------- | ------ |
-   | `local` | `insurance-app-library-documents-local` |
-   | `uat`   | `insurance-app-library-documents-uat` |
+   | `--env` | Bucket                                       |
+   | ------- | -------------------------------------------- |
+   | `local` | `insurance-app-library-documents-local`      |
+   | `uat`   | `insurance-app-library-documents-uat`        |
    | `prod`  | `insurance-app-library-documents-production` |
 
    Override: `R2_POLICY_DOCUMENTS_BUCKET`
+
 4. Upsert **`policy_document`** **per document** as uploads succeed
 
 Progress:
