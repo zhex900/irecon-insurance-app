@@ -131,8 +131,7 @@ async function assertPremiumMatchesExpected(
   page: Page,
   expected: PremiumBreakdownExpected,
 ) {
-  // await page.getBy;
-  //#premium
+  await expect(page.locator("#premium")).toBeVisible();
   await page.locator("#premium").scrollIntoViewIfNeeded();
 
   await Promise.all(
