@@ -308,8 +308,13 @@ async function confirmMarkPolicyTaken(page: Page) {
       response.url().includes(`/policies/${policyId}.data`) &&
       response.request().method() === "POST",
   );
+  const putDocumentsPromise = page.waitForResponse(
+    (response) =>
+      response.url().includes(`/api/policies/${policyId}/documents`) &&
+      response.request().method() === "PUT",
+  );
   await page.getByRole("button", { name: /^Confirm$/i }).click();
-  await confirmMarkPolicyTakenPromise;
+  await Promise.all([confirmMarkPolicyTakenPromise, putDocumentsPromise]);
   await expect(dialog).not.toBeVisible();
 }
 
