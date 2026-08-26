@@ -68,7 +68,6 @@ export async function clearLegacyDocuments(
   const legacyDocs = await db
     .select({
       policyId: policyDocument.policyId,
-      policyDocumentId: policyDocument.policyDocumentId,
     })
     .from(policyDocument)
     .where(like(policyDocument.generationKey, "legacy:%"));

@@ -1,5 +1,10 @@
 import { and, desc, eq, inArray, ne, sql } from "drizzle-orm";
 
+import type { R2BucketLike } from "~/lib/cloudflare.server";
+import {
+  assignPolicyDocumentIds,
+  assignPolicyNoteIds,
+} from "~/lib/db/assign-child-uuids";
 import { getDb } from "~/lib/db/client";
 import {
   type PolicyChildRows,
@@ -7,11 +12,6 @@ import {
   rowsToPolicy,
 } from "~/lib/db/policy-mapper";
 import {
-  resolvePolicyDocumentIds,
-  resolvePolicyNoteIds,
-} from "~/lib/db/resolve-global-ids";
-import {
-  appUserRecentRoute,
   policy,
   policyCar,
   policyCarAdjustment,
@@ -21,11 +21,21 @@ import {
 } from "~/lib/db/schema";
 import type { Policy, PolicySummary } from "~/lib/db/types";
 import { trackUsage } from "~/lib/observability/metrics.server";
+import type { PdfWorkerBinding } from "~/lib/pdf/pdf-worker.server";
 import { normalizeExcesses } from "~/lib/policies/excesses";
 import { createInformationalNote } from "~/lib/policies/policy-notes";
 import { formatPolicyNumberFromSeq } from "~/lib/policies/policy-number";
 import { normalizeSubLimits } from "~/lib/policies/sub-limits";
 import { getClient, listClients } from "~/lib/services/clients/service";
+import {
+  removeRecentRoutesForEntity,
+  removeRecentRoutesForPolicies,
+} from "~/lib/services/navigation/recent-routes.server";
+import {
+  applyPolicyDocumentR2Keys,
+  preservePolicyDocumentR2Keys,
+  sanitizePolicyDocumentForDb,
+} from "~/lib/services/policy/documents/persist.server";
 import {
   getDefaultExcesses,
   getReferenceData,
@@ -33,6 +43,12 @@ import {
 import { POLICY_STATUS } from "~/lib/zod/policy-car";
 
 const POLICY_NUMBER_ALLOCATE_MAX_ATTEMPTS = 25;
+
+export type SavePolicyOptions = {
+  actor?: string;
+  libraryBucket?: R2BucketLike | null;
+  pdfService?: PdfWorkerBinding | null;
+};
 
 /**
  * Next human-facing policy number from {@link policy_number_seq}, skipping values
@@ -92,17 +108,8 @@ export async function deletePolicyDraft(policyId: string, userId?: string) {
   const db = getDb();
   await db.delete(policy).where(eq(policy.policyId, policyId));
 
-  // Clean up recent navigation entry for deleted draft policy
   if (userId) {
-    const policyPath = `/policies/${policyId}`;
-    await db
-      .delete(appUserRecentRoute)
-      .where(
-        and(
-          eq(appUserRecentRoute.userId, userId),
-          eq(appUserRecentRoute.path, policyPath),
-        ),
-      );
+    await removeRecentRoutesForEntity(userId, { kind: "policy", id: policyId });
   }
 
   return existing;
@@ -154,17 +161,8 @@ export async function deletePolicies(
     .delete(policy)
     .where(and(inArray(policy.policyId, ids), eq(policy.policyStatusId, 1)));
 
-  // Clean up recent navigation entries for deleted policies
   if (options?.userId) {
-    const policyPaths = ids.map((id) => `/policies/${id}`);
-    await db
-      .delete(appUserRecentRoute)
-      .where(
-        and(
-          eq(appUserRecentRoute.userId, options.userId),
-          inArray(appUserRecentRoute.path, policyPaths),
-        ),
-      );
+    await removeRecentRoutesForPolicies(options.userId, ids);
   }
 
   return rows;
@@ -179,7 +177,19 @@ async function loadPolicyChildren(
   const db = getDb();
   const [documents, notes, selectedWordings] = await Promise.all([
     db
-      .select()
+      .select({
+        documentId: policyDocument.documentId,
+        policyId: policyDocument.policyId,
+        name: policyDocument.name,
+        filename: policyDocument.filename,
+        generationKey: policyDocument.generationKey,
+        templateKey: policyDocument.templateKey,
+        libraryDocumentId: policyDocument.libraryDocumentId,
+        generatedWhen: policyDocument.generatedWhen,
+        generatedBy: policyDocument.generatedBy,
+        documentTypeCode: policyDocument.documentTypeCode,
+        r2Key: policyDocument.r2Key,
+      })
       .from(policyDocument)
       .where(inArray(policyDocument.policyId, policyIds)),
     db.select().from(policyNote).where(inArray(policyNote.policyId, policyIds)),
@@ -337,9 +347,13 @@ function normalizePolicy(item: Policy): Policy {
 
 export async function savePolicy(
   policyDoc: Policy,
-  options?: { actor?: string },
+  options?: SavePolicyOptions,
 ) {
   const db = getDb();
+  const sanitizedPolicy: Policy = {
+    ...policyDoc,
+    documents: policyDoc.documents?.map(sanitizePolicyDocumentForDb),
+  };
   const {
     policyValues,
     carValues,
@@ -347,7 +361,41 @@ export async function savePolicy(
     documentValues,
     noteValues,
     selectedWordingIds,
-  } = policyToRows(policyDoc);
+  } = policyToRows(sanitizedPolicy);
+
+  const existingDocuments = await db
+    .select({
+      documentId: policyDocument.documentId,
+      templateKey: policyDocument.templateKey,
+      libraryDocumentId: policyDocument.libraryDocumentId,
+      filename: policyDocument.filename,
+      generationKey: policyDocument.generationKey,
+      r2Key: policyDocument.r2Key,
+    })
+    .from(policyDocument)
+    .where(eq(policyDocument.policyId, policyDoc.policyId));
+
+  let documentsToInsert = assignPolicyDocumentIds(
+    existingDocuments,
+    documentValues,
+  );
+
+  if (options?.pdfService) {
+    documentsToInsert = await applyPolicyDocumentR2Keys(
+      sanitizedPolicy,
+      documentsToInsert,
+      existingDocuments,
+      {
+        libraryBucket: options.libraryBucket ?? null,
+        pdfService: options.pdfService,
+      },
+    );
+  } else {
+    documentsToInsert = preservePolicyDocumentR2Keys(
+      documentsToInsert,
+      existingDocuments,
+    );
+  }
 
   await db.transaction(async (tx) => {
     const [existing] = await tx
@@ -406,16 +454,20 @@ export async function savePolicy(
     await tx
       .delete(policyDocument)
       .where(eq(policyDocument.policyId, policyDoc.policyId));
-    if (documentValues.length > 0) {
-      const documents = await resolvePolicyDocumentIds(tx, documentValues);
-      await tx.insert(policyDocument).values(documents);
+    if (documentsToInsert.length > 0) {
+      await tx.insert(policyDocument).values(documentsToInsert);
     }
+
+    const existingNotes = await tx
+      .select({ noteId: policyNote.noteId })
+      .from(policyNote)
+      .where(eq(policyNote.policyId, policyDoc.policyId));
 
     await tx
       .delete(policyNote)
       .where(eq(policyNote.policyId, policyDoc.policyId));
     if (noteValues.length > 0) {
-      const notes = await resolvePolicyNoteIds(tx, noteValues);
+      const notes = assignPolicyNoteIds(existingNotes, noteValues);
       await tx.insert(policyNote).values(notes);
     }
 

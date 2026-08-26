@@ -5,13 +5,11 @@ import { submenuStartClass } from "~/components/side-nav/constants";
 import { NavRowButton } from "~/components/side-nav/nav-row-button";
 import { RecentRouteRow } from "~/components/side-nav/recent-route-row";
 import { recentsListHeightPx } from "~/components/side-nav/utils/recents-list-height";
-import { excludeRecentRoute } from "~/lib/services/navigation/recent-routes";
 import type { SideNavLink } from "~/lib/services/navigation/side-nav.service";
 import { cn } from "~/lib/utils";
 
 export function RecentsSection({
   recentRoutes,
-  currentPathname,
   enteringId,
   spilledRoute,
   open,
@@ -19,7 +17,6 @@ export function RecentsSection({
   onToggle,
 }: {
   recentRoutes: SideNavLink[];
-  currentPathname: string;
   enteringId: string | null;
   /** Bottom row kept mounted during insert so the list does not jump. */
   spilledRoute: SideNavLink | null;
@@ -27,22 +24,17 @@ export function RecentsSection({
   iconRail: boolean;
   onToggle: () => void;
 }) {
-  const visibleRoutes = React.useMemo(
-    () => excludeRecentRoute(recentRoutes, currentPathname),
-    [recentRoutes, currentPathname],
-  );
-
   const displayRoutes = React.useMemo(() => {
-    if (!spilledRoute || !enteringId) return visibleRoutes;
-    if (visibleRoutes.some((route) => route.id === spilledRoute.id)) {
-      return visibleRoutes;
+    if (!spilledRoute || !enteringId) return recentRoutes;
+    if (recentRoutes.some((route) => route.id === spilledRoute.id)) {
+      return recentRoutes;
     }
-    return [...visibleRoutes, spilledRoute];
-  }, [visibleRoutes, spilledRoute, enteringId]);
+    return [...recentRoutes, spilledRoute];
+  }, [recentRoutes, spilledRoute, enteringId]);
 
   // Height follows the committed stack (excludes spilled) so unmounting the
   // spilled row after the insert animation does not change the box height.
-  const listHeightPx = recentsListHeightPx(visibleRoutes);
+  const listHeightPx = recentsListHeightPx(recentRoutes);
   const listOpen = open && !iconRail;
 
   return (

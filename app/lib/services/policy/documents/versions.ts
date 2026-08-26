@@ -20,7 +20,8 @@ function generatedTime(doc: PolicyDocument): number {
 function compareDocumentAge(a: PolicyDocument, b: PolicyDocument): number {
   return (
     generatedTime(a) - generatedTime(b) ||
-    a.policyDocumentId - b.policyDocumentId
+    a.filename.localeCompare(b.filename) ||
+    (a.documentId ?? "").localeCompare(b.documentId ?? "")
   );
 }
 

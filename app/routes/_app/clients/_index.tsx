@@ -120,7 +120,7 @@ export async function action({ request }: Route.ActionArgs) {
   if (!id) return { ok: false as const, error: "Missing id" };
 
   try {
-    const deleted = await deleteClient(id);
+    const deleted = await deleteClient(id, { userId: actor.userId });
     await writeAuditLog({
       actor,
       action: "client.delete",

@@ -106,12 +106,12 @@ export function usePolicyNotes({
     });
   }
 
-  function updateNote(policyNoteId: number, description: string) {
+  function updateNote(noteId: string, description: string) {
     setNoteError(null);
     setIsSavingNote(true);
     const body = new FormData();
     body.set("intent", "update-note");
-    body.set("policyNoteId", String(policyNoteId));
+    body.set("noteId", noteId);
     body.set("description", description);
     fetcher.submit(body, {
       method: "post",

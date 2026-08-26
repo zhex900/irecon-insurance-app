@@ -11,13 +11,14 @@ import {
   UserCogIcon,
   UsersIcon,
 } from "lucide-react";
-import { Link, useNavigation } from "react-router";
+import { useNavigation } from "react-router";
 
 import {
   EditorShell,
   ListShell,
 } from "~/components/documents/templates/loading";
 import { PageHeader } from "~/components/layout/app-layout";
+import { AppLink } from "~/components/navigation/app-link";
 import { ThemeModePicker } from "~/components/theme/theme-toggle";
 import {
   Card,
@@ -235,7 +236,7 @@ export default function SettingsIndexRoute({
 
         <div className="grid gap-4 sm:grid-cols-2">
           {settingsItems.map((item) => (
-            <Link
+            <AppLink
               key={item.to}
               to={item.to}
               prefetch="intent"
@@ -253,7 +254,7 @@ export default function SettingsIndexRoute({
                   <CardDescription>{item.description}</CardDescription>
                 </CardHeader>
               </Card>
-            </Link>
+            </AppLink>
           ))}
         </div>
       </div>

@@ -6,7 +6,7 @@ import { PREMIUM_EXCEL_TEMPLATE_KEY } from "~/lib/excel/constants";
 
 function doc(partial: Partial<PolicyDocument>): PolicyDocument {
   return {
-    policyDocumentId: 1,
+    documentId: "11111111-1111-4111-8111-111111111111",
     policyId: "1",
     name: "Premium Excel",
     filename: "P1_Premium.xlsx",

@@ -122,11 +122,104 @@ export function normalizeRecentPath(raw: string): string | null {
 }
 
 const UUID_SEGMENT = "[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}";
-const CLIENT_PATH_PATTERN = new RegExp(`^/clients/${UUID_SEGMENT}(?:/|$)`);
-const POLICY_PATH_PATTERN = new RegExp(`^/policies/${UUID_SEGMENT}(?:/|$)`);
+export const CLIENT_PATH_PATTERN = new RegExp(
+  `^/clients/(${UUID_SEGMENT})(?:/|$)`,
+);
+export const POLICY_PATH_PATTERN = new RegExp(
+  `^/policies/(${UUID_SEGMENT})(?:/|$)`,
+);
+
+export type RecentEntityRef =
+  { kind: "client"; id: string } | { kind: "policy"; id: string };
+
+export const RECENT_ROUTES_CHANGED_EVENT = "irecon:recent-routes-changed";
+
+const LAST_RECORDED_PATH_KEY = "irecon:recent-routes:last-path";
+
+/** Last app path seen by `useRecentRoutes` (survives full reloads in the tab). */
+export function readLastRecordedPath(): string {
+  if (typeof window === "undefined") return "";
+  try {
+    return sessionStorage.getItem(LAST_RECORDED_PATH_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+export function writeLastRecordedPath(path: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.setItem(LAST_RECORDED_PATH_KEY, path);
+  } catch {
+    // Private browsing / disabled storage.
+  }
+}
+
+export function clearLastRecordedPath(): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.removeItem(LAST_RECORDED_PATH_KEY);
+  } catch {
+    // Private browsing / disabled storage.
+  }
+}
+
+const pendingRemovedEntities: RecentEntityRef[] = [];
+
+/** Notify the shell to reload Recents from the API. */
+export function notifyRecentRoutesChanged(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(RECENT_ROUTES_CHANGED_EVENT));
+}
+
+/** Queue an entity so the next navigation does not re-record it in Recents. */
+export function markRecentEntityRemoved(entity: RecentEntityRef): void {
+  if (typeof window === "undefined") return;
+  pendingRemovedEntities.push(entity);
+}
+
+/**
+ * Queue a removed entity and refresh Recents immediately.
+ * Use when the shell loader will not revalidate (draft discard, etc.).
+ */
+export function markRecentEntityRemovedAndRefresh(
+  entity: RecentEntityRef,
+): void {
+  markRecentEntityRemoved(entity);
+  notifyRecentRoutesChanged();
+}
+
+/** Entities marked removed since the last navigation (consumed once). */
+export function consumeRemovedRecentEntities(): RecentEntityRef[] {
+  if (pendingRemovedEntities.length === 0) return [];
+  return pendingRemovedEntities.splice(0);
+}
+
+export function recentEntityBasePath(entity: RecentEntityRef): string {
+  return entity.kind === "client"
+    ? `/clients/${entity.id}`
+    : `/policies/${entity.id}`;
+}
+
+export function pathMatchesRecentEntity(
+  path: string,
+  entity: RecentEntityRef,
+): boolean {
+  const normalized = normalizeRecentPath(path);
+  if (!normalized) return false;
+  const base = recentEntityBasePath(entity);
+  return normalized === base || normalized.startsWith(`${base}/`);
+}
 
 export function recentIdForPath(path: string): string {
   return `recent-${encodeURIComponent(path)}`;
+}
+
+/** Recents caption suffix for known entity sub-routes (e.g. client edit). */
+export function recentSubpathCaptionSuffix(path: string): string {
+  const segments = path.split("/").filter(Boolean);
+  if (segments.at(-1) === "edit") return " (edit)";
+  return "";
 }
 
 /** Known app routes — label is the page title, caption is the parent nav section. */
@@ -185,19 +278,21 @@ export function recentCaptionForPath(path: string): string {
   const leaf = matchRecentLeafSection(path);
   if (leaf) return leaf.section.rootLabel;
 
-  if (CLIENT_PATH_PATTERN.test(path)) return "Client";
-  if (POLICY_PATH_PATTERN.test(path)) return "Policy";
+  let caption: string;
+  if (CLIENT_PATH_PATTERN.test(path)) caption = "Client";
+  else if (POLICY_PATH_PATTERN.test(path)) caption = "Policy";
+  else {
+    const staticRoute = STATIC_RECENT_ROUTES[path];
+    if (staticRoute) caption = staticRoute.caption;
+    else if (path.startsWith("/settings/")) caption = "Settings";
+    else if (path.startsWith("/reports/")) caption = "Reports";
+    else if (path.startsWith("/clients/")) caption = "Client";
+    else if (path.startsWith("/policies/")) caption = "Policy";
+    else if (path.startsWith("/profile")) caption = "Profile";
+    else caption = "Page";
+  }
 
-  const staticRoute = STATIC_RECENT_ROUTES[path];
-  if (staticRoute) return staticRoute.caption;
-
-  if (path.startsWith("/settings/")) return "Settings";
-  if (path.startsWith("/reports/")) return "Reports";
-  if (path.startsWith("/clients/")) return "Client";
-  if (path.startsWith("/policies/")) return "Policy";
-  if (path.startsWith("/profile")) return "Profile";
-
-  return "Page";
+  return `${caption}${recentSubpathCaptionSuffix(path)}`;
 }
 
 /** Optimistic client-side label until the API resolves the real one. */
@@ -222,7 +317,9 @@ export function recentLabelFallback(path: string, previous?: string): string {
 
   if (previous?.trim()) return previous.trim();
   // UUID ids are meaningless to read — wait for the API to resolve a name.
-  if (CLIENT_PATH_PATTERN.test(path)) return "Client";
+  if (CLIENT_PATH_PATTERN.test(path)) {
+    return `Client${recentSubpathCaptionSuffix(path)}`;
+  }
   if (POLICY_PATH_PATTERN.test(path)) return "Policy";
   const segment = path.split("/").filter(Boolean).pop() ?? path;
   return decodeURIComponent(segment).replace(/[-_]/g, " ");
@@ -238,12 +335,69 @@ export function excludeRecentRoute(
   return routes.filter((route) => route.href !== current);
 }
 
-/** Move `path` to the front of a Recents stack (max 5). */
-export function pushRecentRouteLocal(
+/** Drop every recent route for a deleted client or policy (incl. subpaths). */
+export function excludeRecentRoutesForEntity(
   routes: RecentRouteLink[],
-  path: string,
+  entity: RecentEntityRef,
 ): RecentRouteLink[] {
-  return pushRecentRouteLocalDetailed(routes, path).routes;
+  return routes.filter((route) => !pathMatchesRecentEntity(route.href, entity));
+}
+
+export function excludeRecentRoutesForEntities(
+  routes: RecentRouteLink[],
+  entities: RecentEntityRef[],
+): RecentRouteLink[] {
+  if (entities.length === 0) return routes;
+  return routes.filter(
+    (route) =>
+      !entities.some((entity) => pathMatchesRecentEntity(route.href, entity)),
+  );
+}
+
+export type LeaveNavigationUpdate = {
+  routes: RecentRouteLink[];
+  spilled: RecentRouteLink | null;
+  enteringId: string | null;
+  /** Path to POST to the server, or null when nothing should be recorded. */
+  recordPath: string | null;
+};
+
+/**
+ * Apply optimistic Recents updates when navigating from `previousPath` to
+ * `nextPath`. Handles deleted/discarded entities and the max-stack animation.
+ */
+export function computeLeaveNavigation(
+  currentRoutes: RecentRouteLink[],
+  previousPath: string,
+  nextPath: string,
+  removedEntities: RecentEntityRef[],
+): LeaveNavigationUpdate {
+  const recordPath = normalizeRecentPath(previousPath);
+  const skipRecord =
+    recordPath != null &&
+    removedEntities.some((entity) =>
+      pathMatchesRecentEntity(recordPath, entity),
+    );
+
+  let base = excludeRecentRoute(currentRoutes, nextPath);
+  base = excludeRecentRoutesForEntities(base, removedEntities);
+
+  if (skipRecord || !recordPath) {
+    return {
+      routes: base,
+      spilled: null,
+      enteringId: null,
+      recordPath: null,
+    };
+  }
+
+  const { routes, spilled } = pushRecentRouteLocalDetailed(base, previousPath);
+  return {
+    routes,
+    spilled,
+    enteringId: recentIdForPath(previousPath),
+    recordPath,
+  };
 }
 
 /**

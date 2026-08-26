@@ -1,39 +1,48 @@
 import { z } from "zod";
 
 import { requireAuth } from "~/lib/auth/session/server.server";
+import {
+  getLibraryDocumentsBucket,
+  getPdfService,
+} from "~/lib/cloudflare.server";
 import { parseUuid } from "~/lib/http/route-input";
 import { trackUsage } from "~/lib/observability/metrics.server";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import { getPolicy, savePolicy } from "~/lib/services/policy/data.service";
+import { sanitizePolicyDocumentForDb } from "~/lib/services/policy/documents/persist.server";
 
 import type { Route } from "./+types/policies.$policyId.documents";
 
 const MAX_DOCUMENTS = 50;
-const MAX_PDF_BASE64_LENGTH = 20 * 1024 * 1024;
 // Fingerprints include the bounded policy/document inputs and commonly exceed
 // 500 characters (existing production rows are already >1,300 characters).
 const MAX_GENERATION_KEY_LENGTH = 20_000;
 
+/** Drop stale bigint ids from pre-UUID clients instead of failing the batch. */
+const optionalDocumentIdSchema = z.preprocess(
+  (value) => parseUuid(value),
+  z.string().uuid().optional(),
+);
+
 const policyDocumentSchema = z
   .object({
-    policyDocumentId: z.number().int().positive(),
+    documentId: optionalDocumentIdSchema,
     policyId: z.string().uuid(),
     name: z.string().trim().min(1).max(200),
     filename: z.string().trim().min(1).max(255),
     generationKey: z.string().max(MAX_GENERATION_KEY_LENGTH),
-    content: z.string().max(500_000),
+    content: z.string().max(2_000).optional(),
     templateKey: z.string().trim().min(1).max(200).optional(),
     libraryDocumentId: z.number().int().positive().optional(),
-    mergeInputs: z
-      .record(z.string().max(200), z.string().max(500_000))
-      .optional(),
-    pdfBase64: z.string().max(MAX_PDF_BASE64_LENGTH).optional(),
     generatedWhen: z.string().max(100),
     generatedBy: z.string().max(500),
     documentTypeCode: z.string().trim().max(50).optional(),
     r2Key: z.string().trim().min(1).max(512).optional(),
   })
-  .strict();
+  .strip()
+  .transform((doc) =>
+    sanitizePolicyDocumentForDb({ ...doc, content: doc.content ?? "" }),
+  );
 
 const policyDocumentsBodySchema = z
   .object({
@@ -57,7 +66,7 @@ function normalizeDocumentPolicyIds(body: unknown, policyId: string): unknown {
 }
 
 /** Persist generated policy documents (Postgres via Drizzle). */
-export async function action({ request, params }: Route.ActionArgs) {
+export async function action({ request, params, context }: Route.ActionArgs) {
   if (request.method !== "PUT" && request.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
   }
@@ -102,7 +111,23 @@ export async function action({ request, params }: Route.ActionArgs) {
 
   const documents = parsedBody.data.documents;
   const previousCount = existing.documents?.length ?? 0;
-  const saved = await savePolicy({ ...existing, documents });
+  const pdfService = getPdfService(context);
+  if (!pdfService) {
+    return Response.json(
+      {
+        ok: false,
+        formError: "Document generation is temporarily unavailable.",
+      },
+      { status: 503 },
+    );
+  }
+  const saved = await savePolicy(
+    { ...existing, documents },
+    {
+      libraryBucket: getLibraryDocumentsBucket(context),
+      pdfService,
+    },
+  );
   const countChanged = documents.length !== previousCount;
   trackUsage("document.generate", {
     result: "success",

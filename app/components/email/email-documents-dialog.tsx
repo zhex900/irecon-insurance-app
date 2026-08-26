@@ -47,6 +47,7 @@ import {
   ensureEmailEditorHtml,
   isEmailHtmlBody,
 } from "~/lib/email/templates";
+import { policyDocumentRowKey } from "~/lib/services/policy/documents/merge";
 
 function EmailDocumentsDialogSkeleton() {
   return (
@@ -182,8 +183,10 @@ function EmailDocumentsDialogForm({
 
   const attachmentCount = attachments.length + extraFiles.length;
 
-  function removeAttachment(id: number) {
-    setAttachments((prev) => prev.filter((doc) => doc.policyDocumentId !== id));
+  function removeAttachment(id: string) {
+    setAttachments((prev) =>
+      prev.filter((doc) => policyDocumentRowKey(doc) !== id),
+    );
   }
 
   async function handleSend() {
@@ -308,27 +311,30 @@ function EmailDocumentsDialogForm({
                   </p>
                 ) : (
                   <ul className="flex flex-col gap-1">
-                    {attachments.map((doc) => (
-                      <li
-                        key={doc.policyDocumentId}
-                        className="flex items-start gap-2 rounded-md bg-background px-2 py-1.5 text-sm ring-1 ring-foreground/10"
-                      >
-                        <FileTextIcon className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
-                        <span className="min-w-0 flex-1 break-words">
-                          {doc.filename}
-                        </span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-xs"
-                          className="shrink-0"
-                          aria-label={`Remove ${doc.name}`}
-                          onClick={() => removeAttachment(doc.policyDocumentId)}
+                    {attachments.map((doc) => {
+                      const rowKey = policyDocumentRowKey(doc);
+                      return (
+                        <li
+                          key={rowKey}
+                          className="flex items-start gap-2 rounded-md bg-background px-2 py-1.5 text-sm ring-1 ring-foreground/10"
                         >
-                          <XIcon />
-                        </Button>
-                      </li>
-                    ))}
+                          <FileTextIcon className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+                          <span className="min-w-0 flex-1 break-words">
+                            {doc.filename}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-xs"
+                            className="shrink-0"
+                            aria-label={`Remove ${doc.name}`}
+                            onClick={() => removeAttachment(rowKey)}
+                          >
+                            <XIcon />
+                          </Button>
+                        </li>
+                      );
+                    })}
                     {extraFiles.map((item: FileWithPreview) => {
                       const name = item.file.name;
                       const size =
@@ -483,7 +489,7 @@ export function EmailDocumentsDialog({
         template.body,
         policyNumber,
         footerImageDataUri,
-        documents.map((doc) => doc.policyDocumentId).join(","),
+        documents.map((doc) => policyDocumentRowKey(doc)).join(","),
       ].join("|"),
     [
       recipientType,

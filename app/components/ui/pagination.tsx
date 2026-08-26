@@ -4,8 +4,8 @@ import {
   MoreHorizontalIcon,
 } from "lucide-react";
 import * as React from "react";
-import { Link } from "react-router";
 
+import { AppLink } from "~/components/navigation/app-link";
 import { Button } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
 
@@ -82,7 +82,7 @@ function PaginationLink({
       className={cn(className)}
       nativeButton={false}
       render={
-        <Link
+        <AppLink
           to={destination}
           aria-current={isActive ? "page" : undefined}
           data-slot="pagination-link"

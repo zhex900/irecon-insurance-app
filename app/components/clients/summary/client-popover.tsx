@@ -1,7 +1,7 @@
 import { ArrowUpRightIcon } from "lucide-react";
 import type { ReactNode } from "react";
-import { Link } from "react-router";
 
+import { AppLink } from "~/components/navigation/app-link";
 import { Button } from "~/components/ui/button";
 import {
   Popover,
@@ -109,7 +109,7 @@ export function ClientPopover({
         <div className="border-t p-2.5">
           <Button
             nativeButton={false}
-            render={<Link to={href} />}
+            render={<AppLink to={href} />}
             size="sm"
             className="w-full"
           >

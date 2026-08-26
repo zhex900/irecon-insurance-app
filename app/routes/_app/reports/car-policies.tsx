@@ -1,9 +1,10 @@
 import { DownloadIcon } from "lucide-react";
 import { useMemo } from "react";
-import { Form, Link, useSearchParams } from "react-router";
+import { Form, useSearchParams } from "react-router";
 import { z } from "zod";
 
 import { PageHeader } from "~/components/layout/app-layout";
+import { AppLink } from "~/components/navigation/app-link";
 import { Button, buttonVariants } from "~/components/ui/button";
 import { DateInput } from "~/components/ui/date-input";
 import { Field, FieldGroup, FieldLabel } from "~/components/ui/field";
@@ -277,7 +278,7 @@ export default function CarPolicyReportRoute({
                     {row.policyCount === 0 ? (
                       row.status
                     ) : (
-                      <Link
+                      <AppLink
                         to={statusDetailSearch(
                           loaderData.dateFrom,
                           loaderData.dateTo,
@@ -286,7 +287,7 @@ export default function CarPolicyReportRoute({
                         className="text-foreground underline-offset-4 hover:underline"
                       >
                         {row.status}
-                      </Link>
+                      </AppLink>
                     )}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
@@ -314,12 +315,12 @@ export default function CarPolicyReportRoute({
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Link
+              <AppLink
                 to={`?from=${encodeURIComponent(loaderData.dateFrom)}&to=${encodeURIComponent(loaderData.dateTo)}`}
                 className={buttonVariants({ variant: "outline", size: "sm" })}
               >
                 Close
-              </Link>
+              </AppLink>
               {detailExportHref ? (
                 <a
                   href={detailExportHref}
@@ -370,12 +371,12 @@ export default function CarPolicyReportRoute({
                   detail.rows.map((policy) => (
                     <TableRow key={policy.policyId}>
                       <TableCell className="font-medium">
-                        <Link
+                        <AppLink
                           to={`/policies/${policy.policyId}`}
                           className="text-foreground underline-offset-4 hover:underline"
                         >
                           {policy.clientName}
-                        </Link>
+                        </AppLink>
                       </TableCell>
                       <TableCell>{policy.arName || "—"}</TableCell>
                       <TableCell>{formatDate(policy.createdWhen)}</TableCell>

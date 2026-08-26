@@ -433,9 +433,7 @@ export const carWording = pgTable("car_wording", {
 
 /** Generated / library policy pack documents (legacy PolicyDocument). */
 export const policyDocument = pgTable("policy_document", {
-  policyDocumentId: bigint("policy_document_id", {
-    mode: "number",
-  }).primaryKey(),
+  documentId: uuid("document_id").primaryKey().defaultRandom(),
   policyId: uuid("policy_id")
     .notNull()
     .references(() => policy.policyId, { onDelete: "cascade" }),
@@ -445,8 +443,6 @@ export const policyDocument = pgTable("policy_document", {
   content: text("content").notNull().default(""),
   templateKey: varchar("template_key", { length: 64 }),
   libraryDocumentId: bigint("library_document_id", { mode: "number" }),
-  mergeInputs: jsonb("merge_inputs").$type<Record<string, string>>(),
-  pdfBase64: text("pdf_base64"),
   generatedWhen: timestamp("generated_when", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -457,7 +453,7 @@ export const policyDocument = pgTable("policy_document", {
 
 /** Policy notes (legacy PolicyNote). */
 export const policyNote = pgTable("policy_note", {
-  policyNoteId: bigint("policy_note_id", { mode: "number" }).primaryKey(),
+  noteId: uuid("note_id").primaryKey().defaultRandom(),
   policyId: uuid("policy_id")
     .notNull()
     .references(() => policy.policyId, { onDelete: "cascade" }),

@@ -2,6 +2,7 @@ import type { RefObject } from "react";
 import type { Blocker, NavigateFunction } from "react-router";
 
 import type { Policy } from "~/lib/db/types";
+import { markRecentEntityRemovedAndRefresh } from "~/lib/services/navigation/recent-routes";
 import { discardPolicyDraftClient } from "~/lib/services/policy/draft.client";
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
 
@@ -60,6 +61,10 @@ export function useLeaveActions(options: {
       clearWizardStepState(policy.policyId);
       allowLeaveRef.current = true;
       setDiscardConfirmOpen(false);
+      markRecentEntityRemovedAndRefresh({
+        kind: "policy",
+        id: policy.policyId,
+      });
       proceedOrNavigate({ blocker, navigate, destination: clientPath });
     } catch {
       setDraftSaveError(

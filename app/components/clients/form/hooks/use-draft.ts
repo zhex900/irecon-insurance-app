@@ -13,6 +13,7 @@ import {
   discardClientDraftClient,
   saveClientDraftClient,
 } from "~/lib/services/clients/draft.client";
+import { markRecentEntityRemovedAndRefresh } from "~/lib/services/navigation/recent-routes";
 import type { ClientFormValues } from "~/lib/zod/client";
 
 export function useFormDraft({
@@ -270,6 +271,10 @@ export function useFormDraft({
       }
       allowLeaveRef.current = true;
       setDiscardConfirmOpen(false);
+      markRecentEntityRemovedAndRefresh({
+        kind: "client",
+        id: client.clientId,
+      });
       if (blocker.state === "blocked") {
         blocker.proceed();
       } else {

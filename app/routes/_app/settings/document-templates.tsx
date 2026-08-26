@@ -1,6 +1,6 @@
 import { FilePenLineIcon, PlusIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { Link, useFetcher, useNavigate, useNavigation } from "react-router";
+import { useFetcher, useNavigate, useNavigation } from "react-router";
 import { toast } from "sonner";
 
 import {
@@ -8,6 +8,7 @@ import {
   ListShell,
 } from "~/components/documents/templates/loading";
 import { PageHeader } from "~/components/layout/app-layout";
+import { AppLink } from "~/components/navigation/app-link";
 import { AppSelect } from "~/components/ui/app-select";
 import { Button } from "~/components/ui/button";
 import {
@@ -186,7 +187,7 @@ function LastUpdatedCell({ updatedWhen }: { updatedWhen: string | null }) {
 
 function TemplateCard({ template }: { template: DocumentTemplateListItem }) {
   return (
-    <Link
+    <AppLink
       to={templateHref(template.key)}
       className="group block h-full rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
     >
@@ -208,7 +209,7 @@ function TemplateCard({ template }: { template: DocumentTemplateListItem }) {
           ) : null}
         </CardHeader>
       </Card>
-    </Link>
+    </AppLink>
   );
 }
 

@@ -8,10 +8,10 @@ import {
   UsersIcon,
 } from "lucide-react";
 import { type ComponentType, useRef, useState } from "react";
-import { Link } from "react-router";
 import { toast } from "sonner";
 
 import { PageHeader } from "~/components/layout/app-layout";
+import { AppLink } from "~/components/navigation/app-link";
 import { Badge } from "~/components/reui/badge";
 import { RootErrorBoundary } from "~/components/root-error-boundary";
 import { Button } from "~/components/ui/button";
@@ -93,7 +93,7 @@ function TemplateSummaryCard({
   icon: ComponentType<LucideProps>;
 }) {
   return (
-    <Link
+    <AppLink
       to={href}
       className="group block h-full rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
     >
@@ -125,7 +125,7 @@ function TemplateSummaryCard({
           ) : null}
         </CardHeader>
       </Card>
-    </Link>
+    </AppLink>
   );
 }
 

@@ -9,10 +9,6 @@ export function formatDocTimestamp(date: Date) {
   return `${date.getFullYear()}${pad2(date.getMonth() + 1)}${pad2(date.getDate())} ${pad2(date.getHours())}${pad2(date.getMinutes())}${pad2(date.getSeconds())}${String(date.getMilliseconds()).padStart(3, "0")}`;
 }
 
-export function nextDocumentId(existing: PolicyDocument[]) {
-  return Math.max(0, ...existing.map((doc) => doc.policyDocumentId)) + 1;
-}
-
 /** Next amendment index for a template key (0, 1, 2…) so filenames stay unique. */
 export function nextAmendmentNumber(
   existing: PolicyDocument[],
@@ -151,7 +147,6 @@ export function buildAdjustmentContent(policy: Policy): string {
 }
 
 export function makeDoc(input: {
-  id: number;
   policyId: string;
   name: string;
   filename: string;
@@ -161,11 +156,9 @@ export function makeDoc(input: {
   generatedWhen: string;
   templateKey?: string;
   libraryDocumentId?: number;
-  mergeInputs?: Record<string, string>;
   documentTypeCode?: string;
 }): PolicyDocument {
   return {
-    policyDocumentId: input.id,
     policyId: input.policyId,
     name: input.name,
     filename: input.filename,
@@ -173,7 +166,6 @@ export function makeDoc(input: {
     content: input.content,
     templateKey: input.templateKey,
     libraryDocumentId: input.libraryDocumentId,
-    mergeInputs: input.mergeInputs,
     generatedWhen: input.generatedWhen,
     generatedBy: input.generatedBy,
     documentTypeCode: input.documentTypeCode,

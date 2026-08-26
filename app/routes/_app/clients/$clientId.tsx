@@ -1,14 +1,9 @@
 import { useState } from "react";
-import {
-  Form,
-  Link,
-  redirect,
-  useActionData,
-  useNavigation,
-} from "react-router";
+import { Form, redirect, useActionData, useNavigation } from "react-router";
 
 import { ClientPolicies } from "~/components/clients/summary";
 import { PageHeader } from "~/components/layout/app-layout";
+import { AppLink } from "~/components/navigation/app-link";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import {
@@ -34,6 +29,7 @@ import {
   deleteClient,
   getClient,
 } from "~/lib/services/clients/service";
+import { markRecentEntityRemoved } from "~/lib/services/navigation/recent-routes";
 import { listPoliciesPage } from "~/lib/services/policies/list.service";
 import { deletePolicies } from "~/lib/services/policy/data.service";
 import { getReferenceDataAsync } from "~/lib/services/reference.service";
@@ -172,7 +168,7 @@ export async function action({ request, params }: Route.ActionArgs) {
   }
 
   try {
-    const deleted = await deleteClient(clientId);
+    const deleted = await deleteClient(clientId, { userId: actor.userId });
     await writeAuditLog({
       actor,
       action: "client.delete",
@@ -247,11 +243,11 @@ export default function ClientDetailRoute({
         ]}
         action={
           <div className="flex flex-wrap gap-2">
-            <Link to={`/clients/${client.clientId}/edit`}>
+            <AppLink to={`/clients/${client.clientId}/edit`}>
               <Button type="button" variant="outline">
                 Edit Client
               </Button>
-            </Link>
+            </AppLink>
             {policyCount === 0 ? (
               <Button
                 type="button"
@@ -378,7 +374,15 @@ export default function ClientDetailRoute({
             >
               Cancel
             </Button>
-            <Form method="post">
+            <Form
+              method="post"
+              onSubmit={() => {
+                markRecentEntityRemoved({
+                  kind: "client",
+                  id: client.clientId,
+                });
+              }}
+            >
               <input type="hidden" name="intent" value="delete" />
               <LoadingButton
                 type="submit"

@@ -1,6 +1,7 @@
-import { Form, Link } from "react-router";
+import { Form } from "react-router";
 
 import { AppBreadcrumb } from "~/components/layout/app-breadcrumb";
+import { AppLink } from "~/components/navigation/app-link";
 import { NewPolicyClientDialog } from "~/components/policies/new-policy-client-dialog";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
@@ -104,24 +105,24 @@ export default function DashboardRoute({ loaderData }: Route.ComponentProps) {
             <CardTitle className="text-base">Quick links</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-2 text-sm">
-            <Link className="text-primary hover:underline" to="/clients">
+            <AppLink className="text-primary hover:underline" to="/clients">
               Clients directory →
-            </Link>
-            <Link className="text-primary hover:underline" to="/policies">
+            </AppLink>
+            <AppLink className="text-primary hover:underline" to="/policies">
               All policies →
-            </Link>
-            <Link
+            </AppLink>
+            <AppLink
               className="text-primary hover:underline"
               to={`/policies?status=${POLICY_STATUS.Pending}`}
             >
               Pending policies →
-            </Link>
-            <Link
+            </AppLink>
+            <AppLink
               className="text-primary hover:underline"
               to={`/policies?status=${POLICY_STATUS.NotTaken}`}
             >
               Not taken policies →
-            </Link>
+            </AppLink>
           </CardContent>
         </Card>
       </div>
@@ -141,7 +142,7 @@ function StatCard({
   to: string;
 }) {
   return (
-    <Link
+    <AppLink
       to={to}
       className="block rounded-xl transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
     >
@@ -158,6 +159,6 @@ function StatCard({
           <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
         </CardContent>
       </Card>
-    </Link>
+    </AppLink>
   );
 }

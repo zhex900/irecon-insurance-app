@@ -1,5 +1,5 @@
+import { policyDocumentIdentityKey } from "~/lib/db/policy-document-identity";
 import type { PolicyDocument } from "~/lib/db/types";
-import { nextDocumentId } from "~/lib/services/policy/documents/content";
 
 function isVersionedDocument(doc: PolicyDocument) {
   return Boolean(doc.templateKey);
@@ -78,12 +78,7 @@ export function mergeReviewDocuments(
 
   if (options?.replace) {
     const kept = current.filter(isPreservedAcrossCoverReplace);
-    let id = nextDocumentId(kept);
-    const replaced = pack.map((doc) => ({
-      ...doc,
-      policyDocumentId: id++,
-    }));
-    return [...kept, ...replaced];
+    return [...kept, ...pack];
   }
 
   const key = pack[0]?.generationKey;
@@ -117,19 +112,12 @@ export function mergeReviewDocuments(
     return current;
   }
 
-  let id = nextDocumentId(current);
+  const appendedVersioned = versionedUpToDate ? [] : versionedIncoming;
+  return [...current, ...appendedVersioned, ...missingFixed];
+}
 
-  const appendedVersioned = versionedUpToDate
-    ? []
-    : versionedIncoming.map((doc) => ({
-        ...doc,
-        policyDocumentId: id++,
-      }));
-
-  const addedFixed = missingFixed.map((doc) => ({
-    ...doc,
-    policyDocumentId: id++,
-  }));
-
-  return [...current, ...appendedVersioned, ...addedFixed];
+/** Stable client-side key before the server assigns documentId. */
+export function policyDocumentRowKey(doc: PolicyDocument): string {
+  if (doc.documentId) return doc.documentId;
+  return policyDocumentIdentityKey(doc);
 }

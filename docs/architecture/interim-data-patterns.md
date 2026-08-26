@@ -18,7 +18,7 @@ Temporary schema and storage choices used during Phase 1 rebuild and legacy migr
 | Static lookups              | `app/lib/reference-data.ts`                | Active interim                                                     | Migrate catalogues to DB tables                          |
 | `is_draft`                  | `policy.is_draft`                          | Active interim                                                     | Derive from status + premium                             |
 | Denormalized rating         | `policy_car.*` rate columns                | Stable                                                             | Optional `policy_car_rating` table later                 |
-| Document fallbacks          | `policy_document.pdf_base64`, `content`    | Active interim                                                     | R2-only when legacy parity allows                        |
+| Document fallbacks          | `policy_document.pdf_base64`, `content`    | **Done** — R2-only; columns dropped; metadata loader               |
 | Legacy migration IDs        | `legacyPolicyUuid`, deduped policy numbers | Migration-era                                                      | Keep for re-import; not runtime product design           |
 | Repair scripts              | `db:repair:migrated-policies`, etc.        | Migration-era                                                      | Run after imports; document in runbooks                  |
 | Client session cache        | `sessionStorage`, wizard step memory       | Ephemeral UX                                                       | No DB work needed                                        |
@@ -183,12 +183,14 @@ These are **not** catch-all bags. Each column has a fixed TypeScript shape and Z
 
 **Table:** `policy_document`
 
-| Field          | Role                                        | Target state                                         |
-| -------------- | ------------------------------------------- | ---------------------------------------------------- |
-| `r2_key`       | Canonical PDF in R2                         | Primary for migrated + generated docs                |
-| `pdf_base64`   | Inline PDF (session / Excel export / email) | Drop when generation always uploads to R2            |
-| `content`      | Plain text for legacy text-PDF builder      | Keep for text-only endorsements or drop if all pdfme |
-| `merge_inputs` | pdfme merge field overrides                 | JSONB OK — shape varies by template                  |
+| Field              | Role                                    | Status                                             |
+| ------------------ | --------------------------------------- | -------------------------------------------------- |
+| `r2_key`           | Canonical PDF in R2                     | **Primary** for migrated + generated template docs |
+| `content`          | Legacy text-PDF fallback (non-template) | Capped at 2KB; empty for template rows             |
+| ~~`pdf_base64`~~   | —                                       | **Dropped**                                        |
+| ~~`merge_inputs`~~ | —                                       | **Dropped** — regenerate from live policy          |
+
+**Backfill:** `npm run db:repair:policy-document-r2 -- --env=local`
 
 **Code:** `app/lib/pdf/generate.ts`, `app/lib/services/email/send-policy-documents.server.ts`, `app/routes/api/policies.$policyId.documents.tsx`
 
@@ -228,7 +230,7 @@ Not persisted domain data — no normalization task.
 2. **`reference-data.ts` → DB tables** — highest ongoing maintenance cost; enables admin editing of catalogues.
 3. **Stage 2 adjustments** — replaces `app_snapshot` and single-row overwrite model.
 4. **`is_draft` derivation** — small schema cleanup once lifecycle rules are stable.
-5. **`policy_document` R2-only** — reduce row size and duplicate PDF bytes.
+5. **`policy_document` R2-only** — done (`db:repair:policy-document-r2` for backfill).
 6. **Optional row normalization** — `sub_limits`, `excesses`, custom `wordings` only if reporting requires it.
 
 ---

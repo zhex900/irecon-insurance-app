@@ -23,6 +23,14 @@ export function legacyPolicyUuid(legacyPolicyId: number): string {
   return legacyUuid("policy", legacyPolicyId);
 }
 
+export function legacyPolicyDocumentUuid(legacyDocumentId: number): string {
+  return legacyUuid("policy-document", legacyDocumentId);
+}
+
+export function legacyPolicyNoteUuid(legacyNoteId: number): string {
+  return legacyUuid("policy-note", legacyNoteId);
+}
+
 export function policyDocumentR2Key(
   policyUuid: string,
   legacyDocumentId: number,

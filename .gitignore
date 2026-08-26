@@ -36,6 +36,7 @@ supabase/.branches/
 coverage/
 test-results/
 playwright-report/
+.playwright-cli/
 blob-report/
 playwright/.auth/
 playwright/.cache/
@@ -43,6 +44,7 @@ workers/excel/test-output/
 
 # Local MSSQL credentials (live under _archive/mssql/)
 _archive/mssql/.env.mssql
+_archive/data/legacy-documents-sync-state.local.json
 
 # Nested git checkout under archive (not part of this repo)
 _archive/legacy-app/

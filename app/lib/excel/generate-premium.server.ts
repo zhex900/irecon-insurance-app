@@ -1,15 +1,12 @@
 import { z } from "zod";
 
-import type { Policy, PolicyDocument } from "~/lib/db/types";
+import type { Policy } from "~/lib/db/types";
 import {
   ExternalServiceError,
   NotFoundError,
   ValidationError,
 } from "~/lib/errors";
-import {
-  PREMIUM_EXCEL_FILENAME_PREFIX,
-  PREMIUM_EXCEL_TEMPLATE_KEY,
-} from "~/lib/excel/constants";
+import { PREMIUM_EXCEL_FILENAME_PREFIX } from "~/lib/excel/constants";
 import type { ExcelWorkerBinding } from "~/lib/excel/excel-worker.server";
 import type {
   Policy as ExcelPolicy,
@@ -179,12 +176,18 @@ async function renderPremiumWorkbook(
   return bytes;
 }
 
+export type PremiumExcelDownload = {
+  filename: string;
+  /** XLSX file bytes, base64-encoded (legacy response field name). */
+  pdfBase64: string;
+};
+
 /** Load policy from DB and generate a premium workbook via the Excel worker. */
 export async function generatePremiumExcelDocument(input: {
   policyId: string;
   generatedBy: string;
   excelService: ExcelWorkerBinding;
-}): Promise<PolicyDocument> {
+}): Promise<PremiumExcelDownload> {
   const policy = await getPolicy(input.policyId);
   if (!policy) throw new NotFoundError("Policy not found");
   const premium = policy.car.premium;
@@ -200,18 +203,9 @@ export async function generatePremiumExcelDocument(input: {
   );
   const filename = `${PREMIUM_EXCEL_FILENAME_PREFIX}-${policy.policyNumber || policy.policyId}.xlsx`;
   const contentBase64 = bytesToBase64(bytes);
-  const when = new Date().toISOString();
 
   return {
-    policyDocumentId: 0,
-    policyId: policy.policyId,
-    name: filename.replace(/\.xlsx$/i, ""),
     filename,
-    generationKey: `excel|${policy.policyId}|${policy.car.adjusted ? "adjusted" : "unadjusted"}`,
-    content: contentBase64,
-    templateKey: PREMIUM_EXCEL_TEMPLATE_KEY,
-    generatedWhen: when,
-    generatedBy: input.generatedBy,
     pdfBase64: contentBase64,
   };
 }

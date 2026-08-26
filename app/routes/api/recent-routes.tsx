@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { requireAuth } from "~/lib/auth/session/server.server";
 import {
+  clearRecentRoutes,
   listRecentRoutes,
   pushRecentRoute,
 } from "~/lib/services/navigation/recent-routes.server";
@@ -19,9 +20,16 @@ export async function loader({ request }: Route.LoaderArgs) {
   return Response.json({ routes });
 }
 
-/** POST — push a path onto the Recents stack (newest first, max 5). */
+/** POST — push a path onto the Recents stack (newest first, max 5).
+ *  DELETE — clear the signed-in user's Recents stack. */
 export async function action({ request }: Route.ActionArgs) {
   const viewer = await requireAuth(request);
+
+  if (request.method === "DELETE") {
+    await clearRecentRoutes(viewer.userId);
+    return Response.json({ ok: true as const, routes: [] });
+  }
+
   if (request.method !== "POST") {
     return Response.json({ error: "Method not allowed" }, { status: 405 });
   }

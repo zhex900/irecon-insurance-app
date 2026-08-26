@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { isRouteErrorResponse, Link } from "react-router";
+import { isRouteErrorResponse } from "react-router";
 
 import { ErrorIllustration } from "~/components/error-illustration";
+import { AppLink } from "~/components/navigation/app-link";
 import { Button, buttonVariants } from "~/components/ui/button";
 import { getResourceNotFoundCopy } from "~/lib/http/resource-not-found";
 import { reportClientRouteError } from "~/lib/observability/report-error";
@@ -165,9 +166,9 @@ export function RootErrorBoundary({ error }: { error: unknown }) {
         <p className="mt-1 text-lg text-muted-foreground">{subheading}</p>
         <p className="mt-3 text-sm text-muted-foreground">{details}</p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <Link to="/dashboard" className={cn(buttonVariants())}>
+          <AppLink to="/dashboard" className={cn(buttonVariants())}>
             Go to dashboard
-          </Link>
+          </AppLink>
           {showDebugDetails ? (
             <Button
               type="button"

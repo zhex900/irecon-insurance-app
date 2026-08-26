@@ -121,7 +121,8 @@ export const POLICY_REFERRAL_NOTE_TYPE_ID = 2;
 export const POLICY_MESSAGE_NOTE_TYPE_ID = 3;
 
 export type PolicyNote = {
-  policyNoteId: number;
+  /** Assigned by the server on first persist. */
+  noteId?: string;
   policyId: string;
   policyNoteTypeId: number;
   description: string;
@@ -228,22 +229,19 @@ export type CarAdjustmentRecord = {
 };
 
 export type PolicyDocument = {
-  policyDocumentId: number;
+  /** Assigned by the server on first persist. */
+  documentId?: string;
   policyId: string;
   name: string;
   filename: string;
   /** Fingerprint of the policy snapshot used to generate this pack. */
   generationKey: string;
-  /** Human-readable summary / library placeholder text. */
+  /** Human-readable summary for non-template / legacy text-PDF fallback. */
   content: string;
   /** pdfme template key (generated docs). Absent for library attachments. */
   templateKey?: string;
   /** Library document id when this row was copied from Library Documents. */
   libraryDocumentId?: number;
-  /** Legacy MERGEFIELD → value map used for generation / regeneration. */
-  mergeInputs?: Record<string, string>;
-  /** Optional cached PDF (base64) from last generate. */
-  pdfBase64?: string;
   generatedWhen: string;
   generatedBy: string;
   /** Document type code (CARSCHED, CARRATING, CARADJUST, CARADDIT) */

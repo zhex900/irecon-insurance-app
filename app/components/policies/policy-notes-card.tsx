@@ -38,7 +38,7 @@ function authorLabel(
 function canEditNote(
   note: PolicyNote,
   canAddNotes: boolean,
-  onUpdateNote?: (policyNoteId: number, description: string) => void,
+  onUpdateNote?: (noteId: string, description: string) => void,
 ) {
   return (
     canAddNotes &&
@@ -61,12 +61,12 @@ export function PolicyNotesCard({
   noteAuthors?: Record<string, NoteAuthor>;
   canAddNotes?: boolean;
   onAddNote?: (description: string) => void;
-  onUpdateNote?: (policyNoteId: number, description: string) => void;
+  onUpdateNote?: (noteId: string, description: string) => void;
   noteBusy?: boolean;
   noteError?: string | null;
   className?: string;
 }) {
-  const [selectedNoteId, setSelectedNoteId] = useState<number | null>(null);
+  const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [editDraft, setEditDraft] = useState("");
@@ -80,8 +80,7 @@ export function PolicyNotesCard({
   const selectedNote =
     selectedNoteId == null
       ? null
-      : (orderedNotes.find((note) => note.policyNoteId === selectedNoteId) ??
-        null);
+      : (orderedNotes.find((note) => note.noteId === selectedNoteId) ?? null);
 
   useEffect(() => {
     if (wasBusyRef.current && !noteBusy && !noteError) {
@@ -103,7 +102,7 @@ export function PolicyNotesCard({
     setLocalError(null);
     setEditDraft(note.description);
     setEditing(canEditNote(note, canAddNotes, onUpdateNote));
-    setSelectedNoteId(note.policyNoteId);
+    setSelectedNoteId(note.noteId ?? null);
   }
 
   function submitAdd() {
@@ -126,7 +125,7 @@ export function PolicyNotesCard({
     }
     setLocalError(null);
     pendingSaveRef.current = "edit";
-    onUpdateNote?.(selectedNote.policyNoteId, text);
+    onUpdateNote?.(selectedNote.noteId!, text);
   }
 
   return (
@@ -179,7 +178,12 @@ export function PolicyNotesCard({
                   noteAuthors,
                 );
                 return (
-                  <li key={note.policyNoteId}>
+                  <li
+                    key={
+                      note.noteId ??
+                      `${note.createdWhen}-${note.policyNoteTypeId}`
+                    }
+                  >
                     <button
                       type="button"
                       className="flex w-full flex-col gap-1 px-(--card-spacing) py-2.5 text-left transition-colors hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none focus-visible:ring-inset"

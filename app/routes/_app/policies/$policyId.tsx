@@ -1,7 +1,6 @@
 import { CopyIcon, SlidersHorizontalIcon, Trash2Icon } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Link,
   redirect,
   type ShouldRevalidateFunctionArgs,
   useActionData,
@@ -11,6 +10,7 @@ import {
 } from "react-router";
 import { toast } from "sonner";
 
+import { AppLink } from "~/components/navigation/app-link";
 import { DeletePoliciesDialog } from "~/components/policies/delete-policies-dialog";
 import { PolicyWizard } from "~/components/policies/wizard/wizard";
 import {
@@ -147,6 +147,7 @@ export async function action({ request, params }: Route.ActionArgs) {
       const [deleted] = await deletePolicies([policyId], {
         userId: actor.userId,
       });
+
       await writeAuditLog({
         actor,
         action: "policy.delete",
@@ -212,23 +213,19 @@ export async function action({ request, params }: Route.ActionArgs) {
 
   if (intent === "update-note") {
     const description = String(formData.get("description") ?? "");
-    const policyNoteId = parsePositiveInteger(formData.get("policyNoteId"));
-    if (!policyNoteId) {
+    const noteId = parseUuid(formData.get("noteId"));
+    if (!noteId) {
       return { formError: "Invalid note." };
     }
     try {
-      const policy = await updatePolicyNote(
-        policyId,
-        policyNoteId,
-        description,
-      );
+      const policy = await updatePolicyNote(policyId, noteId, description);
       await writeAuditLog({
         actor,
         action: "policy.note_update",
         entityType: "policy",
         entityId: policyId,
         summary: `Updated note on ${policy.policyNumber}`,
-        metadata: { policyNumber: policy.policyNumber, policyNoteId },
+        metadata: { policyNumber: policy.policyNumber, noteId },
         request,
       });
       return {
@@ -488,12 +485,12 @@ export default function PolicyDetailRoute({
           </Button>
         ) : null}
         {canAdjust ? (
-          <Link to={`/policies/${policy.policyId}/adjust`}>
+          <AppLink to={`/policies/${policy.policyId}/adjust`}>
             <Button size="sm">
               <SlidersHorizontalIcon data-icon="inline-start" />
               {policy.car.adjusted ? "Re-adjust" : "Adjust"}
             </Button>
-          </Link>
+          </AppLink>
         ) : null}
         {canClone ? (
           <Tooltip>

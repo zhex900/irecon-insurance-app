@@ -56,7 +56,6 @@ export const AppSideNav = React.memo(function AppSideNav({
       >
         <RecentsSection
           recentRoutes={recentRoutes}
-          currentPathname={location.pathname}
           enteringId={enteringId}
           spilledRoute={spilledRoute}
           open={recentsOpen}

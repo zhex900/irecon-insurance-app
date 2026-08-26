@@ -1,7 +1,8 @@
-import { Link, redirect } from "react-router";
+import { redirect } from "react-router";
 
 import { AuthHashSessionBridge } from "~/components/auth/auth-hash-session-bridge";
 import { AuthShell } from "~/components/auth/auth-shell";
+import { AppLink } from "~/components/navigation/app-link";
 import { buttonVariants } from "~/components/ui/button";
 import {
   appendAuthSessionCookies,
@@ -84,12 +85,12 @@ export default function AuthConfirmRoute({ loaderData }: Route.ComponentProps) {
         link.
       </p>
       <div className="mt-8">
-        <Link
+        <AppLink
           to="/forgot-password"
           className={cn(buttonVariants({ variant: "secondary" }), "w-full")}
         >
           Request reset link
-        </Link>
+        </AppLink>
       </div>
     </AuthShell>
   );

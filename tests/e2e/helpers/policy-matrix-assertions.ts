@@ -7,6 +7,8 @@ import {
   dismissBlockedTakenDialog,
   markPolicyNotTaken,
   policyIdFromUrl,
+  waitForPolicyRouteSave,
+  waitForPremiumCalculationIdle,
 } from "./policy-wizard";
 
 type PremiumCellAssertion = {
@@ -131,8 +133,7 @@ async function assertPremiumMatchesExpected(
   page: Page,
   expected: PremiumBreakdownExpected,
 ) {
-  // await page.getBy;
-  //#premium
+  await expect(page.locator("#premium")).toBeVisible();
   await page.locator("#premium").scrollIntoViewIfNeeded();
 
   await Promise.all(
@@ -295,6 +296,7 @@ async function setExistingStructurePremium(page: Page, amount: number) {
     .getByRole("textbox", { name: "Edit premium value" })
     .fill(String(amount));
   await page.keyboard.press("Enter");
+  await waitForPremiumCalculationIdle(page);
 }
 
 async function confirmMarkPolicyTaken(page: Page) {
@@ -304,14 +306,13 @@ async function confirmMarkPolicyTaken(page: Page) {
   const dialog = page.getByRole("dialog", { name: "Mark policy as Taken?" });
   await expect(dialog).toBeVisible();
   const policyId = policyIdFromUrl(page);
-  const confirmMarkPolicyTakenPromise = page.waitForResponse(
-    (response) =>
-      response.url().includes(`/policies/${policyId}.data`) &&
-      response.request().method() === "POST",
-  );
+  const confirmMarkPolicyTakenPromise = waitForPolicyRouteSave(page, policyId);
   await page.getByRole("button", { name: /^Confirm$/i }).click();
-  await confirmMarkPolicyTakenPromise;
+  // Taken confirm may regenerate documents (slow on preview) before the save POST.
+  // Prefer the terminal UI outcome over waiting on every network hop.
+  await Promise.race([confirmMarkPolicyTakenPromise, assertPolicyTaken(page)]);
   await expect(dialog).not.toBeVisible();
+  await assertPolicyTaken(page);
 }
 
 export async function completeTakenTerminalFlow(
@@ -336,7 +337,18 @@ export async function completeTakenTerminalFlow(
   await confirmMarkPolicyTaken(page);
   await assertPolicyTaken(page);
 
+  const libraryDocumentsPromise = page.waitForResponse(
+    "**/api/library-documents",
+  );
+  const policeId = policyIdFromUrl(page);
+  const noteAuthorPromise = page.waitForResponse(
+    `**/api/policies/${policeId}/note-authors`,
+  );
+
   await page.reload();
+
+  await Promise.all([libraryDocumentsPromise, noteAuthorPromise]);
+  await page.waitForURL(`/policies/${policeId}`);
 
   await assertPremiumExpectations(page, premiumBreakdownTaken, referralReasons);
   await assertPolicyTaken(page);
@@ -349,7 +361,16 @@ export async function completeNotTakenTerminalFlow(
 ) {
   await markPolicyNotTaken(page);
   await assertPolicyNotTaken(page);
+  const libraryDocumentsPromise = page.waitForResponse(
+    "**/api/library-documents",
+  );
+  const policeId = policyIdFromUrl(page);
+  const noteAuthorPromise = page.waitForResponse(
+    `**/api/policies/${policeId}/note-authors`,
+  );
   await page.reload();
+  await Promise.all([libraryDocumentsPromise, noteAuthorPromise]);
+  await page.waitForURL(`/policies/${policeId}`);
   await assertPolicyNotTaken(page);
   await assertPremiumExpectations(page, premiumBreakdown, referralReasons);
 }

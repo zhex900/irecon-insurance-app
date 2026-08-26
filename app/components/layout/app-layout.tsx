@@ -5,7 +5,7 @@ import {
   UserIcon,
 } from "lucide-react";
 import * as React from "react";
-import { Link, Outlet, useFetcher, useNavigation } from "react-router";
+import { Outlet, useFetcher, useNavigation } from "react-router";
 import { toast } from "sonner";
 
 import { SessionTimeoutDialog } from "~/components/auth/session-timeout-dialog";
@@ -17,6 +17,7 @@ import { GlobalSearch } from "~/components/layout/global-search";
 import { NavigationProgress } from "~/components/layout/navigation-progress";
 import { OfflineDialog } from "~/components/layout/offline-dialog";
 import { Logo } from "~/components/logo";
+import { AppLink } from "~/components/navigation/app-link";
 import { Badge } from "~/components/reui/badge";
 import { AppSideNav } from "~/components/side-nav";
 import { ThemeProvider } from "~/components/theme/theme-provider";
@@ -77,14 +78,14 @@ function SidebarBrand() {
   if (isMobile) {
     return (
       <>
-        <Link
+        <AppLink
           to="/dashboard"
           className="flex w-max items-center gap-2 px-1"
           aria-label={`${APP_NAME} dashboard`}
         >
           <Logo showTagline={false} className="text-sidebar-foreground" />
           <span className="sr-only">{APP_NAME}</span>
-        </Link>
+        </AppLink>
         <SidebarTrigger className="shrink-0" aria-label="Toggle sidebar" />
       </>
     );
@@ -92,7 +93,7 @@ function SidebarBrand() {
 
   if (collapsed) {
     return (
-      <Link
+      <AppLink
         to="/dashboard"
         className="inline-flex size-8 shrink-0 items-center justify-center rounded-md hover:bg-sidebar-accent"
         aria-label={`${APP_NAME} dashboard`}
@@ -102,18 +103,18 @@ function SidebarBrand() {
           alt=""
           className="size-7 rounded-md object-contain"
         />
-      </Link>
+      </AppLink>
     );
   }
 
   return (
-    <Link
+    <AppLink
       to="/dashboard"
       className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden px-1"
     >
       <Logo showTagline={false} className="text-sidebar-foreground" />
       <span className="sr-only">{APP_NAME}</span>
-    </Link>
+    </AppLink>
   );
 }
 
@@ -344,7 +345,7 @@ function AccountMenu({ broker }: { broker: BrokerSession }) {
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
-            <DropdownMenuItem render={<Link to="/profile" />}>
+            <DropdownMenuItem render={<AppLink to="/profile" />}>
               <UserIcon />
               Profile
             </DropdownMenuItem>

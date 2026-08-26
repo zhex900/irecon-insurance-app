@@ -215,7 +215,7 @@ export async function addPolicyNote(
 
 export async function updatePolicyNote(
   policyId: string,
-  policyNoteId: number,
+  noteId: string,
   description: string,
 ) {
   const text = description.trim();
@@ -225,7 +225,7 @@ export async function updatePolicyNote(
   const existing = await getPolicy(policyId);
   if (!existing) throw new NotFoundError("Policy not found");
   const notes = existing.notes ?? [];
-  const index = notes.findIndex((note) => note.policyNoteId === policyNoteId);
+  const index = notes.findIndex((note) => note.noteId === noteId);
   if (index < 0) {
     throw new PolicySaveError("Note not found.");
   }

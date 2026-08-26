@@ -162,21 +162,43 @@ SELECT COUNT(*) FROM policy_document;
 
 ## UAT / production
 
-Same order as local. Scripts include `--confirm`.
+**Production:** see **[production-runbook.md](./production-runbook.md)** for the full ordered checklist (deploy, schema migrations, domain load, R2 documents, verification).
+
+**UAT** (same slice order; validate here before prod):
 
 ```bash
 # Preview
 npm run db:migrate:legacy -- --env=uat --dry-run --only account-managers,ar,clients,policies
 
-# Clear
+# Clear (destructive)
 npm run db:clear:legacy:uat -- --confirm
 
-# Migrate
+# Domain migrate
 npm run db:migrate:legacy:uat
 
-# Documents (after policies on target)
+# Repairs
+npm run db:repair:policy-periods -- --env=uat --confirm
+npm run db:repair:migrated-policies -- --env=uat --confirm
+
+# Documents — upload PDFs to R2 (do NOT use --skip-r2 before prod cutover)
 npm run db:migrate:legacy:documents:uat
+
+# Deploy app (after schema migrations applied)
+npm run deploy:uat
 ```
+
+**Production (short form):**
+
+```bash
+npm run db:export:legacy
+npm run db:migrate:legacy:prod
+npm run db:repair:policy-periods -- --env=prod --confirm
+npm run db:repair:migrated-policies -- --env=prod --confirm
+npm run db:migrate:legacy:documents:prod
+npm run deploy:prod -- --skip-migrate   # see runbook for migrate/deploy order
+```
+
+Alternative: validate on UAT, then `npm run db:copy:prod -- --confirm` — see runbook Path B.
 
 ---
 
@@ -188,7 +210,7 @@ npm run db:migrate:legacy:documents:uat
 | `ar`               | `WholesaleBroker`            | `authorised_representative`                                                                                      |
 | `clients`          | `Client`                     | `client`                                                                                                         |
 | `policies`         | `Policy` + `PolicyCAR`       | `policy`, `policy_car`, `policy_car_adjustment`, `policy_document`, `policy_note`, `policy_car_selected_wording` |
-| `documents`        | `PolicyDocument` + PDF files | R2 + `policy_document`                                                                                           |
+| `documents`        | `PolicyDocument` + PDF files | R2 + `policy_document` (`r2_key`; no inline blobs)                                                               |
 
 Load order: account managers → AR → clients → policies → documents.
 
@@ -231,6 +253,7 @@ Pass after `--` on any `db:migrate:legacy` command:
 
 ## Related docs
 
+- [production-runbook.md](./production-runbook.md) — **production cutover checklist**
 - [mssql-setup.md](./mssql-setup.md) — Docker + restore backup
 - [mappings.md](./mappings.md) — Legacy → Postgres field mapping
 - [documents.md](./documents.md) — PDF / R2 migration

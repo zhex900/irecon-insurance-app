@@ -187,6 +187,86 @@ describe("applyManualPremiumEdit — corrected vs legacy quirks", () => {
     );
   });
 
+  it("ESL edit does not recalculate Stamp Duty", () => {
+    const sd = 134.48;
+    const result = applyManualPremiumEdit({
+      premium: premium({
+        contractWorksBasePremium: 1000,
+        contractWorksTerrorismPremium: 53,
+        contractWorksPlantPremium: 75,
+        contractWorksPlantTerrorismPremium: 3.98,
+        contractWorksPlantESL: 15.8,
+        contractWorksESL: 210.6,
+        contractWorksGST: 135.84,
+        contractWorksStampDuty: sd,
+      }),
+      rating: rating({ eslRate: 0.2, contractWorksStampDutyRate: 0.09 }),
+      key: "contractWorksESL",
+      value: 99,
+    });
+
+    expect(result.premium.contractWorksESL).toBe(99);
+    expect(result.premium.contractWorksStampDuty).toBe(sd);
+  });
+
+  it("Stamp Duty edit does not recalculate ESL", () => {
+    const esl = 210.6;
+    const result = applyManualPremiumEdit({
+      premium: premium({
+        contractWorksBasePremium: 1000,
+        contractWorksTerrorismPremium: 53,
+        contractWorksPlantPremium: 75,
+        contractWorksPlantTerrorismPremium: 3.98,
+        contractWorksPlantESL: 15.8,
+        contractWorksESL: esl,
+        contractWorksGST: 135.84,
+        contractWorksStampDuty: 134.48,
+      }),
+      rating: rating({ eslRate: 0.2, contractWorksStampDutyRate: 0.09 }),
+      key: "contractWorksStampDuty",
+      value: 120,
+    });
+
+    expect(result.premium.contractWorksStampDuty).toBe(120);
+    expect(result.premium.contractWorksESL).toBe(esl);
+  });
+
+  it("liability ESL edit does not recalculate Stamp Duty", () => {
+    const sd = 49.5;
+    const result = applyManualPremiumEdit({
+      premium: premium({
+        liabilityBasePremium: 500,
+        liabilityESL: 0,
+        liabilityGST: 50,
+        liabilityStampDuty: sd,
+      }),
+      rating: rating({ eslRate: 0.2, liabilityStampDutyRate: 0.09 }),
+      key: "liabilityESL",
+      value: 99,
+    });
+
+    expect(result.premium.liabilityESL).toBe(99);
+    expect(result.premium.liabilityStampDuty).toBe(sd);
+  });
+
+  it("liability Stamp Duty edit does not recalculate ESL", () => {
+    const esl = 100;
+    const result = applyManualPremiumEdit({
+      premium: premium({
+        liabilityBasePremium: 500,
+        liabilityESL: esl,
+        liabilityGST: 60,
+        liabilityStampDuty: 49.5,
+      }),
+      rating: rating({ eslRate: 0.2, liabilityStampDutyRate: 0.09 }),
+      key: "liabilityStampDuty",
+      value: 55,
+    });
+
+    expect(result.premium.liabilityStampDuty).toBe(55);
+    expect(result.premium.liabilityESL).toBe(esl);
+  });
+
   it("Quirk 4 fixed: ESL edit does not freeze later True Base tax recalc", () => {
     const afterEsl = applyManualPremiumEdit({
       premium: premium({

@@ -37,6 +37,7 @@ import {
   resolveBrokerTemplateKey,
 } from "~/lib/email/templates";
 import { isPremiumExcelDocument } from "~/lib/excel/client";
+import { policyDocumentRowKey } from "~/lib/services/policy/documents/merge";
 import { versionPolicyDocuments } from "~/lib/services/policy/documents/versions";
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
 
@@ -157,7 +158,7 @@ export function PremiumSummaryDocuments({
   documentsOnly?: boolean;
 }) {
   const form = useFormContext<CarPolicyFormValues>();
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showPreviousVersions, setShowPreviousVersions] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
   const [emailRecipient, setEmailRecipient] =
@@ -184,14 +185,11 @@ export function PremiumSummaryDocuments({
     const rows = showPreviousVersions
       ? allRows
       : allRows.filter((row) => row.isLatest);
-    const visibleIds = rows.map((row) => row.doc.policyDocumentId);
+    const visibleIds = rows.map((row) => policyDocumentRowKey(row.doc));
     return {
       documentRows: rows,
       hasPreviousVersions: allRows.some((row) => !row.isLatest),
-      visibleIdKey: visibleIds
-        .slice()
-        .sort((a, b) => a - b)
-        .join(","),
+      visibleIdKey: visibleIds.slice().sort().join(","),
     };
   }, [documents, showPreviousVersions]);
 
@@ -199,9 +197,7 @@ export function PremiumSummaryDocuments({
   useEffect(() => {
     if (lastVisibleIdKeyRef.current === visibleIdKey) return;
     lastVisibleIdKeyRef.current = visibleIdKey;
-    const visible = new Set(
-      visibleIdKey ? visibleIdKey.split(",").map(Number) : [],
-    );
+    const visible = new Set(visibleIdKey ? visibleIdKey.split(",") : []);
     setSelectedIds((prev) => {
       const next = prev.filter((id) => visible.has(id));
       return next.length === prev.length ? prev : next;
@@ -210,13 +206,15 @@ export function PremiumSummaryDocuments({
 
   const allSelected =
     documentRows.length > 0 &&
-    documentRows.every((row) => selectedIds.includes(row.doc.policyDocumentId));
+    documentRows.every((row) =>
+      selectedIds.includes(policyDocumentRowKey(row.doc)),
+    );
 
   const selectedDocs = documentRows
-    .filter((row) => selectedIds.includes(row.doc.policyDocumentId))
+    .filter((row) => selectedIds.includes(policyDocumentRowKey(row.doc)))
     .map((row) => row.doc);
 
-  function toggleDoc(id: number, checked: boolean) {
+  function toggleDoc(id: string, checked: boolean) {
     setSelectedIds((prev) =>
       checked ? [...prev, id] : prev.filter((item) => item !== id),
     );
@@ -224,7 +222,7 @@ export function PremiumSummaryDocuments({
 
   function toggleAll(checked: boolean) {
     setSelectedIds(
-      checked ? documentRows.map((row) => row.doc.policyDocumentId) : [],
+      checked ? documentRows.map((row) => policyDocumentRowKey(row.doc)) : [],
     );
   }
 
@@ -326,16 +324,17 @@ export function PremiumSummaryDocuments({
           <ScrollArea className="h-48 rounded-md border border-border">
             <ul className="flex flex-col gap-1 p-2">
               {documentRows.map(({ doc, version }) => {
-                const checked = selectedIds.includes(doc.policyDocumentId);
+                const rowKey = policyDocumentRowKey(doc);
+                const checked = selectedIds.includes(rowKey);
                 const shortName = formatDocumentLabel(doc.name);
                 return (
-                  <li key={doc.policyDocumentId}>
+                  <li key={rowKey}>
                     <div className="relative flex items-start gap-2 rounded-md px-1 py-1 pe-9 hover:bg-muted/60">
                       <Checkbox
                         className="mt-0.5"
                         checked={checked}
                         onCheckedChange={(value) =>
-                          toggleDoc(doc.policyDocumentId, Boolean(value))
+                          toggleDoc(rowKey, Boolean(value))
                         }
                         aria-label={`Select ${shortName} version ${version}`}
                       />

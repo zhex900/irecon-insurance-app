@@ -4,10 +4,7 @@ import {
   libraryDocumentMatchesPolicy,
   type LibraryDocumentRecord,
 } from "~/lib/documents/library-documents";
-import {
-  type BrokerFeeLineInput,
-  policyToMergeInputs,
-} from "~/lib/pdf/merge-fields";
+import type { BrokerFeeLineInput } from "~/lib/pdf/merge-fields";
 import type { DocumentTemplate } from "~/lib/pdf/templates";
 import {
   formatDocTimestamp,
@@ -111,17 +108,12 @@ export function buildReviewDocumentPack(
   const when = new Date();
   const stamp = formatDocTimestamp(when);
   const generatedWhen = when.toISOString();
-  const mergeInputs = policyToMergeInputs(policy, {
-    brokerFeeLines: options?.brokerFeeLines,
-  });
-  let nextId = 1;
 
   const docs: PolicyDocument[] = templates.map((template) => {
     const amendment = nextAmendmentNumber(existing, template.key);
     const safeKey = template.key.replace(/[^a-zA-Z0-9_-]+/g, "_");
     const name = packTemplateLabel(template);
     return makeDoc({
-      id: nextId++,
       policyId: policy.policyId,
       name,
       filename: `${safeKey}_${policy.policyNumber}_${amendment}_${stamp}.pdf`,
@@ -134,7 +126,6 @@ export function buildReviewDocumentPack(
       generatedBy,
       generatedWhen,
       templateKey: template.key,
-      mergeInputs,
     });
   });
 
@@ -144,7 +135,6 @@ export function buildReviewDocumentPack(
   for (const item of libraryAttachments) {
     docs.push(
       makeDoc({
-        id: nextId++,
         policyId: policy.policyId,
         name: item.name,
         filename: item.filename,
@@ -227,7 +217,6 @@ export function buildAdjustmentDocumentPack(
   generatedBy: string,
   templates: PackTemplateMeta[],
   existing: PolicyDocument[] = [],
-  options?: { brokerFeeLines?: BrokerFeeLineInput[] },
 ): PolicyDocument[] {
   if (!policy.car.adjustment || !policy.car.premium) return [];
 
@@ -235,17 +224,12 @@ export function buildAdjustmentDocumentPack(
   const when = new Date();
   const stamp = formatDocTimestamp(when);
   const generatedWhen = when.toISOString();
-  const mergeInputs = policyToMergeInputs(policy, {
-    brokerFeeLines: options?.brokerFeeLines,
-  });
-  let nextId = 1;
 
   return templates.map((template) => {
     const amendment = nextAmendmentNumber(existing, template.key);
     const safeKey = template.key.replace(/[^a-zA-Z0-9_-]+/g, "_");
     const name = packTemplateLabel(template);
     return makeDoc({
-      id: nextId++,
       policyId: policy.policyId,
       name,
       filename: `${safeKey}_${policy.policyNumber}_${amendment}_${stamp}.pdf`,
@@ -258,7 +242,6 @@ export function buildAdjustmentDocumentPack(
       generatedBy,
       generatedWhen,
       templateKey: template.key,
-      mergeInputs,
     });
   });
 }

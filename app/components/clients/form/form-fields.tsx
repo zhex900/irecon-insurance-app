@@ -1,5 +1,4 @@
 import { useFormContext } from "react-hook-form";
-import { Link } from "react-router";
 
 import { ArAutocomplete as AuthorisedRepresentativeAutocomplete } from "~/components/clients/representatives";
 import { FormAutocomplete } from "~/components/forms/autocomplete";
@@ -7,6 +6,7 @@ import {
   type PolicySaveStatus,
   PolicySaveStatusBadge,
 } from "~/components/forms/field-save-highlight";
+import { AppLink } from "~/components/navigation/app-link";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { FieldInput } from "~/components/ui/form-controls";
@@ -131,11 +131,11 @@ export function FormFields({
                 Cancel
               </Button>
             ) : (
-              <Link to={cancelTo}>
+              <AppLink to={cancelTo}>
                 <Button type="button" variant="outline">
                   Cancel
                 </Button>
-              </Link>
+              </AppLink>
             )}
           </div>
         </fieldset>
