@@ -7,6 +7,10 @@ import { withSuccessToast } from "~/hooks/utilities";
 import { requireAuth } from "~/lib/auth/session/server.server";
 import { pageTitle } from "~/lib/brand";
 import {
+  getLibraryDocumentsBucket,
+  getPdfService,
+} from "~/lib/cloudflare.server";
+import {
   clientNotFoundResponse,
   policyNotFoundResponse,
 } from "~/lib/http/resource-not-found";
@@ -72,7 +76,7 @@ function parsePayload(raw: string) {
   }
 }
 
-export async function action({ request, params }: Route.ActionArgs) {
+export async function action({ request, params, context }: Route.ActionArgs) {
   const actor = await requireAuth(request);
   const policyId = parseUuid(params.policyId);
   if (!policyId) return { formError: "Invalid policy id." };
@@ -98,7 +102,10 @@ export async function action({ request, params }: Route.ActionArgs) {
 
   try {
     if (intent === "finish") {
-      await submitPolicyAdjustment(policyId, parsed.data, actor.email);
+      await submitPolicyAdjustment(policyId, parsed.data, actor.email, {
+        libraryBucket: getLibraryDocumentsBucket(context),
+        pdfService: getPdfService(context),
+      });
       await writeAuditLog({
         actor,
         action: "policy.adjust",

@@ -30,8 +30,24 @@ type PolicyDocumentRow = typeof policyDocument.$inferSelect;
 type PolicyNoteRow = typeof policyNote.$inferSelect;
 type PolicyCarSelectedWordingRow = typeof policyCarSelectedWording.$inferSelect;
 
+/** Loader / list shape — excludes inline PDF blobs and merge snapshots. */
+export type PolicyDocumentMetadataRow = Pick<
+  PolicyDocumentRow,
+  | "documentId"
+  | "policyId"
+  | "name"
+  | "filename"
+  | "generationKey"
+  | "templateKey"
+  | "libraryDocumentId"
+  | "generatedWhen"
+  | "generatedBy"
+  | "documentTypeCode"
+  | "r2Key"
+>;
+
 export type PolicyChildRows = {
-  documents?: PolicyDocumentRow[];
+  documents?: PolicyDocumentMetadataRow[];
   notes?: PolicyNoteRow[];
   selectedWordings?: PolicyCarSelectedWordingRow[];
 };
@@ -167,18 +183,16 @@ function customWordingsFromRow(wordings: unknown[]): CustomWordingItem[] {
   return normalizeCustomWordings(items);
 }
 
-function documentRowToDomain(row: PolicyDocumentRow): PolicyDocument {
+function documentRowToDomain(row: PolicyDocumentMetadataRow): PolicyDocument {
   return {
     documentId: row.documentId,
     policyId: row.policyId,
     name: row.name,
     filename: row.filename,
     generationKey: row.generationKey,
-    content: row.content,
+    content: "",
     templateKey: row.templateKey ?? undefined,
     libraryDocumentId: row.libraryDocumentId ?? undefined,
-    mergeInputs: row.mergeInputs ?? undefined,
-    pdfBase64: row.pdfBase64 ?? undefined,
     generatedWhen: isoDateTime(row.generatedWhen),
     generatedBy: row.generatedBy,
     documentTypeCode: row.documentTypeCode ?? undefined,
@@ -289,17 +303,16 @@ function dec(value: number | undefined | null): string | null {
 function documentToRow(
   doc: PolicyDocument,
 ): typeof policyDocument.$inferInsert {
+  const content = doc.templateKey ? "" : (doc.content ?? "").slice(0, 2_000);
   return {
     documentId: doc.documentId,
     policyId: doc.policyId,
     name: doc.name,
     filename: doc.filename,
     generationKey: doc.generationKey,
-    content: doc.content,
+    content,
     templateKey: doc.templateKey ?? null,
     libraryDocumentId: doc.libraryDocumentId ?? null,
-    mergeInputs: doc.mergeInputs ?? null,
-    pdfBase64: doc.pdfBase64 ?? null,
     generatedWhen: new Date(doc.generatedWhen),
     generatedBy: doc.generatedBy,
     documentTypeCode: doc.documentTypeCode ?? null,

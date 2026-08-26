@@ -4,10 +4,7 @@ import {
   libraryDocumentMatchesPolicy,
   type LibraryDocumentRecord,
 } from "~/lib/documents/library-documents";
-import {
-  type BrokerFeeLineInput,
-  policyToMergeInputs,
-} from "~/lib/pdf/merge-fields";
+import type { BrokerFeeLineInput } from "~/lib/pdf/merge-fields";
 import type { DocumentTemplate } from "~/lib/pdf/templates";
 import {
   formatDocTimestamp,
@@ -111,9 +108,6 @@ export function buildReviewDocumentPack(
   const when = new Date();
   const stamp = formatDocTimestamp(when);
   const generatedWhen = when.toISOString();
-  const mergeInputs = policyToMergeInputs(policy, {
-    brokerFeeLines: options?.brokerFeeLines,
-  });
 
   const docs: PolicyDocument[] = templates.map((template) => {
     const amendment = nextAmendmentNumber(existing, template.key);
@@ -132,7 +126,6 @@ export function buildReviewDocumentPack(
       generatedBy,
       generatedWhen,
       templateKey: template.key,
-      mergeInputs,
     });
   });
 
@@ -224,7 +217,6 @@ export function buildAdjustmentDocumentPack(
   generatedBy: string,
   templates: PackTemplateMeta[],
   existing: PolicyDocument[] = [],
-  options?: { brokerFeeLines?: BrokerFeeLineInput[] },
 ): PolicyDocument[] {
   if (!policy.car.adjustment || !policy.car.premium) return [];
 
@@ -232,9 +224,6 @@ export function buildAdjustmentDocumentPack(
   const when = new Date();
   const stamp = formatDocTimestamp(when);
   const generatedWhen = when.toISOString();
-  const mergeInputs = policyToMergeInputs(policy, {
-    brokerFeeLines: options?.brokerFeeLines,
-  });
 
   return templates.map((template) => {
     const amendment = nextAmendmentNumber(existing, template.key);
@@ -253,7 +242,6 @@ export function buildAdjustmentDocumentPack(
       generatedBy,
       generatedWhen,
       templateKey: template.key,
-      mergeInputs,
     });
   });
 }

@@ -2,7 +2,9 @@
  * Upload legacy policy PDFs to R2 via the S3-compatible API (AWS CLI).
  */
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 import {
   r2S3Config,
@@ -124,6 +126,25 @@ export function uploadPolicyDocumentToR2(
       },
     },
   );
+}
+
+export function uploadPolicyDocumentBytesToR2(
+  options: Omit<UploadPolicyDocumentOptions, "localPath"> & {
+    bytes: Uint8Array;
+  },
+): void {
+  const dir = mkdtempSync(join(tmpdir(), "irecon-policy-doc-"));
+  const localPath = join(dir, "upload.pdf");
+  try {
+    writeFileSync(localPath, options.bytes);
+    uploadPolicyDocumentToR2({
+      localPath,
+      r2Key: options.r2Key,
+      bucket: options.bucket,
+    });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 }
 
 export function hasR2Credentials(): boolean {

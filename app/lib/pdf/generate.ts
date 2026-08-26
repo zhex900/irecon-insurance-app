@@ -42,13 +42,6 @@ export function uint8ToBase64(bytes: Uint8Array) {
   return btoa(binary);
 }
 
-function base64ToUint8(base64: string) {
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return bytes;
-}
-
 async function fetchPublishedTemplate(
   templateKey: string,
 ): Promise<DocumentTemplate | null> {
@@ -385,23 +378,15 @@ export async function buildPdfBlobFromDocument(
     return buildLegacyTextPdfBlob(doc.name, doc.content);
   }
 
-  if (doc.pdfBase64) {
-    return new Blob([base64ToUint8(doc.pdfBase64)], {
-      type: "application/pdf",
-    });
-  }
-
   const templateKey = doc.templateKey;
   if (!templateKey) {
     return buildLegacyTextPdfBlob(doc.name, doc.content);
   }
 
   // Rebuild from the policy snapshot so Limits / Premium Breakdown overrides
-  // stay current. Pass stored mergeInputs only as Endorsements fallback when
-  // the live catalogue resolve is empty.
+  // stay current.
   if (policy) {
     return buildPdfBlobFromPolicy(templateKey, policy, {
-      mergeInputs: doc.mergeInputs,
       wordingCatalogue: options?.wordingCatalogue,
       brokerFeeLines: options?.brokerFeeLines,
       font: options?.font,

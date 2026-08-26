@@ -443,8 +443,6 @@ export const policyDocument = pgTable("policy_document", {
   content: text("content").notNull().default(""),
   templateKey: varchar("template_key", { length: 64 }),
   libraryDocumentId: bigint("library_document_id", { mode: "number" }),
-  mergeInputs: jsonb("merge_inputs").$type<Record<string, string>>(),
-  pdfBase64: text("pdf_base64"),
   generatedWhen: timestamp("generated_when", { withTimezone: true })
     .notNull()
     .defaultNow(),

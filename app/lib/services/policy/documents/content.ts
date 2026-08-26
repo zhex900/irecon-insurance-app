@@ -156,7 +156,6 @@ export function makeDoc(input: {
   generatedWhen: string;
   templateKey?: string;
   libraryDocumentId?: number;
-  mergeInputs?: Record<string, string>;
   documentTypeCode?: string;
 }): PolicyDocument {
   return {
@@ -167,7 +166,6 @@ export function makeDoc(input: {
     content: input.content,
     templateKey: input.templateKey,
     libraryDocumentId: input.libraryDocumentId,
-    mergeInputs: input.mergeInputs,
     generatedWhen: input.generatedWhen,
     generatedBy: input.generatedBy,
     documentTypeCode: input.documentTypeCode,

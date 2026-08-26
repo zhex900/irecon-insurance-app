@@ -48,6 +48,7 @@
     "db:clear:legacy:documents:pr": "tsx --env-file=.env --env-file=.env.pr scripts/db/clear/clear-legacy-documents.mts --env=pr",
     "db:repair:policy-periods": "tsx scripts/db/repair/repair-migrated-policy-periods.mts",
     "db:repair:migrated-policies": "tsx scripts/db/repair/repair-migrated-policies.mts",
+    "db:repair:policy-document-r2": "tsx scripts/db/repair/repair-policy-document-r2.mts",
     "db:reset": "supabase db reset --yes && npm run db:seed",
     "db:copy:uat": "node --env-file=.env --env-file=.env.uat deployment/copy-uat-to-local.mjs",
     "db:copy:prod": "node --env-file=.env.uat --env-file=.env.production deployment/copy-uat-to-prod.mjs",

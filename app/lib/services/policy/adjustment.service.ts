@@ -2,6 +2,7 @@ import type { CarAdjustmentRecord, Policy, PolicyNote } from "~/lib/db/types";
 import { ValidationError } from "~/lib/errors";
 import { collectEndorsementWordings } from "~/lib/pdf/merge-fields";
 import { listPublishedForAdjustment } from "~/lib/services/documents/document-templates";
+import type { SavePolicyOptions } from "~/lib/services/policy/data.service";
 import { getPolicy, savePolicy } from "~/lib/services/policy/data.service";
 import { mergeReviewDocuments } from "~/lib/services/policy/documents/merge";
 import {
@@ -49,6 +50,7 @@ export async function submitPolicyAdjustment(
   policyId: string,
   input: CarAdjustmentInput,
   createdBy: string,
+  saveOptions?: SavePolicyOptions,
 ) {
   const existing = await getPolicy(policyId);
   if (!existing) throw new AdjustmentError("Policy not found");
@@ -138,5 +140,5 @@ export async function submitPolicyAdjustment(
     templates: templateMeta,
   });
 
-  return savePolicy({ ...policy, documents });
+  return savePolicy({ ...policy, documents }, saveOptions);
 }

@@ -236,16 +236,12 @@ export type PolicyDocument = {
   filename: string;
   /** Fingerprint of the policy snapshot used to generate this pack. */
   generationKey: string;
-  /** Human-readable summary / library placeholder text. */
+  /** Human-readable summary for non-template / legacy text-PDF fallback. */
   content: string;
   /** pdfme template key (generated docs). Absent for library attachments. */
   templateKey?: string;
   /** Library document id when this row was copied from Library Documents. */
   libraryDocumentId?: number;
-  /** Legacy MERGEFIELD → value map used for generation / regeneration. */
-  mergeInputs?: Record<string, string>;
-  /** Optional cached PDF (base64) from last generate. */
-  pdfBase64?: string;
   generatedWhen: string;
   generatedBy: string;
   /** Document type code (CARSCHED, CARRATING, CARADJUST, CARADDIT) */

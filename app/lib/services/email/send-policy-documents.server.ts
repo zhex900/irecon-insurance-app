@@ -114,6 +114,13 @@ async function resolveDocumentPdfBytes({
   pdfService,
   requestId,
 }: ResolveDocumentPdfInput): Promise<Uint8Array> {
+  if (doc.r2Key && libraryBucket) {
+    const object = await getLibraryDocumentObject(libraryBucket, doc.r2Key);
+    if (object?.body) {
+      return new Uint8Array(await new Response(object.body).arrayBuffer());
+    }
+  }
+
   if (!doc.templateKey) {
     if (libraryBucket) {
       const libraryDoc =
@@ -131,13 +138,6 @@ async function resolveDocumentPdfBytes({
       }
     }
     return blobToUint8(await buildLegacyTextPdfBlob(doc.name, doc.content));
-  }
-
-  if (doc.pdfBase64) {
-    const binary = atob(doc.pdfBase64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    return bytes;
   }
 
   const resolved = await resolvePublishedPdfTemplate(doc.templateKey);
