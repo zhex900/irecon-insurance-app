@@ -16,7 +16,7 @@ import type {
   CarSubLimits,
   PolicyNote,
 } from "../../../../app/lib/db/types";
-import { legacyClientUuid, legacyPolicyUuid } from "./legacy-id-map.mts";
+import { legacyClientUuid, legacyPolicyNoteUuid, legacyPolicyUuid } from "./legacy-id-map.mts";
 import type {
   LegacyPolicyAdjustment,
   LegacyPolicyExcesses,
@@ -380,7 +380,7 @@ function mapLegacyNotes(
   policyUuid: string,
 ): PolicyNote[] {
   return row.notes.map((note) => ({
-    policyNoteId: note.policyNoteId,
+    noteId: legacyPolicyNoteUuid(note.policyNoteId),
     policyId: policyUuid,
     policyNoteTypeId: note.policyNoteTypeId,
     description: note.description,

@@ -30,7 +30,7 @@
     "db:migrate:legacy:local": "tsx scripts/db/legacy/migrate-legacy-domain.mts --env=local --replace --only account-managers,ar,clients,policies",
     "db:migrate:legacy:uat": "tsx scripts/db/legacy/migrate-legacy-domain.mts --env=uat --confirm --replace --only account-managers,ar,clients,policies",
     "db:migrate:legacy:prod": "tsx scripts/db/legacy/migrate-legacy-domain.mts --env=prod --confirm --replace --only account-managers,ar,clients,policies",
-    "db:migrate:legacy:documents:local": "tsx scripts/db/legacy/migrate-legacy-domain.mts --env=local --only documents --file _archive/data/legacy-export.json",
+    "db:migrate:legacy:documents:local": "tsx scripts/db/legacy/migrate-legacy-domain.mts --env=local --only documents --skip-r2 --file _archive/data/legacy-export.json",
     "db:migrate:legacy:documents:uat": "tsx scripts/db/legacy/migrate-legacy-domain.mts --env=uat --confirm --only documents --file _archive/data/legacy-export.json",
     "db:migrate:legacy:documents:prod": "tsx scripts/db/legacy/migrate-legacy-domain.mts --env=prod --confirm --only documents --file _archive/data/legacy-export.json",
     "db:seed:prices": "tsx --env-file=.env scripts/db/seed/seed-prices.mts",

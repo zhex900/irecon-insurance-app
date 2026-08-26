@@ -58,7 +58,7 @@ describe("premium note helpers", () => {
   it("sortPolicyNotesDescending puts newest first", () => {
     const sorted = sortPolicyNotesDescending([
       {
-        policyNoteId: 1,
+        noteId: "11111111-1111-4111-8111-111111111111",
         policyId: "p1",
         policyNoteTypeId: 1,
         description: "older",
@@ -66,7 +66,7 @@ describe("premium note helpers", () => {
         createdBy: "a@demo.local",
       },
       {
-        policyNoteId: 2,
+        noteId: "22222222-2222-4222-8222-222222222222",
         policyId: "p1",
         policyNoteTypeId: 3,
         description: "newer",

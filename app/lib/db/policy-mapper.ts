@@ -169,7 +169,7 @@ function customWordingsFromRow(wordings: unknown[]): CustomWordingItem[] {
 
 function documentRowToDomain(row: PolicyDocumentRow): PolicyDocument {
   return {
-    policyDocumentId: row.policyDocumentId,
+    documentId: row.documentId,
     policyId: row.policyId,
     name: row.name,
     filename: row.filename,
@@ -188,7 +188,7 @@ function documentRowToDomain(row: PolicyDocumentRow): PolicyDocument {
 
 function noteRowToDomain(row: PolicyNoteRow): PolicyNote {
   return {
-    policyNoteId: row.policyNoteId,
+    noteId: row.noteId,
     policyId: row.policyId,
     policyNoteTypeId: row.policyNoteTypeId,
     description: row.description,
@@ -290,7 +290,7 @@ function documentToRow(
   doc: PolicyDocument,
 ): typeof policyDocument.$inferInsert {
   return {
-    policyDocumentId: doc.policyDocumentId,
+    documentId: doc.documentId,
     policyId: doc.policyId,
     name: doc.name,
     filename: doc.filename,
@@ -309,7 +309,7 @@ function documentToRow(
 
 function noteToRow(note: PolicyNote): typeof policyNote.$inferInsert {
   return {
-    policyNoteId: note.policyNoteId,
+    noteId: note.noteId,
     policyId: note.policyId,
     policyNoteTypeId: note.policyNoteTypeId,
     description: note.description,

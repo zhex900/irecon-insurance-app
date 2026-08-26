@@ -5,10 +5,6 @@ import {
   type PolicyNote,
 } from "~/lib/db/types";
 
-function nextPolicyNoteId() {
-  return Date.now();
-}
-
 export function buildReferralNotes(
   policyId: string,
   reasons: string[],
@@ -17,7 +13,6 @@ export function buildReferralNotes(
   if (reasons.length === 0) return [];
   return [
     {
-      policyNoteId: nextPolicyNoteId(),
       policyId,
       policyNoteTypeId: POLICY_REFERRAL_NOTE_TYPE_ID,
       description: reasons.join("\n"),
@@ -56,7 +51,6 @@ export function createMessageNote(
   createdBy: string,
 ): PolicyNote {
   return {
-    policyNoteId: nextPolicyNoteId(),
     policyId,
     policyNoteTypeId: POLICY_MESSAGE_NOTE_TYPE_ID,
     description: description.trim(),
@@ -72,7 +66,6 @@ export function createInformationalNote(
   createdBy: string,
 ): PolicyNote {
   return {
-    policyNoteId: nextPolicyNoteId(),
     policyId,
     policyNoteTypeId: POLICY_INFORMATIONAL_NOTE_TYPE_ID,
     description: description.trim(),
@@ -86,9 +79,5 @@ export function sortPolicyNotesDescending(
   notes: PolicyNote[] | undefined,
 ): PolicyNote[] {
   if (!notes?.length) return [];
-  return [...notes].sort((a, b) => {
-    const byWhen = b.createdWhen.localeCompare(a.createdWhen);
-    if (byWhen !== 0) return byWhen;
-    return b.policyNoteId - a.policyNoteId;
-  });
+  return [...notes].sort((a, b) => b.createdWhen.localeCompare(a.createdWhen));
 }

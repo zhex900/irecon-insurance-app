@@ -43,6 +43,7 @@ import {
 } from "./legacy-document-upload.mts";
 import {
   legacyClientUuid,
+  legacyPolicyDocumentUuid,
   legacyPolicyUuid,
   policyDocumentR2Key,
 } from "./legacy-id-map.mts";
@@ -61,7 +62,7 @@ import type {
   LegacyPolicyDocumentRow,
 } from "./legacy-payload.ts";
 
-const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../../..");
 
 export type LoadLegacyDomainOptions = {
   data: LegacyDomainPayload;
@@ -145,7 +146,7 @@ function buildLegacyPolicyDocumentEntry(
     doc.filename,
   );
   return {
-    policyDocumentId: doc.policyDocumentId,
+    documentId: legacyPolicyDocumentUuid(doc.policyDocumentId),
     policyId: policyUuid,
     name: doc.documentName,
     filename: doc.filename,
@@ -180,7 +181,7 @@ async function upsertPolicyDocumentInPostgres(entry: PolicyDocument) {
   await db
     .insert(policyDocument)
     .values({
-      policyDocumentId: entry.policyDocumentId,
+      documentId: entry.documentId!,
       policyId: entry.policyId,
       name: entry.name,
       filename: entry.filename,
@@ -196,7 +197,7 @@ async function upsertPolicyDocumentInPostgres(entry: PolicyDocument) {
       r2Key: entry.r2Key ?? null,
     })
     .onConflictDoUpdate({
-      target: policyDocument.policyDocumentId,
+      target: policyDocument.documentId,
       set: {
         name: entry.name,
         filename: entry.filename,
@@ -213,6 +214,18 @@ async function upsertPolicyDocumentInPostgres(entry: PolicyDocument) {
       },
     });
   return true;
+}
+
+async function persistDocumentMetadataOnly(
+  entry: PolicyDocument,
+  documentsOnly: boolean,
+  dryRun: boolean | undefined,
+  syncState: LegacyDocumentSyncState | null,
+): Promise<boolean> {
+  if (!documentsOnly || dryRun) return false;
+  const updated = await upsertPolicyDocumentInPostgres(entry);
+  if (updated && syncState) syncState.stats.postgresUpdated += 1;
+  return updated;
 }
 
 async function resolveDefaultArId(explicit: number | null | undefined) {
@@ -443,6 +456,10 @@ export async function loadLegacyDomain(options: LoadLegacyDomainOptions) {
     const exportPath =
       options.exportPath ?? join(repoRoot, "_archive/data/legacy-export.json");
 
+    let syncState: LegacyDocumentSyncState | null = null;
+    let completedIds = new Set<number>();
+    let missingIds = new Set<number>();
+
     if (options.clearDocuments) {
       console.log("Clearing migrated legacy documents…");
       const cleared = await clearLegacyDocuments({
@@ -474,10 +491,6 @@ export async function loadLegacyDomain(options: LoadLegacyDomainOptions) {
     if (uploadToR2) {
       console.log(`  R2 bucket: ${policyDocumentsBucket()}`);
     }
-
-    let syncState: LegacyDocumentSyncState | null = null;
-    let completedIds = new Set<number>();
-    let missingIds = new Set<number>();
 
     if (resumeDocuments && options.targetEnv && !options.clearDocuments) {
       syncState = loadSyncState(syncStatePath);
@@ -516,6 +529,18 @@ export async function loadLegacyDomain(options: LoadLegacyDomainOptions) {
         stats.documentsSkipped += 1;
         const entry = buildLegacyPolicyDocumentEntry(doc, createdBy);
         addDocumentToPolicyMap(policyDocumentsByLegacyId, doc, entry);
+        // Checkpoint skips R2 re-upload, but Postgres may have been wiped
+        // (e.g. db:migrate:legacy:local --replace) — still upsert metadata.
+        if (
+          await persistDocumentMetadataOnly(
+            entry,
+            documentsOnly,
+            options.dryRun,
+            syncState,
+          )
+        ) {
+          stats.documentsCopied += 1;
+        }
         if (
           processed === 1 ||
           processed === totalDocuments ||
@@ -584,12 +609,12 @@ export async function loadLegacyDomain(options: LoadLegacyDomainOptions) {
       stats.documentsCopied += 1;
       addDocumentToPolicyMap(policyDocumentsByLegacyId, doc, entry);
 
-      if (documentsOnly && !options.dryRun) {
-        const updated = await upsertPolicyDocumentInPostgres(entry);
-        if (updated && syncState) {
-          syncState.stats.postgresUpdated += 1;
-        }
-      }
+      await persistDocumentMetadataOnly(
+        entry,
+        documentsOnly,
+        options.dryRun,
+        syncState,
+      );
 
       completedIds.add(doc.policyDocumentId);
       if (syncState) {

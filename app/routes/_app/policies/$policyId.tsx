@@ -213,14 +213,14 @@ export async function action({ request, params }: Route.ActionArgs) {
 
   if (intent === "update-note") {
     const description = String(formData.get("description") ?? "");
-    const policyNoteId = parsePositiveInteger(formData.get("policyNoteId"));
-    if (!policyNoteId) {
+    const noteId = parseUuid(formData.get("noteId"));
+    if (!noteId) {
       return { formError: "Invalid note." };
     }
     try {
       const policy = await updatePolicyNote(
         policyId,
-        policyNoteId,
+        noteId,
         description,
       );
       await writeAuditLog({
@@ -229,7 +229,7 @@ export async function action({ request, params }: Route.ActionArgs) {
         entityType: "policy",
         entityId: policyId,
         summary: `Updated note on ${policy.policyNumber}`,
-        metadata: { policyNumber: policy.policyNumber, policyNoteId },
+        metadata: { policyNumber: policy.policyNumber, noteId },
         request,
       });
       return {

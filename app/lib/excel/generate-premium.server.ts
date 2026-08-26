@@ -203,7 +203,6 @@ export async function generatePremiumExcelDocument(input: {
   const when = new Date().toISOString();
 
   return {
-    policyDocumentId: 0,
     policyId: policy.policyId,
     name: filename.replace(/\.xlsx$/i, ""),
     filename,

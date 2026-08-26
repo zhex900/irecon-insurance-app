@@ -114,14 +114,12 @@ export function buildReviewDocumentPack(
   const mergeInputs = policyToMergeInputs(policy, {
     brokerFeeLines: options?.brokerFeeLines,
   });
-  let nextId = 1;
 
   const docs: PolicyDocument[] = templates.map((template) => {
     const amendment = nextAmendmentNumber(existing, template.key);
     const safeKey = template.key.replace(/[^a-zA-Z0-9_-]+/g, "_");
     const name = packTemplateLabel(template);
     return makeDoc({
-      id: nextId++,
       policyId: policy.policyId,
       name,
       filename: `${safeKey}_${policy.policyNumber}_${amendment}_${stamp}.pdf`,
@@ -144,7 +142,6 @@ export function buildReviewDocumentPack(
   for (const item of libraryAttachments) {
     docs.push(
       makeDoc({
-        id: nextId++,
         policyId: policy.policyId,
         name: item.name,
         filename: item.filename,
@@ -238,14 +235,12 @@ export function buildAdjustmentDocumentPack(
   const mergeInputs = policyToMergeInputs(policy, {
     brokerFeeLines: options?.brokerFeeLines,
   });
-  let nextId = 1;
 
   return templates.map((template) => {
     const amendment = nextAmendmentNumber(existing, template.key);
     const safeKey = template.key.replace(/[^a-zA-Z0-9_-]+/g, "_");
     const name = packTemplateLabel(template);
     return makeDoc({
-      id: nextId++,
       policyId: policy.policyId,
       name,
       filename: `${safeKey}_${policy.policyNumber}_${amendment}_${stamp}.pdf`,

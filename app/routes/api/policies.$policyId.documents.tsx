@@ -14,9 +14,15 @@ const MAX_PDF_BASE64_LENGTH = 20 * 1024 * 1024;
 // 500 characters (existing production rows are already >1,300 characters).
 const MAX_GENERATION_KEY_LENGTH = 20_000;
 
+/** Drop stale bigint ids from pre-UUID clients instead of failing the batch. */
+const optionalDocumentIdSchema = z.preprocess(
+  (value) => parseUuid(value),
+  z.string().uuid().optional(),
+);
+
 const policyDocumentSchema = z
   .object({
-    policyDocumentId: z.number().int().positive(),
+    documentId: optionalDocumentIdSchema,
     policyId: z.string().uuid(),
     name: z.string().trim().min(1).max(200),
     filename: z.string().trim().min(1).max(255),
@@ -33,7 +39,7 @@ const policyDocumentSchema = z
     documentTypeCode: z.string().trim().max(50).optional(),
     r2Key: z.string().trim().min(1).max(512).optional(),
   })
-  .strict();
+  .strip();
 
 const policyDocumentsBodySchema = z
   .object({

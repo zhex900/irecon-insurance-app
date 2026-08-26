@@ -121,7 +121,8 @@ export const POLICY_REFERRAL_NOTE_TYPE_ID = 2;
 export const POLICY_MESSAGE_NOTE_TYPE_ID = 3;
 
 export type PolicyNote = {
-  policyNoteId: number;
+  /** Assigned by the server on first persist. */
+  noteId?: string;
   policyId: string;
   policyNoteTypeId: number;
   description: string;
@@ -228,7 +229,8 @@ export type CarAdjustmentRecord = {
 };
 
 export type PolicyDocument = {
-  policyDocumentId: number;
+  /** Assigned by the server on first persist. */
+  documentId?: string;
   policyId: string;
   name: string;
   filename: string;

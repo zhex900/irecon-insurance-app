@@ -24,7 +24,7 @@ const extraAttachmentSchema = z.object({
 });
 
 const emailDocumentsBodySchema = z.object({
-  documentIds: z.array(z.number().finite()).max(50).optional().default([]),
+  documentIds: z.array(z.string().uuid()).max(50).optional().default([]),
   extraAttachments: z
     .array(extraAttachmentSchema)
     .max(10)
@@ -74,8 +74,9 @@ export async function action({ request, params, context }: Route.ActionArgs) {
   }
 
   const payload = parsed.data;
-  const documents = (policy.documents ?? []).filter((doc) =>
-    payload.documentIds.includes(doc.policyDocumentId),
+  const documents = (policy.documents ?? []).filter(
+    (doc) =>
+      doc.documentId != null && payload.documentIds.includes(doc.documentId),
   );
   if (documents.length === 0 && payload.extraAttachments.length === 0) {
     return Response.json(

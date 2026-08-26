@@ -102,7 +102,9 @@ export async function sendPolicyDocumentsEmail({
     headers: { "Content-Type": "application/json" },
     credentials: "same-origin",
     body: JSON.stringify({
-      documentIds: attachments.map((doc) => doc.policyDocumentId),
+      documentIds: attachments
+        .map((doc) => doc.documentId)
+        .filter((id): id is string => Boolean(id)),
       extraAttachments,
       to: recipient,
       cc: cc.trim() || undefined,

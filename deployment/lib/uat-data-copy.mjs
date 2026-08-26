@@ -170,6 +170,9 @@ export async function dumpUatDatabase(dumpDir, uatDbUrl) {
     "-f",
     join(dumpDir, "schema.sql"),
   ]);
+  // App data + auth users only. Skip storage (and other Supabase-managed schemas):
+  // hosted UAT often has newer storage.buckets columns (e.g. versioning_status) than
+  // the local Supabase Docker image, which breaks COPY on restore. Documents use R2.
   await run("npx", [
     "supabase",
     "db",
@@ -180,10 +183,8 @@ export async function dumpUatDatabase(dumpDir, uatDbUrl) {
     join(dumpDir, "data.sql"),
     "--use-copy",
     "--data-only",
-    "-x",
-    "storage.buckets_vectors",
-    "-x",
-    "storage.vector_indexes",
+    "--schema",
+    "public,auth",
   ]);
   console.log("✓ UAT dump written to", dumpDir);
 }

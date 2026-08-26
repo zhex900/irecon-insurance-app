@@ -94,7 +94,6 @@ export async function submitPolicyAdjustment(
   };
 
   const note: PolicyNote = {
-    policyNoteId: Date.now(),
     policyId,
     policyNoteTypeId: 2,
     description: `Adjusted by ${createdBy}`,

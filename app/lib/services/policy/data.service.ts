@@ -1,15 +1,15 @@
 import { and, desc, eq, inArray, ne, sql } from "drizzle-orm";
 
+import {
+  assignPolicyDocumentIds,
+  assignPolicyNoteIds,
+} from "~/lib/db/assign-child-uuids";
 import { getDb } from "~/lib/db/client";
 import {
   type PolicyChildRows,
   policyToRows,
   rowsToPolicy,
 } from "~/lib/db/policy-mapper";
-import {
-  resolvePolicyDocumentIds,
-  resolvePolicyNoteIds,
-} from "~/lib/db/resolve-global-ids";
 import {
   policy,
   policyCar,
@@ -388,19 +388,38 @@ export async function savePolicy(
         set: { ...carValues },
       });
 
+    const existingDocuments = await tx
+      .select({
+        documentId: policyDocument.documentId,
+        templateKey: policyDocument.templateKey,
+        libraryDocumentId: policyDocument.libraryDocumentId,
+        filename: policyDocument.filename,
+        generationKey: policyDocument.generationKey,
+      })
+      .from(policyDocument)
+      .where(eq(policyDocument.policyId, policyDoc.policyId));
+
     await tx
       .delete(policyDocument)
       .where(eq(policyDocument.policyId, policyDoc.policyId));
     if (documentValues.length > 0) {
-      const documents = await resolvePolicyDocumentIds(tx, documentValues);
+      const documents = assignPolicyDocumentIds(
+        existingDocuments,
+        documentValues,
+      );
       await tx.insert(policyDocument).values(documents);
     }
+
+    const existingNotes = await tx
+      .select({ noteId: policyNote.noteId })
+      .from(policyNote)
+      .where(eq(policyNote.policyId, policyDoc.policyId));
 
     await tx
       .delete(policyNote)
       .where(eq(policyNote.policyId, policyDoc.policyId));
     if (noteValues.length > 0) {
-      const notes = await resolvePolicyNoteIds(tx, noteValues);
+      const notes = assignPolicyNoteIds(existingNotes, noteValues);
       await tx.insert(policyNote).values(notes);
     }
 
