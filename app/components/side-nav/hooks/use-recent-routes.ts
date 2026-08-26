@@ -6,7 +6,9 @@ import {
   consumeRemovedRecentEntities,
   excludeRecentRoute,
   normalizeRecentPath,
+  readLastRecordedPath,
   RECENT_ROUTES_CHANGED_EVENT,
+  writeLastRecordedPath,
 } from "~/lib/services/navigation/recent-routes";
 import type { SideNavLink } from "~/lib/services/navigation/side-nav.service";
 
@@ -25,10 +27,6 @@ function mergeRecentRouteLabels(
   });
 }
 
-function recentRoutesKey(routes: SideNavLink[]): string {
-  return routes.map((route) => route.href).join("|");
-}
-
 function visibleRecentRoutes(
   routes: SideNavLink[],
   pathname: string,
@@ -45,13 +43,10 @@ async function fetchRecentRoutes(): Promise<SideNavLink[] | null> {
 
 export function useRecentRoutes(loaderRoutes: SideNavLink[], pathname: string) {
   const initialRecentRoutes = visibleRecentRoutes(loaderRoutes, pathname);
-  const lastRecordedPathRef = React.useRef("");
   const recentRoutesRef = React.useRef(initialRecentRoutes);
-  const skipInitialPathEffectRef = React.useRef(true);
   const enterClearTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
-  const loaderRoutesKeyValue = recentRoutesKey(loaderRoutes);
   const pathnameRef = React.useRef(pathname);
 
   const [recentRoutes, setRecentRoutes] = React.useState(initialRecentRoutes);
@@ -60,12 +55,11 @@ export function useRecentRoutes(loaderRoutes: SideNavLink[], pathname: string) {
     null,
   );
 
-  const applyVisibleRoutes = React.useCallback(
-    (routes: SideNavLink[]) => {
-      setRecentRoutes(visibleRecentRoutes(routes, pathnameRef.current));
-    },
-    [],
-  );
+  const applyVisibleRoutes = React.useCallback((routes: SideNavLink[]) => {
+    const visible = visibleRecentRoutes(routes, pathnameRef.current);
+    recentRoutesRef.current = visible;
+    setRecentRoutes(visible);
+  }, []);
 
   React.useEffect(() => {
     recentRoutesRef.current = recentRoutes;
@@ -87,7 +81,7 @@ export function useRecentRoutes(loaderRoutes: SideNavLink[], pathname: string) {
   // Shell loader refetches after delete — apply fresh Recents from the server.
   React.useEffect(() => {
     applyVisibleRoutes(loaderRoutes);
-  }, [applyVisibleRoutes, loaderRoutesKeyValue]);
+  }, [applyVisibleRoutes, loaderRoutes]);
 
   React.useEffect(() => {
     function refreshFromApi() {
@@ -107,15 +101,9 @@ export function useRecentRoutes(loaderRoutes: SideNavLink[], pathname: string) {
     const path = normalizeRecentPath(pathname);
     if (!path) return;
 
-    if (skipInitialPathEffectRef.current) {
-      skipInitialPathEffectRef.current = false;
-      lastRecordedPathRef.current = path;
-      return;
-    }
-
-    if (lastRecordedPathRef.current === path) return;
-    const previousPath = lastRecordedPathRef.current;
-    lastRecordedPathRef.current = path;
+    const previousPath = readLastRecordedPath();
+    if (previousPath === path) return;
+    writeLastRecordedPath(path);
 
     if (!previousPath) return;
 
@@ -126,6 +114,7 @@ export function useRecentRoutes(loaderRoutes: SideNavLink[], pathname: string) {
       consumeRemovedRecentEntities(),
     );
 
+    recentRoutesRef.current = update.routes;
     setRecentRoutes(update.routes);
     setSpilledRoute(update.spilled);
     setEnteringId(update.enteringId);
@@ -155,9 +144,13 @@ export function useRecentRoutes(loaderRoutes: SideNavLink[], pathname: string) {
         const payload = (await response.json()) as { routes?: SideNavLink[] };
         const apiRoutes = payload.routes;
         if (!apiRoutes?.length) return;
-        if (lastRecordedPathRef.current !== path) return;
+        if (pathnameRef.current !== path) return;
         if (apiRoutes[0]?.href !== update.recordPath) return;
-        setRecentRoutes((prev) => mergeRecentRouteLabels(prev, apiRoutes));
+        setRecentRoutes((prev) => {
+          const merged = mergeRecentRouteLabels(prev, apiRoutes);
+          recentRoutesRef.current = merged;
+          return merged;
+        });
       })
       .catch(() => {});
   }, [pathname]);

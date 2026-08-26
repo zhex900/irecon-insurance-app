@@ -1,11 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   computeLeaveNavigation,
   excludeRecentRoute,
   excludeRecentRoutesForEntity,
   pushRecentRouteLocalDetailed,
+  readLastRecordedPath,
   recentCaptionForPath,
+  writeLastRecordedPath,
 } from "~/lib/services/navigation/recent-routes";
 
 describe("recent route ordering", () => {
@@ -172,5 +174,25 @@ describe("recent route ordering", () => {
 
     expect(update.recordPath).toBe("/clients");
     expect(update.routes.map((route) => route.href)).toEqual(["/clients"]);
+  });
+
+  it("readLastRecordedPath round-trips through sessionStorage", () => {
+    const storage = new Map<string, string>();
+    vi.stubGlobal("window", {});
+    vi.stubGlobal("sessionStorage", {
+      getItem: (key: string) => storage.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        storage.set(key, value);
+      },
+      removeItem: (key: string) => {
+        storage.delete(key);
+      },
+    });
+
+    expect(readLastRecordedPath()).toBe("");
+    writeLastRecordedPath("/clients");
+    expect(readLastRecordedPath()).toBe("/clients");
+    writeLastRecordedPath("/policies");
+    expect(readLastRecordedPath()).toBe("/policies");
   });
 });

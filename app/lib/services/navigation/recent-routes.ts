@@ -130,10 +130,39 @@ export const POLICY_PATH_PATTERN = new RegExp(
 );
 
 export type RecentEntityRef =
-  | { kind: "client"; id: string }
-  | { kind: "policy"; id: string };
+  { kind: "client"; id: string } | { kind: "policy"; id: string };
 
 export const RECENT_ROUTES_CHANGED_EVENT = "irecon:recent-routes-changed";
+
+const LAST_RECORDED_PATH_KEY = "irecon:recent-routes:last-path";
+
+/** Last app path seen by `useRecentRoutes` (survives full reloads in the tab). */
+export function readLastRecordedPath(): string {
+  if (typeof window === "undefined") return "";
+  try {
+    return sessionStorage.getItem(LAST_RECORDED_PATH_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+export function writeLastRecordedPath(path: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.setItem(LAST_RECORDED_PATH_KEY, path);
+  } catch {
+    // Private browsing / disabled storage.
+  }
+}
+
+export function clearLastRecordedPath(): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.removeItem(LAST_RECORDED_PATH_KEY);
+  } catch {
+    // Private browsing / disabled storage.
+  }
+}
 
 const pendingRemovedEntities: RecentEntityRef[] = [];
 

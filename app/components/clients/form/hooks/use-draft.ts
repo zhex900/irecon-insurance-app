@@ -271,7 +271,10 @@ export function useFormDraft({
       }
       allowLeaveRef.current = true;
       setDiscardConfirmOpen(false);
-      markRecentEntityRemovedAndRefresh({ kind: "client", id: client.clientId });
+      markRecentEntityRemovedAndRefresh({
+        kind: "client",
+        id: client.clientId,
+      });
       if (blocker.state === "blocked") {
         blocker.proceed();
       } else {

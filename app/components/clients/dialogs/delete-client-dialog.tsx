@@ -47,7 +47,10 @@ export function DeleteClientDialog({
             method="post"
             onSubmit={() => {
               if (client) {
-                markRecentEntityRemoved({ kind: "client", id: client.clientId });
+                markRecentEntityRemoved({
+                  kind: "client",
+                  id: client.clientId,
+                });
               }
             }}
           >

@@ -1,213 +1,173 @@
-// import { expect, test } from "@playwright/test";
+import { faker } from "@faker-js/faker";
+import { expect, test } from "@playwright/test";
 
-// import {
-//   clickRecentRoute,
-//   fetchRecentRoutesFromApi,
-//   getRecentRoutesInSidebar,
-//   leaveFor,
-//   prepareRecentsShell,
-// } from "./helpers/recent-routes";
+import {
+  openFirstClientAndStartPolicy,
+  policyIdFromUrl,
+} from "./helpers/policy-wizard";
+import type { RecentNavStep } from "./helpers/recent-routes";
+import {
+  clearRecentRoutes,
+  clickRecentRoute,
+  fetchRecentRoutesFromApi,
+  getClientDirectoryLabel,
+  getRecentRouteLabels,
+  navigateRecentRoutes,
+  prepareRecentsShell,
+} from "./helpers/recent-routes";
 
-// test.describe("recent routes", () => {
-//   test.beforeEach(async ({ page }) => {
-//     await prepareRecentsShell(page);
-//   });
+test.describe("recent routes", () => {
+  test.describe.configure({ mode: "serial" });
 
-//   test("records the page being left and hides the current page", async ({
-//     page,
-//   }) => {
-//     await page.goto("/clients");
-//     await expect(
-//       page.getByRole("heading", { name: /clients/i }).first(),
-//     ).toBeVisible();
+  test.beforeEach(async ({ page }) => {
+    await prepareRecentsShell(page);
+    await clearRecentRoutes(page);
+  });
 
-//     await leaveFor(page, "/policies");
-//     await expect(
-//       page.getByRole("heading", { name: /policies/i }).first(),
-//     ).toBeVisible();
+  test("records the page being left and hides the current page", async ({
+    page,
+  }) => {
+    const navigation: RecentNavStep[] = [
+      {
+        action: "goto",
+        path: "/clients",
+        heading: /clients directory/i,
+        waitForReferenceList: true,
+      },
+      { action: "clientRow", index: 0 },
+      { action: "link", name: "Clients", url: /\/clients(?:\?|$)/ },
+      { action: "clientRow", index: 1 },
+      { action: "sidebar", path: "/policies" },
+    ];
 
-//     const recents = await getRecentRoutesInSidebar(page);
-//     expect(recents.map((route) => route.label)).toContain("Clients");
-//     expect(recents.map((route) => route.label)).not.toContain("Policies");
-//   });
+    await navigateRecentRoutes(page, [navigation[0]!]);
+    const firstClient = await getClientDirectoryLabel(page, 0);
+    const secondClient = await getClientDirectoryLabel(page, 1);
+    await navigateRecentRoutes(page, navigation.slice(1));
 
-//   test("preserves visit order with the most recent first", async ({ page }) => {
-//     await page.goto("/clients");
-//     await leaveFor(page, "/policies");
-//     await leaveFor(page, "/reports");
+    const expectedRecents = [secondClient, "Clients", firstClient];
 
-//     const recents = await getRecentRoutesInSidebar(page);
-//     expect(recents.map((route) => route.label)).toEqual([
-//       "Policies",
-//       "Clients",
-//     ]);
-//   });
+    await expect
+      .poll(() => getRecentRouteLabels(page))
+      .toEqual(expectedRecents);
 
-//   test("clicking a recent route navigates there", async ({ page }) => {
-//     await page.goto("/clients");
-//     await leaveFor(page, "/policies");
-//     await leaveFor(page, "/reports");
+    await page.reload();
+    await expect
+      .poll(() => getRecentRouteLabels(page))
+      .toEqual(expectedRecents);
+  });
 
-//     await clickRecentRoute(page, /^clients$/i);
-//     await expect(page).toHaveURL(/\/clients/);
-//     await expect(
-//       page.getByRole("heading", { name: /clients/i }).first(),
-//     ).toBeVisible();
-//   });
+  test("removes a deleted client from recents", async ({ page }) => {
+    const registeredName = faker.company.name();
 
-//   test("persists across reload", async ({ page }) => {
-//     await page.goto("/clients");
-//     await leaveFor(page, "/policies");
-//     await leaveFor(page, "/reports");
+    await page.goto("/clients");
+    await page.getByRole("button", { name: /new client/i }).click();
+    await expect(page).toHaveURL(/\/clients\/[^/]+\/edit/);
+    await page.getByRole("textbox", { name: "Registered Name" }).click();
+    await page
+      .getByRole("textbox", { name: "Registered Name" })
+      .fill(registeredName);
+    //type enter and tab
+    await page.keyboard.press("Enter");
+    await page.keyboard.press("Tab");
+    await page
+      .getByRole("textbox", { name: "Trading Name" })
+      .fill(registeredName);
+    await page.getByRole("textbox", { name: "ABN" }).fill("12345678901");
+    await page.getByRole("textbox", { name: "Phone" }).fill("0412 345 678");
+    await page.getByRole("textbox", { name: "Email" }).fill("test@test.com");
 
-//     await page.reload();
-//     await expect(
-//       page.getByRole("heading", { name: /reports/i }).first(),
-//     ).toBeVisible();
+    for (const label of [/account manager/i, /authorised representative/i]) {
+      const field = page.getByLabel(label);
+      if (await field.count()) {
+        await field.click();
+        const option = page.getByRole("option").first();
+        if (await option.count()) await option.click();
+      }
+    }
 
-//     const recents = await fetchRecentRoutesFromApi(page);
-//     expect(recents.map((route) => route.href)).toEqual([
-//       "/policies",
-//       "/clients",
-//     ]);
-//   });
+    await page.getByRole("button", { name: /^save$/i }).click();
+    await expect(page).toHaveURL(/\/clients\/[^/]+$/);
 
-//   test("removes a deleted client from recents", async ({ page }) => {
-//     const stamp = Date.now();
-//     const registeredName = `E2E Recent Client ${stamp}`;
+    const clientId = page.url().match(/\/clients\/([^/?]+)/)?.[1];
+    expect(clientId).toBeTruthy();
 
-//     await page.goto("/clients");
-//     await page.getByRole("button", { name: /new client/i }).click();
-//     await expect(page).toHaveURL(/\/clients\/[^/]+\/edit/);
+    let routes = await fetchRecentRoutesFromApi(page);
+    expect(
+      routes.some((route) => route.href === `/clients/${clientId}/edit`),
+    ).toBe(true);
 
-//     await page
-//       .getByRole("textbox", { name: "Registered Name" })
-//       .fill(registeredName);
-//     await page
-//       .getByRole("textbox", { name: "Trading Name" })
-//       .fill(registeredName);
-//     await page.getByRole("textbox", { name: "ABN" }).fill("12345678901");
-//     await page.getByRole("textbox", { name: "Phone" }).fill("0412 345 678");
-//     await page.getByRole("textbox", { name: "Email" }).fill("test@test.com");
+    await page.getByRole("button", { name: "Delete" }).click();
+    await page
+      .getByRole("dialog", { name: /delete client/i })
+      .getByRole("button", { name: /^delete$/i })
+      .click();
 
-//     const accountManager = page.getByLabel(/account manager/i);
-//     if (await accountManager.count()) {
-//       await accountManager.click();
-//       const option = page.getByRole("option").first();
-//       if (await option.count()) await option.click();
-//     }
+    await expect(page.getByText(/deleted/i).first()).toBeVisible({
+      timeout: 15_000,
+    });
 
-//     const ar = page.getByLabel(/authorised representative/i);
-//     if (await ar.count()) {
-//       await ar.click();
-//       const option = page.getByRole("option").first();
-//       if (await option.count()) await option.click();
-//     }
+    routes = await fetchRecentRoutesFromApi(page);
+    expect(
+      routes.some((route) => route.href.startsWith(`/clients/${clientId}`)),
+    ).toBe(false);
+    await expect(page.getByText("No recent pages")).toBeVisible();
+  });
 
-//     await page.getByRole("button", { name: /^save$/i }).click();
-//     await expect(page).toHaveURL(/\/clients\/[^/]+$/);
+  test("removes a deleted policy from recents", async ({ page }) => {
+    await openFirstClientAndStartPolicy(page);
+    await page
+      .getByRole("textbox", { name: "Insured Name" })
+      .fill(faker.company.name());
 
-//     const clientUrl = page.url();
-//     const clientId = clientUrl.match(/\/clients\/([^/?]+)/)?.[1];
-//     expect(clientId).toBeTruthy();
+    const policyId = policyIdFromUrl(page);
+    const saveDraftPromise = page.waitForResponse(
+      (response) =>
+        response.url().includes(`api/policies/${policyId}/draft`) &&
+        response.request().method() === "PUT",
+    );
 
-//     await leaveFor(page, "/policies");
+    await page.keyboard.press("Control+s");
 
-//     let routes = await fetchRecentRoutesFromApi(page);
-//     expect(routes.some((route) => route.href === `/clients/${clientId}`)).toBe(
-//       true,
-//     );
+    const policyNumber = (
+      await page.getByRole("heading", { name: "Policy number" }).textContent()
+    )?.trim();
+    expect(policyNumber).toBeTruthy();
+    await saveDraftPromise;
+    await expect(page.getByText("Saved", { exact: true })).toBeVisible();
 
-//     await page.goto(`/clients?q=${encodeURIComponent(registeredName)}`);
-//     await expect(page.getByText(registeredName).first()).toBeVisible({
-//       timeout: 15_000,
-//     });
+    const recentsCarriedOver = (await getRecentRouteLabels(page)).filter(
+      (label) => label !== "Clients",
+    );
 
-//     await page
-//       .getByRole("button", { name: `Delete ${registeredName}` })
-//       .click();
-//     await page
-//       .getByRole("dialog", { name: /delete client/i })
-//       .getByRole("button", { name: /^delete$/i })
-//       .click();
+    await navigateRecentRoutes(page, [
+      { action: "link", name: "Clients", url: /\/clients(?:\?|$)/ },
+    ]);
+    await expect(
+      page.getByRole("heading", { name: /clients directory/i }),
+    ).toBeVisible();
 
-//     await expect(page.getByText(/deleted/i).first()).toBeVisible({
-//       timeout: 15_000,
-//     });
+    expect((await fetchRecentRoutesFromApi(page))[0]?.label).toBe(policyNumber);
+    await expect
+      .poll(() => getRecentRouteLabels(page))
+      .toEqual([policyNumber!, ...recentsCarriedOver]);
 
-//     routes = await fetchRecentRoutesFromApi(page);
-//     expect(
-//       routes.some((route) => route.href.startsWith(`/clients/${clientId}`)),
-//     ).toBe(false);
-//   });
+    await clickRecentRoute(page, policyNumber!, {
+      url: new RegExp(`/policies/${policyId}(?:[/?#]|$)`),
+    });
 
-//   test("removes a deleted policy from recents", async ({ page }) => {
-//     const stamp = Date.now();
-//     const registeredName = `E2E Recent Policy Client ${stamp}`;
+    await page.getByRole("button", { name: /^delete$/i }).click();
+    await page
+      .getByRole("dialog", { name: /delete policy/i })
+      .getByRole("button", { name: /^delete$/i })
+      .click();
 
-//     await page.goto("/clients");
-//     await page.getByRole("button", { name: /new client/i }).click();
-//     await page
-//       .getByRole("textbox", { name: "Registered Name" })
-//       .fill(registeredName);
-//     await page
-//       .getByRole("textbox", { name: "Trading Name" })
-//       .fill(registeredName);
-//     await page.getByRole("textbox", { name: "ABN" }).fill("12345678901");
-//     await page.getByRole("textbox", { name: "Phone" }).fill("0412 345 678");
-//     await page.getByRole("textbox", { name: "Email" }).fill("test@test.com");
-
-//     const accountManager = page.getByLabel(/account manager/i);
-//     if (await accountManager.count()) {
-//       await accountManager.click();
-//       const option = page.getByRole("option").first();
-//       if (await option.count()) await option.click();
-//     }
-
-//     const ar = page.getByLabel(/authorised representative/i);
-//     if (await ar.count()) {
-//       await ar.click();
-//       const option = page.getByRole("option").first();
-//       if (await option.count()) await option.click();
-//     }
-
-//     await page.getByRole("button", { name: /^save$/i }).click();
-//     await expect(page).toHaveURL(/\/clients\/[^/]+$/);
-
-//     const newPolicyPromise = page.waitForResponse(
-//       (response) =>
-//         response.url().includes("policies/new.data?clientId=") &&
-//         response.request().method() === "POST",
-//     );
-//     await page
-//       .getByRole("button", { name: /new policy/i })
-//       .first()
-//       .click();
-//     await newPolicyPromise;
-//     await expect(page).toHaveURL(/\/policies\/[^/?]+$/);
-
-//     const policyId = page.url().match(/\/policies\/([^/?]+)/)?.[1];
-//     expect(policyId).toBeTruthy();
-
-//     await leaveFor(page, "/clients");
-
-//     let routes = await fetchRecentRoutesFromApi(page);
-//     expect(routes.some((route) => route.href === `/policies/${policyId}`)).toBe(
-//       true,
-//     );
-
-//     await page.goto(`/policies/${policyId}`);
-//     await page.getByRole("button", { name: /^delete$/i }).click();
-//     await page
-//       .getByRole("dialog", { name: /delete policy/i })
-//       .getByRole("button", { name: /^delete$/i })
-//       .click();
-
-//     await expect(page).toHaveURL(/\/clients\//, { timeout: 15_000 });
-
-//     routes = await fetchRecentRoutesFromApi(page);
-//     expect(
-//       routes.some((route) => route.href.startsWith(`/policies/${policyId}`)),
-//     ).toBe(false);
-//   });
-// });
+    await expect(page).toHaveURL(/\/clients\//, { timeout: 15_000 });
+    expect(
+      (await fetchRecentRoutesFromApi(page)).some((route) =>
+        route.href.startsWith(`/policies/${policyId}`),
+      ),
+    ).toBe(false);
+    await expect.poll(() => getRecentRouteLabels(page)).toEqual(["Clients"]);
+  });
+});

@@ -531,7 +531,10 @@ export function PolicyStickyHeader({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 flex-col gap-1">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <h2 className="truncate text-lg font-semibold tracking-tight md:text-xl">
+              <h2
+                aria-label={`Policy number`}
+                className="truncate text-lg font-semibold tracking-tight md:text-xl"
+              >
                 {policyNumber}
               </h2>
               {coverTypeName ? (

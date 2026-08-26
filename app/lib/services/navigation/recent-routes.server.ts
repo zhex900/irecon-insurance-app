@@ -46,7 +46,10 @@ export async function removeRecentRoutesForEntity(
   await db
     .delete(appUserRecentRoute)
     .where(
-      and(eq(appUserRecentRoute.userId, userId), recentEntityPathConditions(entity)),
+      and(
+        eq(appUserRecentRoute.userId, userId),
+        recentEntityPathConditions(entity),
+      ),
     );
 }
 
@@ -58,12 +61,26 @@ export async function removeRecentRoutesForPolicies(
   if (ids.length === 0) return;
 
   const db = getDb();
-  await db.delete(appUserRecentRoute).where(
-    and(
-      eq(appUserRecentRoute.userId, userId),
-      or(...ids.map((id) => recentEntityPathConditions({ kind: "policy", id }))),
-    ),
-  );
+  await db
+    .delete(appUserRecentRoute)
+    .where(
+      and(
+        eq(appUserRecentRoute.userId, userId),
+        or(
+          ...ids.map((id) =>
+            recentEntityPathConditions({ kind: "policy", id }),
+          ),
+        ),
+      ),
+    );
+}
+
+/** Drop every recent route for the signed-in user. */
+export async function clearRecentRoutes(userId: string): Promise<void> {
+  const db = getDb();
+  await db
+    .delete(appUserRecentRoute)
+    .where(eq(appUserRecentRoute.userId, userId));
 }
 
 /**

@@ -61,7 +61,10 @@ export function useLeaveActions(options: {
       clearWizardStepState(policy.policyId);
       allowLeaveRef.current = true;
       setDiscardConfirmOpen(false);
-      markRecentEntityRemovedAndRefresh({ kind: "policy", id: policy.policyId });
+      markRecentEntityRemovedAndRefresh({
+        kind: "policy",
+        id: policy.policyId,
+      });
       proceedOrNavigate({ blocker, navigate, destination: clientPath });
     } catch {
       setDraftSaveError(
