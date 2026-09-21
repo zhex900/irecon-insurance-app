@@ -7,6 +7,7 @@ import {
   type PremiumBreakdown,
 } from "~/lib/db/types";
 import { NotFoundError, ValidationError } from "~/lib/errors";
+import { deriveMaximumConstructionPeriod } from "~/lib/policies/construction-period";
 import {
   flatCustomWordings,
   normalizeCustomWordings,
@@ -57,15 +58,48 @@ export class PolicySaveError extends ValidationError {}
 
 const RENEWAL_NUMBER_MAX_ATTEMPTS = 25;
 
-async function allocateRenewalPolicyNumber(
-  sourcePolicyNumber: string,
-  sourcePolicyId: string,
-): Promise<string> {
-  let candidate = incrementPolicyNumber(sourcePolicyNumber);
+/** Postgres unique_violation (23505) on the case-insensitive policy number index. */
+function isPolicyNumberConflict(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  const { code, constraint_name, message } = error as {
+    code?: unknown;
+    constraint_name?: unknown;
+    message?: unknown;
+  };
+  if (code !== "23505") return false;
+  return (
+    String(constraint_name ?? "").includes("policy_number") ||
+    String(message ?? "").includes("policy_policy_number_uidx")
+  );
+}
+
+/**
+ * Allocate a renewal policy number and create the draft in one retryable step.
+ * The pre-check narrows the search; the insert is the source of truth, so a
+ * concurrent renewal that wins the same candidate is caught here and retried
+ * against the next number instead of racing on a read-then-insert check.
+ */
+async function createRenewalDraft(
+  source: Policy,
+  createdBy: string,
+  partial: Omit<Partial<Policy>, "policyNumber">,
+): Promise<Policy> {
+  let candidate = incrementPolicyNumber(source.policyNumber);
   for (let attempt = 0; attempt < RENEWAL_NUMBER_MAX_ATTEMPTS; attempt++) {
-    if (!(await isPolicyNumberTaken(candidate, sourcePolicyId)))
-      return candidate;
-    candidate = incrementPolicyNumber(candidate);
+    if (await isPolicyNumberTaken(candidate, source.policyId)) {
+      candidate = incrementPolicyNumber(candidate);
+      continue;
+    }
+    try {
+      return await createPolicyDraft(
+        source.clientId,
+        { ...partial, policyNumber: candidate },
+        createdBy,
+      );
+    } catch (error) {
+      if (!isPolicyNumberConflict(error)) throw error;
+      candidate = incrementPolicyNumber(candidate);
+    }
   }
   throw new PolicySaveError("Could not allocate a unique renewal number.");
 }
@@ -322,11 +356,11 @@ export async function renewPolicy(sourcePolicyId: string, createdBy: string) {
   const source = await getPolicy(sourcePolicyId);
   if (!source) throw new NotFoundError("Policy not found");
 
-  const policyNumber = await allocateRenewalPolicyNumber(
-    source.policyNumber,
-    source.policyId,
-  );
   const dateStart = addMonths(new Date(`${source.dateStart}T00:00:00`), 12);
+  const maximumConstructionPeriod = deriveMaximumConstructionPeriod(
+    source.car.coverTypeId,
+    source.car.annualCoverTypeId,
+  );
   const car: Policy["car"] = {
     coverTypeId: source.car.coverTypeId,
     annualCoverTypeId: source.car.annualCoverTypeId ?? null,
@@ -345,7 +379,7 @@ export async function renewPolicy(sourcePolicyId: string, createdBy: string) {
     liabilityLimitBand: source.car.liabilityLimitBand,
     hasExistingContractWorksCover: source.car.hasExistingContractWorksCover,
     currentInsurer: source.car.currentInsurer,
-    maximumConstructionPeriod: 18,
+    maximumConstructionPeriod,
     maximumMaintenancePeriod: source.car.maximumMaintenancePeriod,
     contractWorksExistingStructurePremium:
       source.car.contractWorksExistingStructurePremium,
@@ -366,23 +400,18 @@ export async function renewPolicy(sourcePolicyId: string, createdBy: string) {
     referralReasons: [],
   };
 
-  return createPolicyDraft(
-    source.clientId,
-    {
-      policyNumber,
-      policyCategoryId: 2,
-      policyStatusId: POLICY_STATUS.Pending,
-      postcode: source.postcode,
-      stateId: source.stateId,
-      dateEffective: toIsoDate(dateStart),
-      dateStart: toIsoDate(dateStart),
-      dateEnd: toIsoDate(addMonths(dateStart, 18)),
-      insurerCode: source.insurerCode,
-      isDraft: true,
-      car,
-    },
-    createdBy,
-  );
+  return createRenewalDraft(source, createdBy, {
+    policyCategoryId: 2,
+    policyStatusId: POLICY_STATUS.Pending,
+    postcode: source.postcode,
+    stateId: source.stateId,
+    dateEffective: toIsoDate(dateStart),
+    dateStart: toIsoDate(dateStart),
+    dateEnd: toIsoDate(addMonths(dateStart, maximumConstructionPeriod)),
+    insurerCode: source.insurerCode,
+    isDraft: true,
+    car,
+  });
 }
 
 function applyFormValues(

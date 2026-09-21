@@ -17,6 +17,7 @@ import {
 import { FormulaTooltip } from "~/components/ui/formula-tooltip";
 import { Input } from "~/components/ui/input";
 import type { ReferenceData } from "~/lib/db/types";
+import { deriveMaximumConstructionPeriod } from "~/lib/policies/construction-period";
 import type { ExcessFieldConfig } from "~/lib/policies/excesses";
 import type { SubLimitFieldConfig } from "~/lib/policies/sub-limits";
 import { cn } from "~/lib/utils";
@@ -158,10 +159,11 @@ export function applyAnnualCoverTypeDefaults(
       reference.defaultTexts.insuredContractsAnnualTransfer,
       { shouldDirty: true, shouldValidate: false },
     );
-    setValue("maximumConstructionPeriod", 18, {
-      shouldDirty: true,
-      shouldValidate: false,
-    });
+    setValue(
+      "maximumConstructionPeriod",
+      deriveMaximumConstructionPeriod(1, annualCoverTypeId),
+      { shouldDirty: true, shouldValidate: false },
+    );
     return;
   }
   if (annualCoverTypeId === 2) {
@@ -170,10 +172,11 @@ export function applyAnnualCoverTypeDefaults(
       reference.defaultTexts.insuredContractsAnnualContractCommencing,
       { shouldDirty: true, shouldValidate: false },
     );
-    setValue("maximumConstructionPeriod", 12, {
-      shouldDirty: true,
-      shouldValidate: false,
-    });
+    setValue(
+      "maximumConstructionPeriod",
+      deriveMaximumConstructionPeriod(1, annualCoverTypeId),
+      { shouldDirty: true, shouldValidate: false },
+    );
   }
 }
 
@@ -193,10 +196,11 @@ export function applyCoverTypeDefaults(
       reference.defaultTexts.geographicalScopeAnnual,
       { shouldDirty: true },
     );
-    setValue("maximumConstructionPeriod", 18, {
-      shouldDirty: true,
-      shouldValidate: false,
-    });
+    setValue(
+      "maximumConstructionPeriod",
+      deriveMaximumConstructionPeriod(coverTypeId),
+      { shouldDirty: true, shouldValidate: false },
+    );
     setValue("subLimits", { ...reference.defaultSubLimits.annual });
     return;
   }
@@ -208,18 +212,20 @@ export function applyCoverTypeDefaults(
   });
   if (coverTypeId === 2) {
     setValue("insuredContracts", reference.defaultTexts.insuredContractsSingle);
-    setValue("maximumConstructionPeriod", 12, {
-      shouldDirty: true,
-      shouldValidate: false,
-    });
+    setValue(
+      "maximumConstructionPeriod",
+      deriveMaximumConstructionPeriod(coverTypeId),
+      { shouldDirty: true, shouldValidate: false },
+    );
     setValue("subLimits", { ...reference.defaultSubLimits.annual });
   }
   if (coverTypeId === 3) {
     setValue("insuredContracts", reference.defaultTexts.insuredContractsSingle);
-    setValue("maximumConstructionPeriod", 12, {
-      shouldDirty: true,
-      shouldValidate: false,
-    });
+    setValue(
+      "maximumConstructionPeriod",
+      deriveMaximumConstructionPeriod(coverTypeId),
+      { shouldDirty: true, shouldValidate: false },
+    );
     setValue("subLimits", { ...reference.defaultSubLimits.ownerBuilder });
   }
 }
