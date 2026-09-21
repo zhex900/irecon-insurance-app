@@ -119,6 +119,10 @@ export function applyAnnualCoverTypeDefaults(
       reference.defaultTexts.insuredContractsAnnualTransfer,
       { shouldDirty: true, shouldValidate: false },
     );
+    setValue("maximumConstructionPeriod", 18, {
+      shouldDirty: true,
+      shouldValidate: false,
+    });
     return;
   }
   if (annualCoverTypeId === 2) {
@@ -127,6 +131,10 @@ export function applyAnnualCoverTypeDefaults(
       reference.defaultTexts.insuredContractsAnnualContractCommencing,
       { shouldDirty: true, shouldValidate: false },
     );
+    setValue("maximumConstructionPeriod", 12, {
+      shouldDirty: true,
+      shouldValidate: false,
+    });
   }
 }
 
