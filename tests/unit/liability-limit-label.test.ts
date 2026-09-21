@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { policyToFormValues } from "~/components/policies/wizard/shared/policy-to-values";
 import type { Policy } from "~/lib/db/types";
 import { money } from "~/lib/pdf/merge-field-tables";
 import {
@@ -78,6 +79,22 @@ describe("LegalLiabilityLimit merge field", () => {
       policyToMergeInputs(basePolicy({ liabilityLimitBand: "3" }))
         .LegalLiabilityLimit,
     ).toBe("Not Insured");
+  });
+});
+
+describe("insured name defaults", () => {
+  it("uses the client name only when the policy insured name is empty", () => {
+    const policy = basePolicy({});
+    policy.car.insuredName = "";
+
+    expect(policyToFormValues(policy, "Trading Name").insuredName).toBe(
+      "Trading Name",
+    );
+
+    policy.car.insuredName = "Existing Insured Name";
+    expect(policyToFormValues(policy, "Trading Name").insuredName).toBe(
+      "Existing Insured Name",
+    );
   });
 });
 

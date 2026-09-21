@@ -5,6 +5,7 @@ import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
 
 export function policyToFormValues(
   policy: Policy,
+  fallbackInsuredName = "",
 ): Partial<CarPolicyFormValues> {
   /** Draft DB rows use 0 as money placeholders — show empty until entered. */
   const blankZeros = Boolean(policy.isDraft);
@@ -20,7 +21,7 @@ export function policyToFormValues(
     clientId: policy.clientId,
     policyStatusId: policy.policyStatusId,
     insurerCode: policy.insurerCode,
-    insuredName: policy.car.insuredName,
+    insuredName: policy.car.insuredName || fallbackInsuredName,
     coverTypeId: policy.car.coverTypeId,
     annualCoverTypeId: policy.car.annualCoverTypeId ?? null,
     policyCategoryId: policy.policyCategoryId,

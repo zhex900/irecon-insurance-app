@@ -86,7 +86,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 
   return {
     policy,
-    clientName: client.name,
+    clientName: client.tradingName || client.name,
   };
 }
 
