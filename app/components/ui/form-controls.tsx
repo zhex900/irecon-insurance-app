@@ -271,6 +271,7 @@ export function FieldDateInput<
   disabled,
   className,
   placeholder,
+  onChange,
 }: {
   name: TName;
   control?: Control<TFieldValues>;
@@ -283,6 +284,7 @@ export function FieldDateInput<
   className?: string;
   id?: string;
   placeholder?: string;
+  onChange?: (iso: string) => void;
 }) {
   const formContext = useFormContext<TFieldValues>();
   const resolvedControl = control ?? formContext.control;
@@ -318,7 +320,10 @@ export function FieldDateInput<
           id={fieldId}
           name={field.name}
           value={field.value == null ? "" : String(field.value)}
-          onChange={field.onChange}
+          onChange={(next) => {
+            field.onChange(next);
+            onChange?.(next);
+          }}
           onBlur={field.onBlur}
           disabled={disabled}
           required={required}
