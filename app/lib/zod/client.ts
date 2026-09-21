@@ -40,20 +40,6 @@ export const clientSchema = clientDraftSchema.superRefine((values, ctx) => {
       message: "Registered name is required",
     });
   }
-  if (!values.abn.trim()) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["abn"],
-      message: "ABN is required",
-    });
-  }
-  if (!values.phone.trim()) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["phone"],
-      message: "Phone is required",
-    });
-  }
   if (!values.email.trim()) {
     ctx.addIssue({
       code: "custom",

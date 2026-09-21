@@ -24,7 +24,7 @@ describe("clientDraftSchema", () => {
 });
 
 describe("clientSchema", () => {
-  it("requires the remaining client fields", () => {
+  it("requires client fields other than ABN and phone", () => {
     const result = clientSchema.safeParse({
       name: "",
       tradingName: "",
@@ -41,14 +41,28 @@ describe("clientSchema", () => {
       expect(paths).toEqual(
         expect.arrayContaining([
           "name",
-          "abn",
-          "phone",
           "email",
           "accountManagerId",
           "authorisedRepresentativeId",
         ]),
       );
+      expect(paths).not.toContain("abn");
+      expect(paths).not.toContain("phone");
     }
+  });
+
+  it("accepts a client without an ABN or phone", () => {
+    const result = clientSchema.safeParse({
+      name: "Acme Pty Ltd",
+      tradingName: "",
+      abn: "",
+      phone: "",
+      email: "a@b.co",
+      accountManagerId: 1,
+      clientSourceId: 16,
+      authorisedRepresentativeId: 2,
+    });
+    expect(result.success).toBe(true);
   });
 
   it("accepts a client without a trading name", () => {
