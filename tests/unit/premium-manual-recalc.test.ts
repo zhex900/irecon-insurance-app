@@ -75,14 +75,14 @@ describe("applyManualPremiumEdit — corrected vs legacy quirks", () => {
     expect(result.premium.contractWorksTerrorismPremium).toBe(terror);
   });
 
-  it("does not allow True Base to decrease below the current value", () => {
+  it("allows True Base to decrease above the contract works minimum", () => {
     const result = applyManualPremiumEdit({
       premium: premium({ contractWorksBasePremium: 1000 }),
       rating: rating({ contractWorksMinPremium: 800 }),
       key: "contractWorksBasePremium",
-      value: 100,
+      value: 900,
     });
-    expect(result.premium.contractWorksBasePremium).toBe(1000);
+    expect(result.premium.contractWorksBasePremium).toBe(900);
   });
 
   it("floors True Base to the contract works minimum when current is below min", () => {
@@ -95,14 +95,14 @@ describe("applyManualPremiumEdit — corrected vs legacy quirks", () => {
     expect(result.premium.contractWorksBasePremium).toBe(800);
   });
 
-  it("does not allow liability True Base to decrease", () => {
+  it("allows liability True Base to decrease above the liability minimum", () => {
     const result = applyManualPremiumEdit({
       premium: premium({ liabilityBasePremium: 500 }),
       rating: rating({ liabilityMinPremium: 250 }),
       key: "liabilityBasePremium",
-      value: 100,
+      value: 400,
     });
-    expect(result.premium.liabilityBasePremium).toBe(500);
+    expect(result.premium.liabilityBasePremium).toBe(400);
   });
 
   it("ES/DH edit: display terror = base×τ + ES×τ + DH×τ", () => {
