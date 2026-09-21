@@ -194,28 +194,28 @@ export function activeBandExcessAmounts(
   estimatedTurnover: unknown,
 ): ActiveBandExcessAmounts {
   const empty: ActiveBandExcessAmounts = {
-    minorPerils: "",
-    majorPerils: "",
-    limit10M: "",
-    limit20M: "",
+    minorPerils: "N/A",
+    majorPerils: "N/A",
+    limit10M: "N/A",
+    limit20M: "N/A",
   };
   const band = resolveContractValueBand(estimatedTurnover);
   if (!band || !excesses) return empty;
 
   if (band === "upTo2m") {
     return {
-      minorPerils: excesses.excessUpTo2MMinorPerils ?? "",
-      majorPerils: excesses.excessUpTo2MMajorPerils ?? "",
-      limit10M: excesses.excessUpTo2MLimit10M ?? "",
-      limit20M: excesses.excessUpTo2MLimit20M ?? "",
+      minorPerils: excesses.excessUpTo2MMinorPerils || "N/A",
+      majorPerils: excesses.excessUpTo2MMajorPerils || "N/A",
+      limit10M: excesses.excessUpTo2MLimit10M || "N/A",
+      limit20M: excesses.excessUpTo2MLimit20M || "N/A",
     };
   }
 
   return {
-    minorPerils: excesses.excessOver2MMinorPerils ?? "",
-    majorPerils: excesses.excessOver2MMajorPerils ?? "",
-    limit10M: excesses.excessOver2MLimit10M ?? "",
-    limit20M: excesses.excessOver2MLimit20M ?? "",
+    minorPerils: excesses.excessOver2MMinorPerils || "N/A",
+    majorPerils: excesses.excessOver2MMajorPerils || "N/A",
+    limit10M: excesses.excessOver2MLimit10M || "N/A",
+    limit20M: excesses.excessOver2MLimit20M || "N/A",
   };
 }
 
@@ -311,7 +311,7 @@ export function migrateLegacyExcessKeys(
 ): Record<string, string> {
   const raw: Record<string, string> = {};
   for (const [key, value] of Object.entries(excesses ?? {})) {
-    if (value != null && !isLegacyExcessEmpty(value)) raw[key] = value;
+    if (value != null) raw[key] = value;
   }
   for (const [oldKey, newKey] of Object.entries(LEGACY_EXCESS_KEY)) {
     const legacy = raw[oldKey];

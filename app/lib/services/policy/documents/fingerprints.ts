@@ -5,6 +5,7 @@ export function reviewDocumentsFingerprint(policy: Policy): string {
   const premium = policy.car.premium;
   const car = policy.car;
   return [
+    "review-documents-v2",
     policy.policyNumber,
     policy.policyStatusId,
     policy.dateStart,
