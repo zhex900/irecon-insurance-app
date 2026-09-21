@@ -1,3 +1,4 @@
+import { addDays, addMonths, addYears } from "date-fns";
 import type { z } from "zod";
 
 import {
@@ -11,6 +12,7 @@ import {
   normalizeCustomWordings,
 } from "~/lib/policies/custom-wordings";
 import {
+  incrementPolicyNumber,
   POLICY_NUMBER_TAKEN_MESSAGE,
   resolvePolicyNumberForSave,
   validatePolicyNumberInput,
@@ -23,6 +25,7 @@ import {
   buildReferralReasons,
   liabilityLimitLabel,
 } from "~/lib/pricing/referral-reasons";
+import { toIsoDate } from "~/lib/search/date-range-filter";
 import {
   createPolicyDraft,
   getPolicy,
@@ -51,6 +54,21 @@ export {
 type DraftValues = z.infer<typeof carPolicyDraftSchema>;
 
 export class PolicySaveError extends ValidationError {}
+
+const RENEWAL_NUMBER_MAX_ATTEMPTS = 25;
+
+async function allocateRenewalPolicyNumber(
+  sourcePolicyNumber: string,
+  sourcePolicyId: string,
+): Promise<string> {
+  let candidate = incrementPolicyNumber(sourcePolicyNumber);
+  for (let attempt = 0; attempt < RENEWAL_NUMBER_MAX_ATTEMPTS; attempt++) {
+    if (!(await isPolicyNumberTaken(candidate, sourcePolicyId)))
+      return candidate;
+    candidate = incrementPolicyNumber(candidate);
+  }
+  throw new PolicySaveError("Could not allocate a unique renewal number.");
+}
 
 /**
  * Validate shape + uniqueness when a save changes the policy number.
@@ -292,6 +310,76 @@ export async function clonePolicy(sourcePolicyId: string, createdBy: string) {
       dateEffective: source.dateEffective,
       dateStart: source.dateStart,
       dateEnd: source.dateEnd,
+      insurerCode: source.insurerCode,
+      isDraft: true,
+      car,
+    },
+    createdBy,
+  );
+}
+
+export async function renewPolicy(sourcePolicyId: string, createdBy: string) {
+  const source = await getPolicy(sourcePolicyId);
+  if (!source) throw new NotFoundError("Policy not found");
+
+  const policyNumber = await allocateRenewalPolicyNumber(
+    source.policyNumber,
+    source.policyId,
+  );
+  const dateStart = addDays(
+    addYears(new Date(`${source.dateEnd}T00:00:00`), 1),
+    1,
+  );
+  const car: Policy["car"] = {
+    coverTypeId: source.car.coverTypeId,
+    annualCoverTypeId: source.car.annualCoverTypeId ?? null,
+    siteAddress: source.car.siteAddress,
+    insuredName: source.car.insuredName,
+    estimatedTurnover: source.car.estimatedTurnover,
+    businessActivities: source.car.businessActivities,
+    insuredContracts: source.car.insuredContracts,
+    geographicalScopes: source.car.geographicalScopes,
+    plantEquipment: source.car.plantEquipment,
+    existingStructure: source.car.existingStructure,
+    displayHomes: source.car.displayHomes,
+    claimsCountLast3Years: source.car.claimsCountLast3Years,
+    anyClaimsExceed20k: source.car.anyClaimsExceed20k,
+    contractWorksSumInsured: source.car.contractWorksSumInsured,
+    liabilityLimitBand: source.car.liabilityLimitBand,
+    hasExistingContractWorksCover: source.car.hasExistingContractWorksCover,
+    currentInsurer: source.car.currentInsurer,
+    maximumConstructionPeriod: 18,
+    maximumMaintenancePeriod: source.car.maximumMaintenancePeriod,
+    contractWorksExistingStructurePremium:
+      source.car.contractWorksExistingStructurePremium,
+    contractWorksDisplayHomesPremium:
+      source.car.contractWorksDisplayHomesPremium,
+    subLimits: {
+      ...source.car.subLimits,
+      transit: "$200,000 any one loss",
+    },
+    excesses: { ...source.car.excesses },
+    declarationConfirmed: false,
+    excludedContracts1: source.car.excludedContracts1,
+    excludedContracts2: source.car.excludedContracts2,
+    excludedContracts3: source.car.excludedContracts3,
+    selectedWordingIds: [...source.car.selectedWordingIds],
+    customWordings: [...(source.car.customWordings ?? [])],
+    ...flatCustomWordings(source.car.customWordings ?? []),
+    referralReasons: [],
+  };
+
+  return createPolicyDraft(
+    source.clientId,
+    {
+      policyNumber,
+      policyCategoryId: 2,
+      policyStatusId: POLICY_STATUS.Pending,
+      postcode: source.postcode,
+      stateId: source.stateId,
+      dateEffective: toIsoDate(dateStart),
+      dateStart: toIsoDate(dateStart),
+      dateEnd: toIsoDate(addMonths(dateStart, 18)),
       insurerCode: source.insurerCode,
       isDraft: true,
       car,

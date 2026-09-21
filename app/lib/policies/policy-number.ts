@@ -32,6 +32,15 @@ export function composePolicyNumber(suffix: string): string {
   return `${POLICY_NUMBER_PREFIX}${clean}`;
 }
 
+/** Increment the numeric policy suffix while preserving its width. */
+export function incrementPolicyNumber(policyNumber: string): string {
+  const suffix = policyNumberSuffix(policyNumber);
+  if (!suffix) return composePolicyNumber("1");
+  return composePolicyNumber(
+    String(Number(suffix) + 1).padStart(suffix.length, "0"),
+  );
+}
+
 /** Auto-allocate from `policy_number_seq` (not the UUID primary key). */
 export function formatPolicyNumberFromSeq(seq: number): string {
   return composePolicyNumber(String(seq).padStart(4, "0"));

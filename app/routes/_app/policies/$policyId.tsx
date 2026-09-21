@@ -1,4 +1,9 @@
-import { CopyIcon, SlidersHorizontalIcon, Trash2Icon } from "lucide-react";
+import {
+  CopyIcon,
+  RefreshCwIcon,
+  SlidersHorizontalIcon,
+  Trash2Icon,
+} from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import {
   redirect,
@@ -48,6 +53,7 @@ import {
   applyPremiumCalculation,
   clonePolicy,
   PolicySaveError,
+  renewPolicy,
   savePolicyDraft,
   updatePolicyNote,
   upsertPolicyFromForm,
@@ -102,6 +108,7 @@ export async function action({ request, params }: Route.ActionArgs) {
     [
       "save",
       "clone",
+      "renew",
       "delete",
       "add-note",
       "update-note",
@@ -138,6 +145,35 @@ export async function action({ request, params }: Route.ActionArgs) {
       withSuccessToast(
         `/policies/${cloned.policyId}?cloned=1`,
         `Policy cloned · ${cloned.policyNumber}. You are editing the new copy.`,
+      ),
+    );
+  }
+
+  if (intent === "renew") {
+    const source = await getPolicy(policyId);
+    if (!source || !isTerminalStatus(source.policyStatusId)) {
+      throw new Response("Only taken or not taken policies can be renewed.", {
+        status: 400,
+      });
+    }
+    const renewed = await renewPolicy(policyId, actor.email);
+    await writeAuditLog({
+      actor,
+      action: "policy.renew",
+      entityType: "policy",
+      entityId: renewed.policyId,
+      summary: `Renewed policy ${source.policyNumber} → ${renewed.policyNumber}`,
+      metadata: {
+        sourcePolicyId: policyId,
+        sourcePolicyNumber: source.policyNumber,
+        policyNumber: renewed.policyNumber,
+      },
+      request,
+    });
+    return redirect(
+      withSuccessToast(
+        `/policies/${renewed.policyId}?renewed=1`,
+        `Policy renewed · ${renewed.policyNumber}. You are editing the new renewal.`,
       ),
     );
   }
@@ -435,14 +471,19 @@ export default function PolicyDetailRoute({
     policy.policyStatusId === POLICY_STATUS.Taken &&
     Boolean(policy.car.premium);
   const canClone = readOnly;
+  const canRenew = readOnly;
   const canDelete = !readOnly;
   const isCloning =
     navigation.state !== "idle" &&
     navigation.formData?.get("intent") === "clone";
+  const isRenewing =
+    navigation.state !== "idle" &&
+    navigation.formData?.get("intent") === "renew";
   const isDeleting =
     navigation.state !== "idle" &&
     navigation.formData?.get("intent") === "delete";
   const wasCloned = searchParams.get("cloned") === "1";
+  const wasRenewed = searchParams.get("renewed") === "1";
   const clearedCloneForPolicyId = useRef<string | null>(null);
   const deleteError =
     actionData && "formError" in actionData ? actionData.formError : null;
@@ -455,11 +496,11 @@ export default function PolicyDetailRoute({
   }, [searchParams, setSearchParams]);
 
   useEffect(() => {
-    if (!wasCloned) return;
+    if (!wasCloned && !wasRenewed) return;
     if (clearedCloneForPolicyId.current === policy.policyId) return;
     clearWizardStepState(policy.policyId);
     clearedCloneForPolicyId.current = policy.policyId;
-  }, [wasCloned, policy.policyId]);
+  }, [wasCloned, wasRenewed, policy.policyId]);
 
   const lastDeleteErrorRef = useRef<string | null>(null);
   useEffect(() => {
@@ -470,7 +511,7 @@ export default function PolicyDetailRoute({
   }, [deleteError, deleteOpen]);
 
   const headerActions: ReactNode =
-    canAdjust || canClone || canDelete ? (
+    canAdjust || canClone || canRenew || canDelete ? (
       <div className="flex items-center gap-2">
         {canDelete ? (
           <Button
@@ -513,18 +554,39 @@ export default function PolicyDetailRoute({
             <TooltipContent>Clone policy</TooltipContent>
           </Tooltip>
         ) : null}
+        {canRenew ? (
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <LoadingButton
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  loading={isRenewing}
+                  onClick={() => {
+                    submit({ intent: "renew" }, { method: "post" });
+                  }}
+                />
+              }
+            >
+              <RefreshCwIcon data-icon="inline-start" />
+              Renew
+            </TooltipTrigger>
+            <TooltipContent>Renew policy</TooltipContent>
+          </Tooltip>
+        ) : null}
       </div>
     ) : null;
 
   return (
     <div>
       <PolicyWizard
-        key={`${policy.policyId}-${wasCloned ? "cloned" : "view"}`}
+        key={`${policy.policyId}-${wasCloned || wasRenewed ? "copied" : "view"}`}
         policy={policy}
         onPolicyUpdated={setPolicy}
         reference={reference}
         referenceFeeNamesPending={feeNamesPending}
-        freshSteps={wasCloned}
+        freshSteps={wasCloned || wasRenewed}
         initialIsNew={initialIsNew}
         clientName={loaderData.clientName}
         noteAuthors={noteAuthors}
