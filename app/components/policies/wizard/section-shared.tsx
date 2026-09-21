@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { useFormContext } from "react-hook-form";
+import { useEffect } from "react";
+import { useFormContext, useWatch } from "react-hook-form";
 
 import {
   FieldSavedTick,
@@ -16,6 +17,7 @@ import {
 import { FormulaTooltip } from "~/components/ui/formula-tooltip";
 import { Input } from "~/components/ui/input";
 import type { ReferenceData } from "~/lib/db/types";
+import { deriveMaximumConstructionPeriod } from "~/lib/policies/construction-period";
 import type { ExcessFieldConfig } from "~/lib/policies/excesses";
 import type { SubLimitFieldConfig } from "~/lib/policies/sub-limits";
 import { cn } from "~/lib/utils";
@@ -53,15 +55,50 @@ export function SubLimitField({ field }: { field: SubLimitFieldConfig }) {
 export function ExcessField({
   field,
   className,
+  plantEquipmentDefaultExcess,
 }: {
   field: ExcessFieldConfig;
   className?: string;
+  /** Default excess to restore when plant & equipment goes from zero back to a value. */
+  plantEquipmentDefaultExcess?: string;
 }) {
   const {
+    setValue,
     formState: { errors },
   } = useFormContext<CarPolicyFormValues>();
   const error = errors.excesses?.[field.key]?.message;
   const inputId = `excesses.${field.key}`;
+  const plantEquipment = useWatch({ name: "plantEquipment" });
+  const plantEquipmentExcess = useWatch({
+    name: "excesses.excessPlantEquipment",
+  });
+  const plantEquipmentIsZero = Number(plantEquipment || 0) <= 0;
+
+  useEffect(() => {
+    if (field.key !== "excessPlantEquipment") return;
+    if (plantEquipmentIsZero) {
+      if (plantEquipmentExcess !== "N/A") {
+        setValue("excesses.excessPlantEquipment", "N/A", {
+          shouldDirty: true,
+          shouldValidate: true,
+        });
+      }
+      return;
+    }
+    if (plantEquipmentExcess === "N/A") {
+      setValue(
+        "excesses.excessPlantEquipment",
+        plantEquipmentDefaultExcess ?? "",
+        { shouldDirty: true, shouldValidate: true },
+      );
+    }
+  }, [
+    field.key,
+    plantEquipmentDefaultExcess,
+    plantEquipmentExcess,
+    plantEquipmentIsZero,
+    setValue,
+  ]);
 
   return (
     <Field data-invalid={error ? true : undefined} className={className}>
@@ -79,6 +116,9 @@ export function ExcessField({
         name={inputId}
         id={inputId}
         type="text"
+        allowNA
+        // Plant & equipment N/A is derived automatically — no manual toggle.
+        showNAButton={field.key !== "excessPlantEquipment"}
         aria-invalid={!!error}
       />
       {field.description ? (
@@ -119,12 +159,22 @@ export function applyAnnualCoverTypeDefaults(
       reference.defaultTexts.insuredContractsAnnualTransfer,
       { shouldDirty: true, shouldValidate: false },
     );
+    setValue(
+      "maximumConstructionPeriod",
+      deriveMaximumConstructionPeriod(1, annualCoverTypeId),
+      { shouldDirty: true, shouldValidate: false },
+    );
     return;
   }
   if (annualCoverTypeId === 2) {
     setValue(
       "insuredContracts",
       reference.defaultTexts.insuredContractsAnnualContractCommencing,
+      { shouldDirty: true, shouldValidate: false },
+    );
+    setValue(
+      "maximumConstructionPeriod",
+      deriveMaximumConstructionPeriod(1, annualCoverTypeId),
       { shouldDirty: true, shouldValidate: false },
     );
   }
@@ -146,10 +196,11 @@ export function applyCoverTypeDefaults(
       reference.defaultTexts.geographicalScopeAnnual,
       { shouldDirty: true },
     );
-    setValue("maximumConstructionPeriod", 18, {
-      shouldDirty: true,
-      shouldValidate: false,
-    });
+    setValue(
+      "maximumConstructionPeriod",
+      deriveMaximumConstructionPeriod(coverTypeId),
+      { shouldDirty: true, shouldValidate: false },
+    );
     setValue("subLimits", { ...reference.defaultSubLimits.annual });
     return;
   }
@@ -161,18 +212,20 @@ export function applyCoverTypeDefaults(
   });
   if (coverTypeId === 2) {
     setValue("insuredContracts", reference.defaultTexts.insuredContractsSingle);
-    setValue("maximumConstructionPeriod", 12, {
-      shouldDirty: true,
-      shouldValidate: false,
-    });
+    setValue(
+      "maximumConstructionPeriod",
+      deriveMaximumConstructionPeriod(coverTypeId),
+      { shouldDirty: true, shouldValidate: false },
+    );
     setValue("subLimits", { ...reference.defaultSubLimits.annual });
   }
   if (coverTypeId === 3) {
     setValue("insuredContracts", reference.defaultTexts.insuredContractsSingle);
-    setValue("maximumConstructionPeriod", 12, {
-      shouldDirty: true,
-      shouldValidate: false,
-    });
+    setValue(
+      "maximumConstructionPeriod",
+      deriveMaximumConstructionPeriod(coverTypeId),
+      { shouldDirty: true, shouldValidate: false },
+    );
     setValue("subLimits", { ...reference.defaultSubLimits.ownerBuilder });
   }
 }

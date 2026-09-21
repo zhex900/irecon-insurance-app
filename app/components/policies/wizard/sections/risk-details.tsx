@@ -1,3 +1,4 @@
+import { addMonths, isValid, parseISO } from "date-fns";
 import { useFormContext } from "react-hook-form";
 
 import { PolicyNumberField } from "~/components/policies/policy-number-field";
@@ -9,6 +10,7 @@ import {
   Select,
 } from "~/components/ui/form-controls";
 import type { ReferenceData } from "~/lib/db/types";
+import { isIsoDate, toIsoDate } from "~/lib/search/date-range-filter";
 import { type CarPolicyFormValues } from "~/lib/zod/policy-car";
 
 import {
@@ -28,6 +30,7 @@ export function RiskDetails({ reference }: { reference: ReferenceData }) {
 
   const coverTypeId = Number(watch("coverTypeId"));
   const policyCategoryId = Number(watch("policyCategoryId"));
+  const maximumConstructionPeriod = Number(watch("maximumConstructionPeriod"));
   const policyNumber = watch("policyNumber") ?? "";
   const holdCurrent = watch("hasExistingContractWorksCover");
   const isRenewal = policyCategoryId === 2;
@@ -192,6 +195,25 @@ export function RiskDetails({ reference }: { reference: ReferenceData }) {
           required
           hint="Auto 12 months for annual"
           error={errors.dateStart?.message}
+          onChange={(next) => {
+            if (!isIsoDate(next)) return;
+            const startDate = parseISO(next);
+            if (!isValid(startDate)) return;
+            if (
+              !Number.isFinite(maximumConstructionPeriod) ||
+              maximumConstructionPeriod <= 0
+            ) {
+              return;
+            }
+            setValue(
+              "dateEnd",
+              toIsoDate(addMonths(startDate, maximumConstructionPeriod)),
+              {
+                shouldDirty: true,
+                shouldValidate: false,
+              },
+            );
+          }}
         />
         <FieldDateInput
           className="md:row-span-3 md:!grid md:grid-rows-subgrid md:gap-2"

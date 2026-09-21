@@ -1,4 +1,4 @@
-import { CheckIcon } from "lucide-react";
+import { CheckIcon, XIcon } from "lucide-react";
 import { useState } from "react";
 import { Controller, useFormContext } from "react-hook-form";
 
@@ -6,6 +6,7 @@ import { useFieldSaveState } from "~/components/forms/field-save-highlight";
 import {
   InputGroup,
   InputGroupAddon,
+  InputGroupButton,
   InputGroupInput,
   InputGroupText,
 } from "~/components/ui/input-group";
@@ -19,6 +20,10 @@ type AmountInputProps = Omit<
   name: string;
   /** When false, no leading $ (still comma-formats). Default true. */
   showCurrencySymbol?: boolean;
+  /** Allow the excesses section to store the literal N/A value. */
+  allowNA?: boolean;
+  /** Hide the manual "Set N/A" button while still allowing N/A display/typing. */
+  showNAButton?: boolean;
 };
 
 function assignRef<T>(ref: React.Ref<T> | undefined, value: T | null) {
@@ -36,6 +41,26 @@ function rawAmountValue(value: string | number | null | undefined): string {
   return sanitizeAmountInput(String(value));
 }
 
+function normalizeInputValue(value: string, allowNA: boolean): string {
+  if (allowNA) return value;
+  return sanitizeAmountInput(value);
+}
+
+function displayAmountValue(
+  value: string | number | null | undefined,
+  allowNA: boolean,
+  focused: boolean,
+): string {
+  if (value == null || value === "") return "";
+  if (allowNA) {
+    const text = String(value);
+    if (focused || !/^\d+(?:\.\d+)?$/.test(text.replace(/,/g, ""))) {
+      return text;
+    }
+  }
+  return focused ? rawAmountValue(value) : formatAmountInput(value);
+}
+
 /**
  * Controlled currency/amount input: shows thousands separators when blurred,
  * plain digits while focused so the caret does not jump.
@@ -43,6 +68,8 @@ function rawAmountValue(value: string | number | null | undefined): string {
 export function AmountInput({
   name,
   showCurrencySymbol = true,
+  allowNA = false,
+  showNAButton = true,
   className,
   id,
   ...inputProps
@@ -70,11 +97,7 @@ export function AmountInput({
             {...inputProps}
             name={field.name}
             ref={(node) => assignRef(field.ref, node)}
-            value={
-              focused
-                ? rawAmountValue(field.value)
-                : formatAmountInput(field.value as string | number)
-            }
+            value={displayAmountValue(field.value, allowNA, focused)}
             onFocus={(event) => {
               setFocused(true);
               inputProps.onFocus?.(event);
@@ -85,9 +108,21 @@ export function AmountInput({
               inputProps.onBlur?.(event);
             }}
             onChange={(event) => {
-              field.onChange(sanitizeAmountInput(event.target.value));
+              field.onChange(normalizeInputValue(event.target.value, allowNA));
             }}
           />
+          {allowNA && showNAButton ? (
+            <InputGroupAddon align="inline-end">
+              <InputGroupButton
+                aria-label="Set N/A"
+                title="Set N/A"
+                disabled={inputProps.disabled}
+                onClick={() => field.onChange("N/A")}
+              >
+                <XIcon />
+              </InputGroupButton>
+            </InputGroupAddon>
+          ) : null}
           {saved ? (
             <InputGroupAddon align="inline-end">
               <CheckIcon className="size-3.5 text-success" aria-hidden />

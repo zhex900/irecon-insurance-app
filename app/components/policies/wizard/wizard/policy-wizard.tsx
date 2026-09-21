@@ -30,7 +30,7 @@ export function PolicyWizard({
   const form = useForm<CarPolicyFormValues>({
     resolver: zodResolver(carPolicySchema) as Resolver<CarPolicyFormValues>,
     defaultValues: {
-      ...policyToFormValues(policy),
+      ...policyToFormValues(policy, clientName),
       ...(blankInitialFields
         ? {
             hasExistingContractWorksCover: undefined,

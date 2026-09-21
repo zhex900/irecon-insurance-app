@@ -21,10 +21,11 @@ const LIABILITY_BY_ID = new Map(
 );
 
 export function money(value: number | string | null | undefined) {
-  if (value == null || value === "") return "";
+  if (value == null || value === "") return "N/A";
   if (typeof value === "string") {
     const trimmed = value.trim();
-    if (!trimmed) return "";
+    if (!trimmed) return "N/A";
+    if (/^n\/a$/i.test(trimmed)) return "N/A";
     // Only format bare / $ amounts — leave free text (e.g. "Not Insured") alone.
     const bare = trimmed.replace(/[$,\s]/g, "");
     if (!/^-?\d+(\.\d+)?$/.test(bare)) return trimmed;
@@ -32,7 +33,7 @@ export function money(value: number | string | null | undefined) {
     if (Number.isNaN(parsed)) return trimmed;
     return formatCurrency(parsed);
   }
-  if (Number.isNaN(value)) return "";
+  if (Number.isNaN(value)) return "N/A";
   return formatCurrency(value);
 }
 

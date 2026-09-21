@@ -1,3 +1,4 @@
+import { addMonths } from "date-fns";
 import type { z } from "zod";
 
 import {
@@ -6,11 +7,13 @@ import {
   type PremiumBreakdown,
 } from "~/lib/db/types";
 import { NotFoundError, ValidationError } from "~/lib/errors";
+import { deriveMaximumConstructionPeriod } from "~/lib/policies/construction-period";
 import {
   flatCustomWordings,
   normalizeCustomWordings,
 } from "~/lib/policies/custom-wordings";
 import {
+  incrementPolicyNumber,
   POLICY_NUMBER_TAKEN_MESSAGE,
   resolvePolicyNumberForSave,
   validatePolicyNumberInput,
@@ -23,6 +26,7 @@ import {
   buildReferralReasons,
   liabilityLimitLabel,
 } from "~/lib/pricing/referral-reasons";
+import { toIsoDate } from "~/lib/search/date-range-filter";
 import {
   createPolicyDraft,
   getPolicy,
@@ -51,6 +55,54 @@ export {
 type DraftValues = z.infer<typeof carPolicyDraftSchema>;
 
 export class PolicySaveError extends ValidationError {}
+
+const RENEWAL_NUMBER_MAX_ATTEMPTS = 25;
+
+/** Postgres unique_violation (23505) on the case-insensitive policy number index. */
+function isPolicyNumberConflict(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  const { code, constraint_name, message } = error as {
+    code?: unknown;
+    constraint_name?: unknown;
+    message?: unknown;
+  };
+  if (code !== "23505") return false;
+  return (
+    String(constraint_name ?? "").includes("policy_number") ||
+    String(message ?? "").includes("policy_policy_number_uidx")
+  );
+}
+
+/**
+ * Allocate a renewal policy number and create the draft in one retryable step.
+ * The pre-check narrows the search; the insert is the source of truth, so a
+ * concurrent renewal that wins the same candidate is caught here and retried
+ * against the next number instead of racing on a read-then-insert check.
+ */
+async function createRenewalDraft(
+  source: Policy,
+  createdBy: string,
+  partial: Omit<Partial<Policy>, "policyNumber">,
+): Promise<Policy> {
+  let candidate = incrementPolicyNumber(source.policyNumber);
+  for (let attempt = 0; attempt < RENEWAL_NUMBER_MAX_ATTEMPTS; attempt++) {
+    if (await isPolicyNumberTaken(candidate, source.policyId)) {
+      candidate = incrementPolicyNumber(candidate);
+      continue;
+    }
+    try {
+      return await createPolicyDraft(
+        source.clientId,
+        { ...partial, policyNumber: candidate },
+        createdBy,
+      );
+    } catch (error) {
+      if (!isPolicyNumberConflict(error)) throw error;
+      candidate = incrementPolicyNumber(candidate);
+    }
+  }
+  throw new PolicySaveError("Could not allocate a unique renewal number.");
+}
 
 /**
  * Validate shape + uniqueness when a save changes the policy number.
@@ -298,6 +350,68 @@ export async function clonePolicy(sourcePolicyId: string, createdBy: string) {
     },
     createdBy,
   );
+}
+
+export async function renewPolicy(sourcePolicyId: string, createdBy: string) {
+  const source = await getPolicy(sourcePolicyId);
+  if (!source) throw new NotFoundError("Policy not found");
+
+  const dateStart = addMonths(new Date(`${source.dateStart}T00:00:00`), 12);
+  const maximumConstructionPeriod = deriveMaximumConstructionPeriod(
+    source.car.coverTypeId,
+    source.car.annualCoverTypeId,
+  );
+  const car: Policy["car"] = {
+    coverTypeId: source.car.coverTypeId,
+    annualCoverTypeId: source.car.annualCoverTypeId ?? null,
+    siteAddress: source.car.siteAddress,
+    insuredName: source.car.insuredName,
+    estimatedTurnover: source.car.estimatedTurnover,
+    businessActivities: source.car.businessActivities,
+    insuredContracts: source.car.insuredContracts,
+    geographicalScopes: source.car.geographicalScopes,
+    plantEquipment: source.car.plantEquipment,
+    existingStructure: source.car.existingStructure,
+    displayHomes: source.car.displayHomes,
+    claimsCountLast3Years: source.car.claimsCountLast3Years,
+    anyClaimsExceed20k: source.car.anyClaimsExceed20k,
+    contractWorksSumInsured: source.car.contractWorksSumInsured,
+    liabilityLimitBand: source.car.liabilityLimitBand,
+    hasExistingContractWorksCover: source.car.hasExistingContractWorksCover,
+    currentInsurer: source.car.currentInsurer,
+    maximumConstructionPeriod,
+    maximumMaintenancePeriod: source.car.maximumMaintenancePeriod,
+    contractWorksExistingStructurePremium:
+      source.car.contractWorksExistingStructurePremium,
+    contractWorksDisplayHomesPremium:
+      source.car.contractWorksDisplayHomesPremium,
+    subLimits: {
+      ...source.car.subLimits,
+      transit: "$200,000 any one loss",
+    },
+    excesses: { ...source.car.excesses },
+    declarationConfirmed: false,
+    excludedContracts1: source.car.excludedContracts1,
+    excludedContracts2: source.car.excludedContracts2,
+    excludedContracts3: source.car.excludedContracts3,
+    selectedWordingIds: [...source.car.selectedWordingIds],
+    customWordings: [...(source.car.customWordings ?? [])],
+    ...flatCustomWordings(source.car.customWordings ?? []),
+    referralReasons: [],
+  };
+
+  return createRenewalDraft(source, createdBy, {
+    policyCategoryId: 2,
+    policyStatusId: POLICY_STATUS.Pending,
+    postcode: source.postcode,
+    stateId: source.stateId,
+    dateEffective: toIsoDate(dateStart),
+    dateStart: toIsoDate(dateStart),
+    dateEnd: toIsoDate(addMonths(dateStart, maximumConstructionPeriod)),
+    insurerCode: source.insurerCode,
+    isDraft: true,
+    car,
+  });
 }
 
 function applyFormValues(

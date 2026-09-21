@@ -60,15 +60,13 @@ export function FormFields({
             />
             <FieldInput
               label="Trading Name"
-              required={isNew}
               error={errors.tradingName?.message}
               {...register("tradingName")}
             />
             <FieldInput
               label="ABN"
               inputMode="numeric"
-              required={isNew}
-              hint={isNew ? "11 digits" : "11 digits (optional)"}
+              hint="11 digits (optional)"
               error={errors.abn?.message}
               {...register("abn")}
             />
@@ -79,7 +77,7 @@ export function FormFields({
               label="Phone"
               type="tel"
               autoComplete="tel"
-              required={isNew}
+              hint="Optional"
               error={errors.phone?.message}
               {...register("phone")}
             />

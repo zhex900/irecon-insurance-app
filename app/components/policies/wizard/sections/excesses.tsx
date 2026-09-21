@@ -1,6 +1,7 @@
 import { useFormContext } from "react-hook-form";
 
 import { FieldInput } from "~/components/ui/form-controls";
+import type { ReferenceData } from "~/lib/db/types";
 import {
   groupExcessFieldsByBand,
   resolveContractValueBand,
@@ -10,7 +11,7 @@ import { type CarPolicyFormValues } from "~/lib/zod/policy-car";
 
 import { ExcessField, Section } from "../section-shared";
 
-export function Excesses() {
+export function Excesses({ reference }: { reference: ReferenceData }) {
   const { register, watch } = useFormContext<CarPolicyFormValues>();
   const estimatedTurnover = watch("estimatedTurnover");
   const visibility = { estimatedTurnover };
@@ -22,12 +23,17 @@ export function Excesses() {
     visibleExcessFields({ ...visibility, group: "legalLiability" }),
   );
   const contractValueBand = resolveContractValueBand(estimatedTurnover);
+  const plantEquipmentDefaultExcess =
+    reference.defaultExcesses.excessPlantEquipment;
 
   return (
     <div className="flex flex-col gap-8">
       <Section title="Section 1 – Contract Works Excesses">
         <div className="flex flex-col gap-6">
-          <ExcessBandGroups bands={contractWorksBands} />
+          <ExcessBandGroups
+            bands={contractWorksBands}
+            plantEquipmentDefaultExcess={plantEquipmentDefaultExcess}
+          />
           {!contractValueBand ? (
             <p className="text-sm text-muted-foreground">
               Enter Estimated Turnover / Project Value in Risk Details to show
@@ -60,8 +66,10 @@ export function Excesses() {
 
 function ExcessBandGroups({
   bands,
+  plantEquipmentDefaultExcess,
 }: {
   bands: ReturnType<typeof groupExcessFieldsByBand>;
+  plantEquipmentDefaultExcess?: string;
 }) {
   return (
     <div className="flex flex-col gap-6">
@@ -78,6 +86,7 @@ function ExcessBandGroups({
               <ExcessField
                 key={field.key}
                 field={field}
+                plantEquipmentDefaultExcess={plantEquipmentDefaultExcess}
                 className={
                   field.key === "excessPlantEquipment"
                     ? "md:col-span-2"

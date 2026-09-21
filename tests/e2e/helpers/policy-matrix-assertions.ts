@@ -254,11 +254,14 @@ async function assertPolicyNotTaken(page: Page) {
   await expect(header).toHaveClass(/border-l-muted-foreground\/40/);
 }
 
-async function assertPolicyTaken(page: Page) {
+async function assertPolicyTaken(page: Page, options?: { timeout?: number }) {
   const header = page.getByLabel("Policy wizard header");
 
-  await expect(header).toHaveClass(/border-l-success/);
-  await expect(header.getByLabel("policy status badge")).toHaveText("Taken");
+  await expect(header).toHaveClass(/border-l-success/, options);
+  await expect(header.getByLabel("policy status badge")).toHaveText(
+    "Taken",
+    options,
+  );
 }
 
 async function assertBlockedTakenDialog(page: Page) {
@@ -309,10 +312,14 @@ async function confirmMarkPolicyTaken(page: Page) {
   const confirmMarkPolicyTakenPromise = waitForPolicyRouteSave(page, policyId);
   await page.getByRole("button", { name: /^Confirm$/i }).click();
   // Taken confirm may regenerate documents (slow on preview) before the save POST.
-  // Prefer the terminal UI outcome over waiting on every network hop.
-  await Promise.race([confirmMarkPolicyTakenPromise, assertPolicyTaken(page)]);
+  // Prefer the terminal UI outcome over waiting on every network hop — use a
+  // generous timeout so this branch only wins by succeeding, not by timing out.
+  await Promise.race([
+    confirmMarkPolicyTakenPromise,
+    assertPolicyTaken(page, { timeout: 90_000 }),
+  ]);
   await expect(dialog).not.toBeVisible();
-  await assertPolicyTaken(page);
+  await assertPolicyTaken(page, { timeout: 90_000 });
 }
 
 export async function completeTakenTerminalFlow(

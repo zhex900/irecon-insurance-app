@@ -7,6 +7,7 @@ import {
   contractValueBandLabel,
   migrateLegacyExcessKeys,
   normalizeExcesses,
+  normalizeExcessValue,
   relocateExcessesToActiveBand,
 } from "~/lib/policies/excesses";
 
@@ -72,12 +73,12 @@ describe("activeBandExcessAmounts", () => {
     });
   });
 
-  it("returns empty strings when turnover does not resolve", () => {
+  it("returns N/A values when turnover does not resolve", () => {
     expect(activeBandExcessAmounts(excesses, "")).toEqual({
-      minorPerils: "",
-      majorPerils: "",
-      limit10M: "",
-      limit20M: "",
+      minorPerils: "N/A",
+      majorPerils: "N/A",
+      limit10M: "N/A",
+      limit20M: "N/A",
     });
   });
 });
@@ -111,6 +112,20 @@ describe("legacy excess migration", () => {
     );
   });
 
+  it("preserves N/A on current excess fields for saving", () => {
+    expect(
+      normalizeExcesses({
+        excessUpTo2MMinorPerils: "N/A",
+        excessUpTo2MMajorPerils: "N/A",
+        excessUpTo2MLimit20M: "N/A",
+      }),
+    ).toMatchObject({
+      excessUpTo2MMinorPerils: "N/A",
+      excessUpTo2MMajorPerils: "N/A",
+      excessUpTo2MLimit20M: "N/A",
+    });
+  });
+
   it("relocates up-to-2M values into over-2M band for high turnover", () => {
     const normalized = normalizeExcesses(legacy19965, 4_000_000);
     expect(normalized).toMatchObject({
@@ -123,7 +138,7 @@ describe("legacy excess migration", () => {
     expect(activeBandExcessAmounts(normalized, 4_000_000)).toEqual({
       minorPerils: "1000",
       majorPerils: "1000",
-      limit10M: "",
+      limit10M: "N/A",
       limit20M: "2500",
     });
   });
@@ -138,5 +153,13 @@ describe("legacy excess migration", () => {
     expect(relocateExcessesToActiveBand(normalized, 1_500_000)).toEqual(
       normalized,
     );
+  });
+});
+
+describe("excess value normalization", () => {
+  it("preserves N/A alongside numeric values", () => {
+    expect(normalizeExcessValue("N/A")).toBe("N/A");
+    expect(normalizeExcessValue("n/a")).toBe("N/A");
+    expect(normalizeExcessValue("$2,500")).toBe("2500");
   });
 });

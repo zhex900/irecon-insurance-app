@@ -1,6 +1,5 @@
 import { type Dispatch, type SetStateAction, useMemo, useState } from "react";
 import { useFormContext } from "react-hook-form";
-import { toast } from "sonner";
 
 import type { PremiumBreakdown, RatingSnapshot } from "~/lib/db/types";
 import {
@@ -28,16 +27,6 @@ function applyPremiumPatch(options: {
     SetStateAction<ManualPremiumSessionRates | undefined>
   >;
 }): void {
-  if (
-    options.key === "contractWorksBasePremium" ||
-    options.key === "liabilityBasePremium"
-  ) {
-    const current = Number(options.premium[options.key]) || 0;
-    if (options.value < current) {
-      toast.error("True base premium cannot be decreased.");
-      return;
-    }
-  }
   const nextManualKeys = new Set(options.manualKeys);
   nextManualKeys.add(options.key);
   options.setManualKeys(nextManualKeys);

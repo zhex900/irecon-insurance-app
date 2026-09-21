@@ -148,11 +148,53 @@ export function normalizePdfmeTemplateSchemas<
   return {
     ...template,
     schemas: template.schemas.map((page) =>
-      alignBrokerFeeSchemaNames(
-        page.map((schema) => normalizeMultiVariableTextSchema(schema)),
+      alignExcessSchemaNames(
+        alignBrokerFeeSchemaNames(
+          page.map((schema) => normalizeMultiVariableTextSchema(schema)),
+        ),
       ),
     ),
   };
+}
+
+/** Repair the legacy ROA row that was saved with the wrong excess field. */
+function alignExcessSchemaNames(
+  page: Array<Record<string, unknown>>,
+): Array<Record<string, unknown>> {
+  const label = page.find(
+    (schema) =>
+      typeof schema.content === "string" &&
+      schema.content.trim() === "Worker to Worker Claims",
+  );
+  if (!label || !label.position || typeof label.position !== "object") {
+    return page;
+  }
+
+  const labelY = (label.position as { y?: unknown }).y;
+  if (typeof labelY !== "number") return page;
+
+  const valueIndex = page.findIndex((schema) => {
+    const name = canonicalMergeFieldName(
+      typeof schema.name === "string" ? schema.name : "",
+    );
+    const position = schema.position;
+    const y =
+      position && typeof position === "object"
+        ? (position as { y?: unknown }).y
+        : null;
+    return (
+      name === "ExcessUpTo2MLimit20M" &&
+      typeof y === "number" &&
+      Math.abs(y - labelY) <= 2
+    );
+  });
+  if (valueIndex < 0) return page;
+
+  const next = page.map((schema) => ({ ...schema }));
+  const schema = next[valueIndex]!;
+  schema.name = "ExcessWorkerToWorker";
+  schema.content = "{ExcessWorkerToWorker}";
+  return next;
 }
 
 /**
