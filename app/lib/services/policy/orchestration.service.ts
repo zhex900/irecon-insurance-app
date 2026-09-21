@@ -1,4 +1,4 @@
-import { addDays, addMonths, addYears } from "date-fns";
+import { addMonths } from "date-fns";
 import type { z } from "zod";
 
 import {
@@ -326,10 +326,7 @@ export async function renewPolicy(sourcePolicyId: string, createdBy: string) {
     source.policyNumber,
     source.policyId,
   );
-  const dateStart = addDays(
-    addYears(new Date(`${source.dateEnd}T00:00:00`), 1),
-    1,
-  );
+  const dateStart = addMonths(new Date(`${source.dateStart}T00:00:00`), 12);
   const car: Policy["car"] = {
     coverTypeId: source.car.coverTypeId,
     annualCoverTypeId: source.car.annualCoverTypeId ?? null,
