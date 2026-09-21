@@ -34,7 +34,7 @@ describe("buildReferralReasons anyClaimsExceed20k", () => {
     );
   });
 
-  it("includes no when claims exceed is false", () => {
+  it("omits the claims-exceed reason when claims do not exceed $20,000", () => {
     const reasons = buildReferralReasons(
       {
         displayHomes: 0,
@@ -49,8 +49,8 @@ describe("buildReferralReasons anyClaimsExceed20k", () => {
       ratingOk,
       "$10 Million",
     );
-    expect(reasons).toContain(
-      "Any claims exceeded $20,000 in value is stated as no",
+    expect(reasons).not.toContain(
+      "Any claims exceeded $20,000 in value is stated as yes",
     );
   });
 
@@ -69,8 +69,8 @@ describe("buildReferralReasons anyClaimsExceed20k", () => {
       ratingOk,
       "$10 Million",
     );
-    expect(reasons).toContain(
-      "Any claims exceeded $20,000 in value is stated as no",
+    expect(reasons).not.toContain(
+      "Any claims exceeded $20,000 in value is stated as yes",
     );
     expect(reasons).not.toContain(
       "Any claims exceeded $20,000 in value is stated as yes",

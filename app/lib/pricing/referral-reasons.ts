@@ -74,8 +74,6 @@ export function buildReferralReasons(
   const claimsExceed20k = coerceFormBoolean(input.anyClaimsExceed20k);
   if (claimsExceed20k === true) {
     reasons.push("Any claims exceeded $20,000 in value is stated as yes");
-  } else if (claimsExceed20k === false) {
-    reasons.push("Any claims exceeded $20,000 in value is stated as no");
   }
   if (coerceFormBoolean(input.hasExistingContractWorksCover) === false) {
     reasons.push("Do not hold a current Contract Works/Liability policy");
