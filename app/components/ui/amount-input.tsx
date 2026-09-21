@@ -22,6 +22,8 @@ type AmountInputProps = Omit<
   showCurrencySymbol?: boolean;
   /** Allow the excesses section to store the literal N/A value. */
   allowNA?: boolean;
+  /** Hide the manual "Set N/A" button while still allowing N/A display/typing. */
+  showNAButton?: boolean;
 };
 
 function assignRef<T>(ref: React.Ref<T> | undefined, value: T | null) {
@@ -67,6 +69,7 @@ export function AmountInput({
   name,
   showCurrencySymbol = true,
   allowNA = false,
+  showNAButton = true,
   className,
   id,
   ...inputProps
@@ -108,7 +111,7 @@ export function AmountInput({
               field.onChange(normalizeInputValue(event.target.value, allowNA));
             }}
           />
-          {allowNA ? (
+          {allowNA && showNAButton ? (
             <InputGroupAddon align="inline-end">
               <InputGroupButton
                 aria-label="Set N/A"

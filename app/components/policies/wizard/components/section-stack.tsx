@@ -110,7 +110,7 @@ export const SectionStack = memo(function SectionStack({
         }
         className={borderClassName}
       >
-        <Excesses />
+        <Excesses reference={reference} />
       </PolicyCollapsibleSection>
 
       <PolicyCollapsibleSection

@@ -54,9 +54,12 @@ export function SubLimitField({ field }: { field: SubLimitFieldConfig }) {
 export function ExcessField({
   field,
   className,
+  plantEquipmentDefaultExcess,
 }: {
   field: ExcessFieldConfig;
   className?: string;
+  /** Default excess to restore when plant & equipment goes from zero back to a value. */
+  plantEquipmentDefaultExcess?: string;
 }) {
   const {
     setValue,
@@ -71,17 +74,30 @@ export function ExcessField({
   const plantEquipmentIsZero = Number(plantEquipment || 0) <= 0;
 
   useEffect(() => {
-    if (
-      field.key === "excessPlantEquipment" &&
-      plantEquipmentIsZero &&
-      plantEquipmentExcess !== "N/A"
-    ) {
-      setValue("excesses.excessPlantEquipment", "N/A", {
-        shouldDirty: true,
-        shouldValidate: true,
-      });
+    if (field.key !== "excessPlantEquipment") return;
+    if (plantEquipmentIsZero) {
+      if (plantEquipmentExcess !== "N/A") {
+        setValue("excesses.excessPlantEquipment", "N/A", {
+          shouldDirty: true,
+          shouldValidate: true,
+        });
+      }
+      return;
     }
-  }, [field.key, plantEquipmentExcess, plantEquipmentIsZero, setValue]);
+    if (plantEquipmentExcess === "N/A") {
+      setValue(
+        "excesses.excessPlantEquipment",
+        plantEquipmentDefaultExcess ?? "",
+        { shouldDirty: true, shouldValidate: true },
+      );
+    }
+  }, [
+    field.key,
+    plantEquipmentDefaultExcess,
+    plantEquipmentExcess,
+    plantEquipmentIsZero,
+    setValue,
+  ]);
 
   return (
     <Field data-invalid={error ? true : undefined} className={className}>
@@ -100,6 +116,8 @@ export function ExcessField({
         id={inputId}
         type="text"
         allowNA
+        // Plant & equipment N/A is derived automatically — no manual toggle.
+        showNAButton={field.key !== "excessPlantEquipment"}
         aria-invalid={!!error}
       />
       {field.description ? (
