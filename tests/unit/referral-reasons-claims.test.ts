@@ -50,7 +50,7 @@ describe("buildReferralReasons anyClaimsExceed20k", () => {
       "$10 Million",
     );
     expect(reasons).not.toContain(
-      "Any claims exceeded $20,000 in value is stated as yes",
+      "Any claims exceeded $20,000 in value is stated as no",
     );
   });
 
