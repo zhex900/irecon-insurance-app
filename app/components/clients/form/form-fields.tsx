@@ -60,7 +60,6 @@ export function FormFields({
             />
             <FieldInput
               label="Trading Name"
-              required={isNew}
               error={errors.tradingName?.message}
               {...register("tradingName")}
             />

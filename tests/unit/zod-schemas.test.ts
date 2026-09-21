@@ -24,7 +24,7 @@ describe("clientDraftSchema", () => {
 });
 
 describe("clientSchema", () => {
-  it("requires name, trading name, contact fields, account manager, and AR", () => {
+  it("requires the remaining client fields", () => {
     const result = clientSchema.safeParse({
       name: "",
       tradingName: "",
@@ -41,7 +41,6 @@ describe("clientSchema", () => {
       expect(paths).toEqual(
         expect.arrayContaining([
           "name",
-          "tradingName",
           "abn",
           "phone",
           "email",
@@ -50,6 +49,20 @@ describe("clientSchema", () => {
         ]),
       );
     }
+  });
+
+  it("accepts a client without a trading name", () => {
+    const result = clientSchema.safeParse({
+      name: "Acme Pty Ltd",
+      tradingName: "",
+      abn: "51824753556",
+      phone: "0412 345 678",
+      email: "a@b.co",
+      accountManagerId: 1,
+      clientSourceId: 16,
+      authorisedRepresentativeId: 2,
+    });
+    expect(result.success).toBe(true);
   });
 
   it("accepts a complete client", () => {
