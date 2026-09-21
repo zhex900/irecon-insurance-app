@@ -274,6 +274,7 @@ export function normalizeExcessValue(value: string | undefined): string {
   if (value == null) return "";
   const trimmed = value.trim();
   if (!trimmed) return "";
+  if (/^n\/a$/i.test(trimmed)) return "N/A";
   const match = trimmed.replace(/,/g, "").match(/-?\d+(?:\.\d+)?/);
   return match?.[0] ?? "";
 }

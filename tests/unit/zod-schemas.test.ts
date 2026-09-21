@@ -3,7 +3,10 @@ import { describe, expect, it } from "vitest";
 import { appUserCreateSchema, appUserSchema } from "~/lib/zod/app-user";
 import { clientDraftSchema, clientSchema } from "~/lib/zod/client";
 import { carAdjustmentInputSchema } from "~/lib/zod/policy-adjustment";
-import { getPolicyRuleIssues } from "~/lib/zod/policy-car";
+import {
+  carPolicyDraftSchema,
+  getPolicyRuleIssues,
+} from "~/lib/zod/policy-car";
 
 describe("clientDraftSchema", () => {
   it("accepts incomplete drafts", () => {
@@ -129,6 +132,55 @@ describe("getPolicyRuleIssues", () => {
     expect(issues.map((issue) => issue.path.join("."))).toContain(
       "annualCoverTypeId",
     );
+  });
+
+  it("allows N/A for a visible excess", () => {
+    const issues = getPolicyRuleIssues({
+      coverTypeId: 1,
+      estimatedTurnover: 1_000_000,
+      excesses: {
+        excessPlantEquipment: "N/A",
+      },
+    });
+    expect(issues).not.toContainEqual(
+      expect.objectContaining({
+        path: ["excesses", "excessPlantEquipment"],
+        message: "Must be a number",
+      }),
+    );
+  });
+});
+
+describe("carPolicyDraftSchema excesses", () => {
+  const excesses = {
+    excessPlantEquipment: "N/A",
+    excessUpTo2MMinorPerils: "1,000",
+    excessUpTo2MMajorPerils: "",
+    excessOver2MMinorPerils: "",
+    excessOver2MMajorPerils: "",
+    excessAdditionalNotes: "",
+    excessWorkerToWorker: "",
+    excessUpTo2MLimit10M: "",
+    excessUpTo2MLimit20M: "",
+    excessOver2MLimit10M: "",
+    excessOver2MLimit20M: "",
+  };
+
+  it("accepts numeric values and N/A", () => {
+    expect(
+      carPolicyDraftSchema.safeParse({
+        clientId: "11111111-1111-4111-8111-111111111111",
+        excesses,
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects other alphabetic excess values", () => {
+    const result = carPolicyDraftSchema.safeParse({
+      clientId: "11111111-1111-4111-8111-111111111111",
+      excesses: { ...excesses, excessPlantEquipment: "pending" },
+    });
+    expect(result.success).toBe(false);
   });
 });
 

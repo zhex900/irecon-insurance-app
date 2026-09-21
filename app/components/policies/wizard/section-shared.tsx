@@ -79,6 +79,7 @@ export function ExcessField({
         name={inputId}
         id={inputId}
         type="text"
+        allowNA
         aria-invalid={!!error}
       />
       {field.description ? (

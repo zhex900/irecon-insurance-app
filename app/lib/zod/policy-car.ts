@@ -65,11 +65,16 @@ const subLimitsSchema = z.object({
   transit: subLimitText,
 });
 
-const excessNumber = z.preprocess((val) => {
-  const stripped = stripAmountCommas(val);
-  if (stripped === "" || stripped == null) return "";
-  return stripped;
-}, z.string());
+const excessNumber = z.preprocess(
+  (val) => {
+    const stripped = stripAmountCommas(val);
+    if (stripped === "" || stripped == null) return "";
+    return stripped;
+  },
+  z
+    .string()
+    .regex(/^(?:\d+(?:\.\d+)?|N\/A)?$/i, "Enter a numeric excess or N/A"),
+);
 
 const excessesSchema = z.object({
   excessPlantEquipment: excessNumber,
@@ -317,7 +322,7 @@ export function getPolicyRuleIssues(
         .trim();
       if (!raw) {
         pushCustomIssue(issues, ["excesses", field.key], "Required");
-      } else if (!/^\d+(\.\d+)?$/.test(raw)) {
+      } else if (!/^(?:\d+(\.\d+)?|N\/A)$/i.test(raw)) {
         pushCustomIssue(issues, ["excesses", field.key], "Must be a number");
       }
     }

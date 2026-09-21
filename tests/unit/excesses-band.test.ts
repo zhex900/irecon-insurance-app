@@ -7,6 +7,7 @@ import {
   contractValueBandLabel,
   migrateLegacyExcessKeys,
   normalizeExcesses,
+  normalizeExcessValue,
   relocateExcessesToActiveBand,
 } from "~/lib/policies/excesses";
 
@@ -138,5 +139,13 @@ describe("legacy excess migration", () => {
     expect(relocateExcessesToActiveBand(normalized, 1_500_000)).toEqual(
       normalized,
     );
+  });
+});
+
+describe("excess value normalization", () => {
+  it("preserves N/A alongside numeric values", () => {
+    expect(normalizeExcessValue("N/A")).toBe("N/A");
+    expect(normalizeExcessValue("n/a")).toBe("N/A");
+    expect(normalizeExcessValue("$2,500")).toBe("2500");
   });
 });
