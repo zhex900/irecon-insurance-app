@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { useFormContext } from "react-hook-form";
+import { useEffect } from "react";
+import { useFormContext, useWatch } from "react-hook-form";
 
 import {
   FieldSavedTick,
@@ -58,10 +59,29 @@ export function ExcessField({
   className?: string;
 }) {
   const {
+    setValue,
     formState: { errors },
   } = useFormContext<CarPolicyFormValues>();
   const error = errors.excesses?.[field.key]?.message;
   const inputId = `excesses.${field.key}`;
+  const plantEquipment = useWatch({ name: "plantEquipment" });
+  const plantEquipmentExcess = useWatch({
+    name: "excesses.excessPlantEquipment",
+  });
+  const plantEquipmentIsZero = Number(plantEquipment || 0) <= 0;
+
+  useEffect(() => {
+    if (
+      field.key === "excessPlantEquipment" &&
+      plantEquipmentIsZero &&
+      plantEquipmentExcess !== "N/A"
+    ) {
+      setValue("excesses.excessPlantEquipment", "N/A", {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+  }, [field.key, plantEquipmentExcess, plantEquipmentIsZero, setValue]);
 
   return (
     <Field data-invalid={error ? true : undefined} className={className}>
