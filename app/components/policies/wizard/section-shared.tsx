@@ -18,6 +18,7 @@ import { FormulaTooltip } from "~/components/ui/formula-tooltip";
 import { Input } from "~/components/ui/input";
 import type { ReferenceData } from "~/lib/db/types";
 import { deriveMaximumConstructionPeriod } from "~/lib/policies/construction-period";
+import { syncExcludedContractsPeriodsFromForm } from "~/lib/policies/excluded-contracts";
 import type { ExcessFieldConfig } from "~/lib/policies/excesses";
 import type { SubLimitFieldConfig } from "~/lib/policies/sub-limits";
 import { cn } from "~/lib/utils";
@@ -152,6 +153,9 @@ export function applyAnnualCoverTypeDefaults(
   annualCoverTypeId: number,
   reference: ReferenceData,
   setValue: ReturnType<typeof useFormContext<CarPolicyFormValues>>["setValue"],
+  getValues: ReturnType<
+    typeof useFormContext<CarPolicyFormValues>
+  >["getValues"],
 ) {
   if (annualCoverTypeId === 1) {
     setValue(
@@ -159,11 +163,12 @@ export function applyAnnualCoverTypeDefaults(
       reference.defaultTexts.insuredContractsAnnualTransfer,
       { shouldDirty: true, shouldValidate: false },
     );
-    setValue(
-      "maximumConstructionPeriod",
-      deriveMaximumConstructionPeriod(1, annualCoverTypeId),
-      { shouldDirty: true, shouldValidate: false },
-    );
+    const months = deriveMaximumConstructionPeriod(1, annualCoverTypeId);
+    setValue("maximumConstructionPeriod", months, {
+      shouldDirty: true,
+      shouldValidate: false,
+    });
+    syncExcludedContractsPeriodsFromForm(getValues, setValue);
     return;
   }
   if (annualCoverTypeId === 2) {
@@ -172,11 +177,12 @@ export function applyAnnualCoverTypeDefaults(
       reference.defaultTexts.insuredContractsAnnualContractCommencing,
       { shouldDirty: true, shouldValidate: false },
     );
-    setValue(
-      "maximumConstructionPeriod",
-      deriveMaximumConstructionPeriod(1, annualCoverTypeId),
-      { shouldDirty: true, shouldValidate: false },
-    );
+    const months = deriveMaximumConstructionPeriod(1, annualCoverTypeId);
+    setValue("maximumConstructionPeriod", months, {
+      shouldDirty: true,
+      shouldValidate: false,
+    });
+    syncExcludedContractsPeriodsFromForm(getValues, setValue);
   }
 }
 
@@ -196,11 +202,12 @@ export function applyCoverTypeDefaults(
       reference.defaultTexts.geographicalScopeAnnual,
       { shouldDirty: true },
     );
-    setValue(
-      "maximumConstructionPeriod",
-      deriveMaximumConstructionPeriod(coverTypeId),
-      { shouldDirty: true, shouldValidate: false },
-    );
+    const months = deriveMaximumConstructionPeriod(coverTypeId);
+    setValue("maximumConstructionPeriod", months, {
+      shouldDirty: true,
+      shouldValidate: false,
+    });
+    syncExcludedContractsPeriodsFromForm(getValues, setValue);
     setValue("subLimits", { ...reference.defaultSubLimits.annual });
     return;
   }
@@ -212,20 +219,22 @@ export function applyCoverTypeDefaults(
   });
   if (coverTypeId === 2) {
     setValue("insuredContracts", reference.defaultTexts.insuredContractsSingle);
-    setValue(
-      "maximumConstructionPeriod",
-      deriveMaximumConstructionPeriod(coverTypeId),
-      { shouldDirty: true, shouldValidate: false },
-    );
+    const singleMonths = deriveMaximumConstructionPeriod(coverTypeId);
+    setValue("maximumConstructionPeriod", singleMonths, {
+      shouldDirty: true,
+      shouldValidate: false,
+    });
+    syncExcludedContractsPeriodsFromForm(getValues, setValue);
     setValue("subLimits", { ...reference.defaultSubLimits.annual });
   }
   if (coverTypeId === 3) {
     setValue("insuredContracts", reference.defaultTexts.insuredContractsSingle);
-    setValue(
-      "maximumConstructionPeriod",
-      deriveMaximumConstructionPeriod(coverTypeId),
-      { shouldDirty: true, shouldValidate: false },
-    );
+    const ownerBuilderMonths = deriveMaximumConstructionPeriod(coverTypeId);
+    setValue("maximumConstructionPeriod", ownerBuilderMonths, {
+      shouldDirty: true,
+      shouldValidate: false,
+    });
+    syncExcludedContractsPeriodsFromForm(getValues, setValue);
     setValue("subLimits", { ...reference.defaultSubLimits.ownerBuilder });
   }
 }

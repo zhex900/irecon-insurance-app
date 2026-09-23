@@ -9,6 +9,7 @@ import {
   Select,
 } from "~/components/ui/form-controls";
 import type { ReferenceData } from "~/lib/db/types";
+import { syncExcludedContractsPeriodsFromForm } from "~/lib/policies/excluded-contracts";
 import { derivePolicyEndDate } from "~/lib/policies/policy-period";
 import { isIsoDate } from "~/lib/search/date-range-filter";
 import { type CarPolicyFormValues } from "~/lib/zod/policy-car";
@@ -34,6 +35,8 @@ export function RiskDetails({ reference }: { reference: ReferenceData }) {
   const holdCurrent = watch("hasExistingContractWorksCover");
   const isRenewal = policyCategoryId === 2;
   const showCurrentInsurer = String(holdCurrent) === "true";
+  const maximumConstructionPeriodRegister = register("maximumConstructionPeriod");
+  const maximumMaintenancePeriodRegister = register("maximumMaintenancePeriod");
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
@@ -87,7 +90,12 @@ export function RiskDetails({ reference }: { reference: ReferenceData }) {
             })),
           ]}
           onValueChange={(next) =>
-            applyAnnualCoverTypeDefaults(Number(next), reference, setValue)
+            applyAnnualCoverTypeDefaults(
+              Number(next),
+              reference,
+              setValue,
+              getValues,
+            )
           }
         />
       ) : null}
@@ -173,7 +181,11 @@ export function RiskDetails({ reference }: { reference: ReferenceData }) {
           type="text"
           inputMode="decimal"
           error={errors.maximumConstructionPeriod?.message}
-          {...register("maximumConstructionPeriod")}
+          {...maximumConstructionPeriodRegister}
+          onBlur={(event) => {
+            void maximumConstructionPeriodRegister.onBlur(event);
+            syncExcludedContractsPeriodsFromForm(getValues, setValue);
+          }}
         />
         <FieldInput
           className="md:row-span-3 md:!grid md:grid-rows-subgrid md:gap-2"
@@ -183,7 +195,11 @@ export function RiskDetails({ reference }: { reference: ReferenceData }) {
           type="text"
           inputMode="decimal"
           error={errors.maximumMaintenancePeriod?.message}
-          {...register("maximumMaintenancePeriod")}
+          {...maximumMaintenancePeriodRegister}
+          onBlur={(event) => {
+            void maximumMaintenancePeriodRegister.onBlur(event);
+            syncExcludedContractsPeriodsFromForm(getValues, setValue);
+          }}
         />
       </div>
       <div className="grid gap-x-4 gap-y-2 md:col-span-2 md:grid-cols-2 md:grid-rows-[auto_auto_auto]">

@@ -1,4 +1,5 @@
 import type { ReferenceData } from "~/lib/db/types";
+import { buildExcludedContracts2Activities } from "~/lib/policies/excluded-contracts";
 
 /** Static lookup catalogue (not customer data). ARs / excesses come from DB via getReferenceDataAsync. */
 export const referenceData = {
@@ -102,8 +103,7 @@ export const referenceData = {
       "Anywhere in Australia below the 26th parallel south",
     excludedContracts1:
       "Are those contracts that include any of the following activities, unless agreed to by the Underwriter via Endorsement, prior to commencement:",
-    excludedContracts2:
-      "- Underpinning, underground, tunnelling, bridging and dam works; or\n- Airside or rail works; or\n- Demolition exceeding 20 metres in height: or\n- Works exceeding 10 levels; or\n- Works above the 26th Parallel South; or\n- With a construction period exceeding eighteen (18) months ; or\n- With a maintenance/defects liability period exceeding twelve (12) months; or\n- Contract exceeds the Sum Insured specified against Cover Item 1 (a);",
+    excludedContracts2: buildExcludedContracts2Activities(18, 12),
     excludedContracts3:
       "Underground means any contract where the majority of the work, and the completed structure, will be situated below ground level.\n\nTunnelling means any contract involving the excavation of an artificial subterranean passage (e.g. for the purposes of roads and railways).",
   },
