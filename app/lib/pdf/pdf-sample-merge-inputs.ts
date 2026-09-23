@@ -112,6 +112,8 @@ const SAMPLE_BY_FIELD: Record<string, string> = {
   ExcessMajorPerils: "$5,000.00",
   ExcessLimit10M: "$5,000.00",
   ExcessLimit20M: "$5,000.00",
+  ExcessLimitLabel: "$10,000,000 Limit of Liability",
+  ExcessLimit: "$5,000.00",
   ExcessUpTo2MMinorPerils: "$5,000.00",
   ExcessOver2MMinorPerils: "$5,000.00",
   ExcessOver2MMajorPerils: "$5,000.00",

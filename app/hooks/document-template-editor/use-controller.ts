@@ -93,33 +93,6 @@ export function useDocumentTemplateEditorController({
   );
   const [editingTitle, setEditingTitle] = useState(false);
   const [historyOpen, setHistoryOpenState] = useState(false);
-  const [editingVersionNumber, setEditingVersionNumber] = useState(
-    loaderData.editingVersionNumber,
-  );
-  const [editingIsPublished, setEditingIsPublished] = useState(
-    loaderData.editingIsPublished,
-  );
-  const [publishedVersionNumber, setPublishedVersionNumber] = useState(
-    loaderData.publishedVersionNumber,
-  );
-  const [canUndo, setCanUndo] = useState(loaderData.canUndo);
-  const [history, setHistory] = useState(loaderData.history);
-
-  useEffect(() => {
-    setEditingVersionNumber(loaderData.editingVersionNumber);
-    setEditingIsPublished(loaderData.editingIsPublished);
-    setPublishedVersionNumber(loaderData.publishedVersionNumber);
-    setCanUndo(loaderData.canUndo);
-  }, [
-    loaderData.editingVersionNumber,
-    loaderData.editingIsPublished,
-    loaderData.publishedVersionNumber,
-    loaderData.canUndo,
-  ]);
-
-  useEffect(() => {
-    setHistory(loaderData.history);
-  }, [loaderData.history]);
 
   const setHistoryOpen = useCallback(
     (open: boolean) => {
@@ -367,7 +340,7 @@ export function useDocumentTemplateEditorController({
   }
 
   function handleUndo() {
-    if (!canEdit || !canUndo) return;
+    if (!canEdit || !loaderData.canUndo) return;
     setConfirmAction({ kind: "undo" });
   }
 
@@ -521,11 +494,11 @@ export function useDocumentTemplateEditorController({
     coverTypeValue,
     editingTitle,
     historyOpen,
-    editingVersionNumber,
-    editingIsPublished,
-    publishedVersionNumber,
-    canUndo,
-    history,
+    editingVersionNumber: loaderData.editingVersionNumber,
+    editingIsPublished: loaderData.editingIsPublished,
+    publishedVersionNumber: loaderData.publishedVersionNumber,
+    canUndo: loaderData.canUndo,
+    history: loaderData.history,
     deleteOpen,
     leaveOpen,
     confirmAction,

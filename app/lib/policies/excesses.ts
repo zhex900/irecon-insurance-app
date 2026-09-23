@@ -1,8 +1,8 @@
-import { stripAmountCommas } from "~/lib/amount-input";
 import {
   EXCESS_CONTRACT_VALUE_BAND_THRESHOLD,
   WORKER_TO_WORKER_TURNOVER_THRESHOLD,
 } from "~/constants";
+import { stripAmountCommas } from "~/lib/amount-input";
 import type { CarExcesses } from "~/lib/db/types";
 
 export type ExcessNoteFieldKey =

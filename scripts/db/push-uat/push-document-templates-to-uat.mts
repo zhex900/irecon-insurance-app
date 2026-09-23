@@ -6,20 +6,17 @@
  *   # or
  *   node --env-file=.env --import tsx scripts/push-document-templates-to-uat.mts
  *
- * Reads LOCAL from DATABASE_URL (.env) and writes to UAT_DATABASE_URL.
+ * Reads LOCAL from DATABASE_URL (.env) and writes to UAT (UAT_DATABASE_URL or
+ * DATABASE_URL in .env.uat).
  */
 import postgres from "postgres";
 
+import { resolveUatDatabaseUrl } from "./resolve-uat-database-url.mts";
+
 const localUrl = process.env.DATABASE_URL?.trim();
-const uatUrl = process.env.UAT_DATABASE_URL?.trim();
+const uatUrl = resolveUatDatabaseUrl();
 
 if (!localUrl) throw new Error("DATABASE_URL is required (local)");
-if (!uatUrl) {
-  throw new Error("UAT_DATABASE_URL is required (uat pooler URL, port 6543)");
-}
-if (/127\.0\.0\.1|localhost/.test(uatUrl)) {
-  throw new Error("UAT_DATABASE_URL still points at localhost");
-}
 
 const local = postgres(localUrl, { max: 1 });
 const uat = postgres(uatUrl, { max: 1, prepare: false });

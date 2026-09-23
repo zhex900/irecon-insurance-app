@@ -1,19 +1,19 @@
 import { describe, expect, it } from "vitest";
 
 import type { CarExcesses } from "~/lib/db/types";
-import { referenceData } from "~/lib/reference-data";
 import {
   activeBandExcessAmounts,
+  isExcessFieldVisible,
+  legalLiabilityExcessValuesFor,
   migrateLegacyExcessKeys,
   normalizeExcesses,
   normalizeExcessValue,
-  isExcessFieldVisible,
-  legalLiabilityExcessValuesFor,
   perilsExcessValuesForLegalLiability,
   relocateExcessesToActiveBand,
   resolveContractValueBand,
   resolveWorkerToWorkerExcess,
 } from "~/lib/policies/excesses";
+import { referenceData } from "~/lib/reference-data";
 
 const excesses: Pick<
   CarExcesses,
