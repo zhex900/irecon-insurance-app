@@ -54,19 +54,20 @@ export function Excesses({ reference }: { reference: ReferenceData }) {
 
       <Section title="Section 2 – Legal Liability Excesses">
         <div className="flex flex-col gap-6">
-          <ExcessBandGroups bands={legalLiabilityBands} />
           {!legalLiabilityInsured ? (
-            <p className="text-sm text-muted-foreground">
-              Select a Limit of Liability under Limits of Liability (not Not
-              Insured) to show legal liability excesses.
-            </p>
-          ) : !liabilityExcessBand ? (
-            <p className="text-sm text-muted-foreground">
-              Enter Estimated Turnover / Project Value in Risk Details to show
-              the matching Limit of Liability excess for that contract value
-              band.
-            </p>
-          ) : null}
+            <p className="text-sm text-muted-foreground">Not Applicable</p>
+          ) : (
+            <>
+              <ExcessBandGroups bands={legalLiabilityBands} />
+              {!liabilityExcessBand ? (
+                <p className="text-sm text-muted-foreground">
+                  Enter Estimated Turnover / Project Value in Risk Details to
+                  show the matching Limit of Liability excess for that contract
+                  value band.
+                </p>
+              ) : null}
+            </>
+          )}
         </div>
       </Section>
     </div>
