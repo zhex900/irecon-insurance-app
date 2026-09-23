@@ -134,6 +134,7 @@ const SAMPLE_BY_FIELD: Record<string, string> = {
   ConstructionPlantEquipment: "$250,000.00",
   PlantHireCharges: "$50,000",
   Transit: "$100,000",
+  AdditionalCostOfWorking: "Not Insured",
   GovernmentCosts: "$25,000",
   PremiumDisplayHomes: "$500.00",
   PremiumExistingStructure: "$0.00",

@@ -187,6 +187,7 @@ Legacy-only period fix (superseded): `npm run db:repair:policy-periods`
 | `EmployeesProperty`                 | `employeesProperty`                                 |
 | `MaterialsInOffSiteStorage`         | `materialsInOffSiteStorage`                         |
 | `Transit`                           | `transit`                                           |
+| _(none — app default)_              | `additionalCostOfWorking` (defaults to **Not Insured**) |
 | `ExcludedContracts1–3`              | `excludedContracts1–3` (also top-level on `Policy`) |
 
 ### Excesses → `policy_car.excesses` (jsonb)

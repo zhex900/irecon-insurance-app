@@ -63,6 +63,7 @@ const subLimitsSchema = z.object({
   employeesProperty: subLimitText,
   materialsInOffSiteStorage: subLimitText,
   transit: subLimitText,
+  additionalCostOfWorking: subLimitText,
 });
 
 const excessNumber = z.preprocess(

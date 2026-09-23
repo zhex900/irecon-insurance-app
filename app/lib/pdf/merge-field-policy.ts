@@ -267,6 +267,7 @@ export function policyToMergeInputs(
     EmployeesProperty: String(sub.employeesProperty ?? ""),
     MaterialsInOffSiteStorage: String(sub.materialsInOffSiteStorage ?? ""),
     Transit: String(sub.transit ?? ""),
+    AdditionalCostOfWorking: String(sub.additionalCostOfWorking ?? ""),
     LegalLiabilityLimit: liabilityLabel(car.liabilityLimitBand),
     ExcessMinorPerils: money(activeExcess.minorPerils),
     ExcessMajorPerils: money(activeExcess.majorPerils),

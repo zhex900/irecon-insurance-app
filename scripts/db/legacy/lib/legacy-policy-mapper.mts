@@ -116,6 +116,7 @@ function subLimitsFromRaw(raw: Record<string, unknown>): LegacyPolicySubLimits {
     employeesProperty: text(raw.employeesProperty),
     materialsInOffSiteStorage: text(raw.materialsInOffSiteStorage),
     transit: text(raw.transit),
+    additionalCostOfWorking: text(raw.additionalCostOfWorking),
   };
 }
 

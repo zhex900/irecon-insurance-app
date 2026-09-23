@@ -60,6 +60,7 @@ export const referenceData = {
       employeesProperty: "$2,500 any one employee/any one loss",
       materialsInOffSiteStorage: "$200,000 any one loss",
       transit: "$200,000 any one loss",
+      additionalCostOfWorking: "Not Insured",
     },
     ownerBuilder: {
       removalOfDebris: "10% of Contract Value",
@@ -74,6 +75,7 @@ export const referenceData = {
       employeesProperty: "Not Insured",
       materialsInOffSiteStorage: "Not Insured",
       transit: "Not Insured",
+      additionalCostOfWorking: "Not Insured",
     },
   },
   defaultExcesses: {

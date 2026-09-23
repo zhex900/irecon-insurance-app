@@ -67,6 +67,7 @@ function basePolicy(opts: {
         employeesProperty: "",
         materialsInOffSiteStorage: "",
         transit: "",
+        additionalCostOfWorking: "Not Insured",
       },
       excesses: {
         excessPlantEquipment: "",

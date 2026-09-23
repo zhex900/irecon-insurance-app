@@ -143,6 +143,7 @@ export type CarSubLimits = {
   employeesProperty: string;
   materialsInOffSiteStorage: string;
   transit: string;
+  additionalCostOfWorking: string;
 };
 
 export type CarExcesses = {
