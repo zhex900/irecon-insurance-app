@@ -159,6 +159,7 @@ describe("carPolicyDraftSchema excesses", () => {
     excessOver2MMinorPerils: "",
     excessOver2MMajorPerils: "",
     excessAdditionalNotes: "",
+    excessLegalLiabilityAdditionalNotes: "",
     excessWorkerToWorker: "",
     excessUpTo2MLimit10M: "",
     excessUpTo2MLimit20M: "",

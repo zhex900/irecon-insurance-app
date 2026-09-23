@@ -15,7 +15,6 @@ export const annualDocuments = [
 export const annualReferralReasons = [
   "Display Homes has a value of $10.00",
   "Existing Structure has a value of $30.00",
-  "Do not hold a current Contract Works/Liability policy",
 ] as const;
 
 export const annualPremiumBreakdown = {

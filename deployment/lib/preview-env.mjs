@@ -264,7 +264,8 @@ export function extractProjectRefFromDbUrl(url) {
     /postgresql:\/\/postgres:(?:([a-z0-9]+)\.([^.@/]+)|([^.@/]+)\.([a-z0-9]+))\.supabase\.co/i,
   );
   if (missingAtMatch) {
-    return missingAtMatch[1] || missingAtMatch[4] || null;
+    // postgres:PASSWORD.ref.supabase.co → ref is group 2; postgres:ref.PASSWORD → ref is group 3
+    return missingAtMatch[2] || missingAtMatch[3] || null;
   }
   return null;
 }

@@ -126,18 +126,15 @@ export function useDocumentTemplateEditorFetcher({
     const saved = submittedTemplateRef.current;
     if (saved) baselineTemplateRef.current = saved;
 
-    const isAutosave = data.intent === "autosave";
-    if (!isAutosave && saved) {
+    if (saved) {
       revertTemplateRef.current = saved;
       toast.success(`Draft saved (v${data.versionNumber})`);
     }
 
     queueMicrotask(() => {
       syncDirtyFromBaseline();
-      dispatch(
-        isAutosave ? { type: "autosave_success" } : { type: "draft_success" },
-      );
-      if (pendingLeaveAfterSaveRef.current && !isAutosave) {
+      dispatch({ type: "draft_success" });
+      if (pendingLeaveAfterSaveRef.current) {
         dispatch({ type: "leave_after_save_complete" });
         allowLeaveRef.current = true;
         setManualLeaveOpen(false);
@@ -171,5 +168,70 @@ export function useDocumentTemplateEditorFetcher({
     navigateToList,
     setManualLeaveOpen,
     blocker,
+  ]);
+}
+
+/** Background autosave — no toasts, revalidation, or save-status UI. */
+export function useDocumentTemplateEditorAutosaveFetcher({
+  fetcherState,
+  fetcherData,
+  handledDataRef,
+  docTemplateKey,
+  submittedTemplateRef,
+  baselineTemplateRef,
+  pendingAutosaveRef,
+  dirtyRef,
+  scheduleAutosaveRef,
+  syncDirtyFromBaseline,
+}: {
+  fetcherState: "idle" | "submitting" | "loading";
+  fetcherData: FetcherData | undefined;
+  handledDataRef: RefObject<FetcherData | undefined>;
+  docTemplateKey: string;
+  submittedTemplateRef: RefObject<Template | null>;
+  baselineTemplateRef: RefObject<Template | null>;
+  pendingAutosaveRef: RefObject<boolean>;
+  dirtyRef: RefObject<boolean>;
+  scheduleAutosaveRef: RefObject<() => void>;
+  syncDirtyFromBaseline: () => void;
+}) {
+  useEffect(() => {
+    if (fetcherState !== "idle" || !fetcherData) return;
+    if (handledDataRef.current === fetcherData) return;
+    handledDataRef.current = fetcherData;
+    const data = fetcherData;
+
+    if (!data.ok) {
+      toast.error(data.error ?? "Autosave failed.");
+      if (pendingAutosaveRef.current || dirtyRef.current) {
+        pendingAutosaveRef.current = false;
+        scheduleAutosaveRef.current();
+      }
+      return;
+    }
+
+    invalidatePdfTemplateOverrideCache(data.templateKey ?? docTemplateKey);
+
+    const saved = submittedTemplateRef.current;
+    if (saved) baselineTemplateRef.current = saved;
+
+    queueMicrotask(() => {
+      syncDirtyFromBaseline();
+      if (pendingAutosaveRef.current || dirtyRef.current) {
+        pendingAutosaveRef.current = false;
+        scheduleAutosaveRef.current();
+      }
+    });
+  }, [
+    fetcherState,
+    fetcherData,
+    handledDataRef,
+    docTemplateKey,
+    submittedTemplateRef,
+    baselineTemplateRef,
+    pendingAutosaveRef,
+    dirtyRef,
+    scheduleAutosaveRef,
+    syncDirtyFromBaseline,
   ]);
 }

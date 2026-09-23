@@ -147,13 +147,16 @@ function repairSubLimits(
 
 function repairExcesses(
   excesses: CarExcesses | Record<string, string | undefined>,
-  estimatedTurnover: number,
+  contractWorksSumInsured: number,
   liabilityLimitBand: number,
 ): CarExcesses {
   const defaults = referenceData.defaultExcesses;
-  const normalized = normalizeExcesses(excesses, estimatedTurnover);
+  const normalized = normalizeExcesses(excesses, {
+    contractWorksSumInsured,
+    liabilityLimitBand,
+  });
   const visible = visibleExcessFields({
-    estimatedTurnover,
+    contractWorksSumInsured,
     liabilityLimitBand,
   });
 
@@ -257,7 +260,7 @@ export function buildMigratedPolicyRepairPatch(
   const currentExcesses = (input.excesses ?? {}) as CarExcesses;
   const repairedExcesses = repairExcesses(
     currentExcesses,
-    input.estimatedTurnover,
+    input.contractWorksSumInsured,
     input.liabilityLimitBand,
   );
   const excessChanged = Object.keys(repairedExcesses).some(

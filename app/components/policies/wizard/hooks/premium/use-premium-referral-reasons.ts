@@ -28,7 +28,6 @@ export function useReferralReasons({
       FIELD_PATHS.EXISTING_STRUCTURE,
       FIELD_PATHS.CLAIMS_COUNT_LAST_3_YEARS,
       FIELD_PATHS.ANY_CLAIMS_EXCEED_20K,
-      FIELD_PATHS.HAS_EXISTING_CONTRACT_WORKS_COVER,
       FIELD_PATHS.PLANT_EQUIPMENT,
       FIELD_PATHS.LIABILITY_LIMIT_BAND,
       FIELD_PATHS.DATE_START,
@@ -43,10 +42,9 @@ export function useReferralReasons({
     const existingStructure = watchedFields[1];
     const claimsCountLast3Years = watchedFields[2];
     const anyClaimsExceed20k = watchedFields[3];
-    const hasExistingContractWorksCover = watchedFields[4];
-    const plantEquipment = watchedFields[5];
-    const liabilityLimitBand = watchedFields[6];
-    const dateStart = watchedFields[7];
+    const plantEquipment = watchedFields[4];
+    const liabilityLimitBand = watchedFields[5];
+    const dateStart = watchedFields[6];
 
     return buildReferralReasons(
       {
@@ -54,7 +52,6 @@ export function useReferralReasons({
         existingStructure: Number(existingStructure) || 0,
         claimsCountLast3Years: Number(claimsCountLast3Years) || 0,
         anyClaimsExceed20k,
-        hasExistingContractWorksCover,
         plantEquipment: Number(plantEquipment) || 0,
         liabilityLimitBand: Number(liabilityLimitBand) || 3,
         dateStart: String(dateStart || ""),

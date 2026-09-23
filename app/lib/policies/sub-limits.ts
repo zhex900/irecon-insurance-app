@@ -83,6 +83,12 @@ export const SUB_LIMIT_FIELDS: SubLimitFieldConfig[] = [
     unit: "currency",
     defaultSuffix: " any one loss",
   },
+  {
+    key: "additionalCostOfWorking",
+    label: "Additional Cost of Working",
+    unit: "currency",
+    defaultSuffix: "",
+  },
 ];
 
 /** Keep free-text wording; expand legacy bare numbers into full wording. */
@@ -106,9 +112,12 @@ export function normalizeSubLimitValue(
 
 export function normalizeSubLimits(subLimits: CarSubLimits): CarSubLimits {
   return Object.fromEntries(
-    SUB_LIMIT_FIELDS.map((field) => [
-      field.key,
-      normalizeSubLimitValue(subLimits[field.key], field),
-    ]),
+    SUB_LIMIT_FIELDS.map((field) => {
+      let value = normalizeSubLimitValue(subLimits[field.key], field);
+      if (field.key === "additionalCostOfWorking" && !value) {
+        value = "Not Insured";
+      }
+      return [field.key, value];
+    }),
   ) as CarSubLimits;
 }

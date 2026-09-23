@@ -116,6 +116,7 @@ function subLimitsFromRaw(raw: Record<string, unknown>): LegacyPolicySubLimits {
     employeesProperty: text(raw.employeesProperty),
     materialsInOffSiteStorage: text(raw.materialsInOffSiteStorage),
     transit: text(raw.transit),
+    additionalCostOfWorking: text(raw.additionalCostOfWorking),
   };
 }
 
@@ -411,13 +412,16 @@ function mapLegacyWordings(wordings: LegacyPolicyWording[]) {
 
 function mapLegacyExcesses(
   excesses: LegacyPolicyExcesses,
-  estimatedTurnover: number,
+  contractWorksSumInsured: number,
   liabilityLimitBand: number,
 ): CarExcesses {
   const defaults = referenceData.defaultExcesses;
-  const normalized = normalizeExcesses(excesses, estimatedTurnover);
+  const normalized = normalizeExcesses(excesses, {
+    contractWorksSumInsured,
+    liabilityLimitBand,
+  });
   const visible = visibleExcessFields({
-    estimatedTurnover,
+    contractWorksSumInsured,
     liabilityLimitBand,
   });
   const next: CarExcesses = { ...normalized };
@@ -756,7 +760,7 @@ export function legacyPolicyRowToPolicy(row: LegacyPolicyRow): Policy {
       subLimits: mapLegacySubLimits(row.subLimits ?? subLimitsFromRaw({})),
       excesses: mapLegacyExcesses(
         row.excesses ?? excessesFromRaw({}),
-        row.estimatedTurnover,
+        row.contractWorksSumInsured,
         row.liabilityLimitBand,
       ),
       excludedContracts1: row.excludedContracts1 ?? "",

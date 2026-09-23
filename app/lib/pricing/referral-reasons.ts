@@ -43,7 +43,6 @@ export function buildReferralReasons(
     existingStructure?: CarPolicyFormValues["existingStructure"];
     claimsCountLast3Years?: CarPolicyFormValues["claimsCountLast3Years"];
     anyClaimsExceed20k?: unknown;
-    hasExistingContractWorksCover?: unknown;
     plantEquipment?: CarPolicyFormValues["plantEquipment"];
     liabilityLimitBand?: CarPolicyFormValues["liabilityLimitBand"];
     dateStart?: CarPolicyFormValues["dateStart"];
@@ -74,9 +73,6 @@ export function buildReferralReasons(
   const claimsExceed20k = coerceFormBoolean(input.anyClaimsExceed20k);
   if (claimsExceed20k === true) {
     reasons.push("Any claims exceeded $20,000 in value is stated as yes");
-  }
-  if (coerceFormBoolean(input.hasExistingContractWorksCover) === false) {
-    reasons.push("Do not hold a current Contract Works/Liability policy");
   }
   if (Number(input.plantEquipment) > 50000) {
     reasons.push(

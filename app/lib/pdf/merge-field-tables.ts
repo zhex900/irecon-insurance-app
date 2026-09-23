@@ -4,6 +4,8 @@ import {
   resolveTableMergeInput,
 } from "~/lib/pdf/merge-field-schemas";
 import { normalizeCustomWordings } from "~/lib/policies/custom-wordings";
+import type { ActiveBandExcessAmounts } from "~/lib/policies/excesses";
+import { resolveLiabilityLimitMillions } from "~/lib/policies/excesses";
 import { isWordingHtmlEmpty } from "~/lib/policies/wording/html";
 import { referenceData as reference } from "~/lib/reference-data";
 import { formatCurrency } from "~/lib/utils";
@@ -61,6 +63,33 @@ export function liabilityLabel(bandId: number | string | null | undefined) {
   const id = Number(bandId);
   if (!Number.isFinite(id) || id <= 0) return "";
   return LIABILITY_BY_ID.get(id) ?? "";
+}
+
+const EXCESS_LIMIT_LABEL_10M = "$10,000,000 Limit of Liability";
+const EXCESS_LIMIT_LABEL_20M = "$20,000,000 Limit of Liability";
+
+/** Combined Section 2 limit excess label + value for `{ExcessLimitLabel} : {ExcessLimit}`. */
+export function excessLimitMergeFields(
+  liabilityLimitBand: unknown,
+  activeExcess: Pick<ActiveBandExcessAmounts, "limit10M" | "limit20M">,
+): { ExcessLimitLabel: string; ExcessLimit: string } {
+  const limitMillions = resolveLiabilityLimitMillions(liabilityLimitBand);
+  if (limitMillions === 10) {
+    return {
+      ExcessLimitLabel: EXCESS_LIMIT_LABEL_10M,
+      ExcessLimit: money(activeExcess.limit10M),
+    };
+  }
+  if (limitMillions === 20) {
+    return {
+      ExcessLimitLabel: EXCESS_LIMIT_LABEL_20M,
+      ExcessLimit: money(activeExcess.limit20M),
+    };
+  }
+  return {
+    ExcessLimitLabel: "Not Applicable",
+    ExcessLimit: "",
+  };
 }
 
 /** pdfme table field used by Owner Builder ROA premium section. */

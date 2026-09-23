@@ -53,6 +53,7 @@ function policyRow(
       employeesProperty: "",
       materialsInOffSiteStorage: "",
       transit: "",
+      additionalCostOfWorking: "Not Insured",
     },
     excludedContracts1: "",
     excludedContracts2: "",

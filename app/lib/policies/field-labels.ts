@@ -48,6 +48,7 @@ const TOP_LEVEL_LABELS: Record<string, string> = {
   excesses: "Excesses",
   subLimits: "Sub-limits",
   "excesses.excessAdditionalNotes": "Excess Additional Notes",
+  "excesses.excessLegalLiabilityAdditionalNotes": "Excess Additional Notes",
 };
 
 /** Extra visible form copy (group titles, descriptions, premium labels). */
@@ -313,14 +314,18 @@ export function listPolicyFieldSearchOptions(): PolicyFieldSearchOption[] {
             sectionId,
           });
         }
-        const notesPath = "excesses.excessAdditionalNotes";
-        push({
-          value: notesPath,
-          label: labelForPolicyFieldPath(notesPath),
-          secondary: sectionLabel,
-          searchText: `${labelForPolicyFieldPath(notesPath)} ${sectionLabel}`,
-          sectionId,
-        });
+        for (const notesPath of [
+          "excesses.excessAdditionalNotes",
+          "excesses.excessLegalLiabilityAdditionalNotes",
+        ] as const) {
+          push({
+            value: notesPath,
+            label: labelForPolicyFieldPath(notesPath),
+            secondary: sectionLabel,
+            searchText: `${labelForPolicyFieldPath(notesPath)} ${sectionLabel}`,
+            sectionId,
+          });
+        }
         continue;
       }
 

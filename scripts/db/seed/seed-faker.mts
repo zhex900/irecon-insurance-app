@@ -201,6 +201,7 @@ async function seedPolicies(count: number, clientIds: string[]) {
         excesses: {
           ...reference.defaultExcesses,
           excessAdditionalNotes: "",
+          excessLegalLiabilityAdditionalNotes: "",
         },
         excludedContracts1: reference.defaultTexts.excludedContracts1,
         excludedContracts2: reference.defaultTexts.excludedContracts2,

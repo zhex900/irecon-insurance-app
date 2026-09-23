@@ -8,15 +8,13 @@ import {
   coverLabel,
   ENDORSEMENTS_TABLE_FIELD,
   endorsementsTableContent,
+  excessLimitMergeFields,
   liabilityLabel,
   money,
   stateCode,
   yesNo,
 } from "~/lib/pdf/merge-field-tables";
-import {
-  activeBandExcessAmounts,
-  contractValueBandLabel,
-} from "~/lib/policies/excesses";
+import { activeBandExcessAmounts } from "~/lib/policies/excesses";
 import { combinedTrueBasePremium } from "~/lib/pricing/premium-totals";
 import { formatDate } from "~/lib/utils";
 
@@ -214,7 +212,10 @@ export function policyToMergeInputs(
   const adjustment = car.adjustment;
   const sub = car.subLimits ?? ({} as NonNullable<typeof car.subLimits>);
   const excess = car.excesses ?? ({} as NonNullable<typeof car.excesses>);
-  const activeExcess = activeBandExcessAmounts(excess, car.estimatedTurnover);
+  const activeExcess = activeBandExcessAmounts(excess, {
+    contractWorksSumInsured: car.contractWorksSumInsured,
+    liabilityLimitBand: car.liabilityLimitBand,
+  });
   const original = adjustment?.breakdown.original;
   const adjusted = adjustment?.breakdown.adjustment;
   const delta = adjustment?.breakdown.delta;
@@ -265,18 +266,21 @@ export function policyToMergeInputs(
     EmployeesProperty: String(sub.employeesProperty ?? ""),
     MaterialsInOffSiteStorage: String(sub.materialsInOffSiteStorage ?? ""),
     Transit: String(sub.transit ?? ""),
+    AdditionalCostOfWorking: String(sub.additionalCostOfWorking ?? ""),
     LegalLiabilityLimit: liabilityLabel(car.liabilityLimitBand),
-    ContractValueLabel: contractValueBandLabel(car.estimatedTurnover),
     ExcessMinorPerils: money(activeExcess.minorPerils),
     ExcessMajorPerils: money(activeExcess.majorPerils),
     ExcessLimit10M: money(activeExcess.limit10M),
     ExcessLimit20M: money(activeExcess.limit20M),
+    ...excessLimitMergeFields(car.liabilityLimitBand, activeExcess),
     ExcessPlantEquipment: money(excess.excessPlantEquipment),
     ExcessUpTo2MMinorPerils: money(excess.excessUpTo2MMinorPerils),
     ExcessUpTo2MMajorPerils: money(excess.excessUpTo2MMajorPerils),
     ExcessOver2MMinorPerils: money(excess.excessOver2MMinorPerils),
     ExcessOver2MMajorPerils: money(excess.excessOver2MMajorPerils),
     ExcessAdditionalNotes: excess.excessAdditionalNotes ?? "",
+    ExcessLegalLiabilityAdditionalNotes:
+      excess.excessLegalLiabilityAdditionalNotes ?? "",
     ExcessWorkerToWorker: money(excess.excessWorkerToWorker),
     ExcessUpTo2MLimit10M: money(excess.excessUpTo2MLimit10M),
     ExcessUpTo2MLimit20M: money(excess.excessUpTo2MLimit20M),

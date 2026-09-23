@@ -275,10 +275,10 @@ export function rowsToPolicy(
         car.contractWorksDisplayHomesPremium,
       ),
       subLimits: (car.subLimits ?? {}) as CarSubLimits,
-      excesses: normalizeExcesses(
-        (car.excesses ?? {}) as CarExcesses,
-        num(car.estimatedTurnover),
-      ),
+      excesses: normalizeExcesses((car.excesses ?? {}) as CarExcesses, {
+        contractWorksSumInsured: num(car.contractWorksSumInsured),
+        liabilityLimitBand: car.liabilityLimitBand,
+      }),
       excludedContracts1: car.excludedContracts1 ?? "",
       excludedContracts2: car.excludedContracts2 ?? "",
       excludedContracts3: car.excludedContracts3 ?? "",

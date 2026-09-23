@@ -1,4 +1,5 @@
 import { lazy, Suspense } from "react";
+import type { ShouldRevalidateFunctionArgs } from "react-router";
 
 import { EditorShell } from "~/components/documents/templates/loading";
 import { pageTitle } from "~/lib/brand";
@@ -30,6 +31,16 @@ export function loader(args: Route.LoaderArgs) {
 
 export function action(args: Route.ActionArgs) {
   return documentTemplateAction(args);
+}
+
+export function shouldRevalidate({
+  formData,
+  defaultShouldRevalidate,
+}: ShouldRevalidateFunctionArgs) {
+  if (formData?.get("intent") === "autosave") {
+    return false;
+  }
+  return defaultShouldRevalidate;
 }
 
 export default function DocumentTemplateEditorRoute({

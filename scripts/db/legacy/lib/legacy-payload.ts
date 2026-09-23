@@ -172,6 +172,7 @@ export type LegacyPolicySubLimits = {
   employeesProperty: string;
   materialsInOffSiteStorage: string;
   transit: string;
+  additionalCostOfWorking: string;
 };
 
 export type LegacyPolicyExcesses = {

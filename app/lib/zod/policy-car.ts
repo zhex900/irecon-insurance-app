@@ -1,7 +1,11 @@
 import { z } from "zod";
 
-import { stripAmountCommas } from "~/lib/amount-input";
+import { type AmountFieldValue, stripAmountCommas } from "~/lib/amount-input";
 import { visibleExcessFields } from "~/lib/policies/excesses";
+import {
+  addCalendarMonths,
+  parseLocalIsoDate,
+} from "~/lib/policies/policy-period";
 
 /** Free-text sub-limit wording (legacy varchar(100)). */
 const subLimitText = z
@@ -63,6 +67,7 @@ const subLimitsSchema = z.object({
   employeesProperty: subLimitText,
   materialsInOffSiteStorage: subLimitText,
   transit: subLimitText,
+  additionalCostOfWorking: subLimitText,
 });
 
 const excessNumber = z.preprocess(
@@ -83,6 +88,7 @@ const excessesSchema = z.object({
   excessOver2MMinorPerils: excessNumber,
   excessOver2MMajorPerils: excessNumber,
   excessAdditionalNotes: z.string().optional(),
+  excessLegalLiabilityAdditionalNotes: z.string().optional(),
   excessWorkerToWorker: excessNumber,
   excessUpTo2MLimit10M: excessNumber,
   excessUpTo2MLimit20M: excessNumber,
@@ -213,39 +219,8 @@ type PolicyRuleFields = {
   dateEnd?: string;
 };
 
-function addCalendarMonths(isoDate: string, months: number): Date | null {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
-  if (!match) return null;
-  const year = Number(match[1]);
-  const month = Number(match[2]) - 1;
-  const day = Number(match[3]);
-  const date = new Date(year, month, day);
-  if (
-    date.getFullYear() !== year ||
-    date.getMonth() !== month ||
-    date.getDate() !== day
-  ) {
-    return null;
-  }
-  date.setMonth(date.getMonth() + months);
-  return date;
-}
-
 function parseIsoDate(isoDate: string): Date | null {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
-  if (!match) return null;
-  const year = Number(match[1]);
-  const month = Number(match[2]) - 1;
-  const day = Number(match[3]);
-  const date = new Date(year, month, day);
-  if (
-    date.getFullYear() !== year ||
-    date.getMonth() !== month ||
-    date.getDate() !== day
-  ) {
-    return null;
-  }
-  return date;
+  return parseLocalIsoDate(isoDate);
 }
 
 function pushCustomIssue(
@@ -259,7 +234,9 @@ function pushCustomIssue(
 /** Cross-field rules used by Zod and the wizard incomplete list. */
 export function getPolicyRuleIssues(
   data: PolicyRuleFields & {
-    estimatedTurnover?: unknown;
+    estimatedTurnover?: AmountFieldValue;
+    contractWorksSumInsured?: AmountFieldValue;
+    liabilityLimitBand?: AmountFieldValue;
     excesses?: Record<string, string | undefined>;
   },
 ): { path: (string | number)[]; message: string }[] {
@@ -314,7 +291,8 @@ export function getPolicyRuleIssues(
 
   if (data.excesses) {
     const visible = visibleExcessFields({
-      estimatedTurnover: data.estimatedTurnover,
+      contractWorksSumInsured: data.contractWorksSumInsured,
+      liabilityLimitBand: data.liabilityLimitBand,
     });
     for (const field of visible) {
       const raw = String(data.excesses[field.key] ?? "")
@@ -334,7 +312,7 @@ function applyPolicyRules(data: PolicyRuleFields, ctx: z.RefinementCtx) {
   for (const issue of getPolicyRuleIssues(data)) {
     if (issue.path[0] === "excesses") continue;
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: "custom",
       message: issue.message,
       path: issue.path,
     });
@@ -343,7 +321,8 @@ function applyPolicyRules(data: PolicyRuleFields, ctx: z.RefinementCtx) {
 
 function applyExcessRules(
   data: {
-    estimatedTurnover?: unknown;
+    estimatedTurnover?: AmountFieldValue;
+    contractWorksSumInsured?: AmountFieldValue;
     excesses?: Record<string, string | undefined>;
   },
   ctx: z.RefinementCtx,
@@ -351,7 +330,7 @@ function applyExcessRules(
   for (const issue of getPolicyRuleIssues(data)) {
     if (issue.path[0] !== "excesses") continue;
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: "custom",
       message: issue.message,
       path: issue.path,
     });

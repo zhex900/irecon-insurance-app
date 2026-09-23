@@ -6,7 +6,7 @@ import {
 } from "~/lib/documents/template-editor-autosave";
 
 describe("templateEditorAutosaveReducer", () => {
-  it("marks dirty and pending when template changes", () => {
+  it("marks dirty when template changes without touching autosave status", () => {
     const next = templateEditorAutosaveReducer(
       initialTemplateEditorAutosaveState,
       {
@@ -16,11 +16,11 @@ describe("templateEditorAutosaveReducer", () => {
       },
     );
     expect(next.dirty).toBe(true);
-    expect(next.autosaveStatus).toBe("pending");
+    expect(next.autosaveStatus).toBe("idle");
     expect(next.canRevert).toBe(true);
   });
 
-  it("clears dirty state after autosave success", () => {
+  it("leaves autosave status unchanged on autosave submit/success", () => {
     const saving = templateEditorAutosaveReducer(
       initialTemplateEditorAutosaveState,
       { type: "autosave_submit" },
@@ -28,7 +28,7 @@ describe("templateEditorAutosaveReducer", () => {
     const saved = templateEditorAutosaveReducer(saving, {
       type: "autosave_success",
     });
-    expect(saved.autosaveStatus).toBe("saved");
+    expect(saved.autosaveStatus).toBe("idle");
   });
 
   it("returns to idle after saved indicator elapses", () => {
@@ -56,5 +56,20 @@ describe("templateEditorAutosaveReducer", () => {
       stillDirty: true,
     });
     expect(next.autosaveStatus).toBe("pending");
+  });
+
+  it("clears dirty state on publish success", () => {
+    const dirty = {
+      ...initialTemplateEditorAutosaveState,
+      dirty: true,
+      unsavedChanges: [{ kind: "changed", label: "Moved field" }],
+      canRevert: true,
+    };
+    const next = templateEditorAutosaveReducer(dirty, {
+      type: "publish_success",
+    });
+    expect(next.dirty).toBe(false);
+    expect(next.canRevert).toBe(false);
+    expect(next.autosaveStatus).toBe("idle");
   });
 });

@@ -67,6 +67,7 @@ function basePolicy(opts: {
         employeesProperty: "",
         materialsInOffSiteStorage: "",
         transit: "",
+        additionalCostOfWorking: "Not Insured",
       },
       excesses: {
         excessPlantEquipment: "",
@@ -75,6 +76,7 @@ function basePolicy(opts: {
         excessOver2MMinorPerils: "",
         excessOver2MMajorPerils: "",
         excessAdditionalNotes: "",
+        excessLegalLiabilityAdditionalNotes: "",
         excessWorkerToWorker: "",
         excessUpTo2MLimit10M: "",
         excessUpTo2MLimit20M: "",
@@ -142,6 +144,7 @@ describe("excess merge fields", () => {
   it("maps ROA and schedule excess values to the selected contract band", () => {
     const policy = basePolicy({ liabilityLimitBand: 2 });
     policy.car.estimatedTurnover = 1_000_000;
+    policy.car.contractWorksSumInsured = 1_000_000;
     policy.car.plantEquipment = 125_000;
     policy.car.excesses = {
       excessPlantEquipment: "1100",
@@ -155,27 +158,81 @@ describe("excess merge fields", () => {
       excessOver2MLimit10M: "9900",
       excessOver2MLimit20M: "10100",
       excessAdditionalNotes: "",
+      excessLegalLiabilityAdditionalNotes: "",
     };
 
     const upTo2m = policyToMergeInputs(policy);
     expect(upTo2m.ExcessPlantEquipment).toBe("$1,100.00");
-    expect(upTo2m.ExcessMinorPerils).toBe("$2,200.00");
-    expect(upTo2m.ExcessMajorPerils).toBe("$3,300.00");
+    expect(upTo2m.ExcessMinorPerils).toBe("$4,400.00");
+    expect(upTo2m.ExcessMajorPerils).toBe("$5,500.00");
     expect(upTo2m.ExcessWorkerToWorker).toBe("$6,600.00");
-    expect(upTo2m.ExcessLimit10M).toBe("$7,700.00");
+    expect(upTo2m.ExcessLimit10M).toBe("N/A");
     expect(upTo2m.ExcessLimit20M).toBe("$8,800.00");
+    expect(upTo2m.ExcessLimitLabel).toBe("$20,000,000 Limit of Liability");
+    expect(upTo2m.ExcessLimit).toBe("$8,800.00");
 
     policy.car.estimatedTurnover = 3_000_000;
+    policy.car.contractWorksSumInsured = 3_000_000;
     const over2m = policyToMergeInputs(policy);
     expect(over2m.ExcessMinorPerils).toBe("$4,400.00");
     expect(over2m.ExcessMajorPerils).toBe("$5,500.00");
-    expect(over2m.ExcessLimit10M).toBe("$9,900.00");
+    expect(over2m.ExcessLimit10M).toBe("N/A");
     expect(over2m.ExcessLimit20M).toBe("$10,100.00");
+    expect(over2m.ExcessLimitLabel).toBe("$20,000,000 Limit of Liability");
+    expect(over2m.ExcessLimit).toBe("$10,100.00");
+  });
+
+  it("maps ExcessLimitLabel and ExcessLimit for $10M limit of liability", () => {
+    const policy = basePolicy({ liabilityLimitBand: 1 });
+    policy.car.contractWorksSumInsured = 1_000_000;
+    policy.car.excesses = {
+      excessPlantEquipment: "",
+      excessUpTo2MMinorPerils: "",
+      excessUpTo2MMajorPerils: "",
+      excessOver2MMinorPerils: "",
+      excessOver2MMajorPerils: "",
+      excessWorkerToWorker: "",
+      excessUpTo2MLimit10M: "5500",
+      excessUpTo2MLimit20M: "",
+      excessOver2MLimit10M: "",
+      excessOver2MLimit20M: "",
+      excessAdditionalNotes: "",
+      excessLegalLiabilityAdditionalNotes: "",
+    };
+
+    const inputs = policyToMergeInputs(policy);
+    expect(inputs.ExcessLimitLabel).toBe("$10,000,000 Limit of Liability");
+    expect(inputs.ExcessLimit).toBe("$5,500.00");
+    expect(inputs.ExcessLimit10M).toBe("$5,500.00");
+    expect(inputs.ExcessLimit20M).toBe("N/A");
+  });
+
+  it("uses Not Applicable and blank ExcessLimit when not insured", () => {
+    const policy = basePolicy({ liabilityLimitBand: 3 });
+    policy.car.excesses = {
+      excessPlantEquipment: "1000",
+      excessUpTo2MMinorPerils: "2000",
+      excessUpTo2MMajorPerils: "3000",
+      excessOver2MMinorPerils: "4000",
+      excessOver2MMajorPerils: "5000",
+      excessWorkerToWorker: "6000",
+      excessUpTo2MLimit10M: "7000",
+      excessUpTo2MLimit20M: "8000",
+      excessOver2MLimit10M: "9000",
+      excessOver2MLimit20M: "10000",
+      excessAdditionalNotes: "",
+      excessLegalLiabilityAdditionalNotes: "",
+    };
+
+    const inputs = policyToMergeInputs(policy);
+    expect(inputs.ExcessLimitLabel).toBe("Not Applicable");
+    expect(inputs.ExcessLimit).toBe("");
   });
 
   it("prints N/A for missing active-band perils and $20M excess values", () => {
     const policy = basePolicy({ liabilityLimitBand: 2 });
     policy.car.estimatedTurnover = 3_000_000;
+    policy.car.contractWorksSumInsured = 3_000_000;
 
     const inputs = policyToMergeInputs(policy);
     expect(inputs.ExcessMinorPerils).toBe("N/A");

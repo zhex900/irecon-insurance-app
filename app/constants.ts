@@ -20,6 +20,18 @@ export const VERSION_21_START_DATE = "2023-01-01";
 /** CW sum insured threshold for post-terror plant banding rules. */
 export const PLANT_CERTIFICATE_TURNOVER_LIMIT = 2_500_000;
 
+/**
+ * Contract value band for CAR excesses (perils + legal liability rows in catalogue).
+ * At or below: up-to band; above: over-$2M band.
+ */
+export const EXCESS_CONTRACT_VALUE_BAND_THRESHOLD = 2_000_000;
+
+/**
+ * Estimated turnover threshold for Section 2 Worker-to-Worker excess.
+ * At or below: $15,000; above: $25,000.
+ */
+export const WORKER_TO_WORKER_TURNOVER_THRESHOLD = 10_000_000;
+
 /** Shared audit action codes. */
 export const AUDIT_ACTIONS = [
   "auth.login",
