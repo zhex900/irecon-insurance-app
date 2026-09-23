@@ -14,21 +14,23 @@ import { ExcessField, Section } from "../section-shared";
 
 export function Excesses({ reference }: { reference: ReferenceData }) {
   const { register, watch } = useFormContext<CarPolicyFormValues>();
-  const estimatedTurnover = watch("estimatedTurnover");
+  const contractWorksSumInsured = watch("contractWorksSumInsured");
   const liabilityLimitBand = watch("liabilityLimitBand");
-  const liabilityExcessBand = resolveContractValueBand(estimatedTurnover);
+  const legalLiabilityExcessBand = resolveContractValueBand(
+    contractWorksSumInsured,
+  );
   const legalLiabilityInsured = isLegalLiabilityInsured(liabilityLimitBand);
 
   const contractWorksBands = groupExcessFieldsByBand(
     visibleExcessFields({
-      estimatedTurnover,
+      contractWorksSumInsured,
       liabilityLimitBand,
       group: "contractWorks",
     }),
   );
   const legalLiabilityBands = groupExcessFieldsByBand(
     visibleExcessFields({
-      estimatedTurnover,
+      contractWorksSumInsured,
       liabilityLimitBand,
       group: "legalLiability",
     }),
@@ -59,13 +61,17 @@ export function Excesses({ reference }: { reference: ReferenceData }) {
           ) : (
             <>
               <ExcessBandGroups bands={legalLiabilityBands} />
-              {!liabilityExcessBand ? (
+              {!legalLiabilityExcessBand ? (
                 <p className="text-sm text-muted-foreground">
-                  Enter Estimated Turnover / Project Value in Risk Details to
-                  show the matching Limit of Liability excess for that contract
-                  value band.
+                  Enter Contract Works under Limits of Liability to show the
+                  matching Limit of Liability excess for that contract value
+                  band.
                 </p>
               ) : null}
+              <FieldInput
+                label="Excess Additional Notes"
+                {...register("excesses.excessLegalLiabilityAdditionalNotes")}
+              />
             </>
           )}
         </div>

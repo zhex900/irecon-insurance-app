@@ -138,11 +138,13 @@ export function policySnapshotFromForm(
               ...policy.car.excesses,
               ...values.excesses,
               excessAdditionalNotes: values.excesses.excessAdditionalNotes ?? "",
+              excessLegalLiabilityAdditionalNotes:
+                values.excesses.excessLegalLiabilityAdditionalNotes ?? "",
             },
             {
-              estimatedTurnover: pickMoney(
-                values.estimatedTurnover,
-                policy.car.estimatedTurnover,
+              contractWorksSumInsured: pickMoney(
+                values.contractWorksSumInsured,
+                policy.car.contractWorksSumInsured,
               ),
               liabilityLimitBand:
                 values.liabilityLimitBand ?? policy.car.liabilityLimitBand,

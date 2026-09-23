@@ -52,7 +52,7 @@ export function policyToFormValues(
     declarationConfirmed: policy.car.declarationConfirmed,
     subLimits: normalizeSubLimits(policy.car.subLimits),
     excesses: normalizeExcesses(policy.car.excesses, {
-      estimatedTurnover: policy.car.estimatedTurnover,
+      contractWorksSumInsured: policy.car.contractWorksSumInsured,
       liabilityLimitBand: policy.car.liabilityLimitBand,
     }),
     excludedContracts1: policy.car.excludedContracts1,

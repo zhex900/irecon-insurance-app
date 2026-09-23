@@ -40,6 +40,7 @@ const SAMPLE_BY_FIELD: Record<string, string> = {
   MaximumMaintenancePeriod: "12",
   SiteAddress: "100 George Street, Sydney NSW 2000",
   ExcessAdditionalNotes: "As per schedule.",
+  ExcessLegalLiabilityAdditionalNotes: "As per schedule.",
   ExcludedContracts1:
     "Contracts involving tunnelling, underground mining, or works outside Australia.",
   ExcludedContracts2: "",

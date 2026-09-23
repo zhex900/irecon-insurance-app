@@ -75,6 +75,7 @@ function basePolicy(opts: {
         excessOver2MMinorPerils: "",
         excessOver2MMajorPerils: "",
         excessAdditionalNotes: "",
+        excessLegalLiabilityAdditionalNotes: "",
         excessWorkerToWorker: "",
         excessUpTo2MLimit10M: "",
         excessUpTo2MLimit20M: "",
@@ -156,6 +157,7 @@ describe("excess merge fields", () => {
       excessOver2MLimit10M: "9900",
       excessOver2MLimit20M: "10100",
       excessAdditionalNotes: "",
+      excessLegalLiabilityAdditionalNotes: "",
     };
 
     const upTo2m = policyToMergeInputs(policy);

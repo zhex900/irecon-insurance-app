@@ -83,6 +83,7 @@ const excessesSchema = z.object({
   excessOver2MMinorPerils: excessNumber,
   excessOver2MMajorPerils: excessNumber,
   excessAdditionalNotes: z.string().optional(),
+  excessLegalLiabilityAdditionalNotes: z.string().optional(),
   excessWorkerToWorker: excessNumber,
   excessUpTo2MLimit10M: excessNumber,
   excessUpTo2MLimit20M: excessNumber,
@@ -316,7 +317,7 @@ export function getPolicyRuleIssues(
 
   if (data.excesses) {
     const visible = visibleExcessFields({
-      estimatedTurnover: data.estimatedTurnover,
+      contractWorksSumInsured: data.contractWorksSumInsured,
       liabilityLimitBand: data.liabilityLimitBand,
     });
     for (const field of visible) {

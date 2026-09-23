@@ -276,7 +276,7 @@ export function rowsToPolicy(
       ),
       subLimits: (car.subLimits ?? {}) as CarSubLimits,
       excesses: normalizeExcesses((car.excesses ?? {}) as CarExcesses, {
-        estimatedTurnover: num(car.estimatedTurnover),
+        contractWorksSumInsured: num(car.contractWorksSumInsured),
         liabilityLimitBand: car.liabilityLimitBand,
       }),
       excludedContracts1: car.excludedContracts1 ?? "",

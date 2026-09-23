@@ -510,6 +510,8 @@ function applyFormValues(
             ...existing.car.excesses,
             ...values.excesses,
             excessAdditionalNotes: values.excesses.excessAdditionalNotes ?? "",
+            excessLegalLiabilityAdditionalNotes:
+              values.excesses.excessLegalLiabilityAdditionalNotes ?? "",
           }
         : existing.car.excesses,
       excludedContracts1:

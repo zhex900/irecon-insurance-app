@@ -330,9 +330,10 @@ function normalizePolicy(item: Policy): Policy {
         item.car.excesses ?? {
           ...ref.defaultExcesses,
           excessAdditionalNotes: "",
+          excessLegalLiabilityAdditionalNotes: "",
         },
         {
-          estimatedTurnover: item.car.estimatedTurnover,
+          contractWorksSumInsured: item.car.contractWorksSumInsured,
           liabilityLimitBand: item.car.liabilityLimitBand,
         },
       ),
@@ -562,6 +563,7 @@ export async function createPolicyDraft(
       excesses: {
         ...defaultExcesses,
         excessAdditionalNotes: "",
+        excessLegalLiabilityAdditionalNotes: "",
       },
       excludedContracts1: ref.defaultTexts.excludedContracts1,
       excludedContracts2: ref.defaultTexts.excludedContracts2,

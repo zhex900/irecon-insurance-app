@@ -26,6 +26,12 @@ export const PLANT_CERTIFICATE_TURNOVER_LIMIT = 2_500_000;
  */
 export const EXCESS_CONTRACT_VALUE_BAND_THRESHOLD = 2_000_000;
 
+/**
+ * Estimated turnover threshold for Section 2 Worker-to-Worker excess.
+ * At or below: $15,000; above: $25,000.
+ */
+export const WORKER_TO_WORKER_TURNOVER_THRESHOLD = 10_000_000;
+
 /** Shared audit action codes. */
 export const AUDIT_ACTIONS = [
   "auth.login",

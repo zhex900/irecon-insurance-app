@@ -411,16 +411,16 @@ function mapLegacyWordings(wordings: LegacyPolicyWording[]) {
 
 function mapLegacyExcesses(
   excesses: LegacyPolicyExcesses,
-  estimatedTurnover: number,
+  contractWorksSumInsured: number,
   liabilityLimitBand: number,
 ): CarExcesses {
   const defaults = referenceData.defaultExcesses;
   const normalized = normalizeExcesses(excesses, {
-    estimatedTurnover,
+    contractWorksSumInsured,
     liabilityLimitBand,
   });
   const visible = visibleExcessFields({
-    estimatedTurnover,
+    contractWorksSumInsured,
     liabilityLimitBand,
   });
   const next: CarExcesses = { ...normalized };
@@ -759,7 +759,7 @@ export function legacyPolicyRowToPolicy(row: LegacyPolicyRow): Policy {
       subLimits: mapLegacySubLimits(row.subLimits ?? subLimitsFromRaw({})),
       excesses: mapLegacyExcesses(
         row.excesses ?? excessesFromRaw({}),
-        row.estimatedTurnover,
+        row.contractWorksSumInsured,
         row.liabilityLimitBand,
       ),
       excludedContracts1: row.excludedContracts1 ?? "",

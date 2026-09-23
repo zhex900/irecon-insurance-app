@@ -152,6 +152,7 @@ export type CarExcesses = {
   excessOver2MMinorPerils: string;
   excessOver2MMajorPerils: string;
   excessAdditionalNotes: string;
+  excessLegalLiabilityAdditionalNotes: string;
   excessWorkerToWorker: string;
   excessUpTo2MLimit10M: string;
   excessUpTo2MLimit20M: string;
@@ -373,7 +374,10 @@ export type ReferenceData = {
     annual: CarSubLimits;
     ownerBuilder: CarSubLimits;
   };
-  defaultExcesses: Omit<CarExcesses, "excessAdditionalNotes">;
+  defaultExcesses: Omit<
+    CarExcesses,
+    "excessAdditionalNotes" | "excessLegalLiabilityAdditionalNotes"
+  >;
   defaultTexts: {
     businessActivities: string;
     insuredContractsAnnualTransfer: string;

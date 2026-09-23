@@ -9,12 +9,19 @@ import {
 } from "~/lib/policies/excesses";
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
 
-/** Keep Section 2 excesses in sync with Limit of Liability + estimated turnover band. */
+/** Section 2 excesses: contract works band, limit of liability, and turnover (Worker to Worker). */
 export function useSyncLegalLiabilityExcess(
   defaultExcesses: ReferenceData["defaultExcesses"],
 ) {
   const { control, setValue } = useFormContext<CarPolicyFormValues>();
-  const estimatedTurnover = useWatch({ control, name: "estimatedTurnover" });
+  const contractWorksSumInsured = useWatch({
+    control,
+    name: "contractWorksSumInsured",
+  });
+  const estimatedTurnover = useWatch({
+    control,
+    name: "estimatedTurnover",
+  });
   const liabilityLimitBand = useWatch({
     control,
     name: "liabilityLimitBand",
@@ -24,8 +31,9 @@ export function useSyncLegalLiabilityExcess(
 
   useEffect(() => {
     const syncKey = legalLiabilityExcessSyncKey(
-      estimatedTurnover,
+      contractWorksSumInsured,
       liabilityLimitBand,
+      estimatedTurnover,
     );
     if (skipInitialSync.current) {
       skipInitialSync.current = false;
@@ -36,9 +44,10 @@ export function useSyncLegalLiabilityExcess(
     previousSyncKey.current = syncKey;
 
     const next = legalLiabilityExcessValuesFor(
-      estimatedTurnover,
+      contractWorksSumInsured,
       liabilityLimitBand,
       defaultExcesses,
+      estimatedTurnover,
     );
     for (const key of LEGAL_LIABILITY_EXCESS_FIELD_KEYS) {
       setValue(`excesses.${key}`, next[key as keyof typeof next], {
@@ -47,6 +56,7 @@ export function useSyncLegalLiabilityExcess(
       });
     }
   }, [
+    contractWorksSumInsured,
     defaultExcesses,
     estimatedTurnover,
     liabilityLimitBand,

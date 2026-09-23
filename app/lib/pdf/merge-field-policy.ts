@@ -214,7 +214,7 @@ export function policyToMergeInputs(
   const sub = car.subLimits ?? ({} as NonNullable<typeof car.subLimits>);
   const excess = car.excesses ?? ({} as NonNullable<typeof car.excesses>);
   const activeExcess = activeBandExcessAmounts(excess, {
-    estimatedTurnover: car.estimatedTurnover,
+    contractWorksSumInsured: car.contractWorksSumInsured,
     liabilityLimitBand: car.liabilityLimitBand,
   });
   const original = adjustment?.breakdown.original;
@@ -278,6 +278,8 @@ export function policyToMergeInputs(
     ExcessOver2MMinorPerils: money(excess.excessOver2MMinorPerils),
     ExcessOver2MMajorPerils: money(excess.excessOver2MMajorPerils),
     ExcessAdditionalNotes: excess.excessAdditionalNotes ?? "",
+    ExcessLegalLiabilityAdditionalNotes:
+      excess.excessLegalLiabilityAdditionalNotes ?? "",
     ExcessWorkerToWorker: money(excess.excessWorkerToWorker),
     ExcessUpTo2MLimit10M: money(excess.excessUpTo2MLimit10M),
     ExcessUpTo2MLimit20M: money(excess.excessUpTo2MLimit20M),

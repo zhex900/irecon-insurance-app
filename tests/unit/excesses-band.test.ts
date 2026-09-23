@@ -12,6 +12,7 @@ import {
   perilsExcessValuesForLegalLiability,
   relocateExcessesToActiveBand,
   resolveContractValueBand,
+  resolveWorkerToWorkerExcess,
 } from "~/lib/policies/excesses";
 
 const excesses: Pick<
@@ -84,7 +85,7 @@ describe("legalLiabilityExcessValuesFor", () => {
     });
   });
 
-  it("applies defaults for insured $10M limit and turnover band", () => {
+  it("applies $1,000 $10M limit excess when contract works ≤ $2M", () => {
     expect(
       legalLiabilityExcessValuesFor(1_500_000, 1, defaults),
     ).toEqual({
@@ -94,6 +95,32 @@ describe("legalLiabilityExcessValuesFor", () => {
       excessOver2MLimit10M: "N/A",
       excessOver2MLimit20M: "N/A",
     });
+  });
+
+  it("applies $2,500 $10M limit excess when contract works above $2M", () => {
+    expect(
+      legalLiabilityExcessValuesFor(2_500_000, 1, defaults),
+    ).toEqual({
+      excessWorkerToWorker: "15000",
+      excessUpTo2MLimit10M: "N/A",
+      excessUpTo2MLimit20M: "N/A",
+      excessOver2MLimit10M: "2500",
+      excessOver2MLimit20M: "N/A",
+    });
+  });
+
+  it("sets Worker to Worker from estimated turnover up to $10M", () => {
+    expect(resolveWorkerToWorkerExcess(10_000_000)).toBe("15000");
+    expect(
+      legalLiabilityExcessValuesFor(1_500_000, 1, defaults, 10_000_000),
+    ).toMatchObject({ excessWorkerToWorker: "15000" });
+  });
+
+  it("sets Worker to Worker to $25,000 when estimated turnover exceeds $10M", () => {
+    expect(resolveWorkerToWorkerExcess(10_000_001)).toBe("25000");
+    expect(
+      legalLiabilityExcessValuesFor(1_500_000, 1, defaults, 10_000_001),
+    ).toMatchObject({ excessWorkerToWorker: "25000" });
   });
 
   it("hides limit rows that do not match selected limit of liability", () => {
@@ -106,7 +133,7 @@ describe("legalLiabilityExcessValuesFor", () => {
           band: "upTo2m",
           liabilityLimitMillions: 20,
         },
-        { estimatedTurnover: 1_500_000, liabilityLimitBand: 1 },
+        { contractWorksSumInsured: 1_500_000, liabilityLimitBand: 1 },
       ),
     ).toBe(false);
     expect(
@@ -157,10 +184,10 @@ describe("legalLiabilityExcessValuesFor", () => {
 });
 
 describe("activeBandExcessAmounts", () => {
-  it("picks perils from limit of liability and liability rows from turnover", () => {
+  it("picks perils from limit of liability and liability rows from contract works", () => {
     expect(
       activeBandExcessAmounts(excesses, {
-        estimatedTurnover: 3_000_000,
+        contractWorksSumInsured: 3_000_000,
         liabilityLimitBand: 1,
       }),
     ).toEqual({
@@ -171,10 +198,10 @@ describe("activeBandExcessAmounts", () => {
     });
   });
 
-  it("picks $20M perils and UpTo2M liability when limit is $20M and turnover ≤ 2M", () => {
+  it("picks $20M perils and UpTo2M liability when limit is $20M and contract works ≤ 2M", () => {
     expect(
       activeBandExcessAmounts(excesses, {
-        estimatedTurnover: 1_000_000,
+        contractWorksSumInsured: 1_000_000,
         liabilityLimitBand: 2,
       }),
     ).toEqual({
@@ -194,7 +221,7 @@ describe("activeBandExcessAmounts", () => {
     });
     expect(
       activeBandExcessAmounts(excesses, {
-        estimatedTurnover: 1_000_000,
+        contractWorksSumInsured: 1_000_000,
         liabilityLimitBand: 2,
       }),
     ).toMatchObject({
@@ -220,6 +247,7 @@ describe("legacy excess migration", () => {
     excessSection2E: "N/A",
     excessSection2F: "N/A",
     excessAdditionalNotes: "",
+    excessLegalLiabilityAdditionalNotes: "",
   };
 
   it("maps legacy section keys and skips N/A", () => {
@@ -251,7 +279,7 @@ describe("legacy excess migration", () => {
 
   it("relocates perils for $20M limit and liability for high turnover", () => {
     const normalized = normalizeExcesses(legacy19965, {
-      estimatedTurnover: 4_000_000,
+      contractWorksSumInsured: 4_000_000,
       liabilityLimitBand: 2,
     });
     expect(normalized).toMatchObject({
@@ -263,7 +291,7 @@ describe("legacy excess migration", () => {
     });
     expect(
       activeBandExcessAmounts(normalized, {
-        estimatedTurnover: 4_000_000,
+        contractWorksSumInsured: 4_000_000,
         liabilityLimitBand: 2,
       }),
     ).toEqual({
@@ -280,13 +308,13 @@ describe("legacy excess migration", () => {
       excessSection2B: "$10,000",
     };
     const normalized = normalizeExcesses(legacy, {
-      estimatedTurnover: 1_500_000,
+      contractWorksSumInsured: 1_500_000,
       liabilityLimitBand: 1,
     });
     expect(normalized.excessUpTo2MLimit10M).toBe("10000");
     expect(
       relocateExcessesToActiveBand(normalized, {
-        estimatedTurnover: 1_500_000,
+        contractWorksSumInsured: 1_500_000,
         liabilityLimitBand: 1,
       }),
     ).toEqual(normalized);
