@@ -18,6 +18,7 @@ import {
   resolvePolicyNumberForSave,
   validatePolicyNumberInput,
 } from "~/lib/policies/policy-number";
+import { derivePolicyEndDate } from "~/lib/policies/policy-period";
 import {
   formatTakenStatusBlockMessage,
   getTakenStatusErrors,
@@ -407,7 +408,8 @@ export async function renewPolicy(sourcePolicyId: string, createdBy: string) {
     stateId: source.stateId,
     dateEffective: toIsoDate(dateStart),
     dateStart: toIsoDate(dateStart),
-    dateEnd: toIsoDate(addMonths(dateStart, maximumConstructionPeriod)),
+    dateEnd:
+      derivePolicyEndDate(toIsoDate(dateStart)) ?? toIsoDate(dateStart),
     insurerCode: source.insurerCode,
     isDraft: true,
     car,

@@ -2,6 +2,10 @@ import { z } from "zod";
 
 import { type AmountFieldValue, stripAmountCommas } from "~/lib/amount-input";
 import { visibleExcessFields } from "~/lib/policies/excesses";
+import {
+  addCalendarMonths,
+  parseLocalIsoDate,
+} from "~/lib/policies/policy-period";
 
 /** Free-text sub-limit wording (legacy varchar(100)). */
 const subLimitText = z
@@ -215,39 +219,8 @@ type PolicyRuleFields = {
   dateEnd?: string;
 };
 
-function addCalendarMonths(isoDate: string, months: number): Date | null {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
-  if (!match) return null;
-  const year = Number(match[1]);
-  const month = Number(match[2]) - 1;
-  const day = Number(match[3]);
-  const date = new Date(year, month, day);
-  if (
-    date.getFullYear() !== year ||
-    date.getMonth() !== month ||
-    date.getDate() !== day
-  ) {
-    return null;
-  }
-  date.setMonth(date.getMonth() + months);
-  return date;
-}
-
 function parseIsoDate(isoDate: string): Date | null {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
-  if (!match) return null;
-  const year = Number(match[1]);
-  const month = Number(match[2]) - 1;
-  const day = Number(match[3]);
-  const date = new Date(year, month, day);
-  if (
-    date.getFullYear() !== year ||
-    date.getMonth() !== month ||
-    date.getDate() !== day
-  ) {
-    return null;
-  }
-  return date;
+  return parseLocalIsoDate(isoDate);
 }
 
 function pushCustomIssue(

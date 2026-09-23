@@ -25,6 +25,7 @@ import type { PdfWorkerBinding } from "~/lib/pdf/pdf-worker.server";
 import { normalizeExcesses } from "~/lib/policies/excesses";
 import { createInformationalNote } from "~/lib/policies/policy-notes";
 import { formatPolicyNumberFromSeq } from "~/lib/policies/policy-number";
+import { derivePolicyEndDate } from "~/lib/policies/policy-period";
 import { normalizeSubLimits } from "~/lib/policies/sub-limits";
 import { getClient, listClients } from "~/lib/services/clients/service";
 import {
@@ -520,18 +521,18 @@ export async function createPolicyDraft(
   const policyId = crypto.randomUUID();
   const policyNumber = await allocatePolicyNumber(policyId);
   const today = new Date();
-  const nextYear = new Date(today);
-  nextYear.setFullYear(nextYear.getFullYear() + 1);
-  nextYear.setDate(nextYear.getDate() - 1);
+  const dateStart = today.toISOString().slice(0, 10);
 
   const draft: Policy = {
     policyCategoryId: 1,
     policyStatusId: 1,
     postcode: "",
     stateId: 0,
-    dateEffective: today.toISOString().slice(0, 10),
-    dateStart: today.toISOString().slice(0, 10),
-    dateEnd: nextYear.toISOString().slice(0, 10),
+    dateEffective: dateStart,
+    dateStart,
+    dateEnd:
+      derivePolicyEndDate(dateStart) ??
+      today.toISOString().slice(0, 10),
     createdWhen: new Date().toISOString(),
     createdBy,
     insurerCode: ref.insurers[0].code,
