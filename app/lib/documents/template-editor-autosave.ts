@@ -56,11 +56,6 @@ export function templateEditorAutosaveReducer(
         dirty,
         unsavedChanges: action.changes,
         canRevert: action.canRevert,
-        autosaveStatus: dirty
-          ? state.autosaveStatus === "saving"
-            ? "saving"
-            : "pending"
-          : "idle",
       };
     }
     case "baseline_seeded":
@@ -72,26 +67,10 @@ export function templateEditorAutosaveReducer(
         autosaveStatus: "idle",
       };
     case "schedule_autosave":
-      return {
-        ...state,
-        autosaveStatus:
-          state.autosaveStatus === "saving" ? "saving" : "pending",
-      };
     case "clear_autosave_timer":
-      return {
-        ...state,
-        autosaveStatus: state.dirty ? state.autosaveStatus : "idle",
-      };
     case "autosave_submit":
-      return {
-        ...state,
-        autosaveStatus: "saving",
-      };
     case "autosave_success":
-      return {
-        ...state,
-        autosaveStatus: "saved",
-      };
+      return state;
     case "draft_success":
       return {
         ...state,

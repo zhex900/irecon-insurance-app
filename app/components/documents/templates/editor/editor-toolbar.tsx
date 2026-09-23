@@ -204,10 +204,7 @@ export function EditorToolbar(props: EditorToolbarProps) {
             type="button"
             variant="outline"
             size="sm"
-            loading={
-              props.busy &&
-              (props.intent === "draft" || props.intent === "autosave")
-            }
+            loading={props.busy && props.intent === "draft"}
             disabled={disabled}
             onClick={props.onSaveDraft}
           >

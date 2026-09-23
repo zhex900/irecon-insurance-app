@@ -88,13 +88,13 @@ export function DocumentTemplateEditor({
             />
           }
           titleAddon={
-            <TemplateVersionBadges
-              publishedVersionNumber={loaderData.publishedVersionNumber}
-              editingVersionNumber={loaderData.editingVersionNumber}
-              editingIsPublished={loaderData.editingIsPublished}
-              unsavedCount={editor.dirty ? editor.unsavedChanges.length : 0}
-              autosaveStatus={editor.autosaveStatus}
-            />
+            <span className="inline-flex min-h-7 flex-wrap items-center gap-2">
+              <TemplateVersionBadges
+                publishedVersionNumber={editor.publishedVersionNumber}
+                editingVersionNumber={editor.editingVersionNumber}
+                editingIsPublished={editor.editingIsPublished}
+              />
+            </span>
           }
           breadcrumbs={[
             { label: "Settings", to: "/settings" },
@@ -110,7 +110,7 @@ export function DocumentTemplateEditor({
           deletable={editor.canDelete}
           busy={editor.busy}
           previewLoading={previewLoading}
-          canUndo={loaderData.canUndo}
+          canUndo={editor.canUndo}
           canRevert={editor.canRevert}
           intent={editor.intent}
           templateKey={docTemplate.key}
@@ -153,14 +153,14 @@ export function DocumentTemplateEditor({
       <HistorySheet
         open={editor.historyOpen}
         onOpenChange={editor.setHistoryOpen}
-        versions={loaderData.history}
-        publishedVersionNumber={loaderData.publishedVersionNumber}
+        versions={editor.history}
+        publishedVersionNumber={editor.publishedVersionNumber}
         canEdit={editor.canEdit}
         busy={editor.busy}
         dirty={editor.dirty}
         unsavedChanges={editor.unsavedChanges}
         editorName={loaderData.viewerName}
-        basedOnVersion={loaderData.editingVersionNumber}
+        basedOnVersion={editor.editingVersionNumber}
         onPreviewVersion={(
           entry: import("~/lib/services/documents/document-template-history").DocumentTemplateHistoryEntry,
         ) => void editor.handlePreviewVersion(entry)}

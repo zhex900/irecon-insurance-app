@@ -1,6 +1,6 @@
 import type { Template } from "@pdfme/common";
 import type { RefObject } from "react";
-import { useEffect, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import {
   useBlocker,
   useFetcher,
@@ -23,7 +23,10 @@ import {
 } from "~/lib/pdf/templates";
 import type { DocumentTemplateHistoryEntry } from "~/lib/services/documents/document-template-history";
 
-import { useDocumentTemplateEditorFetcher } from "./use-fetcher";
+import {
+  useDocumentTemplateEditorAutosaveFetcher,
+  useDocumentTemplateEditorFetcher,
+} from "./use-fetcher";
 
 type FetcherData = {
   ok: boolean;
@@ -55,9 +58,11 @@ export function useDocumentTemplateEditorController({
   const { template: docTemplate, canEdit, canDelete } = loaderData;
   const navigate = useNavigate();
   const revalidator = useRevalidator();
-  const fetcher = useFetcher<FetcherData>();
+  const saveFetcher = useFetcher<FetcherData>();
+  const autosaveFetcher = useFetcher<FetcherData>();
 
-  const handledDataRef = useRef<typeof fetcher.data>(undefined);
+  const handledSaveDataRef = useRef<typeof saveFetcher.data>(undefined);
+  const handledAutosaveDataRef = useRef<typeof autosaveFetcher.data>(undefined);
   const baselineTemplateRef = useRef<Template | null>(null);
   const revertTemplateRef = useRef<Template | null>(null);
   const allowLeaveRef = useRef(false);
@@ -65,10 +70,12 @@ export function useDocumentTemplateEditorController({
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingAutosaveRef = useRef(false);
   const pendingLeaveAfterSaveRef = useRef(false);
-  const fetcherStateRef = useRef(fetcher.state);
+  const saveFetcherStateRef = useRef(saveFetcher.state);
+  const autosaveFetcherStateRef = useRef(autosaveFetcher.state);
   const scheduleAutosaveRef = useRef<() => void>(() => {});
 
-  fetcherStateRef.current = fetcher.state;
+  saveFetcherStateRef.current = saveFetcher.state;
+  autosaveFetcherStateRef.current = autosaveFetcher.state;
 
   const [editorState, dispatch] = useReducer(
     templateEditorAutosaveReducer,
@@ -85,13 +92,49 @@ export function useDocumentTemplateEditorController({
     docTemplate.coverTypeId == null ? "all" : String(docTemplate.coverTypeId),
   );
   const [editingTitle, setEditingTitle] = useState(false);
-  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyOpen, setHistoryOpenState] = useState(false);
+  const [editingVersionNumber, setEditingVersionNumber] = useState(
+    loaderData.editingVersionNumber,
+  );
+  const [editingIsPublished, setEditingIsPublished] = useState(
+    loaderData.editingIsPublished,
+  );
+  const [publishedVersionNumber, setPublishedVersionNumber] = useState(
+    loaderData.publishedVersionNumber,
+  );
+  const [canUndo, setCanUndo] = useState(loaderData.canUndo);
+  const [history, setHistory] = useState(loaderData.history);
+
+  useEffect(() => {
+    setEditingVersionNumber(loaderData.editingVersionNumber);
+    setEditingIsPublished(loaderData.editingIsPublished);
+    setPublishedVersionNumber(loaderData.publishedVersionNumber);
+    setCanUndo(loaderData.canUndo);
+  }, [
+    loaderData.editingVersionNumber,
+    loaderData.editingIsPublished,
+    loaderData.publishedVersionNumber,
+    loaderData.canUndo,
+  ]);
+
+  useEffect(() => {
+    setHistory(loaderData.history);
+  }, [loaderData.history]);
+
+  const setHistoryOpen = useCallback(
+    (open: boolean) => {
+      setHistoryOpenState(open);
+      if (open) revalidator.revalidate();
+    },
+    [revalidator],
+  );
+
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [manualLeaveOpen, setManualLeaveOpen] = useState(false);
   const [confirmAction, setConfirmAction] =
     useState<DocumentTemplateConfirmAction | null>(null);
 
-  const busy = fetcher.state !== "idle";
+  const busy = saveFetcher.state !== "idle";
   const dirty = editorState.dirty;
   const dirtyRef = useRef(dirty);
   dirtyRef.current = dirty;
@@ -101,14 +144,6 @@ export function useDocumentTemplateEditorController({
       if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
     };
   }, []);
-
-  useEffect(() => {
-    if (editorState.autosaveStatus !== "saved") return;
-    const timer = setTimeout(() => {
-      dispatch({ type: "saved_indicator_elapsed" });
-    }, 2500);
-    return () => clearTimeout(timer);
-  }, [editorState.autosaveStatus]);
 
   const blocker = useBlocker(({ currentLocation, nextLocation }) => {
     if (allowLeaveRef.current) return false;
@@ -154,7 +189,10 @@ export function useDocumentTemplateEditorController({
       dispatch({ type: "clear_autosave_timer" });
       return;
     }
-    if (fetcherStateRef.current !== "idle") {
+    if (
+      saveFetcherStateRef.current !== "idle" ||
+      autosaveFetcherStateRef.current !== "idle"
+    ) {
       pendingAutosaveRef.current = true;
       return;
     }
@@ -172,7 +210,7 @@ export function useDocumentTemplateEditorController({
     formData.set("title", next.title ?? titleValue);
     formData.set("label", next.label ?? labelValue);
     formData.set("coverTypeId", next.coverTypeId ?? coverTypeValue);
-    fetcher.submit(formData, { method: "post" });
+    saveFetcher.submit(formData, { method: "post" });
   }
 
   function submitTemplate(intent: "draft" | "publish" | "autosave") {
@@ -189,7 +227,6 @@ export function useDocumentTemplateEditorController({
       pendingAutosaveRef.current = false;
     }
     submittedTemplateRef.current = template;
-    if (intent === "autosave") dispatch({ type: "autosave_submit" });
     const formData = new FormData();
     formData.set("intent", intent);
     formData.set("template", JSON.stringify(template));
@@ -198,11 +235,15 @@ export function useDocumentTemplateEditorController({
       "mergeFields",
       JSON.stringify(collectMergeFields(template, docTemplate.mergeFields)),
     );
+    const fetcher = intent === "autosave" ? autosaveFetcher : saveFetcher;
     fetcher.submit(formData, { method: "post" });
   }
 
   function handleTemplateChange(next: Template) {
-    setOrientation(getTemplateOrientation(next));
+    const nextOrientation = getTemplateOrientation(next);
+    setOrientation((prev) =>
+      prev === nextOrientation ? prev : nextOrientation,
+    );
     if (!baselineTemplateRef.current) {
       baselineTemplateRef.current = next;
       if (!revertTemplateRef.current) revertTemplateRef.current = next;
@@ -286,7 +327,7 @@ export function useDocumentTemplateEditorController({
     const formData = new FormData();
     formData.set("intent", "publish-version");
     formData.set("versionNumber", String(versionNumber));
-    fetcher.submit(formData, { method: "post" });
+    saveFetcher.submit(formData, { method: "post" });
     setConfirmAction(null);
   }
 
@@ -294,7 +335,7 @@ export function useDocumentTemplateEditorController({
     const formData = new FormData();
     formData.set("intent", "delete-draft");
     formData.set("versionNumber", String(versionNumber));
-    fetcher.submit(formData, { method: "post" });
+    saveFetcher.submit(formData, { method: "post" });
     setConfirmAction(null);
   }
 
@@ -326,14 +367,14 @@ export function useDocumentTemplateEditorController({
   }
 
   function handleUndo() {
-    if (!canEdit || !loaderData.canUndo) return;
+    if (!canEdit || !canUndo) return;
     setConfirmAction({ kind: "undo" });
   }
 
   function confirmUndo() {
     const formData = new FormData();
     formData.set("intent", "undo");
-    fetcher.submit(formData, { method: "post" });
+    saveFetcher.submit(formData, { method: "post" });
     setConfirmAction(null);
   }
 
@@ -346,7 +387,7 @@ export function useDocumentTemplateEditorController({
     if (!canDelete) return;
     const formData = new FormData();
     formData.set("intent", "reset");
-    fetcher.submit(formData, { method: "post" });
+    saveFetcher.submit(formData, { method: "post" });
   }
 
   async function handlePreview() {
@@ -432,9 +473,9 @@ export function useDocumentTemplateEditorController({
   }
 
   useDocumentTemplateEditorFetcher({
-    fetcherState: fetcher.state,
-    fetcherData: fetcher.data,
-    handledDataRef,
+    fetcherState: saveFetcher.state,
+    fetcherData: saveFetcher.data,
+    handledDataRef: handledSaveDataRef,
     docTemplateKey: docTemplate.key,
     designerRef,
     submittedTemplateRef,
@@ -453,7 +494,20 @@ export function useDocumentTemplateEditorController({
     blocker,
   });
 
-  const intent = String(fetcher.formData?.get("intent") ?? "");
+  useDocumentTemplateEditorAutosaveFetcher({
+    fetcherState: autosaveFetcher.state,
+    fetcherData: autosaveFetcher.data,
+    handledDataRef: handledAutosaveDataRef,
+    docTemplateKey: docTemplate.key,
+    submittedTemplateRef,
+    baselineTemplateRef,
+    pendingAutosaveRef,
+    dirtyRef,
+    scheduleAutosaveRef,
+    syncDirtyFromBaseline,
+  });
+
+  const intent = String(saveFetcher.formData?.get("intent") ?? "");
 
   return {
     docTemplate,
@@ -467,6 +521,11 @@ export function useDocumentTemplateEditorController({
     coverTypeValue,
     editingTitle,
     historyOpen,
+    editingVersionNumber,
+    editingIsPublished,
+    publishedVersionNumber,
+    canUndo,
+    history,
     deleteOpen,
     leaveOpen,
     confirmAction,
@@ -475,7 +534,6 @@ export function useDocumentTemplateEditorController({
     dirty,
     unsavedChanges: editorState.unsavedChanges,
     canRevert: editorState.canRevert,
-    autosaveStatus: editorState.autosaveStatus,
     pendingLeaveAfterSave: editorState.pendingLeaveAfterSave,
     blocker,
     setTitleValue,
