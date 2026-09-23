@@ -20,6 +20,12 @@ export const VERSION_21_START_DATE = "2023-01-01";
 /** CW sum insured threshold for post-terror plant banding rules. */
 export const PLANT_CERTIFICATE_TURNOVER_LIMIT = 2_500_000;
 
+/**
+ * Contract value band for CAR excesses (perils + legal liability rows in catalogue).
+ * At or below: up-to band; above: over-$2M band.
+ */
+export const EXCESS_CONTRACT_VALUE_BAND_THRESHOLD = 2_000_000;
+
 /** Shared audit action codes. */
 export const AUDIT_ACTIONS = [
   "auth.login",

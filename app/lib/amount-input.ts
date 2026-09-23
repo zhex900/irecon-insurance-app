@@ -1,3 +1,6 @@
+/** Raw form / API values before Zod money coercion. */
+export type AmountFieldValue = string | number | null | undefined;
+
 /** Keep digits and at most one decimal point; strip commas and other junk. */
 export function sanitizeAmountInput(value: string): string {
   const stripped = value.replace(/,/g, "").replace(/[^\d.]/g, "");

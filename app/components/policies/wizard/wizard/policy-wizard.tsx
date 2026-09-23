@@ -10,6 +10,8 @@ import {
 
 import { PolicyPhaseProvider } from "../components/mode-context";
 import { syncFormPolicyStatus } from "../hooks/composite/submit-helpers";
+import { useSyncLegalLiabilityExcess } from "../hooks/use-sync-legal-liability-excess";
+import { useSyncPerilsExcessFromLegalLiability } from "../hooks/use-sync-perils-excess-from-legal-liability";
 import { policyToFormValues } from "../shared/policy-to-values";
 import type { WizardProps } from "../shared/wizard-shared";
 import { WizardDefault } from "./wizard-default";
@@ -56,6 +58,7 @@ export function PolicyWizard({
 
   return (
     <FormProvider {...form}>
+      <PolicyWizardFormEffects defaultExcesses={reference.defaultExcesses} />
       <JustSavedProvider>
         <PolicyPhaseProvider
           policy={policy}
@@ -75,4 +78,14 @@ export function PolicyWizard({
       </JustSavedProvider>
     </FormProvider>
   );
+}
+
+function PolicyWizardFormEffects({
+  defaultExcesses,
+}: {
+  defaultExcesses: WizardProps["reference"]["defaultExcesses"];
+}) {
+  useSyncPerilsExcessFromLegalLiability(defaultExcesses);
+  useSyncLegalLiabilityExcess(defaultExcesses);
+  return null;
 }

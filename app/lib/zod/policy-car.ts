@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { stripAmountCommas } from "~/lib/amount-input";
+import { type AmountFieldValue, stripAmountCommas } from "~/lib/amount-input";
 import { visibleExcessFields } from "~/lib/policies/excesses";
 
 /** Free-text sub-limit wording (legacy varchar(100)). */
@@ -259,7 +259,9 @@ function pushCustomIssue(
 /** Cross-field rules used by Zod and the wizard incomplete list. */
 export function getPolicyRuleIssues(
   data: PolicyRuleFields & {
-    estimatedTurnover?: unknown;
+    estimatedTurnover?: AmountFieldValue;
+    contractWorksSumInsured?: AmountFieldValue;
+    liabilityLimitBand?: AmountFieldValue;
     excesses?: Record<string, string | undefined>;
   },
 ): { path: (string | number)[]; message: string }[] {
@@ -315,6 +317,7 @@ export function getPolicyRuleIssues(
   if (data.excesses) {
     const visible = visibleExcessFields({
       estimatedTurnover: data.estimatedTurnover,
+      liabilityLimitBand: data.liabilityLimitBand,
     });
     for (const field of visible) {
       const raw = String(data.excesses[field.key] ?? "")
@@ -334,7 +337,7 @@ function applyPolicyRules(data: PolicyRuleFields, ctx: z.RefinementCtx) {
   for (const issue of getPolicyRuleIssues(data)) {
     if (issue.path[0] === "excesses") continue;
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: "custom",
       message: issue.message,
       path: issue.path,
     });
@@ -343,7 +346,8 @@ function applyPolicyRules(data: PolicyRuleFields, ctx: z.RefinementCtx) {
 
 function applyExcessRules(
   data: {
-    estimatedTurnover?: unknown;
+    estimatedTurnover?: AmountFieldValue;
+    contractWorksSumInsured?: AmountFieldValue;
     excesses?: Record<string, string | undefined>;
   },
   ctx: z.RefinementCtx,
@@ -351,7 +355,7 @@ function applyExcessRules(
   for (const issue of getPolicyRuleIssues(data)) {
     if (issue.path[0] !== "excesses") continue;
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: "custom",
       message: issue.message,
       path: issue.path,
     });

@@ -15,7 +15,6 @@ import {
 } from "~/lib/pdf/merge-field-tables";
 import {
   activeBandExcessAmounts,
-  contractValueBandLabel,
 } from "~/lib/policies/excesses";
 import { combinedTrueBasePremium } from "~/lib/pricing/premium-totals";
 import { formatDate } from "~/lib/utils";
@@ -214,7 +213,10 @@ export function policyToMergeInputs(
   const adjustment = car.adjustment;
   const sub = car.subLimits ?? ({} as NonNullable<typeof car.subLimits>);
   const excess = car.excesses ?? ({} as NonNullable<typeof car.excesses>);
-  const activeExcess = activeBandExcessAmounts(excess, car.estimatedTurnover);
+  const activeExcess = activeBandExcessAmounts(excess, {
+    estimatedTurnover: car.estimatedTurnover,
+    liabilityLimitBand: car.liabilityLimitBand,
+  });
   const original = adjustment?.breakdown.original;
   const adjusted = adjustment?.breakdown.adjustment;
   const delta = adjustment?.breakdown.delta;
@@ -266,7 +268,6 @@ export function policyToMergeInputs(
     MaterialsInOffSiteStorage: String(sub.materialsInOffSiteStorage ?? ""),
     Transit: String(sub.transit ?? ""),
     LegalLiabilityLimit: liabilityLabel(car.liabilityLimitBand),
-    ContractValueLabel: contractValueBandLabel(car.estimatedTurnover),
     ExcessMinorPerils: money(activeExcess.minorPerils),
     ExcessMajorPerils: money(activeExcess.majorPerils),
     ExcessLimit10M: money(activeExcess.limit10M),

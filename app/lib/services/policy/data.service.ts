@@ -331,7 +331,10 @@ function normalizePolicy(item: Policy): Policy {
           ...ref.defaultExcesses,
           excessAdditionalNotes: "",
         },
-        item.car.estimatedTurnover,
+        {
+          estimatedTurnover: item.car.estimatedTurnover,
+          liabilityLimitBand: item.car.liabilityLimitBand,
+        },
       ),
       excludedContracts1:
         item.car.excludedContracts1 ?? ref.defaultTexts.excludedContracts1,

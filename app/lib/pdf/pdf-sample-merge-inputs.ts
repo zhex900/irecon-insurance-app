@@ -107,7 +107,6 @@ const SAMPLE_BY_FIELD: Record<string, string> = {
   CalcLegalLiabilityStampDuty: "$840.00",
   CalcLegalLiabilityEsl: "$0.00",
   ExcessPlantEquipment: "$5,000.00",
-  ContractValueLabel: "Contract Value over $2,000,001",
   ExcessMinorPerils: "$5,000.00",
   ExcessMajorPerils: "$5,000.00",
   ExcessLimit10M: "$5,000.00",

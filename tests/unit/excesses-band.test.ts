@@ -1,14 +1,17 @@
 import { describe, expect, it } from "vitest";
 
 import type { CarExcesses } from "~/lib/db/types";
+import { referenceData } from "~/lib/reference-data";
 import {
   activeBandExcessAmounts,
-  CONTRACT_VALUE_BAND_LABEL,
-  contractValueBandLabel,
   migrateLegacyExcessKeys,
   normalizeExcesses,
   normalizeExcessValue,
+  isExcessFieldVisible,
+  legalLiabilityExcessValuesFor,
+  perilsExcessValuesForLegalLiability,
   relocateExcessesToActiveBand,
+  resolveContractValueBand,
 } from "~/lib/policies/excesses";
 
 const excesses: Pick<
@@ -32,53 +35,173 @@ const excesses: Pick<
   excessOver2MLimit20M: "4000",
 };
 
-describe("contractValueBandLabel", () => {
-  it("returns up-to-$2M label for turnover at or below 2,000,000", () => {
-    expect(contractValueBandLabel(2_000_000)).toBe(
-      CONTRACT_VALUE_BAND_LABEL.upTo2m,
-    );
-    expect(contractValueBandLabel("1,500,000")).toBe(
-      CONTRACT_VALUE_BAND_LABEL.upTo2m,
-    );
+describe("perilsExcessValuesForLegalLiability", () => {
+  const defaults = referenceData.defaultExcesses;
+
+  it("uses reference defaults for $10M limit of liability", () => {
+    expect(perilsExcessValuesForLegalLiability(1, defaults)).toEqual({
+      excessUpTo2MMinorPerils: "1000",
+      excessUpTo2MMajorPerils: "1000",
+      excessOver2MMinorPerils: "N/A",
+      excessOver2MMajorPerils: "N/A",
+    });
   });
 
-  it("returns $2,000,001 to $5,000,000 label above 2,000,000", () => {
-    expect(contractValueBandLabel(2_000_001)).toBe(
-      CONTRACT_VALUE_BAND_LABEL.from2mTo5m,
-    );
+  it("uses reference defaults for $20M limit of liability", () => {
+    expect(perilsExcessValuesForLegalLiability(2, defaults)).toEqual({
+      excessUpTo2MMinorPerils: "N/A",
+      excessUpTo2MMajorPerils: "N/A",
+      excessOver2MMinorPerils: "2500",
+      excessOver2MMajorPerils: "5000",
+    });
   });
 
-  it("returns empty when turnover is missing", () => {
-    expect(contractValueBandLabel(undefined)).toBe("");
-    expect(contractValueBandLabel("")).toBe("");
+  it("sets N/A when not insured or limit not selected", () => {
+    expect(
+      perilsExcessValuesForLegalLiability(3, defaults),
+    ).toMatchObject({
+      excessUpTo2MMinorPerils: "N/A",
+      excessUpTo2MMajorPerils: "N/A",
+    });
+    expect(perilsExcessValuesForLegalLiability("", defaults)).toMatchObject({
+      excessUpTo2MMinorPerils: "N/A",
+      excessUpTo2MMajorPerils: "N/A",
+    });
+    expect(resolveContractValueBand(0)).toBeNull();
+  });
+});
+
+describe("legalLiabilityExcessValuesFor", () => {
+  const defaults = referenceData.defaultExcesses;
+
+  it("sets all Section 2 excesses to N/A when limit is Not Insured", () => {
+    expect(
+      legalLiabilityExcessValuesFor(1_500_000, 3, defaults),
+    ).toMatchObject({
+      excessWorkerToWorker: "N/A",
+      excessUpTo2MLimit10M: "N/A",
+      excessUpTo2MLimit20M: "N/A",
+    });
+  });
+
+  it("applies defaults for insured $10M limit and turnover band", () => {
+    expect(
+      legalLiabilityExcessValuesFor(1_500_000, 1, defaults),
+    ).toEqual({
+      excessWorkerToWorker: "15000",
+      excessUpTo2MLimit10M: "1000",
+      excessUpTo2MLimit20M: "N/A",
+      excessOver2MLimit10M: "N/A",
+      excessOver2MLimit20M: "N/A",
+    });
+  });
+
+  it("hides limit rows that do not match selected limit of liability", () => {
+    expect(
+      isExcessFieldVisible(
+        {
+          key: "excessUpTo2MLimit20M",
+          group: "legalLiability",
+          label: "$20M",
+          band: "upTo2m",
+          liabilityLimitMillions: 20,
+        },
+        { estimatedTurnover: 1_500_000, liabilityLimitBand: 1 },
+      ),
+    ).toBe(false);
+    expect(
+      isExcessFieldVisible(
+        {
+          key: "excessUpTo2MMajorPerils",
+          group: "contractWorks",
+          label: "Major Perils",
+          band: "upTo2m",
+        },
+        { liabilityLimitBand: 1 },
+      ),
+    ).toBe(true);
+    expect(
+      isExcessFieldVisible(
+        {
+          key: "excessOver2MMajorPerils",
+          group: "contractWorks",
+          label: "Major Perils",
+          band: "from2mTo5m",
+        },
+        { liabilityLimitBand: 1 },
+      ),
+    ).toBe(false);
+    expect(
+      isExcessFieldVisible(
+        {
+          key: "excessUpTo2MMajorPerils",
+          group: "contractWorks",
+          label: "Major Perils",
+          band: "upTo2m",
+        },
+        { liabilityLimitBand: 3 },
+      ),
+    ).toBe(true);
+    expect(
+      isExcessFieldVisible(
+        {
+          key: "excessOver2MMajorPerils",
+          group: "contractWorks",
+          label: "Major Perils",
+          band: "from2mTo5m",
+        },
+        { liabilityLimitBand: 3 },
+      ),
+    ).toBe(false);
   });
 });
 
 describe("activeBandExcessAmounts", () => {
-  it("picks UpTo2M amounts for turnover ≤ 2M", () => {
-    expect(activeBandExcessAmounts(excesses, 1_000_000)).toEqual({
+  it("picks perils from limit of liability and liability rows from turnover", () => {
+    expect(
+      activeBandExcessAmounts(excesses, {
+        estimatedTurnover: 3_000_000,
+        liabilityLimitBand: 1,
+      }),
+    ).toEqual({
       minorPerils: "2500",
       majorPerils: "5000",
-      limit10M: "1000",
+      limit10M: "3000",
+      limit20M: "N/A",
+    });
+  });
+
+  it("picks $20M perils and UpTo2M liability when limit is $20M and turnover ≤ 2M", () => {
+    expect(
+      activeBandExcessAmounts(excesses, {
+        estimatedTurnover: 1_000_000,
+        liabilityLimitBand: 2,
+      }),
+    ).toEqual({
+      minorPerils: "7500",
+      majorPerils: "10000",
+      limit10M: "N/A",
       limit20M: "2000",
     });
   });
 
-  it("picks Over2M amounts for turnover > 2M", () => {
-    expect(activeBandExcessAmounts(excesses, 3_000_000)).toEqual({
-      minorPerils: "7500",
-      majorPerils: "10000",
-      limit10M: "3000",
-      limit20M: "4000",
-    });
-  });
-
-  it("returns N/A values when turnover does not resolve", () => {
+  it("returns N/A when band drivers do not resolve", () => {
     expect(activeBandExcessAmounts(excesses, "")).toEqual({
       minorPerils: "N/A",
       majorPerils: "N/A",
       limit10M: "N/A",
       limit20M: "N/A",
+    });
+    expect(
+      activeBandExcessAmounts(excesses, {
+        estimatedTurnover: 1_000_000,
+        liabilityLimitBand: 2,
+      }),
+    ).toMatchObject({
+      minorPerils: "7500",
+      majorPerils: "10000",
+      limit10M: "N/A",
+      limit20M: "2000",
     });
   });
 });
@@ -126,8 +249,11 @@ describe("legacy excess migration", () => {
     });
   });
 
-  it("relocates up-to-2M values into over-2M band for high turnover", () => {
-    const normalized = normalizeExcesses(legacy19965, 4_000_000);
+  it("relocates perils for $20M limit and liability for high turnover", () => {
+    const normalized = normalizeExcesses(legacy19965, {
+      estimatedTurnover: 4_000_000,
+      liabilityLimitBand: 2,
+    });
     expect(normalized).toMatchObject({
       excessOver2MMinorPerils: "1000",
       excessOver2MMajorPerils: "1000",
@@ -135,7 +261,12 @@ describe("legacy excess migration", () => {
       excessPlantEquipment: "2500",
       excessWorkerToWorker: "15000",
     });
-    expect(activeBandExcessAmounts(normalized, 4_000_000)).toEqual({
+    expect(
+      activeBandExcessAmounts(normalized, {
+        estimatedTurnover: 4_000_000,
+        liabilityLimitBand: 2,
+      }),
+    ).toEqual({
       minorPerils: "1000",
       majorPerils: "1000",
       limit10M: "N/A",
@@ -148,11 +279,17 @@ describe("legacy excess migration", () => {
       ...legacy19965,
       excessSection2B: "$10,000",
     };
-    const normalized = normalizeExcesses(legacy, 1_500_000);
+    const normalized = normalizeExcesses(legacy, {
+      estimatedTurnover: 1_500_000,
+      liabilityLimitBand: 1,
+    });
     expect(normalized.excessUpTo2MLimit10M).toBe("10000");
-    expect(relocateExcessesToActiveBand(normalized, 1_500_000)).toEqual(
-      normalized,
-    );
+    expect(
+      relocateExcessesToActiveBand(normalized, {
+        estimatedTurnover: 1_500_000,
+        liabilityLimitBand: 1,
+      }),
+    ).toEqual(normalized);
   });
 });
 

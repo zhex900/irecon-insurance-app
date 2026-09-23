@@ -1,4 +1,5 @@
 import { stripAmountCommas } from "~/lib/amount-input";
+import { EXCESS_CONTRACT_VALUE_BAND_THRESHOLD } from "~/constants";
 import type { CarExcesses } from "~/lib/db/types";
 
 export type ExcessFieldKey = Exclude<
@@ -41,23 +42,89 @@ const LEGACY_EXCESS_KEY: Record<string, ExcessFieldKey> = {
   excessSection2F: "excessOver2MLimit20M",
 };
 
-const BAND_EXCESS_PAIRS: ReadonlyArray<
+const PERILS_BAND_EXCESS_PAIRS: ReadonlyArray<
   readonly [ExcessFieldKey, ExcessFieldKey]
 > = [
   ["excessUpTo2MMinorPerils", "excessOver2MMinorPerils"],
   ["excessUpTo2MMajorPerils", "excessOver2MMajorPerils"],
+];
+
+export const PERILS_EXCESS_FIELD_KEYS: readonly ExcessFieldKey[] = [
+  "excessUpTo2MMinorPerils",
+  "excessUpTo2MMajorPerils",
+  "excessOver2MMinorPerils",
+  "excessOver2MMajorPerils",
+];
+
+const LIABILITY_BAND_EXCESS_PAIRS: ReadonlyArray<
+  readonly [ExcessFieldKey, ExcessFieldKey]
+> = [
   ["excessUpTo2MLimit10M", "excessOver2MLimit10M"],
   ["excessUpTo2MLimit20M", "excessOver2MLimit20M"],
 ];
+
+/** Reference `liabilityLimitBands` id — Section 2 not insured. */
+export const LIABILITY_LIMIT_NOT_INSURED_BAND_ID = 3;
+
+export type ExcessBandContext = {
+  /** Contract value band for Section 2 legal liability excess rows. */
+  estimatedTurnover?: unknown;
+  /** Section 2 limit of liability ($10m / $20m / not insured). */
+  liabilityLimitBand?: unknown;
+};
+
+export const LEGAL_LIABILITY_EXCESS_FIELD_KEYS: readonly ExcessFieldKey[] = [
+  "excessWorkerToWorker",
+  "excessUpTo2MLimit10M",
+  "excessUpTo2MLimit20M",
+  "excessOver2MLimit10M",
+  "excessOver2MLimit20M",
+];
+
+export function resolveLiabilityLimitMillions(
+  liabilityLimitBand: unknown,
+): 10 | 20 | null {
+  const band = Number(liabilityLimitBand);
+  if (band === 1) return 10;
+  if (band === 2) return 20;
+  return null;
+}
+
+export function isLegalLiabilityInsured(liabilityLimitBand: unknown): boolean {
+  const band = Number(liabilityLimitBand);
+  return (
+    Number.isFinite(band) &&
+    band > 0 &&
+    band !== LIABILITY_LIMIT_NOT_INSURED_BAND_ID
+  );
+}
+
+function normalizeExcessBandContext(
+  context?: unknown | ExcessBandContext,
+): ExcessBandContext {
+  if (context == null) return {};
+  if (typeof context === "object" && !Array.isArray(context)) {
+    return context as ExcessBandContext;
+  }
+  return { estimatedTurnover: context };
+}
 
 export type ExcessGroup = "contractWorks" | "legalLiability";
 
 export type ContractValueBand = "upTo2m" | "from2mTo5m";
 
-export const CONTRACT_VALUE_BAND_LABEL: Record<ContractValueBand, string> = {
-  upTo2m: "Contract Value up to $2,000,000",
-  from2mTo5m: "Contract Value over $2,000,001",
-};
+/**
+ * Which Major / Minor Perils form row set applies for the selected limit of liability.
+ * $10M → up-to band defaults; $20M → over band defaults; not insured → none.
+ */
+export function resolvePerilsStorageBand(
+  liabilityLimitBand: unknown,
+): ContractValueBand | null {
+  const limit = resolveLiabilityLimitMillions(liabilityLimitBand);
+  if (limit === 10) return "upTo2m";
+  if (limit === 20) return "from2mTo5m";
+  return null;
+}
 
 export type ExcessFieldConfig = {
   key: ExcessFieldKey;
@@ -65,8 +132,8 @@ export type ExcessFieldConfig = {
   label: string;
   /** Shown under the input (e.g. "each and every loss"). */
   description?: string;
-  /** Optional band heading used to group related fields. */
-  band?: string;
+  /** Contract-value band this field belongs to (visibility + grouping). */
+  band?: ContractValueBand;
   /** Legal liability: match selected Limit of Liability ($10m / $20m). */
   liabilityLimitMillions?: 10 | 20;
   tooltip?: string;
@@ -80,32 +147,32 @@ export const EXCESS_FIELDS: ExcessFieldConfig[] = [
     description: "each and every loss",
   },
   {
-    key: "excessUpTo2MMinorPerils",
-    group: "contractWorks",
-    label: "Minor Perils",
-    description: "each and every loss",
-    band: CONTRACT_VALUE_BAND_LABEL.upTo2m,
-  },
-  {
     key: "excessUpTo2MMajorPerils",
     group: "contractWorks",
     label: "Major Perils",
     description: "each and every loss",
-    band: CONTRACT_VALUE_BAND_LABEL.upTo2m,
+    band: "upTo2m",
   },
   {
-    key: "excessOver2MMinorPerils",
+    key: "excessUpTo2MMinorPerils",
     group: "contractWorks",
     label: "Minor Perils",
     description: "each and every loss",
-    band: CONTRACT_VALUE_BAND_LABEL.from2mTo5m,
+    band: "upTo2m",
   },
   {
     key: "excessOver2MMajorPerils",
     group: "contractWorks",
     label: "Major Perils",
     description: "each and every loss",
-    band: CONTRACT_VALUE_BAND_LABEL.from2mTo5m,
+    band: "from2mTo5m",
+  },
+  {
+    key: "excessOver2MMinorPerils",
+    group: "contractWorks",
+    label: "Minor Perils",
+    description: "each and every loss",
+    band: "from2mTo5m",
   },
   {
     key: "excessWorkerToWorker",
@@ -118,7 +185,7 @@ export const EXCESS_FIELDS: ExcessFieldConfig[] = [
     group: "legalLiability",
     label: "$10M Limit of Liability",
     description: "each and every occurrence",
-    band: CONTRACT_VALUE_BAND_LABEL.upTo2m,
+    band: "upTo2m",
     liabilityLimitMillions: 10,
   },
   {
@@ -126,7 +193,7 @@ export const EXCESS_FIELDS: ExcessFieldConfig[] = [
     group: "legalLiability",
     label: "$20M Limit of Liability",
     description: "each and every occurrence",
-    band: CONTRACT_VALUE_BAND_LABEL.upTo2m,
+    band: "upTo2m",
     liabilityLimitMillions: 20,
   },
   {
@@ -134,7 +201,7 @@ export const EXCESS_FIELDS: ExcessFieldConfig[] = [
     group: "legalLiability",
     label: "$10M Limit of Liability",
     description: "each and every occurrence",
-    band: CONTRACT_VALUE_BAND_LABEL.from2mTo5m,
+    band: "from2mTo5m",
     liabilityLimitMillions: 10,
   },
   {
@@ -142,7 +209,7 @@ export const EXCESS_FIELDS: ExcessFieldConfig[] = [
     group: "legalLiability",
     label: "$20M Limit of Liability",
     description: "each and every occurrence",
-    band: CONTRACT_VALUE_BAND_LABEL.from2mTo5m,
+    band: "from2mTo5m",
     liabilityLimitMillions: 20,
   },
 ];
@@ -154,15 +221,179 @@ export function resolveContractValueBand(
   const raw = stripAmountCommas(estimatedTurnover);
   if (raw === "" || raw == null) return null;
   const value = typeof raw === "number" ? raw : Number(raw);
-  if (!Number.isFinite(value) || value < 0) return null;
-  if (value <= 2_000_000) return "upTo2m";
+  if (!Number.isFinite(value) || value <= 0) return null;
+  if (value <= EXCESS_CONTRACT_VALUE_BAND_THRESHOLD) return "upTo2m";
   return "from2mTo5m";
 }
 
-/** Active band heading for PDFs / merge fields (empty when turnover unknown). */
-export function contractValueBandLabel(estimatedTurnover: unknown): string {
-  const band = resolveContractValueBand(estimatedTurnover);
-  return band ? CONTRACT_VALUE_BAND_LABEL[band] : "";
+/**
+ * Major / Minor Perils from Section 2 limit of liability only
+ * ($10M / $20M / not insured). Amounts from reference / catalogue defaults.
+ */
+export function perilsExcessValuesForLegalLiability(
+  liabilityLimitBand: unknown,
+  defaults: Pick<
+    CarExcesses,
+    | "excessUpTo2MMinorPerils"
+    | "excessUpTo2MMajorPerils"
+    | "excessOver2MMinorPerils"
+    | "excessOver2MMajorPerils"
+  >,
+): Pick<
+  CarExcesses,
+  | "excessUpTo2MMinorPerils"
+  | "excessUpTo2MMajorPerils"
+  | "excessOver2MMinorPerils"
+  | "excessOver2MMajorPerils"
+> {
+  const na = Object.fromEntries(
+    PERILS_EXCESS_FIELD_KEYS.map((key) => [key, "N/A"]),
+  ) as Pick<
+    CarExcesses,
+    | "excessUpTo2MMinorPerils"
+    | "excessUpTo2MMajorPerils"
+    | "excessOver2MMinorPerils"
+    | "excessOver2MMajorPerils"
+  >;
+
+  const band = resolvePerilsStorageBand(liabilityLimitBand);
+  if (!band) return na;
+
+  const { minorKey, majorKey, minor, major } = perilsExcessDefaultsForBand(
+    band,
+    defaults,
+  );
+  return {
+    ...na,
+    [minorKey]: minor,
+    [majorKey]: major,
+  };
+}
+
+/** Default Major / Minor Perils amounts for a band (from reference / catalogue). */
+export function perilsExcessDefaultsForBand(
+  band: ContractValueBand,
+  defaults: Pick<
+    CarExcesses,
+    | "excessUpTo2MMinorPerils"
+    | "excessUpTo2MMajorPerils"
+    | "excessOver2MMinorPerils"
+    | "excessOver2MMajorPerils"
+  >,
+): { minorKey: ExcessFieldKey; majorKey: ExcessFieldKey; minor: string; major: string } {
+  if (band === "upTo2m") {
+    return {
+      minorKey: "excessUpTo2MMinorPerils",
+      majorKey: "excessUpTo2MMajorPerils",
+      minor: defaults.excessUpTo2MMinorPerils,
+      major: defaults.excessUpTo2MMajorPerils,
+    };
+  }
+  return {
+    minorKey: "excessOver2MMinorPerils",
+    majorKey: "excessOver2MMajorPerils",
+    minor: defaults.excessOver2MMinorPerils,
+    major: defaults.excessOver2MMajorPerils,
+  };
+}
+
+function liabilityLimitExcessKey(
+  turnoverBand: ContractValueBand,
+  limitMillions: 10 | 20,
+): ExcessFieldKey {
+  if (turnoverBand === "upTo2m") {
+    return limitMillions === 10
+      ? "excessUpTo2MLimit10M"
+      : "excessUpTo2MLimit20M";
+  }
+  return limitMillions === 10
+    ? "excessOver2MLimit10M"
+    : "excessOver2MLimit20M";
+}
+
+/**
+ * Section 2 legal liability excess values from turnover band + limit of liability.
+ * Not insured or missing turnover band → all N/A.
+ */
+export function legalLiabilityExcessValuesFor(
+  estimatedTurnover: unknown,
+  liabilityLimitBand: unknown,
+  defaults: Pick<
+    CarExcesses,
+    | "excessWorkerToWorker"
+    | "excessUpTo2MLimit10M"
+    | "excessUpTo2MLimit20M"
+    | "excessOver2MLimit10M"
+    | "excessOver2MLimit20M"
+  >,
+): Pick<
+  CarExcesses,
+  | "excessWorkerToWorker"
+  | "excessUpTo2MLimit10M"
+  | "excessUpTo2MLimit20M"
+  | "excessOver2MLimit10M"
+  | "excessOver2MLimit20M"
+> {
+  const na = Object.fromEntries(
+    LEGAL_LIABILITY_EXCESS_FIELD_KEYS.map((key) => [key, "N/A"]),
+  ) as Pick<
+    CarExcesses,
+    | "excessWorkerToWorker"
+    | "excessUpTo2MLimit10M"
+    | "excessUpTo2MLimit20M"
+    | "excessOver2MLimit10M"
+    | "excessOver2MLimit20M"
+  >;
+
+  if (!isLegalLiabilityInsured(liabilityLimitBand)) {
+    return na;
+  }
+
+  const limitMillions = resolveLiabilityLimitMillions(liabilityLimitBand);
+  const turnoverBand = resolveContractValueBand(estimatedTurnover);
+  const withWorker = {
+    ...na,
+    excessWorkerToWorker: defaults.excessWorkerToWorker,
+  };
+  if (!limitMillions || !turnoverBand) {
+    return withWorker;
+  }
+
+  const limitKey = liabilityLimitExcessKey(turnoverBand, limitMillions);
+  const limitAmount =
+    limitKey === "excessUpTo2MLimit10M"
+      ? defaults.excessUpTo2MLimit10M
+      : limitKey === "excessUpTo2MLimit20M"
+        ? defaults.excessUpTo2MLimit20M
+        : limitKey === "excessOver2MLimit10M"
+          ? defaults.excessOver2MLimit10M
+          : defaults.excessOver2MLimit20M;
+  return {
+    ...withWorker,
+    [limitKey]: limitAmount,
+  };
+}
+
+/** Stable key for detecting contract-value band changes in the form. */
+export function contractWorksLimitSyncKey(value: unknown): string {
+  const band = resolveContractValueBand(value);
+  const raw = stripAmountCommas(value);
+  if (raw === "" || raw == null) return "none:";
+  const numeric = typeof raw === "number" ? raw : Number(raw);
+  return `${band ?? "none"}:${Number.isFinite(numeric) ? numeric : raw}`;
+}
+
+export function legalLiabilityExcessSyncKey(
+  estimatedTurnover: unknown,
+  liabilityLimitBand: unknown,
+): string {
+  return `${contractWorksLimitSyncKey(estimatedTurnover)}|${String(
+    liabilityLimitBand ?? "",
+  )}`;
+}
+
+export function perilsExcessSyncKey(liabilityLimitBand: unknown): string {
+  return String(liabilityLimitBand ?? "");
 }
 
 export type ActiveBandExcessAmounts = {
@@ -176,6 +407,50 @@ export type ActiveBandExcessAmounts = {
  * Excess amounts for the turnover-active contract-value band only.
  * Empty strings when estimated turnover does not resolve to a band.
  */
+type BandExcessSlice = Pick<
+  CarExcesses,
+  | "excessUpTo2MMinorPerils"
+  | "excessUpTo2MMajorPerils"
+  | "excessOver2MMinorPerils"
+  | "excessOver2MMajorPerils"
+  | "excessUpTo2MLimit10M"
+  | "excessUpTo2MLimit20M"
+  | "excessOver2MLimit10M"
+  | "excessOver2MLimit20M"
+>;
+
+function activePerilsBandAmounts(
+  excesses: BandExcessSlice,
+  band: ContractValueBand,
+): Pick<ActiveBandExcessAmounts, "minorPerils" | "majorPerils"> {
+  if (band === "upTo2m") {
+    return {
+      minorPerils: excesses.excessUpTo2MMinorPerils || "N/A",
+      majorPerils: excesses.excessUpTo2MMajorPerils || "N/A",
+    };
+  }
+  return {
+    minorPerils: excesses.excessOver2MMinorPerils || "N/A",
+    majorPerils: excesses.excessOver2MMajorPerils || "N/A",
+  };
+}
+
+function activeLiabilityBandAmounts(
+  excesses: BandExcessSlice,
+  band: ContractValueBand,
+): Pick<ActiveBandExcessAmounts, "limit10M" | "limit20M"> {
+  if (band === "upTo2m") {
+    return {
+      limit10M: excesses.excessUpTo2MLimit10M || "N/A",
+      limit20M: excesses.excessUpTo2MLimit20M || "N/A",
+    };
+  }
+  return {
+    limit10M: excesses.excessOver2MLimit10M || "N/A",
+    limit20M: excesses.excessOver2MLimit20M || "N/A",
+  };
+}
+
 export function activeBandExcessAmounts(
   excesses:
     | Pick<
@@ -191,7 +466,7 @@ export function activeBandExcessAmounts(
       >
     | null
     | undefined,
-  estimatedTurnover: unknown,
+  context?: unknown | ExcessBandContext,
 ): ActiveBandExcessAmounts {
   const empty: ActiveBandExcessAmounts = {
     minorPerils: "N/A",
@@ -199,44 +474,80 @@ export function activeBandExcessAmounts(
     limit10M: "N/A",
     limit20M: "N/A",
   };
-  const band = resolveContractValueBand(estimatedTurnover);
-  if (!band || !excesses) return empty;
+  if (!excesses) return empty;
 
-  if (band === "upTo2m") {
-    return {
-      minorPerils: excesses.excessUpTo2MMinorPerils || "N/A",
-      majorPerils: excesses.excessUpTo2MMajorPerils || "N/A",
-      limit10M: excesses.excessUpTo2MLimit10M || "N/A",
-      limit20M: excesses.excessUpTo2MLimit20M || "N/A",
-    };
-  }
+  const { estimatedTurnover, liabilityLimitBand } =
+    normalizeExcessBandContext(context);
+  const perilsBand = resolvePerilsStorageBand(liabilityLimitBand);
+  const liabilityBand = resolveContractValueBand(estimatedTurnover);
+  const limitMillions = resolveLiabilityLimitMillions(liabilityLimitBand);
+
+  const perilsSlice =
+    perilsBand != null
+      ? activePerilsBandAmounts(excesses, perilsBand)
+      : null;
+  const liabilitySlice =
+    isLegalLiabilityInsured(liabilityLimitBand) && liabilityBand != null
+      ? activeLiabilityBandAmounts(excesses, liabilityBand)
+      : null;
+
+  const limit10M =
+    limitMillions === 10
+      ? (liabilitySlice?.limit10M ?? "N/A")
+      : "N/A";
+  const limit20M =
+    limitMillions === 20
+      ? (liabilitySlice?.limit20M ?? "N/A")
+      : "N/A";
 
   return {
-    minorPerils: excesses.excessOver2MMinorPerils || "N/A",
-    majorPerils: excesses.excessOver2MMajorPerils || "N/A",
-    limit10M: excesses.excessOver2MLimit10M || "N/A",
-    limit20M: excesses.excessOver2MLimit20M || "N/A",
+    minorPerils: perilsSlice?.minorPerils ?? "N/A",
+    majorPerils: perilsSlice?.majorPerils ?? "N/A",
+    limit10M,
+    limit20M,
   };
 }
 
 export function isExcessFieldVisible(
   field: ExcessFieldConfig,
-  opts: {
-    estimatedTurnover: unknown;
+  opts: ExcessBandContext & {
     liabilityLimitBand?: unknown;
   },
 ): boolean {
+  if (field.group === "contractWorks" && field.band) {
+    const perilsBand = resolvePerilsStorageBand(opts.liabilityLimitBand);
+    if (perilsBand != null) {
+      return field.band === perilsBand;
+    }
+    // Not insured / unset: still show Major / Minor (values sync to N/A).
+    return field.band === "upTo2m";
+  }
+
+  if (field.group === "legalLiability") {
+    if (!isLegalLiabilityInsured(opts.liabilityLimitBand)) {
+      return false;
+    }
+    if (field.key === "excessWorkerToWorker") {
+      return true;
+    }
+    const selectedLimit = resolveLiabilityLimitMillions(opts.liabilityLimitBand);
+    if (
+      field.liabilityLimitMillions &&
+      selectedLimit !== field.liabilityLimitMillions
+    ) {
+      return false;
+    }
+  }
+
   if (!field.band) return true;
 
   const band = resolveContractValueBand(opts.estimatedTurnover);
   if (!band) return false;
-  // Show the whole band (e.g. Minor+Major, or $10m+$20m) — same theory as
-  // Section 1: only the matching estimated-turnover band appears.
-  return field.band === CONTRACT_VALUE_BAND_LABEL[band];
+  return field.band === band;
 }
 
 export function visibleExcessFields(opts: {
-  estimatedTurnover: unknown;
+  estimatedTurnover?: unknown;
   liabilityLimitBand?: unknown;
   group?: ExcessGroup;
 }): ExcessFieldConfig[] {
@@ -247,7 +558,7 @@ export function visibleExcessFields(opts: {
 }
 
 export type ExcessFieldBand = {
-  band?: string;
+  band?: ContractValueBand;
   fields: ExcessFieldConfig[];
 };
 
@@ -286,22 +597,41 @@ function isLegacyExcessEmpty(value: string | undefined): boolean {
   return /^n\/a$/i.test(trimmed);
 }
 
-/** Copy band-specific excess values into the band matching estimated turnover. */
-export function relocateExcessesToActiveBand(
+function relocateExcessBandPairs(
   excesses: CarExcesses,
-  estimatedTurnover: unknown,
+  pairs: ReadonlyArray<readonly [ExcessFieldKey, ExcessFieldKey]>,
+  band: ContractValueBand | null,
 ): CarExcesses {
-  const band = resolveContractValueBand(estimatedTurnover);
   if (!band) return excesses;
 
   const result = { ...excesses };
-  for (const [upTo2m, over2m] of BAND_EXCESS_PAIRS) {
+  for (const [upTo2m, over2m] of pairs) {
     const [source, target] =
       band === "from2mTo5m" ? [upTo2m, over2m] : [over2m, upTo2m];
     if (!result[target] && result[source]) {
       result[target] = result[source];
     }
   }
+  return result;
+}
+
+/** Copy band-specific excess values into the bands matching policy amounts. */
+export function relocateExcessesToActiveBand(
+  excesses: CarExcesses,
+  context?: unknown | ExcessBandContext,
+): CarExcesses {
+  const { estimatedTurnover, liabilityLimitBand } =
+    normalizeExcessBandContext(context);
+  let result = relocateExcessBandPairs(
+    excesses,
+    PERILS_BAND_EXCESS_PAIRS,
+    resolvePerilsStorageBand(liabilityLimitBand),
+  );
+  result = relocateExcessBandPairs(
+    result,
+    LIABILITY_BAND_EXCESS_PAIRS,
+    resolveContractValueBand(estimatedTurnover),
+  );
   return result;
 }
 
@@ -326,7 +656,7 @@ export function migrateLegacyExcessKeys(
 
 export function normalizeExcesses(
   excesses: CarExcesses | Record<string, string | undefined>,
-  estimatedTurnover?: unknown,
+  context?: unknown | ExcessBandContext,
 ): CarExcesses {
   const migrated = migrateLegacyExcessKeys(excesses);
   const numeric = Object.fromEntries(
@@ -338,9 +668,13 @@ export function normalizeExcesses(
     excessAdditionalNotes: migrated.excessAdditionalNotes ?? "",
   };
 
-  return estimatedTurnover == null
-    ? normalized
-    : relocateExcessesToActiveBand(normalized, estimatedTurnover);
+  const bandContext = normalizeExcessBandContext(context);
+  const hasBandInput =
+    bandContext.estimatedTurnover != null ||
+    bandContext.liabilityLimitBand != null;
+  return hasBandInput
+    ? relocateExcessesToActiveBand(normalized, bandContext)
+    : normalized;
 }
 
 /** Build flat defaultExcesses from PolicyCARExcessDefault catalogue rows. */

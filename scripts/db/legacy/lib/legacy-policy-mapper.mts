@@ -415,7 +415,10 @@ function mapLegacyExcesses(
   liabilityLimitBand: number,
 ): CarExcesses {
   const defaults = referenceData.defaultExcesses;
-  const normalized = normalizeExcesses(excesses, estimatedTurnover);
+  const normalized = normalizeExcesses(excesses, {
+    estimatedTurnover,
+    liabilityLimitBand,
+  });
   const visible = visibleExcessFields({
     estimatedTurnover,
     liabilityLimitBand,

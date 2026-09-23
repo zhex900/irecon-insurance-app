@@ -133,11 +133,21 @@ export function policySnapshotFromForm(
           })
         : policy.car.subLimits,
       excesses: values.excesses
-        ? normalizeExcesses({
-            ...policy.car.excesses,
-            ...values.excesses,
-            excessAdditionalNotes: values.excesses.excessAdditionalNotes ?? "",
-          })
+        ? normalizeExcesses(
+            {
+              ...policy.car.excesses,
+              ...values.excesses,
+              excessAdditionalNotes: values.excesses.excessAdditionalNotes ?? "",
+            },
+            {
+              estimatedTurnover: pickMoney(
+                values.estimatedTurnover,
+                policy.car.estimatedTurnover,
+              ),
+              liabilityLimitBand:
+                values.liabilityLimitBand ?? policy.car.liabilityLimitBand,
+            },
+          )
         : policy.car.excesses,
       excludedContracts1:
         values.excludedContracts1 ?? policy.car.excludedContracts1,
