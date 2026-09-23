@@ -49,9 +49,7 @@ export function formatMonthCountWording(months: number): string {
   if (months < 100) {
     const tens = Math.floor(months / 10);
     const ones = months % 10;
-    const words = ones
-      ? `${TENS[tens]}-${BELOW_20[ones]}`
-      : TENS[tens];
+    const words = ones ? `${TENS[tens]}-${BELOW_20[ones]}` : TENS[tens];
     return `${words} (${months})`;
   }
   if (months < 1000) {

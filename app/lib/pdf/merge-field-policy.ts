@@ -14,9 +14,7 @@ import {
   stateCode,
   yesNo,
 } from "~/lib/pdf/merge-field-tables";
-import {
-  activeBandExcessAmounts,
-} from "~/lib/policies/excesses";
+import { activeBandExcessAmounts } from "~/lib/policies/excesses";
 import { combinedTrueBasePremium } from "~/lib/pricing/premium-totals";
 import { formatDate } from "~/lib/utils";
 

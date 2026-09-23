@@ -35,7 +35,9 @@ export function RiskDetails({ reference }: { reference: ReferenceData }) {
   const holdCurrent = watch("hasExistingContractWorksCover");
   const isRenewal = policyCategoryId === 2;
   const showCurrentInsurer = String(holdCurrent) === "true";
-  const maximumConstructionPeriodRegister = register("maximumConstructionPeriod");
+  const maximumConstructionPeriodRegister = register(
+    "maximumConstructionPeriod",
+  );
   const maximumMaintenancePeriodRegister = register("maximumMaintenancePeriod");
 
   return (

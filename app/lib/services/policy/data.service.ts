@@ -530,9 +530,7 @@ export async function createPolicyDraft(
     stateId: 0,
     dateEffective: dateStart,
     dateStart,
-    dateEnd:
-      derivePolicyEndDate(dateStart) ??
-      today.toISOString().slice(0, 10),
+    dateEnd: derivePolicyEndDate(dateStart) ?? today.toISOString().slice(0, 10),
     createdWhen: new Date().toISOString(),
     createdBy,
     insurerCode: ref.insurers[0].code,

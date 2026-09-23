@@ -173,22 +173,22 @@ Legacy-only period fix (superseded): `npm run db:repair:policy-periods`
 
 ### Sub-limits → `policy_car.sub_limits` (jsonb)
 
-| Legacy (`PolicyCARSubLimitWording`) | App key                                             |
-| ----------------------------------- | --------------------------------------------------- |
-| `RemovalOfDebris`                   | `removalOfDebris`                                   |
-| `ExpeditingExpenses`                | `expeditingExpenses`                                |
-| `ProfessionalFees`                  | `professionalFees`                                  |
-| `MitigationExpenses`                | `mitigationExpenses`                                |
-| `SearchAndLocateCosts`              | `searchAndLocateCosts`                              |
-| `PlantHireCharges`                  | `plantHireCharges`                                  |
-| `ClaimsPreparationCosts`            | `claimsPreparationCosts`                            |
-| `GovernmentCosts`                   | `governmentCosts`                                   |
-| `InflationProtection`               | `inflationProtection`                               |
-| `EmployeesProperty`                 | `employeesProperty`                                 |
-| `MaterialsInOffSiteStorage`         | `materialsInOffSiteStorage`                         |
-| `Transit`                           | `transit`                                           |
+| Legacy (`PolicyCARSubLimitWording`) | App key                                                 |
+| ----------------------------------- | ------------------------------------------------------- |
+| `RemovalOfDebris`                   | `removalOfDebris`                                       |
+| `ExpeditingExpenses`                | `expeditingExpenses`                                    |
+| `ProfessionalFees`                  | `professionalFees`                                      |
+| `MitigationExpenses`                | `mitigationExpenses`                                    |
+| `SearchAndLocateCosts`              | `searchAndLocateCosts`                                  |
+| `PlantHireCharges`                  | `plantHireCharges`                                      |
+| `ClaimsPreparationCosts`            | `claimsPreparationCosts`                                |
+| `GovernmentCosts`                   | `governmentCosts`                                       |
+| `InflationProtection`               | `inflationProtection`                                   |
+| `EmployeesProperty`                 | `employeesProperty`                                     |
+| `MaterialsInOffSiteStorage`         | `materialsInOffSiteStorage`                             |
+| `Transit`                           | `transit`                                               |
 | _(none — app default)_              | `additionalCostOfWorking` (defaults to **Not Insured**) |
-| `ExcludedContracts1–3`              | `excludedContracts1–3` (also top-level on `Policy`) |
+| `ExcludedContracts1–3`              | `excludedContracts1–3` (also top-level on `Policy`)     |
 
 ### Excesses → `policy_car.excesses` (jsonb)
 

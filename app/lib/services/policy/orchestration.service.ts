@@ -408,8 +408,7 @@ export async function renewPolicy(sourcePolicyId: string, createdBy: string) {
     stateId: source.stateId,
     dateEffective: toIsoDate(dateStart),
     dateStart: toIsoDate(dateStart),
-    dateEnd:
-      derivePolicyEndDate(toIsoDate(dateStart)) ?? toIsoDate(dateStart),
+    dateEnd: derivePolicyEndDate(toIsoDate(dateStart)) ?? toIsoDate(dateStart),
     insurerCode: source.insurerCode,
     isDraft: true,
     car,

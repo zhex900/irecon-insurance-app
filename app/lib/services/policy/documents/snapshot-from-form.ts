@@ -137,7 +137,8 @@ export function policySnapshotFromForm(
             {
               ...policy.car.excesses,
               ...values.excesses,
-              excessAdditionalNotes: values.excesses.excessAdditionalNotes ?? "",
+              excessAdditionalNotes:
+                values.excesses.excessAdditionalNotes ?? "",
               excessLegalLiabilityAdditionalNotes:
                 values.excesses.excessLegalLiabilityAdditionalNotes ?? "",
             },

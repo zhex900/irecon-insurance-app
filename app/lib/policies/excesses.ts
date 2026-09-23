@@ -6,8 +6,7 @@ import { stripAmountCommas } from "~/lib/amount-input";
 import type { CarExcesses } from "~/lib/db/types";
 
 export type ExcessNoteFieldKey =
-  | "excessAdditionalNotes"
-  | "excessLegalLiabilityAdditionalNotes";
+  "excessAdditionalNotes" | "excessLegalLiabilityAdditionalNotes";
 
 export type ExcessFieldKey = Exclude<keyof CarExcesses, ExcessNoteFieldKey>;
 
@@ -301,7 +300,12 @@ export function perilsExcessDefaultsForBand(
     | "excessOver2MMinorPerils"
     | "excessOver2MMajorPerils"
   >,
-): { minorKey: ExcessFieldKey; majorKey: ExcessFieldKey; minor: string; major: string } {
+): {
+  minorKey: ExcessFieldKey;
+  majorKey: ExcessFieldKey;
+  minor: string;
+  major: string;
+} {
   if (band === "upTo2m") {
     return {
       minorKey: "excessUpTo2MMinorPerils",
@@ -327,9 +331,7 @@ function liabilityLimitExcessKey(
       ? "excessUpTo2MLimit10M"
       : "excessUpTo2MLimit20M";
   }
-  return limitMillions === 10
-    ? "excessOver2MLimit10M"
-    : "excessOver2MLimit20M";
+  return limitMillions === 10 ? "excessOver2MLimit10M" : "excessOver2MLimit20M";
 }
 
 /**
@@ -376,8 +378,7 @@ export function legalLiabilityExcessValuesFor(
   const workerFromTurnover = resolveWorkerToWorkerExcess(estimatedTurnover);
   const withWorker = {
     ...na,
-    excessWorkerToWorker:
-      workerFromTurnover ?? defaults.excessWorkerToWorker,
+    excessWorkerToWorker: workerFromTurnover ?? defaults.excessWorkerToWorker,
   };
   if (!limitMillions || !contractWorksBand) {
     return withWorker;
@@ -510,22 +511,16 @@ export function activeBandExcessAmounts(
   const limitMillions = resolveLiabilityLimitMillions(liabilityLimitBand);
 
   const perilsSlice =
-    perilsBand != null
-      ? activePerilsBandAmounts(excesses, perilsBand)
-      : null;
+    perilsBand != null ? activePerilsBandAmounts(excesses, perilsBand) : null;
   const liabilitySlice =
     isLegalLiabilityInsured(liabilityLimitBand) && liabilityBand != null
       ? activeLiabilityBandAmounts(excesses, liabilityBand)
       : null;
 
   const limit10M =
-    limitMillions === 10
-      ? (liabilitySlice?.limit10M ?? "N/A")
-      : "N/A";
+    limitMillions === 10 ? (liabilitySlice?.limit10M ?? "N/A") : "N/A";
   const limit20M =
-    limitMillions === 20
-      ? (liabilitySlice?.limit20M ?? "N/A")
-      : "N/A";
+    limitMillions === 20 ? (liabilitySlice?.limit20M ?? "N/A") : "N/A";
 
   return {
     minorPerils: perilsSlice?.minorPerils ?? "N/A",
@@ -557,7 +552,9 @@ export function isExcessFieldVisible(
     if (field.key === "excessWorkerToWorker") {
       return true;
     }
-    const selectedLimit = resolveLiabilityLimitMillions(opts.liabilityLimitBand);
+    const selectedLimit = resolveLiabilityLimitMillions(
+      opts.liabilityLimitBand,
+    );
     if (
       field.liabilityLimitMillions &&
       selectedLimit !== field.liabilityLimitMillions

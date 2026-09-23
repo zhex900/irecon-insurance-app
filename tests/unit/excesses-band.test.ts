@@ -58,9 +58,7 @@ describe("perilsExcessValuesForLegalLiability", () => {
   });
 
   it("sets N/A when not insured or limit not selected", () => {
-    expect(
-      perilsExcessValuesForLegalLiability(3, defaults),
-    ).toMatchObject({
+    expect(perilsExcessValuesForLegalLiability(3, defaults)).toMatchObject({
       excessUpTo2MMinorPerils: "N/A",
       excessUpTo2MMajorPerils: "N/A",
     });
@@ -76,19 +74,17 @@ describe("legalLiabilityExcessValuesFor", () => {
   const defaults = referenceData.defaultExcesses;
 
   it("sets all Section 2 excesses to N/A when limit is Not Insured", () => {
-    expect(
-      legalLiabilityExcessValuesFor(1_500_000, 3, defaults),
-    ).toMatchObject({
-      excessWorkerToWorker: "N/A",
-      excessUpTo2MLimit10M: "N/A",
-      excessUpTo2MLimit20M: "N/A",
-    });
+    expect(legalLiabilityExcessValuesFor(1_500_000, 3, defaults)).toMatchObject(
+      {
+        excessWorkerToWorker: "N/A",
+        excessUpTo2MLimit10M: "N/A",
+        excessUpTo2MLimit20M: "N/A",
+      },
+    );
   });
 
   it("applies $1,000 $10M limit excess when contract works ≤ $2M", () => {
-    expect(
-      legalLiabilityExcessValuesFor(1_500_000, 1, defaults),
-    ).toEqual({
+    expect(legalLiabilityExcessValuesFor(1_500_000, 1, defaults)).toEqual({
       excessWorkerToWorker: "15000",
       excessUpTo2MLimit10M: "1000",
       excessUpTo2MLimit20M: "N/A",
@@ -98,9 +94,7 @@ describe("legalLiabilityExcessValuesFor", () => {
   });
 
   it("applies $2,500 $10M limit excess when contract works above $2M", () => {
-    expect(
-      legalLiabilityExcessValuesFor(2_500_000, 1, defaults),
-    ).toEqual({
+    expect(legalLiabilityExcessValuesFor(2_500_000, 1, defaults)).toEqual({
       excessWorkerToWorker: "15000",
       excessUpTo2MLimit10M: "N/A",
       excessUpTo2MLimit20M: "N/A",
