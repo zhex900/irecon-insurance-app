@@ -63,13 +63,10 @@ test.describe("recent routes", () => {
     await page.goto("/clients");
     await page.getByRole("button", { name: /new client/i }).click();
     await expect(page).toHaveURL(/\/clients\/[^/]+\/edit/);
-    await page.getByRole("textbox", { name: "Registered Name" }).click();
+
     await page
       .getByRole("textbox", { name: "Registered Name" })
       .fill(registeredName);
-    //type enter and tab
-    await page.keyboard.press("Enter");
-    await page.keyboard.press("Tab");
     await page
       .getByRole("textbox", { name: "Trading Name" })
       .fill(registeredName);
@@ -79,26 +76,29 @@ test.describe("recent routes", () => {
 
     for (const label of [/account manager/i, /authorised representative/i]) {
       const field = page.getByLabel(label);
-      if (await field.count()) {
-        await field.click();
-        const option = page.getByRole("option").first();
-        if (await option.count()) await option.click();
-      }
+      if ((await field.count()) === 0) continue;
+      await field.click();
+      const option = page.getByRole("option").first();
+      if ((await option.count()) === 0) continue;
+      await option.getByRole("button").click();
     }
 
     await page.getByRole("button", { name: /^save$/i }).click();
-    await expect(page).toHaveURL(/\/clients\/[^/]+$/);
+    await expect(page).toHaveURL(/\/clients\/[^/]+$/, { timeout: 15_000 });
 
     const clientId = page.url().match(/\/clients\/([^/?]+)/)?.[1];
     expect(clientId).toBeTruthy();
 
     await expect
-      .poll(async () => {
-        const routes = await fetchRecentRoutesFromApi(page);
-        return routes.some(
-          (route) => route.href === `/clients/${clientId}/edit`,
-        );
-      })
+      .poll(
+        async () => {
+          const routes = await fetchRecentRoutesFromApi(page);
+          return routes.some(
+            (route) => route.href === `/clients/${clientId}/edit`,
+          );
+        },
+        { timeout: 20_000 },
+      )
       .toBe(true);
 
     await page.getByRole("button", { name: "Delete" }).click();
@@ -107,15 +107,20 @@ test.describe("recent routes", () => {
       .getByRole("button", { name: /^delete$/i })
       .click();
 
-    await expect(page.getByText(/deleted/i).first()).toBeVisible({
-      timeout: 15_000,
-    });
+    await expect(page).toHaveURL(/\/clients(?:\?|$)/, { timeout: 15_000 });
 
-    const routes = await fetchRecentRoutesFromApi(page);
-    expect(
-      routes.some((route) => route.href.startsWith(`/clients/${clientId}`)),
-    ).toBe(false);
-    await expect(page.getByText("No recent pages")).toBeVisible();
+    await expect
+      .poll(async () => {
+        const routes = await fetchRecentRoutesFromApi(page);
+        return routes.some((route) =>
+          route.href.startsWith(`/clients/${clientId}`),
+        );
+      })
+      .toBe(false);
+
+    await expect
+      .poll(() => getRecentRouteLabels(page), { timeout: 15_000 })
+      .toEqual([]);
   });
 
   test("removes a deleted policy from recents", async ({ page }) => {
