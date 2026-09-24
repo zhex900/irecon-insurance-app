@@ -5,30 +5,30 @@ import type { ReferenceData } from "~/lib/db/types";
 import {
   PERILS_EXCESS_FIELD_KEYS,
   perilsExcessSyncKey,
-  perilsExcessValuesForLegalLiability,
+  perilsExcessValuesForContractWorks,
 } from "~/lib/policies/excesses";
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
 
 type SyncPerilsOptions = {
-  /** Clone / renew: replace copied Major / Minor with catalogue defaults for liabilityLimitBand. */
+  /** Clone / renew: replace copied Major / Minor with defaults for contract works band. */
   syncOnMount?: boolean;
 };
 
-/** Major / Minor Perils follow Section 2 limit of liability ($10M / $20M / not insured). */
+/** Major / Minor Perils follow Section 1 contract works (≤ $2M vs over $2M). */
 export function useSyncPerilsExcessFromLegalLiability(
   defaultExcesses: ReferenceData["defaultExcesses"],
   { syncOnMount = false }: SyncPerilsOptions = {},
 ) {
   const { control, setValue } = useFormContext<CarPolicyFormValues>();
-  const liabilityLimitBand = useWatch({
+  const contractWorksSumInsured = useWatch({
     control,
-    name: "liabilityLimitBand",
+    name: "contractWorksSumInsured",
   });
   const previousSyncKey = useRef<string | undefined>(undefined);
   const skipInitialSync = useRef(!syncOnMount);
 
   useEffect(() => {
-    const syncKey = perilsExcessSyncKey(liabilityLimitBand);
+    const syncKey = perilsExcessSyncKey(contractWorksSumInsured);
     if (skipInitialSync.current) {
       skipInitialSync.current = false;
       previousSyncKey.current = syncKey;
@@ -37,8 +37,8 @@ export function useSyncPerilsExcessFromLegalLiability(
     if (syncKey === previousSyncKey.current) return;
     previousSyncKey.current = syncKey;
 
-    const next = perilsExcessValuesForLegalLiability(
-      liabilityLimitBand,
+    const next = perilsExcessValuesForContractWorks(
+      contractWorksSumInsured,
       defaultExcesses,
     );
     for (const key of PERILS_EXCESS_FIELD_KEYS) {
@@ -47,5 +47,5 @@ export function useSyncPerilsExcessFromLegalLiability(
         shouldValidate: true,
       });
     }
-  }, [defaultExcesses, liabilityLimitBand, setValue]);
+  }, [contractWorksSumInsured, defaultExcesses, setValue]);
 }

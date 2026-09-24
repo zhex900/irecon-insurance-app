@@ -8,7 +8,7 @@ import {
   migrateLegacyExcessKeys,
   normalizeExcesses,
   normalizeExcessValue,
-  perilsExcessValuesForLegalLiability,
+  perilsExcessValuesForContractWorks,
   relocateExcessesToActiveBand,
   resolveContractValueBand,
   resolveWorkerToWorkerExcess,
@@ -36,11 +36,11 @@ const excesses: Pick<
   excessOver2MLimit20M: "4000",
 };
 
-describe("perilsExcessValuesForLegalLiability", () => {
+describe("perilsExcessValuesForContractWorks", () => {
   const defaults = referenceData.defaultExcesses;
 
-  it("uses reference defaults for $10M limit of liability", () => {
-    expect(perilsExcessValuesForLegalLiability(1, defaults)).toEqual({
+  it("uses reference defaults when contract works ≤ $2M", () => {
+    expect(perilsExcessValuesForContractWorks(2_000_000, defaults)).toEqual({
       excessUpTo2MMinorPerils: "1000",
       excessUpTo2MMajorPerils: "1000",
       excessOver2MMinorPerils: "N/A",
@@ -48,8 +48,8 @@ describe("perilsExcessValuesForLegalLiability", () => {
     });
   });
 
-  it("uses reference defaults for $20M limit of liability", () => {
-    expect(perilsExcessValuesForLegalLiability(2, defaults)).toEqual({
+  it("uses reference defaults when contract works above $2M", () => {
+    expect(perilsExcessValuesForContractWorks(2_000_001, defaults)).toEqual({
       excessUpTo2MMinorPerils: "N/A",
       excessUpTo2MMajorPerils: "N/A",
       excessOver2MMinorPerils: "2500",
@@ -57,12 +57,8 @@ describe("perilsExcessValuesForLegalLiability", () => {
     });
   });
 
-  it("sets N/A when not insured or limit not selected", () => {
-    expect(perilsExcessValuesForLegalLiability(3, defaults)).toMatchObject({
-      excessUpTo2MMinorPerils: "N/A",
-      excessUpTo2MMajorPerils: "N/A",
-    });
-    expect(perilsExcessValuesForLegalLiability("", defaults)).toMatchObject({
+  it("sets N/A when contract works is unset or zero", () => {
+    expect(perilsExcessValuesForContractWorks("", defaults)).toMatchObject({
       excessUpTo2MMinorPerils: "N/A",
       excessUpTo2MMajorPerils: "N/A",
     });
@@ -138,7 +134,7 @@ describe("legalLiabilityExcessValuesFor", () => {
           label: "Major Perils",
           band: "upTo2m",
         },
-        { liabilityLimitBand: 1 },
+        { contractWorksSumInsured: 1_500_000, liabilityLimitBand: 1 },
       ),
     ).toBe(true);
     expect(
@@ -149,7 +145,7 @@ describe("legalLiabilityExcessValuesFor", () => {
           label: "Major Perils",
           band: "from2mTo5m",
         },
-        { liabilityLimitBand: 1 },
+        { contractWorksSumInsured: 1_500_000, liabilityLimitBand: 1 },
       ),
     ).toBe(false);
     expect(
@@ -160,9 +156,9 @@ describe("legalLiabilityExcessValuesFor", () => {
           label: "Major Perils",
           band: "upTo2m",
         },
-        { liabilityLimitBand: 3 },
+        { contractWorksSumInsured: 3_000_000, liabilityLimitBand: 3 },
       ),
-    ).toBe(true);
+    ).toBe(false);
     expect(
       isExcessFieldVisible(
         {
@@ -171,36 +167,36 @@ describe("legalLiabilityExcessValuesFor", () => {
           label: "Major Perils",
           band: "from2mTo5m",
         },
-        { liabilityLimitBand: 3 },
+        { contractWorksSumInsured: 3_000_000, liabilityLimitBand: 3 },
       ),
-    ).toBe(false);
+    ).toBe(true);
   });
 });
 
 describe("activeBandExcessAmounts", () => {
-  it("picks perils from limit of liability and liability rows from contract works", () => {
+  it("picks perils and liability rows from contract works band", () => {
     expect(
       activeBandExcessAmounts(excesses, {
         contractWorksSumInsured: 3_000_000,
         liabilityLimitBand: 1,
       }),
     ).toEqual({
-      minorPerils: "2500",
-      majorPerils: "5000",
+      minorPerils: "7500",
+      majorPerils: "10000",
       limit10M: "3000",
       limit20M: "N/A",
     });
   });
 
-  it("picks $20M perils and UpTo2M liability when limit is $20M and contract works ≤ 2M", () => {
+  it("picks UpTo2M perils when contract works ≤ $2M regardless of liability limit", () => {
     expect(
       activeBandExcessAmounts(excesses, {
         contractWorksSumInsured: 1_000_000,
         liabilityLimitBand: 2,
       }),
     ).toEqual({
-      minorPerils: "7500",
-      majorPerils: "10000",
+      minorPerils: "2500",
+      majorPerils: "5000",
       limit10M: "N/A",
       limit20M: "2000",
     });
@@ -219,8 +215,8 @@ describe("activeBandExcessAmounts", () => {
         liabilityLimitBand: 2,
       }),
     ).toMatchObject({
-      minorPerils: "7500",
-      majorPerils: "10000",
+      minorPerils: "2500",
+      majorPerils: "5000",
       limit10M: "N/A",
       limit20M: "2000",
     });

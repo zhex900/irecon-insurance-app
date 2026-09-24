@@ -117,16 +117,13 @@ export type ExcessGroup = "contractWorks" | "legalLiability";
 export type ContractValueBand = "upTo2m" | "from2mTo5m";
 
 /**
- * Which Major / Minor Perils form row set applies for the selected limit of liability.
- * $10M → up-to band defaults; $20M → over band defaults; not insured → none.
+ * Which Major / Minor Perils row set applies from Section 1 contract works sum insured.
+ * ≤ $2,000,000 → up-to band; above → over-$2M band.
  */
 export function resolvePerilsStorageBand(
-  liabilityLimitBand: unknown,
+  contractWorksSumInsured: unknown,
 ): ContractValueBand | null {
-  const limit = resolveLiabilityLimitMillions(liabilityLimitBand);
-  if (limit === 10) return "upTo2m";
-  if (limit === 20) return "from2mTo5m";
-  return null;
+  return resolveContractValueBand(contractWorksSumInsured);
 }
 
 export type ExcessFieldConfig = {
@@ -247,11 +244,11 @@ export function resolveWorkerToWorkerExcess(
 }
 
 /**
- * Major / Minor Perils from Section 2 limit of liability only
- * ($10M / $20M / not insured). Amounts from reference / catalogue defaults.
+ * Major / Minor Perils from Section 1 contract works sum insured.
+ * Amounts from reference / catalogue defaults ($1k/$1k vs $2.5k/$5k bands).
  */
-export function perilsExcessValuesForLegalLiability(
-  liabilityLimitBand: unknown,
+export function perilsExcessValuesForContractWorks(
+  contractWorksSumInsured: unknown,
   defaults: Pick<
     CarExcesses,
     | "excessUpTo2MMinorPerils"
@@ -276,7 +273,7 @@ export function perilsExcessValuesForLegalLiability(
     | "excessOver2MMajorPerils"
   >;
 
-  const band = resolvePerilsStorageBand(liabilityLimitBand);
+  const band = resolvePerilsStorageBand(contractWorksSumInsured);
   if (!band) return na;
 
   const { minorKey, majorKey, minor, major } = perilsExcessDefaultsForBand(
@@ -289,6 +286,10 @@ export function perilsExcessValuesForLegalLiability(
     [majorKey]: major,
   };
 }
+
+/** @deprecated Use {@link perilsExcessValuesForContractWorks}. */
+export const perilsExcessValuesForLegalLiability =
+  perilsExcessValuesForContractWorks;
 
 /** Default Major / Minor Perils amounts for a band (from reference / catalogue). */
 export function perilsExcessDefaultsForBand(
@@ -420,8 +421,8 @@ export function legalLiabilityExcessSyncKey(
   )}|${workerTier}`;
 }
 
-export function perilsExcessSyncKey(liabilityLimitBand: unknown): string {
-  return String(liabilityLimitBand ?? "");
+export function perilsExcessSyncKey(contractWorksSumInsured: unknown): string {
+  return contractWorksLimitSyncKey(contractWorksSumInsured);
 }
 
 export type ActiveBandExcessAmounts = {
@@ -506,7 +507,7 @@ export function activeBandExcessAmounts(
 
   const { contractWorksSumInsured, liabilityLimitBand } =
     normalizeExcessBandContext(context);
-  const perilsBand = resolvePerilsStorageBand(liabilityLimitBand);
+  const perilsBand = resolvePerilsStorageBand(contractWorksSumInsured);
   const liabilityBand = resolveContractValueBand(contractWorksSumInsured);
   const limitMillions = resolveLiabilityLimitMillions(liabilityLimitBand);
 
@@ -537,11 +538,11 @@ export function isExcessFieldVisible(
   },
 ): boolean {
   if (field.group === "contractWorks" && field.band) {
-    const perilsBand = resolvePerilsStorageBand(opts.liabilityLimitBand);
+    const perilsBand = resolvePerilsStorageBand(opts.contractWorksSumInsured);
     if (perilsBand != null) {
       return field.band === perilsBand;
     }
-    // Not insured / unset: still show Major / Minor (values sync to N/A).
+    // Unset contract works: show up-to-$2M Major / Minor row until value is known.
     return field.band === "upTo2m";
   }
 
@@ -649,7 +650,7 @@ export function relocateExcessesToActiveBand(
   let result = relocateExcessBandPairs(
     excesses,
     PERILS_BAND_EXCESS_PAIRS,
-    resolvePerilsStorageBand(liabilityLimitBand),
+    resolvePerilsStorageBand(contractWorksSumInsured),
   );
   result = relocateExcessBandPairs(
     result,
