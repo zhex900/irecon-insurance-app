@@ -80,29 +80,26 @@ export function PolicyListTableRow({
           aria-label={`Select ${policyReference}`}
         />
       </InteractiveTableActionsCell>
-      <TableCell className="min-w-48 align-top whitespace-normal">
+      <TableCell className="min-w-56 align-top whitespace-normal">
         <div className="min-w-0">
-          <PolicySeriesLabel
-            seriesNumber={policy.policyNumber}
-            seriesTerm={policy.seriesTerm}
-            searchQuery={searchQuery}
-            seriesClassName="whitespace-nowrap"
-          />
-          {policy.adjusted ||
-          (showDraftBadge && policy.isDraft) ? (
-            <div className="mt-1 flex flex-wrap items-center gap-1.5">
-              {policy.adjusted ? (
-                <Badge variant="focus-light" size="sm">
-                  Adjusted
-                </Badge>
-              ) : null}
-              {showDraftBadge && policy.isDraft ? (
-                <Badge variant="warning-light" size="sm">
-                  Draft
-                </Badge>
-              ) : null}
-            </div>
-          ) : null}
+          <div className="flex flex-nowrap items-center gap-2">
+            <PolicySeriesLabel
+              seriesNumber={policy.policyNumber}
+              seriesTerm={policy.seriesTerm}
+              searchQuery={searchQuery}
+              seriesClassName="whitespace-nowrap"
+            />
+            {policy.adjusted ? (
+              <Badge variant="focus-light" size="sm" className="shrink-0">
+                Adjusted
+              </Badge>
+            ) : null}
+            {showDraftBadge && policy.isDraft ? (
+              <Badge variant="warning-light" size="sm" className="shrink-0">
+                Draft
+              </Badge>
+            ) : null}
+          </div>
           {showInsured ? (
             <p className="mt-0.5 line-clamp-2 min-w-0 text-xs break-words text-muted-foreground">
               {searchQuery ? (
