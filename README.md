@@ -61,10 +61,10 @@ Requires Node.js 24+, [Docker](https://docs.docker.com/get-docker/), and the [Su
 ```bash
 corepack enable   # once per machine, if pnpm is not on PATH
 pnpm install
-cp .env.example .env   # DATABASE_URL points at local Supabase
+cp .env.example .env   # local Postgres (:54322) + Auth (:54321); see db:status for keys
 pnpm run db:start       # starts local Postgres on :54322
 pnpm run db:reset       # apply migrations + seed
-pnpm run db:copy:uat    # replace local DB with full UAT copy (.env.uat → .env)
+pnpm run db:copy:uat    # full UAT Postgres → local (public + auth users/passwords; needs .env.uat)
 pnpm run db:copy:prod -- --confirm   # replace production DB with UAT (.env.uat → .env.production)
 pnpm run dev            # http://127.0.0.1:5173
 # Second terminal: private PDF service used by email attachment rendering

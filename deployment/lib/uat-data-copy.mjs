@@ -2,7 +2,7 @@
  * Dump UAT Postgres and restore into another Supabase project.
  * Manual / one-off tooling — not part of `npm run deploy:prod`.
  */
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
 import { capture, run, sleep, toSessionDbUrl } from "./preview-env.mjs";
@@ -145,6 +145,44 @@ export async function restoreWithPsql(
     "--dbname",
     dockerDbUrl(destUrl),
   ]);
+}
+
+/** Password login only needs users + identities; other auth tables often differ by Supabase version. */
+const LOCAL_AUTH_DATA_TABLES = new Set(["users", "identities"]);
+
+/**
+ * Hosted UAT auth schema/data often differs from the local Supabase Docker stack.
+ * Keep public data + minimal auth rows so UAT email/password works locally.
+ */
+export async function filterAuthDataForLocalTarget(dataSqlPath) {
+  const raw = await readFile(dataSqlPath, "utf8");
+  const lines = raw.split("\n");
+  const out = [];
+  let skipBlock = false;
+
+  for (const line of lines) {
+    const match = line.match(/^COPY "auth"\."([^"]+)"/);
+    if (match) {
+      const table = match[1];
+      skipBlock = !LOCAL_AUTH_DATA_TABLES.has(table);
+      if (skipBlock) {
+        out.push(
+          `-- skipped auth.${table} (local copy keeps users + identities only)`,
+        );
+        continue;
+      }
+    }
+    if (skipBlock) {
+      if (line === "\\.") skipBlock = false;
+      continue;
+    }
+    out.push(line);
+  }
+
+  await writeFile(dataSqlPath, `${out.join("\n")}\n`, "utf8");
+  console.log(
+    "✓ Filtered auth data (users + identities only for local Supabase)",
+  );
 }
 
 export async function dumpUatDatabase(dumpDir, uatDbUrl) {
@@ -328,9 +366,14 @@ export async function copyDatabaseFromUat({
   destTransactionUrl,
   workDir,
   skipRoles = true,
+  /** Local Supabase Docker auth schema lags hosted UAT — keep users + identities only. */
+  localAuthMinimal = false,
 }) {
   await dumpUatDatabase(workDir, uatDbUrl);
   await resetTargetDatabase(destSessionUrl, workDir);
+  if (localAuthMinimal) {
+    await filterAuthDataForLocalTarget(join(workDir, "data.sql"));
+  }
   console.log("→ Restoring UAT dump into target project…");
   await restoreWithPsql(destTransactionUrl, workDir, { skipRoles });
   await syncPolicyNumberSeq(destSessionUrl, workDir);
