@@ -1,4 +1,4 @@
--- R2-only policy documents: remove inline PDF blobs and merge snapshots from Postgres.
+-- R2-only policy documents: clear inline blobs before column drop (see 20260826130000).
 -- PDF bytes live in R2 (policy_document.r2_key); metadata stays in Postgres.
 
 UPDATE policy_document
@@ -9,6 +9,3 @@ END
 WHERE pdf_base64 IS NOT NULL
    OR merge_inputs IS NOT NULL
    OR (template_key IS NOT NULL AND content <> '');
-
-ALTER TABLE policy_document DROP COLUMN IF EXISTS pdf_base64;
-ALTER TABLE policy_document DROP COLUMN IF EXISTS merge_inputs;
