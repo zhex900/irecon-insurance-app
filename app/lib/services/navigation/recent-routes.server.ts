@@ -4,7 +4,13 @@
 import { and, desc, eq, like, notInArray, or, sql } from "drizzle-orm";
 
 import { getDb } from "~/lib/db/client";
-import { appUserRecentRoute, client, policy, policyCar } from "~/lib/db/schema";
+import {
+  appUserRecentRoute,
+  client,
+  policy,
+  policyCar,
+  policySeries,
+} from "~/lib/db/schema";
 import { formatDocumentTemplateTitle } from "~/lib/documents/template-title";
 import { getLatestDocumentTemplate } from "~/lib/services/documents/document-templates";
 import {
@@ -137,14 +143,18 @@ export async function resolveRecentRouteLabel(path: string): Promise<string> {
     const db = getDb();
     const [row] = await db
       .select({
-        policyNumber: policy.policyNumber,
+        seriesNumber: policySeries.seriesNumber,
         insuredName: policyCar.insuredName,
       })
       .from(policy)
+      .innerJoin(
+        policySeries,
+        eq(policy.policySeriesId, policySeries.policySeriesId),
+      )
       .leftJoin(policyCar, eq(policy.policyId, policyCar.policyId))
       .where(eq(policy.policyId, policyId))
       .limit(1);
-    const number = (row?.policyNumber ?? "").replace(/\s+/g, " ").trim();
+    const number = (row?.seriesNumber ?? "").replace(/\s+/g, " ").trim();
     const insured = (row?.insuredName ?? "").replace(/\s+/g, " ").trim();
     return number || insured || "Policy";
   }

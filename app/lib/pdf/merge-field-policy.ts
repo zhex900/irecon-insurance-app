@@ -225,7 +225,7 @@ export function policyToMergeInputs(
       : collectEndorsementWordings(car, options?.wordingCatalogue ?? []);
 
   const inputs: Record<string, string> = {
-    PolicyNumber: policy.policyNumber,
+    PolicyNumber: policy.seriesNumber?.trim() || policy.policyNumber,
     CoverType: coverLabel(car.coverTypeId),
     CoverTypeUpper: coverLabel(car.coverTypeId).toUpperCase(),
     InsuredName: car.insuredName,

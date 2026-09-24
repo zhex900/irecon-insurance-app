@@ -188,6 +188,7 @@ describe("generatePremiumExcelDocument", () => {
     vi.mocked(getPolicy).mockResolvedValue({
       policyId: POLICY_ID,
       policyNumber: "ATCCWI1001",
+      seriesNumber: "ATCCWI0487",
       postcode: "2000",
       stateId: 1,
       dateStart: "2026-01-01",
@@ -247,10 +248,16 @@ describe("generatePremiumExcelDocument", () => {
     expect(generatePremiumExcelRpc).toHaveBeenCalledWith(
       expect.objectContaining({
         reportType: "premiumWorkbook",
-        options: expect.objectContaining({ generatedBy: "session-user" }),
+        data: expect.objectContaining({
+          policy: expect.objectContaining({ seriesNumber: "ATCCWI0487" }),
+        }),
+        options: expect.objectContaining({
+          generatedBy: "session-user",
+          policyNumber: "ATCCWI0487",
+        }),
       }),
     );
-    expect(document.filename).toContain("ATCCWI1001");
+    expect(document.filename).toContain("ATCCWI0487");
     expect(document.pdfBase64).toBeTruthy();
     expect(typeof document.pdfBase64).toBe("string");
   });

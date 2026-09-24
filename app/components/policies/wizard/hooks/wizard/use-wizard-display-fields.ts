@@ -24,7 +24,8 @@ export function resolveWizardDisplayFields(
   const selectedStatus = reference.policyStatuses.find(
     (item) => item.policyStatusId === selectedStatusId,
   );
-  const livePolicyNumber = live.policyNumber?.trim() || policy.policyNumber;
+  const livePolicyNumber =
+    live.policyNumber?.trim() || policy.seriesNumber || policy.policyNumber;
   const coverTypeId = Number(live.coverTypeId) || policy.car.coverTypeId;
   const coverTypeName =
     reference.coverTypes.find((item) => item.coverTypeId === coverTypeId)

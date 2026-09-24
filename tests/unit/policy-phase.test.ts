@@ -13,6 +13,8 @@ function makePolicy(
   return {
     policyId: "p1",
     policyNumber: "TEST-1",
+    policySeriesId: "series-1",
+    seriesNumber: "TEST-1",
     clientId: "c1",
     policyStatusId: POLICY_STATUS.Pending,
     isDraft: true,

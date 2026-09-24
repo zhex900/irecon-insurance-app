@@ -17,6 +17,7 @@ import {
   trackDistribution,
   trackUsage,
 } from "~/lib/observability/metrics.server";
+import { policyDisplayNumber } from "~/lib/policies/policy-display";
 import { getPolicy } from "~/lib/services/policy/data.service";
 
 import type { GeneratePremiumExcelRequestData } from "../../../workers/excel/types/generate-types";
@@ -38,6 +39,7 @@ function toExcelPolicy(policy: Policy): ExcelPolicy {
   return {
     policyId: policy.policyId,
     policyNumber: policy.policyNumber,
+    seriesNumber: policy.seriesNumber,
     postcode: policy.postcode,
     stateId: policy.stateId,
     dateStart: policy.dateStart,
@@ -128,7 +130,7 @@ function premiumWorkbookRequest(
         : undefined,
     },
     options: {
-      policyNumber: policy.policyNumber,
+      policyNumber: policyDisplayNumber(policy),
       generatedBy,
     },
   };
@@ -201,7 +203,7 @@ export async function generatePremiumExcelDocument(input: {
     premium,
     input.generatedBy,
   );
-  const filename = `${PREMIUM_EXCEL_FILENAME_PREFIX}-${policy.policyNumber || policy.policyId}.xlsx`;
+  const filename = `${PREMIUM_EXCEL_FILENAME_PREFIX}-${policyDisplayNumber(policy) || policy.policyId}.xlsx`;
   const contentBase64 = bytesToBase64(bytes);
 
   return {

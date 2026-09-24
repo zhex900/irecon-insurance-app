@@ -1,56 +1,18 @@
-import {
-  createContext,
-  type ReactNode,
-  useCallback,
-  useMemo,
-  useState,
-} from "react";
+import { type ReactNode, useCallback, useMemo, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import type { Policy } from "~/lib/db/types";
+import { isRenewalPolicyCategory } from "~/lib/policies/policy-series";
 import {
   type CarPolicyFormValues,
   isTerminalStatus,
 } from "~/lib/zod/policy-car";
 
+import { derivePolicyPhase, isEditablePhase } from "../shared/policy-phase";
 import {
-  derivePolicyPhase,
-  isEditablePhase,
-  type PolicyPhase,
-} from "../shared/policy-phase";
-
-export type PolicyPhaseContextValue = {
-  phase: PolicyPhase;
-  canEdit: boolean;
-  canShowSubmitButton: boolean;
-  canChangeStatus: boolean;
-  policyNumberEditable: boolean;
-  premiumPinned: boolean;
-  isNew: boolean;
-  /** Clears session-new state after the first successful draft save. */
-  dismissNewPolicy: () => void;
-  freshSteps: boolean;
-  /** Saved policy status is terminal (Taken / Not taken). */
-  isSavedTerminal: boolean;
-  /** Live form status is terminal (includes confirm-before-save). */
-  isFormTerminal: boolean;
-};
-
-const defaultValue: PolicyPhaseContextValue = {
-  phase: "pending",
-  canEdit: true,
-  canShowSubmitButton: true,
-  canChangeStatus: false,
-  policyNumberEditable: true,
-  premiumPinned: false,
-  isNew: false,
-  dismissNewPolicy: () => {},
-  freshSteps: false,
-  isSavedTerminal: false,
-  isFormTerminal: false,
-};
-
-const PolicyPhaseContext = createContext<PolicyPhaseContextValue>(defaultValue);
+  PolicyPhaseContext,
+  type PolicyPhaseContextValue,
+} from "./policy-phase-context";
 
 export function PolicyPhaseProvider({
   policy,
@@ -65,6 +27,9 @@ export function PolicyPhaseProvider({
 }) {
   const { control } = useFormContext<CarPolicyFormValues>();
   const formStatusId = Number(useWatch({ control, name: "policyStatusId" }));
+  const formCategoryId = Number(
+    useWatch({ control, name: "policyCategoryId" }),
+  );
   const [isNew, setIsNew] = useState(initialIsNew);
   const dismissNewPolicy = useCallback(() => setIsNew(false), []);
 
@@ -73,13 +38,15 @@ export function PolicyPhaseProvider({
     const canEdit = isEditablePhase(phase);
     const isSavedTerminal = isTerminalStatus(policy.policyStatusId);
     const isFormTerminal = isTerminalStatus(formStatusId);
+    const policyCategoryId = formCategoryId || policy.policyCategoryId;
+    const isRenewal = isRenewalPolicyCategory(policyCategoryId);
 
     return {
       phase,
       canEdit,
       canShowSubmitButton: canEdit,
       canChangeStatus: phase === "pending",
-      policyNumberEditable: !isSavedTerminal,
+      policyNumberEditable: !isSavedTerminal && !isRenewal,
       premiumPinned: phase !== "new",
       isNew,
       dismissNewPolicy,
@@ -87,7 +54,14 @@ export function PolicyPhaseProvider({
       isSavedTerminal,
       isFormTerminal,
     };
-  }, [policy, isNew, dismissNewPolicy, freshSteps, formStatusId]);
+  }, [
+    policy,
+    isNew,
+    dismissNewPolicy,
+    freshSteps,
+    formStatusId,
+    formCategoryId,
+  ]);
 
   return (
     <PolicyPhaseContext.Provider value={value}>
@@ -98,5 +72,3 @@ export function PolicyPhaseProvider({
 
 /** @deprecated Use PolicyPhaseProvider */
 export const ModeProvider = PolicyPhaseProvider;
-
-export { PolicyPhaseContext };

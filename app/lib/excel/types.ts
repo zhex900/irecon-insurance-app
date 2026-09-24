@@ -28,6 +28,7 @@ export interface CarInfo {
 export interface Policy {
   policyId: string;
   policyNumber: string;
+  seriesNumber?: string;
   postcode?: string;
   stateId: number;
   dateStart?: string;

@@ -1,7 +1,7 @@
 import type { CarWording, Policy, PremiumBreakdown } from "~/lib/db/types";
 import { collectEndorsementWordings } from "~/lib/pdf/merge-fields";
 import { normalizeExcesses } from "~/lib/policies/excesses";
-import { resolvePolicyNumberForSave } from "~/lib/policies/policy-number";
+import { resolveSeriesNumberForSave } from "~/lib/policies/policy-number";
 import { normalizeSubLimits } from "~/lib/policies/sub-limits";
 import { coerceFormBoolean } from "~/lib/pricing/referral-reasons";
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
@@ -48,8 +48,8 @@ export function policySnapshotFromForm(
     ...policy,
     policyCategoryId: values.policyCategoryId ?? policy.policyCategoryId,
     policyStatusId: values.policyStatusId ?? policy.policyStatusId,
-    policyNumber: resolvePolicyNumberForSave(
-      policy.policyNumber,
+    seriesNumber: resolveSeriesNumberForSave(
+      policy.seriesNumber,
       values.policyNumber,
       isTerminalStatus(policy.policyStatusId),
     ),

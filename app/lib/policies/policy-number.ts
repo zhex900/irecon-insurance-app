@@ -5,6 +5,9 @@ export const POLICY_NUMBER_PREFIX = "ATCCWI";
 export const POLICY_NUMBER_TAKEN_MESSAGE =
   "This policy number is already in use";
 
+/** Same validation rules as policy numbers; series numbers share the ATCCWI format. */
+export const SERIES_NUMBER_TAKEN_MESSAGE = POLICY_NUMBER_TAKEN_MESSAGE;
+
 /** Keep digits only (suffix after the fixed prefix). */
 export function sanitizePolicyNumberSuffix(value: string): string {
   return value.replace(/\D/g, "");
@@ -81,4 +84,42 @@ export function validatePolicyNumberInput(
     return { ok: false, message: "Policy number must be digits only" };
   }
   return { ok: true, policyNumber };
+}
+
+/** Validate client-facing series number (same shape as policy numbers). */
+export function validateSeriesNumberInput(
+  value: string | undefined,
+): { ok: true; seriesNumber: string } | { ok: false; message: string } {
+  const result = validatePolicyNumberInput(value);
+  if (!result.ok) return result;
+  return { ok: true, seriesNumber: result.policyNumber };
+}
+
+/** Series number to persist when the broker edits the field. */
+export function resolveSeriesNumberForSave(
+  currentSeriesNumber: string,
+  submitted: string | undefined,
+  locked: boolean,
+): string {
+  return resolvePolicyNumberForSave(currentSeriesNumber, submitted, locked);
+}
+
+/**
+ * Legacy renewal term suffixes group under one client-facing series base.
+ * Matches MSSQL import dedupe shapes (year, year-month, full inception date).
+ * Example: ATCCWI0487-2024-06-15 → ATCCWI0487
+ */
+export function normalizeLegacySeriesBase(policyNumber: string): string {
+  let trimmed = policyNumber.trim().toUpperCase();
+  const legacySuffixes = [
+    /^ATCCWI\d+-(?:19|20)\d{2}-\d{2}-\d{2}$/,
+    /^ATCCWI\d+-(?:19|20)\d{2}-\d{2}$/,
+    /^ATCCWI\d+-(?:19|20)\d{2}$/,
+  ] as const;
+  for (const pattern of legacySuffixes) {
+    if (!pattern.test(trimmed)) continue;
+    trimmed = trimmed.replace(/-(?:19|20)\d{2}(?:-\d{2}){0,2}$/, "");
+    break;
+  }
+  return composePolicyNumber(trimmed);
 }

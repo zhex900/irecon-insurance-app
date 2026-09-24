@@ -15,6 +15,7 @@ import {
   policyNotFoundResponse,
 } from "~/lib/http/resource-not-found";
 import { parseFormIntent, parseUuid } from "~/lib/http/route-input";
+import { policyDisplayNumber } from "~/lib/policies/policy-display";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import { getClient } from "~/lib/services/clients/service";
 import {
@@ -30,7 +31,9 @@ import { POLICY_STATUS } from "~/lib/zod/policy-car";
 import type { Route } from "./+types/$policyId.adjust";
 
 export function meta({ loaderData }: Route.MetaArgs) {
-  return [{ title: pageTitle(`Adjust ${loaderData.policy.policyNumber}`) }];
+  return [
+    { title: pageTitle(`Adjust ${policyDisplayNumber(loaderData.policy)}`) },
+  ];
 }
 
 export async function loader({ params, request }: Route.LoaderArgs) {
@@ -111,9 +114,9 @@ export async function action({ request, params, context }: Route.ActionArgs) {
         action: "policy.adjust",
         entityType: "policy",
         entityId: policyId,
-        summary: `Applied adjustment on ${policy.policyNumber}`,
+        summary: `Applied adjustment on ${policyDisplayNumber(policy)}`,
         metadata: {
-          policyNumber: policy.policyNumber,
+          policyNumber: policyDisplayNumber(policy),
           adjustmentTurnover: parsed.data.adjustmentTurnover,
         },
         request,
@@ -121,7 +124,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
       return redirect(
         withSuccessToast(
           `/policies/${policyId}`,
-          `Adjustment saved on ${policy.policyNumber}`,
+          `Adjustment saved on ${policyDisplayNumber(policy)}`,
         ),
       );
     }
@@ -146,7 +149,7 @@ export default function PolicyAdjustRoute({
   return (
     <div>
       <PageHeader
-        title={`Adjust ${loaderData.policy.policyNumber}`}
+        title={`Adjust ${policyDisplayNumber(loaderData.policy)}`}
         description={
           <span className="inline-flex flex-wrap items-center gap-2">
             <span>End of term adjustment for {loaderData.client.name}</span>
@@ -160,7 +163,7 @@ export default function PolicyAdjustRoute({
             to: `/clients/${loaderData.client.clientId}`,
           },
           {
-            label: loaderData.policy.policyNumber,
+            label: policyDisplayNumber(loaderData.policy),
             to: `/policies/${loaderData.policy.policyId}`,
           },
           { label: "Adjust" },

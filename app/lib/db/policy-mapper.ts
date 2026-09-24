@@ -211,11 +211,17 @@ function noteRowToDomain(row: PolicyNoteRow): PolicyNote {
   };
 }
 
+type PolicySeriesSlice = {
+  policySeriesId: string;
+  seriesNumber: string;
+};
+
 export function rowsToPolicy(
   p: PolicyRow,
   car: PolicyCarRow,
   adjustment?: AdjustmentRow | null,
   children: PolicyChildRows = {},
+  series?: PolicySeriesSlice | null,
 ): Policy {
   const premium = premiumFromRow(car);
   const rating = ratingFromRow(car);
@@ -234,6 +240,9 @@ export function rowsToPolicy(
     policyId: p.policyId,
     clientId: p.clientId,
     policyNumber: p.policyNumber,
+    policySeriesId: series?.policySeriesId ?? p.policySeriesId,
+    seriesNumber: series?.seriesNumber ?? p.policyNumber,
+    copiedFromPolicyId: p.copiedFromPolicyId,
     policyCategoryId: p.policyCategoryId,
     policyStatusId: p.policyStatusId,
     postcode: p.postcode,
@@ -363,6 +372,8 @@ export function policyToRows(policyDoc: Policy): {
     stateId: policyDoc.stateId,
     policyCategoryId: policyDoc.policyCategoryId,
     policyNumber: policyDoc.policyNumber,
+    policySeriesId: policyDoc.policySeriesId,
+    copiedFromPolicyId: policyDoc.copiedFromPolicyId ?? null,
     dateStart: new Date(`${policyDoc.dateStart}T00:00:00.000Z`),
     dateEnd: new Date(`${policyDoc.dateEnd}T00:00:00.000Z`),
     insurerCode: policyDoc.insurerCode,

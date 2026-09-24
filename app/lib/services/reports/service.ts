@@ -106,7 +106,7 @@ export function buildReportPolicyRows(
       : undefined;
     return {
       policyId: policy.policyId,
-      policyNumber: policy.policyNumber,
+      policyNumber: policy.seriesNumber?.trim() || policy.policyNumber,
       clientId: policy.clientId,
       clientName: client?.name ?? "—",
       arName: broker?.fullName?.trim() ?? "",

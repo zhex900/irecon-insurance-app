@@ -417,7 +417,7 @@ jobs:
           node-version: "20"
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Run PDF integration tests
         run: npm run test:integration -- --run pdf-output-comparison.test.ts

@@ -4,15 +4,15 @@ Local quality gate for Irecon Insurance (Phase 8). CI should re-run the same com
 
 ## Commands
 
-| Command                | What                                                   |
-| ---------------------- | ------------------------------------------------------ |
-| `npm run lint`         | ESLint flat config                                     |
-| `npm run lint:fix`     | ESLint with `--fix`                                    |
-| `npm run format`       | Prettier write (incl. Tailwind class sort)             |
-| `npm run format:check` | Prettier check                                         |
-| `npm run typecheck`    | React Router typegen + `tsc` (TypeScript **7** native) |
-| `npm run test:unit`    | Vitest unit                                            |
-| `npm run verify`       | lint + format:check + typecheck + test:unit            |
+| Command                 | What                                                   |
+| ----------------------- | ------------------------------------------------------ |
+| `pnpm run lint`         | ESLint flat config                                     |
+| `pnpm run lint:fix`     | ESLint with `--fix`                                    |
+| `pnpm run format`       | Prettier write (incl. Tailwind class sort)             |
+| `pnpm run format:check` | Prettier check                                         |
+| `pnpm run typecheck`    | React Router typegen + `tsc` (TypeScript **7** native) |
+| `pnpm run test:unit`    | Vitest unit                                            |
+| `pnpm run verify`       | lint + format:check + typecheck + test:unit            |
 
 ## Config files
 
@@ -36,4 +36,5 @@ Remove the dual install once typescript-eslint supports TS 7.1+.
 
 - `scripts/` is ignored by ESLint (ops scripts).
 - React Compiler hooks rules (`set-state-in-effect`, `refs`, …) are enforced as **errors**.
-- Pre-commit formats/lints staged files only. Always run `npm run verify` before merging.
+- Pre-commit formats/lints staged files only. Always run `pnpm run verify` before merging.
+- Install deps with `pnpm install` (`pnpm-lock.yaml` is the lockfile; CI uses `pnpm install --frozen-lockfile`).

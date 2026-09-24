@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { calculatePremiumForPolicy } from "~/lib/services/price/premium.service";
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
+import { resolveBrokerFeeTotal } from "~/server/pricing/rate-resolver";
 
 /**
  * Premium Calculation Integration Tests
@@ -345,9 +346,7 @@ describe("Premium Calculation Integration Tests", () => {
       // Act
       await calculatePremiumForPolicy(policyValues);
 
-      // Assert
-      const { resolveBrokerFeeTotal } =
-        await import("~/server/pricing/rate-resolver");
+      // Assert (same mocked fn instance premium.service imports — not dynamic import)
       expect(resolveBrokerFeeTotal).toHaveBeenCalledWith("2026-06-01");
     });
   });

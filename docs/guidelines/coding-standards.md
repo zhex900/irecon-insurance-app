@@ -1,6 +1,6 @@
 # Coding standards
 
-Opinionated, measurable rules for Irecon Insurance. Prefer tooling (TypeScript strict, ESLint, Prettier, `npm run verify`, CI) for what machines can enforce; this doc covers the rest.
+Opinionated, measurable rules for Irecon Insurance. Prefer tooling (TypeScript strict, ESLint, Prettier, `pnpm run verify`, CI) for what machines can enforce; this doc covers the rest.
 
 Companions: [design-patterns.md](design-patterns.md) · [performance.md](../architecture/performance.md) · [ui-guidelines.md](ui-guidelines.md) · [code-review.md](code-review.md)
 
@@ -192,7 +192,7 @@ Do not document obvious code.
 
 ## Testing
 
-**Required today:** `npm run typecheck`.
+**Required today:** `pnpm run typecheck`.
 
 **Target:** Vitest (Zod, pricing, services) + Playwright (critical journeys). Prefer `getByRole` / labels. Pricing changes need golden fixtures. Never use prod credentials in tests.
 

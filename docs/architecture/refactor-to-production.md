@@ -97,7 +97,7 @@ After reorganisation (names can vary; structure should not):
 - [x] Inventory secrets and environments: local / PR / UAT / prod.
 - [x] List every `~/data/*` import and classify: **runtime** | **seed** | **delete**. (Done: moved off `app/data`; seeds under `_archive/data`.)
 - [x] Curate `docs/`; link this plan from root README.
-- [x] Decide package manager lockfile policy (keep npm unless team wants pnpm).
+- [x] Package manager: **pnpm** (`pnpm-lock.yaml`, `packageManager` in `package.json`, CI `pnpm install --frozen-lockfile`).
 - [x] Create GitHub project/board columns matching phases.
 
 **DoD for “production-ready” (suggested):**

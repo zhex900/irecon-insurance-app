@@ -199,6 +199,8 @@ function createMockPolicy(overrides: Partial<Policy> = {}): Policy {
   return {
     policyId: "1",
     policyNumber: "POL123456",
+    policySeriesId: "series-1",
+    seriesNumber: "POL123456",
     clientId: "1",
     policyCategoryId: 1,
     policyStatusId: 1,

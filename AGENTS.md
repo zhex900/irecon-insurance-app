@@ -62,7 +62,7 @@ When multiple solutions exist, choose in this order:
 - shadcn `base-nova` + ReUI only — no parallel UI kit.
 - No secrets, PII dumps, or `_archive/` imports in the app.
 - URL paths stay stable (`app/routes.ts`).
-- `npm run typecheck` must pass.
+- `pnpm run typecheck` must pass.
 - **Keep Worker/SSR bundles small** — no static `@pdfme/generator` / `@pdfme/ui` (or other heavy) imports in routes; dynamic-import PDF/Designer code; don’t ship full template history in loaders ([docs/architecture/performance.md](docs/architecture/performance.md) § Bundle & Workers).
 
 ## Before / after

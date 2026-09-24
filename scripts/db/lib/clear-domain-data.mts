@@ -165,9 +165,13 @@ export async function clearPolicies(options?: {
   } else {
     await db.execute(sql`
       truncate table
+        policy_car_selected_wording,
+        policy_note,
+        policy_document,
         policy_car_adjustment,
         policy_car,
-        policy
+        policy,
+        policy_series
       restart identity cascade
     `);
     await restartPolicyNumberSeq();

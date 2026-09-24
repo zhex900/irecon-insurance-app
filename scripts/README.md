@@ -26,7 +26,7 @@ scripts/
 
 ## Common commands
 
-| npm script           | Script path                                      |
+| `pnpm run` script    | Script path                                      |
 | -------------------- | ------------------------------------------------ |
 | `db:seed`            | `scripts/db/seed/seed-db.mts`                    |
 | `db:migrate:legacy*` | `scripts/db/legacy/migrate-legacy-domain.mts`    |

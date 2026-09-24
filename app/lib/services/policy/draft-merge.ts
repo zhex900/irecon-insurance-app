@@ -5,7 +5,10 @@ import {
   flatCustomWordings,
   normalizeCustomWordings,
 } from "~/lib/policies/custom-wordings";
-import { resolvePolicyNumberForSave } from "~/lib/policies/policy-number";
+import {
+  effectivePolicyCategoryId,
+  resolveSeriesNumberFromForm,
+} from "~/lib/policies/policy-series";
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
 import {
   carPolicyDraftSchema,
@@ -42,10 +45,16 @@ export function mergeDraftIntoPolicy(
     policyStatusId: keepSubmitted
       ? existing.policyStatusId
       : POLICY_STATUS.Pending,
-    policyNumber: resolvePolicyNumberForSave(
-      existing.policyNumber,
+    seriesNumber: resolveSeriesNumberFromForm(
+      existing.seriesNumber,
       values.policyNumber,
-      isTerminalStatus(existing.policyStatusId),
+      {
+        policyCategoryId: effectivePolicyCategoryId(
+          values.policyCategoryId,
+          existing.policyCategoryId,
+        ),
+        terminalLocked: isTerminalStatus(existing.policyStatusId),
+      },
     ),
     postcode: values.postcode ?? existing.postcode,
     stateId:

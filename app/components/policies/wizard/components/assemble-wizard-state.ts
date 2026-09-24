@@ -72,7 +72,7 @@ export function buildPremiumPanelProps(
     isCalculating: premiumCalc.isCalculating,
     documents: documents.documents,
     isGeneratingDocuments: documents.isGeneratingDocuments,
-    policyNumber: props.policy.policyNumber,
+    policyNumber: props.policy.seriesNumber,
     clientName: props.clientName ?? "",
     reference: props.reference,
     policy: props.policy,

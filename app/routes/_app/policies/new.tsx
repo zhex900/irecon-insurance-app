@@ -31,8 +31,8 @@ export async function action({ request }: Route.ActionArgs) {
     action: "policy.create",
     entityType: "policy",
     entityId: policy.policyId,
-    summary: `Created policy ${policy.policyNumber} for ${client.name}`,
-    metadata: { clientId, policyNumber: policy.policyNumber },
+    summary: `Created policy ${policy.seriesNumber} for ${client.name}`,
+    metadata: { clientId, policyNumber: policy.seriesNumber },
     request,
   });
   return redirect(`/policies/${policy.policyId}?new=1`);

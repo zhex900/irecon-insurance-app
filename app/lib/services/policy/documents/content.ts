@@ -1,4 +1,5 @@
 import type { Policy, PolicyDocument } from "~/lib/db/types";
+import { policyDisplayNumber } from "~/lib/policies/policy-display";
 import { formatCurrency, formatRate } from "~/lib/utils";
 
 function pad2(n: number) {
@@ -37,7 +38,7 @@ export function buildScheduleContent(policy: Policy): string {
   const adjustment = policy.car.adjustment;
   const lines = [
     "CAR Schedule",
-    `Policy number: ${policy.policyNumber}`,
+    `Policy number: ${policyDisplayNumber(policy)}`,
     `Insured: ${policy.car.insuredName}`,
     `Cover type: ${coverTypeLabel(policy.car.coverTypeId)}`,
     `Site address: ${policy.car.siteAddress || "—"}`,
@@ -75,7 +76,7 @@ export function buildRatingContent(policy: Policy): string {
   const adjustment = policy.car.adjustment;
   const lines = [
     "CAR Rating / Record of Advice",
-    `Policy number: ${policy.policyNumber}`,
+    `Policy number: ${policyDisplayNumber(policy)}`,
     `Insured: ${policy.car.insuredName}`,
   ];
 
@@ -133,7 +134,7 @@ export function buildAdjustmentContent(policy: Policy): string {
   const effective = effectiveTotalPremium(policy);
   return [
     "CAR Adjustment",
-    `Policy number: ${policy.policyNumber}`,
+    `Policy number: ${policyDisplayNumber(policy)}`,
     `Insured: ${policy.car.insuredName}`,
     `Original turnover: ${formatCurrency(adjustment.breakdown.originalTurnover)}`,
     `Adjusted turnover: ${formatCurrency(adjustment.adjustedTurnover)}`,
