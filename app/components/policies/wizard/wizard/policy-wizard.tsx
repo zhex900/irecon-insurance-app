@@ -58,7 +58,10 @@ export function PolicyWizard({
 
   return (
     <FormProvider {...form}>
-      <PolicyWizardFormEffects defaultExcesses={reference.defaultExcesses} />
+      <PolicyWizardFormEffects
+        defaultExcesses={reference.defaultExcesses}
+        syncPerilsOnMount={Boolean(freshSteps)}
+      />
       <JustSavedProvider>
         <PolicyPhaseProvider
           policy={policy}
@@ -82,10 +85,14 @@ export function PolicyWizard({
 
 function PolicyWizardFormEffects({
   defaultExcesses,
+  syncPerilsOnMount,
 }: {
   defaultExcesses: WizardProps["reference"]["defaultExcesses"];
+  syncPerilsOnMount: boolean;
 }) {
-  useSyncPerilsExcessFromLegalLiability(defaultExcesses);
+  useSyncPerilsExcessFromLegalLiability(defaultExcesses, {
+    syncOnMount: syncPerilsOnMount,
+  });
   useSyncLegalLiabilityExcess(defaultExcesses);
   return null;
 }

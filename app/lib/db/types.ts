@@ -261,6 +261,8 @@ export type Policy = {
   policySeriesId: string;
   /** Client-facing number (from policy_series); use in UI, PDF, and email. */
   seriesNumber: string;
+  /** 0-based term in series; show #n badge when n >= 1. */
+  seriesTerm: number;
   /** Prior term when created by renew or clone. */
   copiedFromPolicyId?: string | null;
   policyCategoryId: number;

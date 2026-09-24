@@ -132,6 +132,8 @@ export const policy = pgTable("policy", {
   policySeriesId: uuid("policy_series_id")
     .notNull()
     .references(() => policySeries.policySeriesId),
+  /** 0-based term in series; UI shows #n badge when n >= 1. */
+  seriesTerm: integer("series_term").notNull().default(0),
   dateStart: timestamp("date_start", { withTimezone: true }).notNull(),
   dateEnd: timestamp("date_end", { withTimezone: true }).notNull(),
   insurerCode: varchar("insurer_code", { length: 32 }).notNull().default("ATC"),

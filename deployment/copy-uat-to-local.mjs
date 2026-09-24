@@ -94,6 +94,7 @@ async function main() {
     destTransactionUrl: toTransactionDbUrl(localDatabaseUrl),
     workDir,
     skipRoles: true,
+    localAuthMinimal: true,
   });
 
   console.log("");

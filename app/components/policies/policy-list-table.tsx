@@ -229,7 +229,9 @@ export function PolicyListTable({
                   aria-label="Select all deletable policies on this page"
                 />
               </TableHead>
-              <TableHead className="w-0 whitespace-normal">Policy #</TableHead>
+              <TableHead className="min-w-56 whitespace-nowrap">
+                Policy #
+              </TableHead>
               {showClientColumn && clientFilter ? (
                 <TableHead className="max-w-48 whitespace-normal">
                   <ColumnClientFilterHeader

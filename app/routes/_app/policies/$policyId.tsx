@@ -44,7 +44,10 @@ import {
   parseUuid,
 } from "~/lib/http/route-input";
 import { trackUsage } from "~/lib/observability/metrics.server";
-import { policyDisplayNumber } from "~/lib/policies/policy-display";
+import {
+  policyDisplayNumber,
+  policyDisplayReference,
+} from "~/lib/policies/policy-display";
 import { referenceData } from "~/lib/reference-data";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import { getClient } from "~/lib/services/clients/service";
@@ -73,7 +76,7 @@ import {
 import type { Route } from "./+types/$policyId";
 
 export function meta({ loaderData }: Route.MetaArgs) {
-  return [{ title: pageTitle(`${policyDisplayNumber(loaderData.policy)}`) }];
+  return [{ title: pageTitle(`${policyDisplayReference(loaderData.policy)}`) }];
 }
 
 export async function loader({ params, request }: Route.LoaderArgs) {

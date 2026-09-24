@@ -6,6 +6,7 @@ import { Badge } from "~/components/reui/badge";
 import { LoadingButton } from "~/components/ui/loading-button";
 import { StatusBadge } from "~/components/ui/status-badge";
 import type { Policy, ReferenceData } from "~/lib/db/types";
+import { policyDisplayReference } from "~/lib/policies/policy-display";
 import { cn } from "~/lib/utils";
 
 import type { usePolicyWizardNavigation } from "../hooks/composite/use-navigation";
@@ -80,6 +81,7 @@ export const Header = memo(function Header({
     >
       <PolicyStickyHeader
         policyNumber={livePolicyNumber}
+        seriesTerm={policy.seriesTerm}
         clientId={policy.clientId}
         clientName={clientName || "Client"}
         coverTypeName={coverTypeName || undefined}
@@ -90,7 +92,12 @@ export const Header = memo(function Header({
             label: clientName || "Client",
             to: `/clients/${policy.clientId}`,
           },
-          { label: livePolicyNumber },
+          {
+            label: policyDisplayReference({
+              ...policy,
+              seriesNumber: livePolicyNumber,
+            }),
+          },
         ]}
         statusBadge={
           <>

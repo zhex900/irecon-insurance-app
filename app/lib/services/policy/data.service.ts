@@ -29,7 +29,10 @@ import { ValidationError } from "~/lib/errors";
 import { trackUsage } from "~/lib/observability/metrics.server";
 import type { PdfWorkerBinding } from "~/lib/pdf/pdf-worker.server";
 import { normalizeExcesses } from "~/lib/policies/excesses";
-import { policyDisplayNumber } from "~/lib/policies/policy-display";
+import {
+  policyDisplayNumber,
+  policyDisplayReference,
+} from "~/lib/policies/policy-display";
 import { createInformationalNote } from "~/lib/policies/policy-notes";
 import {
   formatPolicyNumberFromSeq,
@@ -55,6 +58,16 @@ import { POLICY_STATUS } from "~/lib/zod/policy-car";
 
 const POLICY_NUMBER_ALLOCATE_MAX_ATTEMPTS = 25;
 const CREATE_DRAFT_MAX_ATTEMPTS = 25;
+
+async function allocateNextSeriesTerm(policySeriesId: string): Promise<number> {
+  const db = getDb();
+  const [row] = await db
+    .select({ maxTerm: sql<number>`coalesce(max(${policy.seriesTerm}), -1)` })
+    .from(policy)
+    .where(eq(policy.policySeriesId, policySeriesId));
+  const maxTerm = Number(row?.maxTerm ?? -1);
+  return maxTerm + 1;
+}
 
 async function deletePolicySeriesIfOrphan(policySeriesId: string) {
   const db = getDb();
@@ -395,6 +408,7 @@ export async function listPolicySummaries(
     .map((item) => ({
       policyId: item.policyId,
       policyNumber: policyDisplayNumber(item),
+      policyReference: policyDisplayReference(item),
       insuredName: item.car.insuredName,
       clientName: clientById.get(item.clientId) ?? "",
       policyStatusId: item.policyStatusId,
@@ -411,12 +425,15 @@ export async function listPolicySummaries(
 
   const q = search.toLowerCase();
   return summaries
-    .filter(
-      (summary) =>
+    .filter((summary) => {
+      const ref = summary.policyReference.toLowerCase();
+      return (
+        ref.includes(q) ||
         summary.policyNumber.toLowerCase().includes(q) ||
         summary.insuredName.toLowerCase().includes(q) ||
-        summary.clientName.toLowerCase().includes(q),
-    )
+        summary.clientName.toLowerCase().includes(q)
+      );
+    })
     .map(({ createdWhen: _createdWhen, ...summary }) => summary);
 }
 
@@ -677,6 +694,12 @@ export async function createPolicyDraft(
         );
       }
 
+      const seriesTerm =
+        partial.seriesTerm ??
+        (partial.policySeriesId
+          ? await allocateNextSeriesTerm(policySeriesId)
+          : 0);
+
       const today = new Date();
       const dateStart = today.toISOString().slice(0, 10);
 
@@ -735,6 +758,7 @@ export async function createPolicyDraft(
         policyNumber,
         policySeriesId: policySeriesId!,
         seriesNumber,
+        seriesTerm,
         copiedFromPolicyId: partial.copiedFromPolicyId ?? null,
         notes: partial.notes ?? [
           createInformationalNote(policyId, "Policy Created", createdBy),

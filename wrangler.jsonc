@@ -41,8 +41,9 @@
       "service": "insurance-pdf-worker-uat",
     },
   ],
+  // SUPABASE_URL is not set here — local dev reads it from `.env` (local Supabase).
+  // UAT/prod deploy injects SUPABASE_URL via deployment/lib/preview-env.mjs (uatAppWrangler).
   "vars": {
-    "SUPABASE_URL": "https://tjnsygunohylofihoksl.supabase.co",
     "SESSION_INACTIVITY_TIMEOUT_MINUTES": "30",
     "SESSION_ABSOLUTE_TIMEOUT_HOURS": "12",
   },
