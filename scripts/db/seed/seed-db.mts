@@ -22,6 +22,11 @@ import {
 import { policyToRows } from "../../../app/lib/db/policy-mapper";
 import type { Policy } from "../../../app/lib/db/types";
 import { createUser } from "../../../app/lib/services/users/service";
+import {
+  legacyClientUuid,
+  legacyPolicyUuid,
+} from "../legacy/lib/legacy-id-map.mts";
+import { attachPolicySeriesFields } from "../lib/policy-series-import.mts";
 import { getSupabaseAdmin } from "../../../app/lib/supabase/admin.server";
 import { seedAuthorisedRepresentativesFromCsv } from "./seed-ar-from-csv.mts";
 import { seedPrices } from "./seed-prices";
@@ -83,7 +88,11 @@ async function main() {
       createdBy: string;
     }>
   >("clients.json");
-  const policies = readJson<Policy[]>("policies.json");
+  type SeedPolicyRow = Omit<Policy, "policyId" | "clientId"> & {
+    policyId: number;
+    clientId: number;
+  };
+  const policies = readJson<SeedPolicyRow[]>("policies.json");
 
   console.log("Clearing Supabase Auth users…");
   await clearAuthUsers();
@@ -91,9 +100,13 @@ async function main() {
   console.log("Truncating tables…");
   await db.execute(sql`
     TRUNCATE TABLE
+      policy_car_selected_wording,
+      policy_note,
+      policy_document,
       policy_car_adjustment,
       policy_car,
       policy,
+      policy_series,
       client,
       app_user,
       authorised_representative
@@ -123,7 +136,7 @@ async function main() {
   console.log(`Seeding ${clients.length} clients…`);
   for (const c of clients) {
     await db.insert(client).values({
-      clientId: c.clientId,
+      clientId: legacyClientUuid(c.clientId),
       name: c.name,
       tradingName: c.tradingName,
       abn: c.abn,
@@ -141,7 +154,26 @@ async function main() {
   await seedPrices();
 
   console.log(`Seeding ${policies.length} policies…`);
-  for (const p of policies) {
+  const policiesWithSeries = await attachPolicySeriesFields(
+    policies.map((p) => ({
+      clientId: legacyClientUuid(p.clientId),
+      policyNumber: String(p.policyNumber),
+      createdBy: p.createdBy,
+      createdWhen: p.createdWhen,
+    })),
+  );
+  for (let i = 0; i < policies.length; i++) {
+    const seedRow = policies[i]!;
+    const series = policiesWithSeries[i]!;
+    const policyDoc: Policy = {
+      ...seedRow,
+      policyId: legacyPolicyUuid(seedRow.policyId),
+      clientId: legacyClientUuid(seedRow.clientId),
+      policySeriesId: series.policySeriesId,
+      seriesNumber: series.seriesNumber,
+      insurerCode: seedRow.insurerCode ?? "ATC",
+      isDraft: seedRow.isDraft ?? !seedRow.car?.premium,
+    };
     const {
       policyValues,
       carValues,
@@ -149,11 +181,7 @@ async function main() {
       documentValues,
       noteValues,
       selectedWordingIds,
-    } = policyToRows({
-      ...p,
-      insurerCode: p.insurerCode ?? "ATC",
-      isDraft: p.isDraft ?? !p.car?.premium,
-    });
+    } = policyToRows(policyDoc);
     await db.insert(policy).values(policyValues);
     await db.insert(policyCar).values(carValues);
     if (adjustmentValues) {
@@ -168,7 +196,7 @@ async function main() {
     if (selectedWordingIds.length > 0) {
       await db.insert(policyCarSelectedWording).values(
         selectedWordingIds.map((carWordingId) => ({
-          policyId: p.policyId,
+          policyId: policyDoc.policyId,
           carWordingId,
         })),
       );
@@ -176,12 +204,25 @@ async function main() {
   }
 
   await db.execute(sql`
-    SELECT setval(pg_get_serial_sequence('authorised_representative', 'authorised_representative_id'),
-      (SELECT COALESCE(MAX(authorised_representative_id), 1) FROM authorised_representative));
-    SELECT setval(pg_get_serial_sequence('client', 'client_id'),
-      (SELECT COALESCE(MAX(client_id), 1) FROM client));
-    SELECT setval(pg_get_serial_sequence('policy', 'policy_id'),
-      (SELECT COALESCE(MAX(policy_id), 1) FROM policy));
+    SELECT setval(
+      pg_get_serial_sequence('authorised_representative', 'authorised_representative_id'),
+      (SELECT COALESCE(MAX(authorised_representative_id), 1) FROM authorised_representative)
+    );
+    SELECT setval(
+      'policy_number_seq',
+      GREATEST(
+        1000,
+        COALESCE(
+          (
+            SELECT MAX(
+              NULLIF(regexp_replace(p.policy_number, '\\D', '', 'g'), '')::bigint
+            )
+            FROM policy p
+          ),
+          1000
+        )
+      )
+    );
   `);
 
   console.log("Seed complete. Demo password for seeded users: password123");

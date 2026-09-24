@@ -51,6 +51,7 @@ import {
   dedupeLegacyPolicyNumbers,
   legacyPolicyRowToPolicy,
 } from "./legacy-policy-mapper.mts";
+import { attachPolicySeriesFields } from "../../lib/policy-series-import.mts";
 import {
   missingPolicyDocumentRow,
   writeMissingPolicyDocumentsCsv,
@@ -687,7 +688,8 @@ export async function loadLegacyDomain(options: LoadLegacyDomainOptions) {
           policy_document,
           policy_car_adjustment,
           policy_car,
-          policy
+          policy,
+          policy_series
         RESTART IDENTITY CASCADE
       `);
     }
@@ -695,12 +697,30 @@ export async function loadLegacyDomain(options: LoadLegacyDomainOptions) {
     const chunkSize = 25;
     for (let i = 0; i < policyRows.length; i += chunkSize) {
       const chunk = policyRows.slice(i, i + chunkSize);
-      for (const row of chunk) {
+      const chunkPolicyDocs = chunk.map((row) => {
         const policyDoc = legacyPolicyRowToPolicy(row);
         const docs = policyDocumentsByLegacyId.get(row.policyId);
         if (docs?.length) {
           policyDoc.documents = docs;
         }
+        return { row, policyDoc };
+      });
+      const enrichedPolicies = await attachPolicySeriesFields(
+        chunkPolicyDocs.map(({ policyDoc }) => ({
+          clientId: policyDoc.clientId,
+          policyNumber: policyDoc.policyNumber,
+          createdBy: policyDoc.createdBy,
+          createdWhen: policyDoc.createdWhen,
+        })),
+      );
+      for (let j = 0; j < chunkPolicyDocs.length; j++) {
+        const { row, policyDoc } = chunkPolicyDocs[j]!;
+        const series = enrichedPolicies[j]!;
+        const policyDocWithSeries = {
+          ...policyDoc,
+          policySeriesId: series.policySeriesId,
+          seriesNumber: series.seriesNumber,
+        };
         const {
           policyValues,
           carValues,
@@ -708,7 +728,7 @@ export async function loadLegacyDomain(options: LoadLegacyDomainOptions) {
           documentValues,
           noteValues,
           selectedWordingIds,
-        } = policyToRows(policyDoc);
+        } = policyToRows(policyDocWithSeries);
         await db.insert(policy).values({
           ...policyValues,
           createdBy,
@@ -729,7 +749,7 @@ export async function loadLegacyDomain(options: LoadLegacyDomainOptions) {
         if (selectedWordingIds.length > 0) {
           await db.insert(policyCarSelectedWording).values(
             selectedWordingIds.map((carWordingId) => ({
-              policyId: policyDoc.policyId,
+              policyId: policyDocWithSeries.policyId,
               carWordingId,
             })),
           );

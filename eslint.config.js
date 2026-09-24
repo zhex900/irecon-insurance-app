@@ -42,6 +42,17 @@ export default tseslint.config(
   },
   {
     files: ["**/*.{ts,tsx}"],
+    settings: {
+      "import/resolver": {
+        typescript: {
+          alwaysTryTypes: true,
+          project: "./tsconfig.json",
+        },
+        node: {
+          extensions: [".js", ".jsx", ".ts", ".tsx", ".mts", ".cts"],
+        },
+      },
+    },
     languageOptions: {
       ecmaVersion: 2022,
       globals: {

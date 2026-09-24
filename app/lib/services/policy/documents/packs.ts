@@ -1,5 +1,4 @@
 import type { Policy, PolicyDocument } from "~/lib/db/types";
-import { policyDisplayNumber } from "~/lib/policies/policy-display";
 import { formatDocumentLabel } from "~/lib/documents/document-label";
 import {
   libraryDocumentMatchesPolicy,
@@ -7,6 +6,7 @@ import {
 } from "~/lib/documents/library-documents";
 import type { BrokerFeeLineInput } from "~/lib/pdf/merge-fields";
 import type { DocumentTemplate } from "~/lib/pdf/templates";
+import { policyDisplayNumber } from "~/lib/policies/policy-display";
 import {
   formatDocTimestamp,
   makeDoc,

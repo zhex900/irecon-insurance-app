@@ -2,9 +2,15 @@ import { requireAuth } from "~/lib/auth/session/server.server";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
 import { parseUuid } from "~/lib/http/route-input";
 import {
+  composePolicyNumber,
   SERIES_NUMBER_TAKEN_MESSAGE,
   validateSeriesNumberInput,
 } from "~/lib/policies/policy-number";
+import {
+  effectivePolicyCategoryId,
+  isRenewalPolicyCategory,
+  RENEWAL_SERIES_IMMUTABLE_MESSAGE,
+} from "~/lib/policies/policy-series";
 import {
   deletePolicyDraft,
   getPolicy,
@@ -77,6 +83,24 @@ export async function action({ request, params }: Route.ActionArgs) {
       ok: false,
       formError: "This policy status cannot be changed.",
     });
+  }
+
+  const policyCategoryId = effectivePolicyCategoryId(
+    parsed.data.policyCategoryId,
+    existing.policyCategoryId,
+  );
+  if (isRenewalPolicyCategory(policyCategoryId)) {
+    const submitted = parsed.data.policyNumber?.trim();
+    if (
+      submitted &&
+      composePolicyNumber(submitted) !== existing.seriesNumber.trim()
+    ) {
+      return Response.json({
+        ok: false,
+        errors: { policyNumber: [RENEWAL_SERIES_IMMUTABLE_MESSAGE] },
+        formError: RENEWAL_SERIES_IMMUTABLE_MESSAGE,
+      });
+    }
   }
 
   const merged = mergeDraftIntoPolicy(existing, parsed.data);

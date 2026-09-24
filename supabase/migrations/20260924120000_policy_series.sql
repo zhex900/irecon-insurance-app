@@ -27,36 +27,38 @@ as $$
   end;
 $$;
 
--- Backfill: one series row per normalized key; series_number = normalized base.
+-- Globally unique series numbers: one owner client per normalized key.
+do $$
+begin
+  if exists (
+    select 1
+    from public.policy p
+    group by public.normalize_policy_series_key(p.policy_number)
+    having count(distinct p.client_id) > 1
+  ) then
+    raise exception
+      'policy_series backfill: normalized series key is shared across clients; resolve before migrating';
+  end if;
+end $$;
+
+-- One series row per normalized key; client/metadata from earliest policy for that key.
 insert into public.policy_series (series_number, client_id, created_by, created_when)
 select
   g.series_key,
   g.client_id,
-  coalesce(
-    (
-      select p.created_by
-      from public.policy p
-      where public.normalize_policy_series_key(p.policy_number) = g.series_key
-      order by p.created_when asc
-      limit 1
-    ),
-    ''
-  ),
-  coalesce(
-    (
-      select p.created_when
-      from public.policy p
-      where public.normalize_policy_series_key(p.policy_number) = g.series_key
-      order by p.created_when asc
-      limit 1
-    ),
-    now()
-  )
+  g.created_by,
+  g.created_when
 from (
-  select distinct
+  select distinct on (public.normalize_policy_series_key(p.policy_number))
     public.normalize_policy_series_key(p.policy_number) as series_key,
-    p.client_id
+    p.client_id,
+    p.created_by,
+    p.created_when
   from public.policy p
+  order by
+    public.normalize_policy_series_key(p.policy_number),
+    p.created_when asc,
+    p.policy_id asc
 ) g
 where not exists (
   select 1
@@ -64,11 +66,13 @@ where not exists (
   where lower(ps.series_number) = lower(g.series_key)
 );
 
+-- Attach policies only when the series row belongs to the same client.
 update public.policy p
 set policy_series_id = ps.policy_series_id
 from public.policy_series ps
 where p.policy_series_id is null
-  and lower(ps.series_number) = lower(public.normalize_policy_series_key(p.policy_number));
+  and lower(ps.series_number) = lower(public.normalize_policy_series_key(p.policy_number))
+  and ps.client_id = p.client_id;
 
 alter table public.policy
   alter column policy_series_id set not null;

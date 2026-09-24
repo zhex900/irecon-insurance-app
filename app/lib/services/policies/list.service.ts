@@ -511,6 +511,7 @@ async function countDatePresets(
     .select(selectShape)
     .from(policy)
     .innerJoin(policyCar, eq(policy.policyId, policyCar.policyId))
+    .innerJoin(policySeries, eq(policy.policySeriesId, policySeries.policySeriesId))
     .leftJoin(client, eq(policy.clientId, client.clientId))
     .leftJoin(
       policyCarAdjustment,
@@ -543,6 +544,7 @@ export async function countPoliciesForClientIds(
     })
     .from(policy)
     .innerJoin(policyCar, eq(policy.policyId, policyCar.policyId))
+    .innerJoin(policySeries, eq(policy.policySeriesId, policySeries.policySeriesId))
     .leftJoin(client, eq(policy.clientId, client.clientId))
     .leftJoin(
       policyCarAdjustment,

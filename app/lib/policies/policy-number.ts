@@ -109,14 +109,21 @@ export function resolveSeriesNumberForSave(
 }
 
 /**
- * Legacy import suffix `-YYYY` groups renewals under one series base.
- * Example: ATCCWI0487-2024 → ATCCWI0487
+ * Legacy renewal term suffixes group under one client-facing series base.
+ * Matches MSSQL import dedupe shapes (year, year-month, full inception date).
+ * Example: ATCCWI0487-2024-06-15 → ATCCWI0487
  */
 export function normalizeLegacySeriesBase(policyNumber: string): string {
   let trimmed = policyNumber.trim().toUpperCase();
-  const legacySuffix = /^ATCCWI\d+-(?:19|20)\d{2}$/;
-  if (legacySuffix.test(trimmed)) {
-    trimmed = trimmed.replace(/-(?:19|20)\d{2}$/, "");
+  const legacySuffixes = [
+    /^ATCCWI\d+-(?:19|20)\d{2}-\d{2}-\d{2}$/,
+    /^ATCCWI\d+-(?:19|20)\d{2}-\d{2}$/,
+    /^ATCCWI\d+-(?:19|20)\d{2}$/,
+  ] as const;
+  for (const pattern of legacySuffixes) {
+    if (!pattern.test(trimmed)) continue;
+    trimmed = trimmed.replace(/-(?:19|20)\d{2}(?:-\d{2}){0,2}$/, "");
+    break;
   }
   return composePolicyNumber(trimmed);
 }

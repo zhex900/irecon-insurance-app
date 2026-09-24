@@ -2,6 +2,10 @@ import { addMonths } from "date-fns";
 import type { z } from "zod";
 
 import {
+  isPolicyNumberConflict,
+  isSeriesNumberConflict,
+} from "~/lib/db/postgres-unique-violation";
+import {
   type Policy,
   POLICY_MESSAGE_NOTE_TYPE_ID,
   type PremiumBreakdown,
@@ -13,11 +17,16 @@ import {
   normalizeCustomWordings,
 } from "~/lib/policies/custom-wordings";
 import {
-  resolveSeriesNumberForSave,
   SERIES_NUMBER_TAKEN_MESSAGE,
   validateSeriesNumberInput,
 } from "~/lib/policies/policy-number";
 import { derivePolicyEndDate } from "~/lib/policies/policy-period";
+import {
+  effectivePolicyCategoryId,
+  isRenewalPolicyCategory,
+  RENEWAL_SERIES_IMMUTABLE_MESSAGE,
+  resolveSeriesNumberFromForm,
+} from "~/lib/policies/policy-series";
 import {
   formatTakenStatusBlockMessage,
   getTakenStatusErrors,
@@ -55,35 +64,6 @@ export {
 type DraftValues = z.infer<typeof carPolicyDraftSchema>;
 
 export class PolicySaveError extends ValidationError {}
-
-/** Postgres unique_violation (23505) on the case-insensitive policy number index. */
-function isPolicyNumberConflict(error: unknown): boolean {
-  if (typeof error !== "object" || error === null) return false;
-  const { code, constraint_name, message } = error as {
-    code?: unknown;
-    constraint_name?: unknown;
-    message?: unknown;
-  };
-  if (code !== "23505") return false;
-  return (
-    String(constraint_name ?? "").includes("policy_number") ||
-    String(message ?? "").includes("policy_policy_number_uidx")
-  );
-}
-
-function isSeriesNumberConflict(error: unknown): boolean {
-  if (typeof error !== "object" || error === null) return false;
-  const { code, constraint_name, message } = error as {
-    code?: unknown;
-    constraint_name?: unknown;
-    message?: unknown;
-  };
-  if (code !== "23505") return false;
-  return (
-    String(constraint_name ?? "").includes("series_number") ||
-    String(message ?? "").includes("policy_series_number_uidx")
-  );
-}
 
 const RENEWAL_DRAFT_MAX_ATTEMPTS = 25;
 
@@ -126,6 +106,12 @@ export async function assertSeriesNumberAvailable(
   next: Policy,
   existing: Policy,
 ) {
+  if (
+    isRenewalPolicyCategory(next.policyCategoryId) &&
+    next.seriesNumber !== existing.seriesNumber
+  ) {
+    throw new PolicySaveError(RENEWAL_SERIES_IMMUTABLE_MESSAGE);
+  }
   if (next.seriesNumber === existing.seriesNumber) return;
   const validated = validateSeriesNumberInput(next.seriesNumber);
   if (!validated.ok) throw new PolicySaveError(validated.message);
@@ -448,10 +434,16 @@ function applyFormValues(
     ...existing,
     policyCategoryId: values.policyCategoryId ?? existing.policyCategoryId,
     policyStatusId: values.policyStatusId ?? existing.policyStatusId,
-    seriesNumber: resolveSeriesNumberForSave(
+    seriesNumber: resolveSeriesNumberFromForm(
       existing.seriesNumber,
       values.policyNumber,
-      isTerminalStatus(existing.policyStatusId),
+      {
+        policyCategoryId: effectivePolicyCategoryId(
+          values.policyCategoryId,
+          existing.policyCategoryId,
+        ),
+        terminalLocked: isTerminalStatus(existing.policyStatusId),
+      },
     ),
     postcode: values.postcode ?? existing.postcode,
     stateId: values.stateId ?? existing.stateId,

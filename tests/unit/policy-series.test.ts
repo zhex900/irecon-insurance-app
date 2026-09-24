@@ -7,6 +7,14 @@ import {
   validateSeriesNumberInput,
 } from "~/lib/policies/policy-number";
 import {
+  POLICY_CATEGORY_RENEWAL_ID,
+  resolveSeriesNumberFromForm,
+} from "~/lib/policies/policy-series";
+import {
+  createPolicyDraft,
+  getPolicy,
+} from "~/lib/services/policy/data.service";
+import {
   clonePolicy,
   renewPolicy,
 } from "~/lib/services/policy/orchestration.service";
@@ -23,11 +31,6 @@ vi.mock("~/lib/services/price/premium.service", () => ({
   createMessageNote: vi.fn(),
   mergeReferralNotes: vi.fn(),
 }));
-
-import {
-  createPolicyDraft,
-  getPolicy,
-} from "~/lib/services/policy/data.service";
 
 const basePolicy = {
   policyId: "11111111-1111-1111-1111-111111111111",
@@ -87,6 +90,13 @@ describe("normalizeLegacySeriesBase", () => {
   it("leaves standard numbers unchanged", () => {
     expect(normalizeLegacySeriesBase("ATCCWI0487")).toBe("ATCCWI0487");
   });
+
+  it("strips year-month and full-date legacy suffixes", () => {
+    expect(normalizeLegacySeriesBase("ATCCWI0487-2024-06")).toBe("ATCCWI0487");
+    expect(normalizeLegacySeriesBase("ATCCWI0487-2024-06-15")).toBe(
+      "ATCCWI0487",
+    );
+  });
 });
 
 describe("validateSeriesNumberInput", () => {
@@ -96,6 +106,26 @@ describe("validateSeriesNumberInput", () => {
     if (result.ok) {
       expect(result.seriesNumber).toBe("ATCCWI487");
     }
+  });
+});
+
+describe("resolveSeriesNumberFromForm", () => {
+  it("keeps existing series for renewal category", () => {
+    expect(
+      resolveSeriesNumberFromForm("ATCCWI0487", "999", {
+        policyCategoryId: POLICY_CATEGORY_RENEWAL_ID,
+        terminalLocked: false,
+      }),
+    ).toBe("ATCCWI0487");
+  });
+
+  it("applies submitted suffix for non-renewal", () => {
+    expect(
+      resolveSeriesNumberFromForm("ATCCWI0487", "999", {
+        policyCategoryId: 1,
+        terminalLocked: false,
+      }),
+    ).toBe("ATCCWI999");
   });
 });
 

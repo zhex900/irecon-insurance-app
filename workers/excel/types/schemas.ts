@@ -77,6 +77,7 @@ const policyCarSchema = z.object({
 const policySchema = z.object({
   policyId: z.string().min(1).max(100),
   policyNumber: z.string().max(100),
+  seriesNumber: z.string().max(100).optional(),
   postcode: z.string().max(20).optional(),
   stateId: z.number(),
   dateStart: z.string().max(40).optional(),
