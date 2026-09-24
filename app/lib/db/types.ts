@@ -163,6 +163,7 @@ export type CarExcesses = {
 
 export type PolicySummary = {
   policyId: string;
+  /** Client-facing series number (list/search display). */
   policyNumber: string;
   insuredName: string;
   clientName: string;
@@ -255,7 +256,13 @@ export type PolicyDocument = {
 export type Policy = {
   policyId: string;
   clientId: string;
+  /** Internal unique term reference — not shown in broker UI. */
   policyNumber: string;
+  policySeriesId: string;
+  /** Client-facing number (from policy_series); use in UI, PDF, and email. */
+  seriesNumber: string;
+  /** Prior term when created by renew or clone. */
+  copiedFromPolicyId?: string | null;
   policyCategoryId: number;
   policyStatusId: number;
   postcode: string;

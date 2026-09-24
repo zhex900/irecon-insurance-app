@@ -43,6 +43,7 @@ import {
   parsePositiveInteger,
   parseUuid,
 } from "~/lib/http/route-input";
+import { policyDisplayNumber } from "~/lib/policies/policy-display";
 import { trackUsage } from "~/lib/observability/metrics.server";
 import { referenceData } from "~/lib/reference-data";
 import { writeAuditLog } from "~/lib/services/audit/service";
@@ -72,7 +73,9 @@ import {
 import type { Route } from "./+types/$policyId";
 
 export function meta({ loaderData }: Route.MetaArgs) {
-  return [{ title: pageTitle(`${loaderData.policy.policyNumber}`) }];
+  return [
+    { title: pageTitle(`${policyDisplayNumber(loaderData.policy)}`) },
+  ];
 }
 
 export async function loader({ params, request }: Route.LoaderArgs) {
@@ -133,18 +136,18 @@ export async function action({ request, params }: Route.ActionArgs) {
       action: "policy.clone",
       entityType: "policy",
       entityId: cloned.policyId,
-      summary: `Cloned policy ${source.policyNumber} → ${cloned.policyNumber}`,
+      summary: `Cloned policy ${policyDisplayNumber(source)} → ${policyDisplayNumber(cloned)}`,
       metadata: {
         sourcePolicyId: policyId,
-        sourcePolicyNumber: source.policyNumber,
-        policyNumber: cloned.policyNumber,
+        sourcePolicyNumber: policyDisplayNumber(source),
+        policyNumber: policyDisplayNumber(cloned),
       },
       request,
     });
     return redirect(
       withSuccessToast(
         `/policies/${cloned.policyId}?cloned=1`,
-        `Policy cloned · ${cloned.policyNumber}. You are editing the new copy.`,
+        `Policy cloned · ${policyDisplayNumber(cloned)}. You are editing the new copy.`,
       ),
     );
   }
@@ -162,18 +165,18 @@ export async function action({ request, params }: Route.ActionArgs) {
       action: "policy.renew",
       entityType: "policy",
       entityId: renewed.policyId,
-      summary: `Renewed policy ${source.policyNumber} → ${renewed.policyNumber}`,
+      summary: `Renewed policy ${policyDisplayNumber(source)} → ${policyDisplayNumber(renewed)}`,
       metadata: {
         sourcePolicyId: policyId,
-        sourcePolicyNumber: source.policyNumber,
-        policyNumber: renewed.policyNumber,
+        sourcePolicyNumber: policyDisplayNumber(source),
+        policyNumber: policyDisplayNumber(renewed),
       },
       request,
     });
     return redirect(
       withSuccessToast(
         `/policies/${renewed.policyId}?renewed=1`,
-        `Policy renewed · ${renewed.policyNumber}. You are editing the new renewal.`,
+        `Policy renewed · ${policyDisplayNumber(renewed)}. You are editing the new renewal.`,
       ),
     );
   }
@@ -225,8 +228,8 @@ export async function action({ request, params }: Route.ActionArgs) {
         action: "policy.note_add",
         entityType: "policy",
         entityId: policyId,
-        summary: `Added note on ${policy.policyNumber}`,
-        metadata: { policyNumber: policy.policyNumber },
+        summary: `Added note on ${policyDisplayNumber(policy)}`,
+        metadata: { policyNumber: policyDisplayNumber(policy) },
         request,
       });
       return {
@@ -235,7 +238,7 @@ export async function action({ request, params }: Route.ActionArgs) {
         noteAuthors: await resolveNoteAuthors(
           (policy.notes ?? []).map((note) => note.createdBy),
         ),
-        message: `Note saved on ${policy.policyNumber}`,
+        message: `Note saved on ${policyDisplayNumber(policy)}`,
       };
     } catch (error) {
       return {
@@ -260,8 +263,8 @@ export async function action({ request, params }: Route.ActionArgs) {
         action: "policy.note_update",
         entityType: "policy",
         entityId: policyId,
-        summary: `Updated note on ${policy.policyNumber}`,
-        metadata: { policyNumber: policy.policyNumber, noteId },
+        summary: `Updated note on ${policyDisplayNumber(policy)}`,
+        metadata: { policyNumber: policyDisplayNumber(policy), noteId },
         request,
       });
       return {
@@ -270,7 +273,7 @@ export async function action({ request, params }: Route.ActionArgs) {
         noteAuthors: await resolveNoteAuthors(
           (policy.notes ?? []).map((note) => note.createdBy),
         ),
-        message: `Note updated on ${policy.policyNumber}`,
+        message: `Note updated on ${policyDisplayNumber(policy)}`,
       };
     } catch (error) {
       return {
@@ -368,11 +371,11 @@ export async function action({ request, params }: Route.ActionArgs) {
       action: "policy.status_change",
       entityType: "policy",
       entityId: policyId,
-      summary: `Changed status on ${before?.policyNumber ?? policyId}: ${before?.policyStatusId} → ${parsed.data.policyStatusId}`,
+      summary: `Changed status on ${before ? policyDisplayNumber(before) : policyId}: ${before?.policyStatusId} → ${parsed.data.policyStatusId}`,
       metadata: {
         fromStatusId: before?.policyStatusId,
         toStatusId: parsed.data.policyStatusId,
-        policyNumber: before?.policyNumber,
+        policyNumber: before ? policyDisplayNumber(before) : undefined,
       },
       request,
     });
@@ -387,8 +390,10 @@ export async function action({ request, params }: Route.ActionArgs) {
       action: "policy.save",
       entityType: "policy",
       entityId: policyId,
-      summary: `Saved policy ${before?.policyNumber ?? policyId}`,
-      metadata: { policyNumber: before?.policyNumber },
+      summary: `Saved policy ${before ? policyDisplayNumber(before) : policyId}`,
+      metadata: {
+        policyNumber: before ? policyDisplayNumber(before) : undefined,
+      },
       request,
     });
   }
@@ -398,8 +403,8 @@ export async function action({ request, params }: Route.ActionArgs) {
     intent: "save" as const,
     policy: saved,
     message: statusChanged
-      ? `Policy ${saved.policyNumber} status saved`
-      : `Policy ${saved.policyNumber} saved`,
+      ? `Policy ${policyDisplayNumber(saved)} status saved`
+      : `Policy ${policyDisplayNumber(saved)} saved`,
   };
 }
 
@@ -596,7 +601,7 @@ export default function PolicyDetailRoute({
         policies={[
           {
             policyId: policy.policyId,
-            policyNumber: policy.policyNumber,
+            policyNumber: policyDisplayNumber(policy),
           },
         ]}
         open={deleteOpen}

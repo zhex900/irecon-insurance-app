@@ -21,6 +21,7 @@ import {
   client,
   policy,
   policyCar,
+  policySeries,
 } from "~/lib/db/schema";
 import { type PageResult, toPageResult } from "~/lib/pagination";
 import { getReferenceData } from "~/lib/services/reference.service";
@@ -118,6 +119,7 @@ export async function listReportPoliciesPage(
       or(
         ilike(client.name, pattern),
         ilike(client.tradingName, pattern),
+        ilike(policySeries.seriesNumber, pattern),
         ilike(policy.policyNumber, pattern),
         ilike(authorisedRepresentative.fullName, pattern),
         ilike(authorisedRepresentative.email, pattern),
@@ -131,6 +133,7 @@ export async function listReportPoliciesPage(
     .select({ count: sql<number>`count(*)::int` })
     .from(policy)
     .innerJoin(policyCar, eq(policy.policyId, policyCar.policyId))
+    .innerJoin(policySeries, eq(policy.policySeriesId, policySeries.policySeriesId))
     .leftJoin(client, eq(policy.clientId, client.clientId))
     .leftJoin(
       authorisedRepresentative,
@@ -144,7 +147,7 @@ export async function listReportPoliciesPage(
   const rows = await db
     .select({
       policyId: policy.policyId,
-      policyNumber: policy.policyNumber,
+      policyNumber: policySeries.seriesNumber,
       clientId: policy.clientId,
       clientName: client.name,
       arName: authorisedRepresentative.fullName,
@@ -158,6 +161,7 @@ export async function listReportPoliciesPage(
     })
     .from(policy)
     .innerJoin(policyCar, eq(policy.policyId, policyCar.policyId))
+    .innerJoin(policySeries, eq(policy.policySeriesId, policySeries.policySeriesId))
     .leftJoin(client, eq(policy.clientId, client.clientId))
     .leftJoin(
       authorisedRepresentative,

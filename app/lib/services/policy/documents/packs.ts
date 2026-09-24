@@ -1,4 +1,5 @@
 import type { Policy, PolicyDocument } from "~/lib/db/types";
+import { policyDisplayNumber } from "~/lib/policies/policy-display";
 import { formatDocumentLabel } from "~/lib/documents/document-label";
 import {
   libraryDocumentMatchesPolicy,
@@ -116,11 +117,11 @@ export function buildReviewDocumentPack(
     return makeDoc({
       policyId: policy.policyId,
       name,
-      filename: `${safeKey}_${policy.policyNumber}_${amendment}_${stamp}.pdf`,
+      filename: `${safeKey}_${policyDisplayNumber(policy)}_${amendment}_${stamp}.pdf`,
       generationKey,
       content: [
         template.title || template.key,
-        `Policy number: ${policy.policyNumber}`,
+        `Policy number: ${policyDisplayNumber(policy)}`,
         `Insured: ${policy.car.insuredName}`,
       ].join("\n"),
       generatedBy,
@@ -171,7 +172,7 @@ export function resolveLibraryAttachments(
         libraryDocumentId: doc.libraryDocumentId,
         content: [
           doc.displayName,
-          `Attached for policy ${policy.policyNumber}.`,
+          `Attached for policy ${policyDisplayNumber(policy)}.`,
         ].join("\n"),
       }));
   }
@@ -183,7 +184,7 @@ export function resolveLibraryAttachments(
       filename: "ATC Stamp duty Exemption.pdf",
       content: [
         "ATC Stamp Duty Exemption",
-        `Policy number: ${policy.policyNumber}`,
+        `Policy number: ${policyDisplayNumber(policy)}`,
         "Applicable because the risk state is New South Wales.",
       ].join("\n"),
     });
@@ -194,7 +195,7 @@ export function resolveLibraryAttachments(
       filename: "POLICY COMPARISON JUNE 2024.pdf",
       content: [
         "Policy Comparison — June 2024",
-        `Attached for policy ${policy.policyNumber}.`,
+        `Attached for policy ${policyDisplayNumber(policy)}.`,
       ].join("\n"),
     },
     {
@@ -202,7 +203,7 @@ export function resolveLibraryAttachments(
       filename: "IA Annual CAR TPL Wording (eff Jan 2026) - Sample.pdf",
       content: [
         "IA Annual CAR TPL Wording (effective January 2026)",
-        `Wording attached for policy ${policy.policyNumber}.`,
+        `Wording attached for policy ${policyDisplayNumber(policy)}.`,
       ].join("\n"),
     },
   );
@@ -232,11 +233,11 @@ export function buildAdjustmentDocumentPack(
     return makeDoc({
       policyId: policy.policyId,
       name,
-      filename: `${safeKey}_${policy.policyNumber}_${amendment}_${stamp}.pdf`,
+      filename: `${safeKey}_${policyDisplayNumber(policy)}_${amendment}_${stamp}.pdf`,
       generationKey,
       content: [
         template.title || template.key,
-        `Policy number: ${policy.policyNumber}`,
+        `Policy number: ${policyDisplayNumber(policy)}`,
         `Insured: ${policy.car.insuredName}`,
       ].join("\n"),
       generatedBy,

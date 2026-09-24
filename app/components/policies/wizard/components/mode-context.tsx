@@ -65,6 +65,7 @@ export function PolicyPhaseProvider({
 }) {
   const { control } = useFormContext<CarPolicyFormValues>();
   const formStatusId = Number(useWatch({ control, name: "policyStatusId" }));
+  const formCategoryId = Number(useWatch({ control, name: "policyCategoryId" }));
   const [isNew, setIsNew] = useState(initialIsNew);
   const dismissNewPolicy = useCallback(() => setIsNew(false), []);
 
@@ -73,13 +74,15 @@ export function PolicyPhaseProvider({
     const canEdit = isEditablePhase(phase);
     const isSavedTerminal = isTerminalStatus(policy.policyStatusId);
     const isFormTerminal = isTerminalStatus(formStatusId);
+    const policyCategoryId = formCategoryId || policy.policyCategoryId;
+    const isRenewal = policyCategoryId === 2;
 
     return {
       phase,
       canEdit,
       canShowSubmitButton: canEdit,
       canChangeStatus: phase === "pending",
-      policyNumberEditable: !isSavedTerminal,
+      policyNumberEditable: !isSavedTerminal && !isRenewal,
       premiumPinned: phase !== "new",
       isNew,
       dismissNewPolicy,
@@ -87,7 +90,14 @@ export function PolicyPhaseProvider({
       isSavedTerminal,
       isFormTerminal,
     };
-  }, [policy, isNew, dismissNewPolicy, freshSteps, formStatusId]);
+  }, [
+    policy,
+    isNew,
+    dismissNewPolicy,
+    freshSteps,
+    formStatusId,
+    formCategoryId,
+  ]);
 
   return (
     <PolicyPhaseContext.Provider value={value}>

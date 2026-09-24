@@ -5,7 +5,7 @@ import {
   flatCustomWordings,
   normalizeCustomWordings,
 } from "~/lib/policies/custom-wordings";
-import { resolvePolicyNumberForSave } from "~/lib/policies/policy-number";
+import { resolveSeriesNumberForSave } from "~/lib/policies/policy-number";
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
 import {
   carPolicyDraftSchema,
@@ -42,8 +42,8 @@ export function mergeDraftIntoPolicy(
     policyStatusId: keepSubmitted
       ? existing.policyStatusId
       : POLICY_STATUS.Pending,
-    policyNumber: resolvePolicyNumberForSave(
-      existing.policyNumber,
+    seriesNumber: resolveSeriesNumberForSave(
+      existing.seriesNumber,
       values.policyNumber,
       isTerminalStatus(existing.policyStatusId),
     ),

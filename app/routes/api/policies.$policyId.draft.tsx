@@ -2,13 +2,13 @@ import { requireAuth } from "~/lib/auth/session/server.server";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
 import { parseUuid } from "~/lib/http/route-input";
 import {
-  POLICY_NUMBER_TAKEN_MESSAGE,
-  validatePolicyNumberInput,
+  SERIES_NUMBER_TAKEN_MESSAGE,
+  validateSeriesNumberInput,
 } from "~/lib/policies/policy-number";
 import {
   deletePolicyDraft,
   getPolicy,
-  isPolicyNumberTaken,
+  isSeriesNumberTaken,
   savePolicy,
 } from "~/lib/services/policy/data.service";
 import { mergeDraftIntoPolicy } from "~/lib/services/policy/draft-merge";
@@ -80,8 +80,8 @@ export async function action({ request, params }: Route.ActionArgs) {
   }
 
   const merged = mergeDraftIntoPolicy(existing, parsed.data);
-  if (merged.policyNumber !== existing.policyNumber) {
-    const validated = validatePolicyNumberInput(merged.policyNumber);
+  if (merged.seriesNumber !== existing.seriesNumber) {
+    const validated = validateSeriesNumberInput(merged.seriesNumber);
     if (!validated.ok) {
       return Response.json({
         ok: false,
@@ -89,14 +89,19 @@ export async function action({ request, params }: Route.ActionArgs) {
         formError: validated.message,
       });
     }
-    if (await isPolicyNumberTaken(validated.policyNumber, policyId)) {
+    if (
+      await isSeriesNumberTaken(
+        validated.seriesNumber,
+        existing.policySeriesId,
+      )
+    ) {
       return Response.json({
         ok: false,
-        errors: { policyNumber: [POLICY_NUMBER_TAKEN_MESSAGE] },
-        formError: POLICY_NUMBER_TAKEN_MESSAGE,
+        errors: { policyNumber: [SERIES_NUMBER_TAKEN_MESSAGE] },
+        formError: SERIES_NUMBER_TAKEN_MESSAGE,
       });
     }
-    merged.policyNumber = validated.policyNumber;
+    merged.seriesNumber = validated.seriesNumber;
   }
 
   try {

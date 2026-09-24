@@ -11,6 +11,7 @@ import { publicErrorMessage } from "~/lib/http/public-error.server";
 import { parseUuid } from "~/lib/http/route-input";
 import { logger } from "~/lib/observability/logger.server";
 import { PdfRenderServiceError } from "~/lib/pdf/pdf-worker.server";
+import { policyDisplayNumber } from "~/lib/policies/policy-display";
 import { writeAuditLog } from "~/lib/services/audit/service";
 import { sendPolicyDocumentsEmail } from "~/lib/services/email/send-policy-documents.server";
 import { getPolicy } from "~/lib/services/policy/data.service";
@@ -115,7 +116,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
       action: "policy.documents_email",
       entityType: "policy",
       entityId: policyId,
-      summary: `Emailed ${attachmentCount} document${attachmentCount === 1 ? "" : "s"} for ${policy.policyNumber} to ${payload.recipientType} (${payload.to})`,
+      summary: `Emailed ${attachmentCount} document${attachmentCount === 1 ? "" : "s"} for ${policyDisplayNumber(policy)} to ${payload.recipientType} (${payload.to})`,
       metadata: {
         recipientType: payload.recipientType,
         to: payload.to,

@@ -106,6 +106,19 @@ export const client = pgTable("client", {
   createdBy: varchar("created_by", { length: 255 }).notNull().default(""),
 });
 
+/** Stable client-facing number shared across renewal terms in a chain. */
+export const policySeries = pgTable("policy_series", {
+  policySeriesId: uuid("policy_series_id").primaryKey().defaultRandom(),
+  seriesNumber: varchar("series_number", { length: 64 }).notNull(),
+  clientId: uuid("client_id")
+    .notNull()
+    .references(() => client.clientId),
+  createdWhen: timestamp("created_when", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  createdBy: varchar("created_by", { length: 255 }).notNull().default(""),
+});
+
 export const policy = pgTable("policy", {
   policyId: uuid("policy_id").primaryKey().defaultRandom(),
   clientId: uuid("client_id").notNull(),
@@ -114,8 +127,11 @@ export const policy = pgTable("policy", {
   postcode: varchar("postcode", { length: 16 }).notNull().default(""),
   stateId: integer("state_id").notNull().default(2),
   policyCategoryId: integer("policy_category_id").notNull().default(1),
-  /** Human-facing unique number (ATCCWI…); routes use policyId UUID. */
+  /** Internal unique term reference (ATCCWI… from seq); not shown to brokers. */
   policyNumber: varchar("policy_number", { length: 64 }).notNull(),
+  policySeriesId: uuid("policy_series_id")
+    .notNull()
+    .references(() => policySeries.policySeriesId),
   dateStart: timestamp("date_start", { withTimezone: true }).notNull(),
   dateEnd: timestamp("date_end", { withTimezone: true }).notNull(),
   insurerCode: varchar("insurer_code", { length: 32 }).notNull().default("ATC"),

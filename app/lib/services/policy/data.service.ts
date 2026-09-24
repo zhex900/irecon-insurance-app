@@ -18,12 +18,14 @@ import {
   policyCarSelectedWording,
   policyDocument,
   policyNote,
+  policySeries,
 } from "~/lib/db/schema";
 import type { Policy, PolicySummary } from "~/lib/db/types";
 import { trackUsage } from "~/lib/observability/metrics.server";
 import type { PdfWorkerBinding } from "~/lib/pdf/pdf-worker.server";
 import { normalizeExcesses } from "~/lib/policies/excesses";
 import { createInformationalNote } from "~/lib/policies/policy-notes";
+import { policyDisplayNumber } from "~/lib/policies/policy-display";
 import { formatPolicyNumberFromSeq } from "~/lib/policies/policy-number";
 import { derivePolicyEndDate } from "~/lib/policies/policy-period";
 import { normalizeSubLimits } from "~/lib/policies/sub-limits";
@@ -77,6 +79,58 @@ export async function allocatePolicyNumber(policyId: string): Promise<string> {
  * True when another policy already holds this number (case-insensitive).
  * `excludePolicyId` keeps a policy from colliding with itself.
  */
+export async function isSeriesNumberTaken(
+  seriesNumber: string,
+  excludePolicySeriesId?: string,
+): Promise<boolean> {
+  const trimmed = seriesNumber.trim();
+  if (!trimmed) return false;
+
+  const db = getDb();
+  const conditions = [sql`lower(${policySeries.seriesNumber}) = lower(${trimmed})`];
+  if (excludePolicySeriesId) {
+    conditions.push(ne(policySeries.policySeriesId, excludePolicySeriesId));
+  }
+  const rows = await db
+    .select({ policySeriesId: policySeries.policySeriesId })
+    .from(policySeries)
+    .where(and(...conditions))
+    .limit(1);
+  return rows.length > 0;
+}
+
+export async function createPolicySeriesRow(
+  clientId: string,
+  seriesNumber: string,
+  createdBy: string,
+): Promise<{ policySeriesId: string; seriesNumber: string }> {
+  const db = getDb();
+  const [row] = await db
+    .insert(policySeries)
+    .values({
+      clientId,
+      seriesNumber,
+      createdBy,
+    })
+    .returning({
+      policySeriesId: policySeries.policySeriesId,
+      seriesNumber: policySeries.seriesNumber,
+    });
+  if (!row) throw new Error("Failed to create policy series");
+  return row;
+}
+
+export async function updatePolicySeriesNumber(
+  policySeriesId: string,
+  seriesNumber: string,
+): Promise<void> {
+  const db = getDb();
+  await db
+    .update(policySeries)
+    .set({ seriesNumber })
+    .where(eq(policySeries.policySeriesId, policySeriesId));
+}
+
 export async function isPolicyNumberTaken(
   policyNumber: string,
   excludePolicyId: string,
@@ -133,12 +187,13 @@ export async function deletePolicies(
   const rows = await db
     .select({
       policyId: policy.policyId,
-      policyNumber: policy.policyNumber,
+      policyNumber: policySeries.seriesNumber,
       clientId: policy.clientId,
       policyStatusId: policy.policyStatusId,
       isDraft: policy.isDraft,
     })
     .from(policy)
+    .innerJoin(policySeries, eq(policy.policySeriesId, policySeries.policySeriesId))
     .where(inArray(policy.policyId, ids));
 
   if (rows.length !== ids.length) {
@@ -227,6 +282,7 @@ async function loadPolicyById(policyId: string): Promise<Policy | null> {
     .select()
     .from(policy)
     .innerJoin(policyCar, eq(policy.policyId, policyCar.policyId))
+    .innerJoin(policySeries, eq(policy.policySeriesId, policySeries.policySeriesId))
     .leftJoin(
       policyCarAdjustment,
       eq(policy.policyId, policyCarAdjustment.policyId),
@@ -242,6 +298,10 @@ async function loadPolicyById(policyId: string): Promise<Policy | null> {
       row.policy_car,
       row.policy_car_adjustment,
       children.get(policyId),
+      {
+        policySeriesId: row.policy_series.policySeriesId,
+        seriesNumber: row.policy_series.seriesNumber,
+      },
     ),
   );
 }
@@ -252,6 +312,7 @@ export async function listPolicies(clientId?: string) {
     .select()
     .from(policy)
     .innerJoin(policyCar, eq(policy.policyId, policyCar.policyId))
+    .innerJoin(policySeries, eq(policy.policySeriesId, policySeries.policySeriesId))
     .leftJoin(
       policyCarAdjustment,
       eq(policy.policyId, policyCarAdjustment.policyId),
@@ -270,6 +331,10 @@ export async function listPolicies(clientId?: string) {
         row.policy_car,
         row.policy_car_adjustment,
         childrenByPolicy.get(row.policy.policyId),
+        {
+          policySeriesId: row.policy_series.policySeriesId,
+          seriesNumber: row.policy_series.seriesNumber,
+        },
       ),
     ),
   );
@@ -287,7 +352,7 @@ export async function listPolicySummaries(
   const summaries = policies
     .map((item) => ({
       policyId: item.policyId,
-      policyNumber: item.policyNumber,
+      policyNumber: policyDisplayNumber(item),
       insuredName: item.car.insuredName,
       clientName: clientById.get(item.clientId) ?? "",
       policyStatusId: item.policyStatusId,
@@ -408,10 +473,24 @@ export async function savePolicy(
         policyStatusId: policy.policyStatusId,
         takenAt: policy.takenAt,
         takenBy: policy.takenBy,
+        policySeriesId: policy.policySeriesId,
+        seriesNumber: policySeries.seriesNumber,
       })
       .from(policy)
+      .innerJoin(policySeries, eq(policy.policySeriesId, policySeries.policySeriesId))
       .where(eq(policy.policyId, policyDoc.policyId))
       .limit(1);
+
+    if (
+      existing &&
+      policyDoc.seriesNumber.trim() &&
+      policyDoc.seriesNumber !== existing.seriesNumber
+    ) {
+      await tx
+        .update(policySeries)
+        .set({ seriesNumber: policyDoc.seriesNumber })
+        .where(eq(policySeries.policySeriesId, policyDoc.policySeriesId));
+    }
 
     let takenAt = existing?.takenAt ?? null;
     let takenBy = existing?.takenBy ?? null;
@@ -439,6 +518,8 @@ export async function savePolicy(
           stateId: policyValues.stateId,
           policyCategoryId: policyValues.policyCategoryId,
           policyNumber: policyValues.policyNumber,
+          policySeriesId: policyValues.policySeriesId,
+          copiedFromPolicyId: policyValues.copiedFromPolicyId,
           dateStart: policyValues.dateStart,
           dateEnd: policyValues.dateEnd,
           insurerCode: policyValues.insurerCode,
@@ -519,7 +600,25 @@ export async function createPolicyDraft(
   if (!existingClient) throw new Error("Client not found");
 
   const policyId = crypto.randomUUID();
-  const policyNumber = await allocatePolicyNumber(policyId);
+  const policyNumber =
+    partial.policyNumber ?? (await allocatePolicyNumber(policyId));
+
+  let policySeriesId = partial.policySeriesId;
+  let seriesNumber = partial.seriesNumber?.trim() ?? "";
+
+  if (!policySeriesId) {
+    seriesNumber = seriesNumber || policyNumber;
+    const seriesRow = await createPolicySeriesRow(
+      clientId,
+      seriesNumber,
+      createdBy,
+    );
+    policySeriesId = seriesRow.policySeriesId;
+    seriesNumber = seriesRow.seriesNumber;
+  } else if (!seriesNumber) {
+    throw new Error("Series number is required when reusing a policy series");
+  }
+
   const today = new Date();
   const dateStart = today.toISOString().slice(0, 10);
 
@@ -574,7 +673,10 @@ export async function createPolicyDraft(
     ...partial,
     policyId,
     clientId,
-    policyNumber: partial.policyNumber ?? policyNumber,
+    policyNumber,
+    policySeriesId: policySeriesId!,
+    seriesNumber,
+    copiedFromPolicyId: partial.copiedFromPolicyId ?? null,
     // Always seed a creation note unless the caller supplied notes (e.g. import).
     notes: partial.notes ?? [
       createInformationalNote(policyId, "Policy Created", createdBy),

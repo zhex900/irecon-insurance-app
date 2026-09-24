@@ -1,4 +1,5 @@
 import type { Policy } from "~/lib/db/types";
+import { policyDisplayNumber } from "~/lib/policies/policy-display";
 
 /** Stable hash of fields that affect Schedule / ROA PDF content. */
 export function reviewDocumentsFingerprint(policy: Policy): string {
@@ -6,7 +7,7 @@ export function reviewDocumentsFingerprint(policy: Policy): string {
   const car = policy.car;
   return [
     "review-documents-v2",
-    policy.policyNumber,
+    policyDisplayNumber(policy),
     policy.policyStatusId,
     policy.dateStart,
     policy.dateEnd,
@@ -59,7 +60,7 @@ export function adjustmentDocumentsFingerprint(policy: Policy): string {
   const adj = policy.car.adjustment;
   return [
     "adjustment",
-    policy.policyNumber,
+    policyDisplayNumber(policy),
     adj?.adjustedTurnover ?? "none",
     adj?.adjustedTotalPremium ?? "none",
     adj?.stampDutyExempt ? "exempt" : "liable",

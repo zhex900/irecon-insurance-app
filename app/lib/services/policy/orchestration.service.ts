@@ -13,10 +13,9 @@ import {
   normalizeCustomWordings,
 } from "~/lib/policies/custom-wordings";
 import {
-  incrementPolicyNumber,
-  POLICY_NUMBER_TAKEN_MESSAGE,
-  resolvePolicyNumberForSave,
-  validatePolicyNumberInput,
+  resolveSeriesNumberForSave,
+  SERIES_NUMBER_TAKEN_MESSAGE,
+  validateSeriesNumberInput,
 } from "~/lib/policies/policy-number";
 import { derivePolicyEndDate } from "~/lib/policies/policy-period";
 import {
@@ -31,7 +30,7 @@ import { toIsoDate } from "~/lib/search/date-range-filter";
 import {
   createPolicyDraft,
   getPolicy,
-  isPolicyNumberTaken,
+  isSeriesNumberTaken,
   savePolicy,
 } from "~/lib/services/policy/data.service";
 import {
@@ -57,8 +56,6 @@ type DraftValues = z.infer<typeof carPolicyDraftSchema>;
 
 export class PolicySaveError extends ValidationError {}
 
-const RENEWAL_NUMBER_MAX_ATTEMPTS = 25;
-
 /** Postgres unique_violation (23505) on the case-insensitive policy number index. */
 function isPolicyNumberConflict(error: unknown): boolean {
   if (typeof error !== "object" || error === null) return false;
@@ -74,50 +71,71 @@ function isPolicyNumberConflict(error: unknown): boolean {
   );
 }
 
+function isSeriesNumberConflict(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  const { code, constraint_name, message } = error as {
+    code?: unknown;
+    constraint_name?: unknown;
+    message?: unknown;
+  };
+  if (code !== "23505") return false;
+  return (
+    String(constraint_name ?? "").includes("series_number") ||
+    String(message ?? "").includes("policy_series_number_uidx")
+  );
+}
+
+const RENEWAL_DRAFT_MAX_ATTEMPTS = 25;
+
 /**
- * Allocate a renewal policy number and create the draft in one retryable step.
- * The pre-check narrows the search; the insert is the source of truth, so a
- * concurrent renewal that wins the same candidate is caught here and retried
- * against the next number instead of racing on a read-then-insert check.
+ * Create a renewal draft: same series, new internal term number, chain link.
  */
 async function createRenewalDraft(
   source: Policy,
   createdBy: string,
-  partial: Omit<Partial<Policy>, "policyNumber">,
+  partial: Omit<
+    Partial<Policy>,
+    "policyNumber" | "policySeriesId" | "seriesNumber"
+  >,
 ): Promise<Policy> {
-  let candidate = incrementPolicyNumber(source.policyNumber);
-  for (let attempt = 0; attempt < RENEWAL_NUMBER_MAX_ATTEMPTS; attempt++) {
-    if (await isPolicyNumberTaken(candidate, source.policyId)) {
-      candidate = incrementPolicyNumber(candidate);
-      continue;
-    }
+  for (let attempt = 0; attempt < RENEWAL_DRAFT_MAX_ATTEMPTS; attempt++) {
     try {
       return await createPolicyDraft(
         source.clientId,
-        { ...partial, policyNumber: candidate },
+        {
+          ...partial,
+          policySeriesId: source.policySeriesId,
+          seriesNumber: source.seriesNumber,
+          copiedFromPolicyId: source.policyId,
+        },
         createdBy,
       );
     } catch (error) {
-      if (!isPolicyNumberConflict(error)) throw error;
-      candidate = incrementPolicyNumber(candidate);
+      if (!isPolicyNumberConflict(error) && !isSeriesNumberConflict(error)) {
+        throw error;
+      }
     }
   }
-  throw new PolicySaveError("Could not allocate a unique renewal number.");
+  throw new PolicySaveError("Could not allocate a unique renewal term.");
 }
 
 /**
- * Validate shape + uniqueness when a save changes the policy number.
- * No-op when the number is unchanged.
+ * Validate shape + uniqueness when a save changes the client-facing series number.
  */
-export async function assertPolicyNumberAvailable(
+export async function assertSeriesNumberAvailable(
   next: Policy,
   existing: Policy,
 ) {
-  if (next.policyNumber === existing.policyNumber) return;
-  const validated = validatePolicyNumberInput(next.policyNumber);
+  if (next.seriesNumber === existing.seriesNumber) return;
+  const validated = validateSeriesNumberInput(next.seriesNumber);
   if (!validated.ok) throw new PolicySaveError(validated.message);
-  if (await isPolicyNumberTaken(validated.policyNumber, existing.policyId)) {
-    throw new PolicySaveError(POLICY_NUMBER_TAKEN_MESSAGE);
+  if (
+    await isSeriesNumberTaken(
+      validated.seriesNumber,
+      existing.policySeriesId,
+    )
+  ) {
+    throw new PolicySaveError(SERIES_NUMBER_TAKEN_MESSAGE);
   }
 }
 
@@ -127,7 +145,6 @@ export async function savePolicyDraft(policyId: string, values: DraftValues) {
   if (isTerminalStatus(existing.policyStatusId)) {
     throw new PolicySaveError("This policy status cannot be changed.");
   }
-  // Preserve submitted policies — blur-save must not re-draft them.
   const keepSubmitted = !existing.isDraft;
   const premiumOverride =
     values.premium && typeof values.premium === "object"
@@ -150,7 +167,7 @@ export async function savePolicyDraft(policyId: string, values: DraftValues) {
       premiumManualKeys: values.premiumManualKeys,
     },
   );
-  await assertPolicyNumberAvailable(policy, existing);
+  await assertSeriesNumberAvailable(policy, existing);
   return savePolicy({ ...policy, isDraft: existing.isDraft ?? true });
 }
 
@@ -174,7 +191,6 @@ export async function upsertPolicyFromForm(
     const { premium: calculatedPremium, rating } =
       await calculatePremiumForPolicy(values);
 
-    // Prefer broker manual edits when provided; otherwise use the calculator.
     const premium: PremiumBreakdown =
       values.premium && typeof values.premium === "object"
         ? {
@@ -183,7 +199,6 @@ export async function upsertPolicyFromForm(
           }
         : calculatedPremium;
 
-    // Referral DH / ES use Limits of Liability fields, not premium lines.
     const referralReasons = buildReferralReasons(
       values,
       rating,
@@ -213,7 +228,7 @@ export async function upsertPolicyFromForm(
       ),
     });
 
-    await assertPolicyNumberAvailable(policy, existing);
+    await assertSeriesNumberAvailable(policy, existing);
     return savePolicy({ ...policy, isDraft: false }, { actor: createdBy });
   });
 }
@@ -228,13 +243,11 @@ export async function applyPremiumCalculation(
   const { premium, rating, referralReasons } =
     await calculatePremiumForPolicy(values);
 
-  // Preserve submitted state — recalculate must not flip isDraft back to true.
   const policy = applyFormValues(existing, values, {
     draft: existing.isDraft ?? true,
     premium,
     rating,
     referralReasons,
-    // Recalculate clears manual Premium Breakdown edits.
     premiumManualKeys: [],
     notes: mergeReferralNotes(
       existing.notes,
@@ -244,7 +257,7 @@ export async function applyPremiumCalculation(
     ),
   });
 
-  await assertPolicyNumberAvailable(policy, existing);
+  await assertSeriesNumberAvailable(policy, existing);
   return savePolicy(policy);
 }
 
@@ -298,7 +311,6 @@ export async function clonePolicy(sourcePolicyId: string, createdBy: string) {
   const source = await getPolicy(sourcePolicyId);
   if (!source) throw new NotFoundError("Policy not found");
 
-  // Copy risk fields only — never carry terminal/pricing progress into the draft.
   const car: Policy["car"] = {
     coverTypeId: source.car.coverTypeId,
     annualCoverTypeId: source.car.annualCoverTypeId ?? null,
@@ -347,6 +359,7 @@ export async function clonePolicy(sourcePolicyId: string, createdBy: string) {
       dateEnd: source.dateEnd,
       insurerCode: source.insurerCode,
       isDraft: true,
+      copiedFromPolicyId: source.policyId,
       car,
     },
     createdBy,
@@ -435,8 +448,8 @@ function applyFormValues(
     ...existing,
     policyCategoryId: values.policyCategoryId ?? existing.policyCategoryId,
     policyStatusId: values.policyStatusId ?? existing.policyStatusId,
-    policyNumber: resolvePolicyNumberForSave(
-      existing.policyNumber,
+    seriesNumber: resolveSeriesNumberForSave(
+      existing.seriesNumber,
       values.policyNumber,
       isTerminalStatus(existing.policyStatusId),
     ),
@@ -469,9 +482,6 @@ function applyFormValues(
       existingStructure:
         values.existingStructure ?? existing.car.existingStructure,
       displayHomes: values.displayHomes ?? existing.car.displayHomes,
-      // Premium lines come from the calculator / existing premium — not risk values.
-      // When extras.premium is present (recalculate), missing DH/ES means 0 so
-      // Reset Premium clears typed add-on lines instead of keeping the last edit.
       contractWorksExistingStructurePremium: extras.premium
         ? (extras.premium.contractWorksExistingStructurePremium ?? 0)
         : existing.car.contractWorksExistingStructurePremium,

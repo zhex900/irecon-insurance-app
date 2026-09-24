@@ -25,7 +25,7 @@ export function policyToFormValues(
     coverTypeId: policy.car.coverTypeId,
     annualCoverTypeId: policy.car.annualCoverTypeId ?? null,
     policyCategoryId: policy.policyCategoryId,
-    policyNumber: policy.policyNumber,
+    policyNumber: policy.seriesNumber,
     siteAddress: policy.car.siteAddress,
     estimatedTurnover: moneyOrEmpty(policy.car.estimatedTurnover),
     postcode: policy.postcode,

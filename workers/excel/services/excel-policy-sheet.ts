@@ -22,7 +22,12 @@ export function addPremiumExcelPolicySheet(
   inputs.getCell("A1").font = { bold: true, size: 14 };
 
   const inputRows: Array<[string, string | number, string]> = [
-    ["Policy number", policy.policyNumber, "text"],
+    [
+      "Policy number",
+      ("seriesNumber" in policy && policy.seriesNumber?.trim()) ||
+        policy.policyNumber,
+      "text",
+    ],
     ["Insured name", car.insuredName || "", "text"],
     ["Cover type", coverLabel, "text"],
     ["Certificate / start date", policy.dateStart || "", "text"],
