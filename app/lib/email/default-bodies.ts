@@ -328,6 +328,3 @@ export const INSURER_EMAIL_BODY_HTML = `
 ${ASCX_SIGNATURE}
 </div>
 `.trim();
-
-/** @deprecated Use BROKER_ANNUAL_BODY_HTML */
-export const BROKER_EMAIL_BODY_HTML = BROKER_ANNUAL_BODY_HTML;

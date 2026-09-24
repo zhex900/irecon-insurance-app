@@ -152,18 +152,6 @@ export function syncExcludedContracts2Periods(
   return text;
 }
 
-/** @deprecated Prefer syncExcludedContracts2Periods */
-export function syncExcludedContracts2ConstructionPeriod(
-  excludedContracts2: string,
-  maximumConstructionPeriod: number,
-): string {
-  return syncExcludedContracts2Periods(
-    excludedContracts2,
-    maximumConstructionPeriod,
-    12,
-  );
-}
-
 export function syncExcludedContractsPeriodsFromForm(
   getValues: UseFormGetValues<CarPolicyFormValues>,
   setValue: UseFormSetValue<CarPolicyFormValues>,
@@ -172,25 +160,6 @@ export function syncExcludedContractsPeriodsFromForm(
   const next = syncExcludedContracts2Periods(
     current,
     Number(getValues("maximumConstructionPeriod")),
-    Number(getValues("maximumMaintenancePeriod")),
-  );
-  if (next === current) return;
-  setValue("excludedContracts2", next, {
-    shouldDirty: true,
-    shouldValidate: false,
-  });
-}
-
-/** @deprecated Prefer syncExcludedContractsPeriodsFromForm */
-export function syncExcludedContractsConstructionPeriodFromMonths(
-  maximumConstructionPeriod: number,
-  getValues: UseFormGetValues<CarPolicyFormValues>,
-  setValue: UseFormSetValue<CarPolicyFormValues>,
-) {
-  const current = getValues("excludedContracts2") ?? "";
-  const next = syncExcludedContracts2Periods(
-    current,
-    maximumConstructionPeriod,
     Number(getValues("maximumMaintenancePeriod")),
   );
   if (next === current) return;

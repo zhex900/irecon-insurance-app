@@ -78,21 +78,6 @@ export function pricesDeleteHref(slug: PriceCatalogueSlug, id: number) {
   return `${pricesItemHref(slug, id)}?delete=1`;
 }
 
-/** @deprecated Prefer pricesItemHref / pricesEditHref / pricesDeleteHref */
-export function pricesViewHref(slug: PriceCatalogueSlug, id: number) {
-  return pricesItemHref(slug, id);
-}
-
-/** @deprecated Prefer pricesEditHref */
-export function pricesViewEditHref(slug: PriceCatalogueSlug, id: number) {
-  return pricesEditHref(slug, id);
-}
-
-/** @deprecated Prefer pricesDeleteHref */
-export function pricesViewDeleteHref(slug: PriceCatalogueSlug, id: number) {
-  return pricesDeleteHref(slug, id);
-}
-
 export function emptyCatalogue(): PriceCatalogueSnapshot {
   return {
     coverTypes: [],

@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildExcludedContracts2Activities,
-  syncExcludedContracts2ConstructionPeriod,
   syncExcludedContracts2Periods,
 } from "~/lib/policies/excluded-contracts";
 
@@ -16,7 +15,7 @@ describe("excluded contracts construction period wording", () => {
 
   it("syncs the construction bullet when maximum construction period changes", () => {
     const original = buildExcludedContracts2Activities(18, 12);
-    const updated = syncExcludedContracts2ConstructionPeriod(original, 12);
+    const updated = syncExcludedContracts2Periods(original, 12, 12);
     expect(updated).toContain(
       "With a construction period exceeding twelve (12) months",
     );
@@ -28,7 +27,7 @@ describe("excluded contracts construction period wording", () => {
 
   it("leaves customized text alone when the standard bullet is missing", () => {
     const custom = "Custom excluded activities only.";
-    expect(syncExcludedContracts2ConstructionPeriod(custom, 12)).toBe(custom);
+    expect(syncExcludedContracts2Periods(custom, 12, 12)).toBe(custom);
   });
 
   it("syncs the maintenance bullet when maximum maintenance period changes", () => {

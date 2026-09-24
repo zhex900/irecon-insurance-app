@@ -33,11 +33,6 @@ export const EMAIL_TEMPLATE_KEYS = [
 ] as const;
 export type EmailTemplateKey = (typeof EMAIL_TEMPLATE_KEYS)[number];
 
-/** @deprecated Use EMAIL_TEMPLATE_KEYS / EmailTemplateKey */
-export const EMAIL_RECIPIENT_TYPES = EMAIL_TEMPLATE_KEYS;
-/** @deprecated Use EmailTemplateKey */
-export type EmailRecipientType = EmailTemplateKey;
-
 export type EmailTemplateMeta = {
   key: EmailTemplateKey;
   title: string;
@@ -357,11 +352,6 @@ export function injectEmailFooterImage(
 export function extractEmailFooterImage(html: string, dataUri: string): string {
   if (!dataUri.trim()) return html;
   return html.replaceAll(dataUri, "{{footerImage}}");
-}
-
-/** @deprecated Use the DB data URI from `getEmailFooterDataUri()` / loader. */
-export function emailFooterImageUrl(_origin?: string): string {
-  return "";
 }
 
 /** Sample merge fields for Settings → Email template preview / test send. */

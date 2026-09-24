@@ -56,7 +56,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     getReferenceDataAsync(),
     listPoliciesPage(
       {
-        clientId,
+        clientIds: [clientId],
         search: filters.q,
         policyStatusIds: filters.statusIds,
         coverTypeIds: filters.coverTypeIds,

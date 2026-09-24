@@ -67,13 +67,9 @@ export type PolicyListItem = {
 
 export type ListPoliciesPageInput = {
   search?: string;
-  /** @deprecated Prefer `policyStatusIds`. */
-  policyStatusId?: number | null;
   policyStatusIds?: number[];
   coverTypeIds?: number[];
   policyCategoryIds?: number[];
-  /** @deprecated Prefer `clientIds`. */
-  clientId?: string | null;
   clientIds?: string[];
   /** Inclusive inception date bounds as `YYYY-MM-DD`. */
   inceptionFrom?: string | null;
@@ -86,23 +82,13 @@ export type ListPoliciesPageInput = {
 };
 
 function resolveClientIds(input: ListPoliciesPageInput): string[] {
-  if (input.clientIds && input.clientIds.length > 0) {
-    return [...new Set(input.clientIds.filter(Boolean))];
-  }
-  if (input.clientId) {
-    return [input.clientId];
-  }
-  return [];
+  if (!input.clientIds?.length) return [];
+  return [...new Set(input.clientIds.filter(Boolean))];
 }
 
 function resolveStatusIds(input: ListPoliciesPageInput): number[] {
-  if (input.policyStatusIds && input.policyStatusIds.length > 0) {
-    return [...new Set(input.policyStatusIds)];
-  }
-  if (input.policyStatusId != null && input.policyStatusId > 0) {
-    return [input.policyStatusId];
-  }
-  return [];
+  if (!input.policyStatusIds?.length) return [];
+  return [...new Set(input.policyStatusIds)];
 }
 
 export type PolicyListPremiumTotals = {

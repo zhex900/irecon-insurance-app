@@ -2,17 +2,13 @@ import type { Font } from "@pdfme/common";
 
 import type { CarWording, Policy, PolicyDocument } from "~/lib/db/types";
 import { isStaticSchemaName } from "~/lib/documents/template-editor-form";
-import {
-  expandEndorsementPairSchemas,
-  parseEndorsementPairsFromInputs,
-} from "~/lib/pdf/endorsement-expand";
+import { expandEndorsementPairSchemas } from "~/lib/pdf/endorsement-expand";
 import { applyFlowPushDown } from "~/lib/pdf/flow-push-down";
 import type { EndorsementRichDrawOp } from "~/lib/pdf/html-rich-text-draw";
 import { applyEndorsementRichDrawOps } from "~/lib/pdf/html-rich-text-draw";
 import { buildLegacyTextPdfBlob } from "~/lib/pdf/legacy-text-pdf";
 import {
   type BrokerFeeLineInput,
-  ENDORSEMENTS_TABLE_FIELD,
   normalizePdfmeTemplateSchemas,
   policyToMergeInputs,
   resolveMultiVariableTextInput,
@@ -136,20 +132,6 @@ export async function generatePolicyPdf(
     ...(mergeInputs ?? {}),
     ...liveInputs,
   };
-  // If live resolve missed catalogue rows (no wordingCatalogue / empty snapshot)
-  // but the stored pack still has Endorsements, keep those so PDF is not blank.
-  const livePairs = parseEndorsementPairsFromInputs(liveInputs);
-  const storedPairs = parseEndorsementPairsFromInputs(mergeInputs ?? {});
-  if (livePairs.length === 0 && storedPairs.length > 0 && mergeInputs) {
-    baseInputs[ENDORSEMENTS_TABLE_FIELD] =
-      mergeInputs[ENDORSEMENTS_TABLE_FIELD] ?? "";
-    if (mergeInputs.EndorsementSubject != null) {
-      baseInputs.EndorsementSubject = mergeInputs.EndorsementSubject;
-    }
-    if (mergeInputs.EndorsementContent != null) {
-      baseInputs.EndorsementContent = mergeInputs.EndorsementContent;
-    }
-  }
   const inputs: Record<string, string> = {
     ...Object.fromEntries(resolved.mergeFields.map((name) => [name, ""])),
     ...baseInputs,

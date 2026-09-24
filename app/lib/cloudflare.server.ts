@@ -19,9 +19,6 @@ export type R2BucketLike = {
   delete(key: string): Promise<void>;
 };
 
-/** @deprecated Prefer R2BucketLike — kept for existing avatar call sites. */
-export type AvatarsBucket = R2BucketLike;
-
 export type CloudflareEnv = {
   DATABASE_URL?: string;
   APP_URL?: string;

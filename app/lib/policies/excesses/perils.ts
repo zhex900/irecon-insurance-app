@@ -38,12 +38,8 @@ export function perilsExcessValuesForContractWorks(
   };
 }
 
-/** @deprecated Use {@link perilsExcessValuesForContractWorks}. */
-export const perilsExcessValuesForLegalLiability =
-  perilsExcessValuesForContractWorks;
-
 /** Default Major / Minor Perils amounts for a band (from reference / catalogue). */
-export function perilsExcessDefaultsForBand(
+function perilsExcessDefaultsForBand(
   band: ContractValueBand,
   defaults: PerilsExcessSlice,
 ): {

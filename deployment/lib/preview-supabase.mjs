@@ -171,25 +171,3 @@ export async function loadPrSupabase({ names, configureAuth = true } = {}) {
   }
   return supabase;
 }
-
-/** @deprecated Shared PR DB is not deleted on preview destroy. */
-export async function destroySupabase() {
-  console.log("→ Shared PR Supabase project left intact (not deleted)");
-}
-
-/** @deprecated Branching is not used; one shared PR project from .env.pr. */
-export async function findBranchByName() {
-  return null;
-}
-
-/** @deprecated Use syncPrDatabaseFromUat + loadPrSupabase. */
-export async function provisionSupabase() {
-  throw new Error(
-    "Use syncPrDatabaseFromUat() — PR previews use .env.pr, not branching.",
-  );
-}
-
-/** @deprecated Use loadPrSupabase. */
-export async function loadExistingSupabase(names) {
-  return loadPrSupabase({ names, configureAuth: false });
-}

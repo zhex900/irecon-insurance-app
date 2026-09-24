@@ -64,11 +64,6 @@ export function productionAuthDomains() {
   return [...DEFAULT_PRODUCTION_AUTH_DOMAINS];
 }
 
-/** @deprecated Use productionWranglerCustomDomains() or productionAuthDomains(). */
-export function productionAppCustomDomains() {
-  return productionWranglerCustomDomains();
-}
-
 export function productionAppCustomDomainRoutes() {
   return productionWranglerCustomDomains().map((domain) => ({
     pattern: domain,
@@ -309,6 +304,3 @@ export async function loadUatEnv() {
       UAT_PROJECT_REF,
   };
 }
-
-/** @deprecated Use PRODUCTION_SCRIPT_FLAGS */
-export { PRODUCTION_SCRIPT_FLAGS as PRODUCTION_FLAGS };

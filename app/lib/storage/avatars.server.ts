@@ -1,4 +1,4 @@
-import type { AvatarsBucket } from "~/lib/cloudflare.server";
+import type { R2BucketLike } from "~/lib/cloudflare.server";
 
 const MAX_BYTES = 2 * 1024 * 1024;
 const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
@@ -8,7 +8,7 @@ export function avatarObjectKey(userId: string) {
 }
 
 export async function putUserAvatar(
-  bucket: AvatarsBucket,
+  bucket: R2BucketLike,
   userId: string,
   file: File,
 ) {
@@ -30,12 +30,12 @@ export async function putUserAvatar(
   return `${key}:${Date.now()}`;
 }
 
-export async function deleteUserAvatar(bucket: AvatarsBucket, userId: string) {
+export async function deleteUserAvatar(bucket: R2BucketLike, userId: string) {
   await bucket.delete(avatarObjectKey(userId));
 }
 
 export async function getUserAvatarObject(
-  bucket: AvatarsBucket,
+  bucket: R2BucketLike,
   userId: string,
 ) {
   return bucket.get(avatarObjectKey(userId));

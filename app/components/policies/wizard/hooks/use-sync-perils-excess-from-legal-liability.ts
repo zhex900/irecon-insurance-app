@@ -3,8 +3,8 @@ import { useFormContext, useWatch } from "react-hook-form";
 
 import type { ReferenceData } from "~/lib/db/types";
 import {
+  contractWorksLimitSyncKey,
   PERILS_EXCESS_FIELD_KEYS,
-  perilsExcessSyncKey,
   perilsExcessValuesForContractWorks,
 } from "~/lib/policies/excesses";
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
@@ -28,7 +28,7 @@ export function useSyncPerilsExcessFromLegalLiability(
   const skipInitialSync = useRef(!syncOnMount);
 
   useEffect(() => {
-    const syncKey = perilsExcessSyncKey(contractWorksSumInsured);
+    const syncKey = contractWorksLimitSyncKey(contractWorksSumInsured);
     if (skipInitialSync.current) {
       skipInitialSync.current = false;
       previousSyncKey.current = syncKey;

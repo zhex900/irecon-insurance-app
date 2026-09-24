@@ -33,7 +33,3 @@ export function contractWorksLimitSyncKey(value: unknown): string {
   const numeric = typeof raw === "number" ? raw : Number(raw);
   return `${band ?? "none"}:${Number.isFinite(numeric) ? numeric : raw}`;
 }
-
-export function perilsExcessSyncKey(contractWorksSumInsured: unknown): string {
-  return contractWorksLimitSyncKey(contractWorksSumInsured);
-}
