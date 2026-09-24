@@ -25,20 +25,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
           node-version: "24"
-          cache: npm
+          cache: pnpm
 
       - name: Install dependencies
-        run: npm ci --prefer-offline
+        run: pnpm install --frozen-lockfile
 
       - name: Run quality checks
         run: |
-          npm run typecheck
-          npm run lint
-          npm run test
+          pnpm run typecheck
+          pnpm run lint
+          pnpm run test
 
   deploy:
     name: Deploy preview
@@ -54,14 +57,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
           node-version: "24"
-          cache: npm
+          cache: pnpm
 
       - name: Install dependencies
-        run: npm ci --prefer-offline
+        run: pnpm install --frozen-lockfile
 
       - name: Write .env.pr from GitHub secrets
         env:
@@ -95,7 +101,7 @@ jobs:
           PREVIEW_ENV: ${{ env.PREVIEW_ENV }}
         run: |
           set -o pipefail
-          npm run deploy:pr -- "$PREVIEW_ENV" 2>&1 | tee deploy.log
+          pnpm run deploy:pr -- "$PREVIEW_ENV" 2>&1 | tee deploy.log
           url="$(grep -o 'Preview ready: https://[^ ]*' deploy.log | sed 's/Preview ready: //' | tail -n1)"
           if [ -z "$url" ]; then
             echo "Could not determine preview URL from deploy output."
@@ -118,27 +124,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node.js 24
         uses: actions/setup-node@v7
         with:
           node-version: "24"
-
-      - name: Cache npm dependencies
-        uses: actions/cache@v6
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-npm-
+          cache: pnpm
 
       - name: Install dependencies
-        run: npm ci --prefer-offline
+        run: pnpm install --frozen-lockfile
 
       - name: Run E2E against preview
         env:
           E2E_SKIP_WEBSERVER: "1"
           E2E_BASE_URL: ${{ needs.deploy.outputs.url }}
-        run: npm run test:e2e
+        run: pnpm run test:e2e
 
       - name: Upload Playwright report
         if: ${{ !cancelled() }}

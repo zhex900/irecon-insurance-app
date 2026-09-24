@@ -39,7 +39,7 @@ Clients, policies, prices, and users persist in **Supabase Postgres** via Drizzl
 | **Observability** | [Sentry](https://sentry.io) + Cloudflare Workers Observability                                                                                       |
 | **Testing**       | [Vitest](https://vitest.dev) (unit/integration), [Playwright](https://playwright.dev) (e2e/smoke), [@faker-js/faker](https://fakerjs.dev) (fixtures) |
 
-Requires **Node.js 24+**. Local Postgres via Supabase CLI (Docker).
+Requires **Node.js 24+** and **[pnpm](https://pnpm.io)** (see `packageManager` in `package.json`). Local Postgres via Supabase CLI (Docker).
 
 ## Repo layout
 
@@ -59,15 +59,16 @@ _archive/      Legacy app, specs, CSVs, MSSQL dumps (not deployed)
 Requires Node.js 24+, [Docker](https://docs.docker.com/get-docker/), and the [Supabase CLI](https://supabase.com/docs/guides/cli).
 
 ```bash
-npm install
+corepack enable   # once per machine, if pnpm is not on PATH
+pnpm install
 cp .env.example .env   # DATABASE_URL points at local Supabase
-npm run db:start       # starts local Postgres on :54322
-npm run db:reset       # apply migrations + seed
-npm run db:copy:uat    # replace local DB with full UAT copy (.env.uat → .env)
-npm run db:copy:prod -- --confirm   # replace production DB with UAT (.env.uat → .env.production)
-npm run dev            # http://127.0.0.1:5173
+pnpm run db:start       # starts local Postgres on :54322
+pnpm run db:reset       # apply migrations + seed
+pnpm run db:copy:uat    # replace local DB with full UAT copy (.env.uat → .env)
+pnpm run db:copy:prod -- --confirm   # replace production DB with UAT (.env.uat → .env.production)
+pnpm run dev            # http://127.0.0.1:5173
 # Second terminal: private PDF service used by email attachment rendering
-npm run dev:pdf-worker
+pnpm run dev:pdf-worker
 ```
 
 Sign in with a seeded user from `_archive/data/users.json`. Default password: `password123`.
@@ -86,30 +87,30 @@ Sign in with a seeded user from `_archive/data/users.json`. Default password: `p
 ## Scripts
 
 ```bash
-npm run db:start
-npm run db:stop
-npm run db:status
-npm run db:reset          # reset DB + seed
-npm run db:seed
-npm run db:migrate:prices # MSSQL CAR prices → Postgres (repeatable)
-npm run db:seed:prices    # load from _archive/data/prices.json
-npm run db:export:prices  # MSSQL → JSON snapshot only
-npm run db:push           # drizzle-kit push (dev only)
-npm run dev
-npm run build
-npm run build:pdf-worker # PDF Worker dry-run bundle
-npm run typecheck
-npm run lint
-npm run format:check
-npm run verify            # lint + format:check + typecheck + unit
-npm run test              # Vitest
-npm run test:e2e          # Playwright (needs `npx playwright install chromium`)
-npm run test:smoke        # Playwright smoke subset
-npm run deploy            # UAT (default)
-npm run deploy --env pr-11
-npm run destroy --env pr-11
-npm run deploy:uat
-npm run deploy:secret
+pnpm run db:start
+pnpm run db:stop
+pnpm run db:status
+pnpm run db:reset          # reset DB + seed
+pnpm run db:seed
+pnpm run db:migrate:prices # MSSQL CAR prices → Postgres (repeatable)
+pnpm run db:seed:prices    # load from _archive/data/prices.json
+pnpm run db:export:prices  # MSSQL → JSON snapshot only
+pnpm run db:push           # drizzle-kit push (dev only)
+pnpm run dev
+pnpm run build
+pnpm run build:pdf-worker # PDF Worker dry-run bundle
+pnpm run typecheck
+pnpm run lint
+pnpm run format:check
+pnpm run verify            # lint + format:check + typecheck + unit
+pnpm run test              # Vitest
+pnpm run test:e2e          # Playwright (needs `pnpm exec playwright install chromium`)
+pnpm run test:smoke        # Playwright smoke subset
+pnpm run deploy            # UAT (default)
+pnpm run deploy --env pr-11
+pnpm run destroy --env pr-11
+pnpm run deploy:uat
+pnpm run deploy:secret
 ```
 
 See [docs/development/testing.md](docs/development/testing.md), [docs/guidelines/tooling.md](docs/guidelines/tooling.md), and [docs/deployment/preview-environments.md](docs/deployment/preview-environments.md).

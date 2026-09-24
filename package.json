@@ -2,8 +2,10 @@
   "name": "insurance-app",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@11.24.0",
   "engines": {
-    "node": ">=24.0.0"
+    "node": ">=24.0.0",
+    "pnpm": ">=9"
   },
   "scripts": {
     "build": "react-router build",
@@ -11,7 +13,7 @@
     "types:pdf-worker": "wrangler types --config wrangler.pdf.jsonc --env-file workers/documents-local.env --env-interface PdfWorkerEnv --include-runtime false workers/pdf/env.d.ts",
     "dev": "react-router dev",
     "dev:pdf-worker": "wrangler dev --config wrangler.pdf.jsonc --env-file workers/documents-local.env",
-    "check:bundle": "npm run build && node scripts/bundle/simple-bundle-check.js",
+    "check:bundle": "pnpm run build && node scripts/bundle/simple-bundle-check.js",
     "check:bundle:quick": "node scripts/bundle/simple-bundle-check.js",
     "db:start": "supabase start",
     "db:stop": "supabase stop",
@@ -49,7 +51,7 @@
     "db:repair:policy-periods": "tsx scripts/db/repair/repair-migrated-policy-periods.mts",
     "db:repair:migrated-policies": "tsx scripts/db/repair/repair-migrated-policies.mts",
     "db:repair:policy-document-r2": "tsx scripts/db/repair/repair-policy-document-r2.mts",
-    "db:reset": "supabase db reset --yes && npm run db:seed",
+    "db:reset": "supabase db reset --yes && pnpm run db:seed",
     "db:copy:uat": "node --env-file=.env --env-file=.env.uat deployment/copy-uat-to-local.mjs",
     "db:copy:prod": "node --env-file=.env.uat --env-file=.env.production deployment/copy-uat-to-prod.mjs",
     "deployment:bootstrap:r2": "node --env-file=.env --env-file=.env.uat deployment/bootstrap-r2-envs.mjs",
@@ -81,7 +83,7 @@
     "test:e2e:ui": "E2E_SKIP_WEBSERVER=1 playwright test --ui --project=e2e",
     "test:e2e:policy-matrix": "playwright test tests/e2e/policy-matrix.spec.ts --project=e2e",
     "test:smoke": "playwright test --project=smoke",
-    "verify": "npm run lint && npm run format:check && npm run typecheck && npm run test:unit && npm run check:bundle:quick",
+    "verify": "pnpm run lint && pnpm run format:check && pnpm run typecheck && pnpm run test:unit && pnpm run check:bundle:quick",
     "check:organization": "./scripts/quality/check-organization.sh",
     "prepare": "husky"
   },

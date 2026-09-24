@@ -8,7 +8,7 @@ Authz, secrets, or data-loss fails **block** merge.
 
 ## Before finishing
 
-- [ ] Types are correct (`npm run typecheck`)
+- [ ] Types are correct (`pnpm run typecheck`)
 - [ ] No duplicated logic
 - [ ] No dead code
 - [ ] No lingering TODOs in the diff (or tracked as explicit follow-up)
