@@ -14,9 +14,7 @@ describe("policy-series-term", () => {
 
   it("shows #1 for second term", () => {
     expect(policySeriesTermBadgeLabel(1)).toBe("#1");
-    expect(formatPolicySeriesReference("ATCCWI1039", 1)).toBe(
-      "ATCCWI1039#1",
-    );
+    expect(formatPolicySeriesReference("ATCCWI1039", 1)).toBe("ATCCWI1039#1");
   });
 
   it("parses series#term search", () => {
