@@ -109,7 +109,9 @@ export async function isSeriesNumberTaken(
   if (!trimmed) return false;
 
   const db = getDb();
-  const conditions = [sql`lower(${policySeries.seriesNumber}) = lower(${trimmed})`];
+  const conditions = [
+    sql`lower(${policySeries.seriesNumber}) = lower(${trimmed})`,
+  ];
   if (excludePolicySeriesId) {
     conditions.push(ne(policySeries.policySeriesId, excludePolicySeriesId));
   }
@@ -224,7 +226,10 @@ export async function deletePolicies(
       isDraft: policy.isDraft,
     })
     .from(policy)
-    .innerJoin(policySeries, eq(policy.policySeriesId, policySeries.policySeriesId))
+    .innerJoin(
+      policySeries,
+      eq(policy.policySeriesId, policySeries.policySeriesId),
+    )
     .where(inArray(policy.policyId, ids));
 
   if (rows.length !== ids.length) {
@@ -313,7 +318,10 @@ async function loadPolicyById(policyId: string): Promise<Policy | null> {
     .select()
     .from(policy)
     .innerJoin(policyCar, eq(policy.policyId, policyCar.policyId))
-    .innerJoin(policySeries, eq(policy.policySeriesId, policySeries.policySeriesId))
+    .innerJoin(
+      policySeries,
+      eq(policy.policySeriesId, policySeries.policySeriesId),
+    )
     .leftJoin(
       policyCarAdjustment,
       eq(policy.policyId, policyCarAdjustment.policyId),
@@ -343,7 +351,10 @@ export async function listPolicies(clientId?: string) {
     .select()
     .from(policy)
     .innerJoin(policyCar, eq(policy.policyId, policyCar.policyId))
-    .innerJoin(policySeries, eq(policy.policySeriesId, policySeries.policySeriesId))
+    .innerJoin(
+      policySeries,
+      eq(policy.policySeriesId, policySeries.policySeriesId),
+    )
     .leftJoin(
       policyCarAdjustment,
       eq(policy.policyId, policyCarAdjustment.policyId),
@@ -500,120 +511,123 @@ export async function savePolicy(
 
   try {
     await db.transaction(async (tx) => {
-    const [existing] = await tx
-      .select({
-        policyStatusId: policy.policyStatusId,
-        takenAt: policy.takenAt,
-        takenBy: policy.takenBy,
-        policySeriesId: policy.policySeriesId,
-        seriesNumber: policySeries.seriesNumber,
-      })
-      .from(policy)
-      .innerJoin(policySeries, eq(policy.policySeriesId, policySeries.policySeriesId))
-      .where(eq(policy.policyId, policyDoc.policyId))
-      .limit(1);
+      const [existing] = await tx
+        .select({
+          policyStatusId: policy.policyStatusId,
+          takenAt: policy.takenAt,
+          takenBy: policy.takenBy,
+          policySeriesId: policy.policySeriesId,
+          seriesNumber: policySeries.seriesNumber,
+        })
+        .from(policy)
+        .innerJoin(
+          policySeries,
+          eq(policy.policySeriesId, policySeries.policySeriesId),
+        )
+        .where(eq(policy.policyId, policyDoc.policyId))
+        .limit(1);
 
-    if (
-      existing &&
-      policyDoc.seriesNumber.trim() &&
-      policyDoc.seriesNumber !== existing.seriesNumber
-    ) {
+      if (
+        existing &&
+        policyDoc.seriesNumber.trim() &&
+        policyDoc.seriesNumber !== existing.seriesNumber
+      ) {
+        await tx
+          .update(policySeries)
+          .set({ seriesNumber: policyDoc.seriesNumber })
+          .where(eq(policySeries.policySeriesId, policyDoc.policySeriesId));
+      }
+
+      let takenAt = existing?.takenAt ?? null;
+      let takenBy = existing?.takenBy ?? null;
+      if (
+        policyValues.policyStatusId === POLICY_STATUS.Taken &&
+        existing?.policyStatusId !== POLICY_STATUS.Taken &&
+        takenAt == null
+      ) {
+        takenAt = new Date();
+        takenBy = options?.actor?.trim() || policyDoc.createdBy || "";
+      }
+
+      const takenFields =
+        takenAt != null ? { takenAt, takenBy: takenBy ?? "" } : {};
+
       await tx
-        .update(policySeries)
-        .set({ seriesNumber: policyDoc.seriesNumber })
-        .where(eq(policySeries.policySeriesId, policyDoc.policySeriesId));
-    }
-
-    let takenAt = existing?.takenAt ?? null;
-    let takenBy = existing?.takenBy ?? null;
-    if (
-      policyValues.policyStatusId === POLICY_STATUS.Taken &&
-      existing?.policyStatusId !== POLICY_STATUS.Taken &&
-      takenAt == null
-    ) {
-      takenAt = new Date();
-      takenBy = options?.actor?.trim() || policyDoc.createdBy || "";
-    }
-
-    const takenFields =
-      takenAt != null ? { takenAt, takenBy: takenBy ?? "" } : {};
-
-    await tx
-      .insert(policy)
-      .values({ ...policyValues, ...takenFields })
-      .onConflictDoUpdate({
-        target: policy.policyId,
-        set: {
-          clientId: policyValues.clientId,
-          policyStatusId: policyValues.policyStatusId,
-          postcode: policyValues.postcode,
-          stateId: policyValues.stateId,
-          policyCategoryId: policyValues.policyCategoryId,
-          policyNumber: policyValues.policyNumber,
-          policySeriesId: policyValues.policySeriesId,
-          copiedFromPolicyId: policyValues.copiedFromPolicyId,
-          dateStart: policyValues.dateStart,
-          dateEnd: policyValues.dateEnd,
-          insurerCode: policyValues.insurerCode,
-          isDraft: policyValues.isDraft,
-          updatedWhen: new Date(),
-          ...takenFields,
-        },
-      });
-
-    await tx
-      .insert(policyCar)
-      .values(carValues)
-      .onConflictDoUpdate({
-        target: policyCar.policyId,
-        set: { ...carValues },
-      });
-
-    await tx
-      .delete(policyDocument)
-      .where(eq(policyDocument.policyId, policyDoc.policyId));
-    if (documentsToInsert.length > 0) {
-      await tx.insert(policyDocument).values(documentsToInsert);
-    }
-
-    const existingNotes = await tx
-      .select({ noteId: policyNote.noteId })
-      .from(policyNote)
-      .where(eq(policyNote.policyId, policyDoc.policyId));
-
-    await tx
-      .delete(policyNote)
-      .where(eq(policyNote.policyId, policyDoc.policyId));
-    if (noteValues.length > 0) {
-      const notes = assignPolicyNoteIds(existingNotes, noteValues);
-      await tx.insert(policyNote).values(notes);
-    }
-
-    await tx
-      .delete(policyCarSelectedWording)
-      .where(eq(policyCarSelectedWording.policyId, policyDoc.policyId));
-    if (selectedWordingIds.length > 0) {
-      await tx.insert(policyCarSelectedWording).values(
-        selectedWordingIds.map((carWordingId) => ({
-          policyId: policyDoc.policyId,
-          carWordingId,
-        })),
-      );
-    }
-
-    if (adjustmentValues) {
-      await tx
-        .insert(policyCarAdjustment)
-        .values(adjustmentValues)
+        .insert(policy)
+        .values({ ...policyValues, ...takenFields })
         .onConflictDoUpdate({
-          target: policyCarAdjustment.policyId,
-          set: { ...adjustmentValues, updatedWhen: new Date() },
+          target: policy.policyId,
+          set: {
+            clientId: policyValues.clientId,
+            policyStatusId: policyValues.policyStatusId,
+            postcode: policyValues.postcode,
+            stateId: policyValues.stateId,
+            policyCategoryId: policyValues.policyCategoryId,
+            policyNumber: policyValues.policyNumber,
+            policySeriesId: policyValues.policySeriesId,
+            copiedFromPolicyId: policyValues.copiedFromPolicyId,
+            dateStart: policyValues.dateStart,
+            dateEnd: policyValues.dateEnd,
+            insurerCode: policyValues.insurerCode,
+            isDraft: policyValues.isDraft,
+            updatedWhen: new Date(),
+            ...takenFields,
+          },
         });
-    } else {
+
       await tx
-        .delete(policyCarAdjustment)
-        .where(eq(policyCarAdjustment.policyId, policyDoc.policyId));
-    }
+        .insert(policyCar)
+        .values(carValues)
+        .onConflictDoUpdate({
+          target: policyCar.policyId,
+          set: { ...carValues },
+        });
+
+      await tx
+        .delete(policyDocument)
+        .where(eq(policyDocument.policyId, policyDoc.policyId));
+      if (documentsToInsert.length > 0) {
+        await tx.insert(policyDocument).values(documentsToInsert);
+      }
+
+      const existingNotes = await tx
+        .select({ noteId: policyNote.noteId })
+        .from(policyNote)
+        .where(eq(policyNote.policyId, policyDoc.policyId));
+
+      await tx
+        .delete(policyNote)
+        .where(eq(policyNote.policyId, policyDoc.policyId));
+      if (noteValues.length > 0) {
+        const notes = assignPolicyNoteIds(existingNotes, noteValues);
+        await tx.insert(policyNote).values(notes);
+      }
+
+      await tx
+        .delete(policyCarSelectedWording)
+        .where(eq(policyCarSelectedWording.policyId, policyDoc.policyId));
+      if (selectedWordingIds.length > 0) {
+        await tx.insert(policyCarSelectedWording).values(
+          selectedWordingIds.map((carWordingId) => ({
+            policyId: policyDoc.policyId,
+            carWordingId,
+          })),
+        );
+      }
+
+      if (adjustmentValues) {
+        await tx
+          .insert(policyCarAdjustment)
+          .values(adjustmentValues)
+          .onConflictDoUpdate({
+            target: policyCarAdjustment.policyId,
+            set: { ...adjustmentValues, updatedWhen: new Date() },
+          });
+      } else {
+        await tx
+          .delete(policyCarAdjustment)
+          .where(eq(policyCarAdjustment.policyId, policyDoc.policyId));
+      }
     });
   } catch (error) {
     if (isSeriesNumberConflict(error)) {
@@ -658,7 +672,9 @@ export async function createPolicyDraft(
         policySeriesId = seriesRow.policySeriesId;
         seriesNumber = seriesRow.seriesNumber;
       } else if (!seriesNumber) {
-        throw new Error("Series number is required when reusing a policy series");
+        throw new Error(
+          "Series number is required when reusing a policy series",
+        );
       }
 
       const today = new Date();

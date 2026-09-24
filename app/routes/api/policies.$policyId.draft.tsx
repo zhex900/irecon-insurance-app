@@ -114,10 +114,7 @@ export async function action({ request, params }: Route.ActionArgs) {
       });
     }
     if (
-      await isSeriesNumberTaken(
-        validated.seriesNumber,
-        existing.policySeriesId,
-      )
+      await isSeriesNumberTaken(validated.seriesNumber, existing.policySeriesId)
     ) {
       return Response.json({
         ok: false,

@@ -262,7 +262,10 @@ async function countByGroup(
     })
     .from(policy)
     .innerJoin(policyCar, eq(policy.policyId, policyCar.policyId))
-    .innerJoin(policySeries, eq(policy.policySeriesId, policySeries.policySeriesId))
+    .innerJoin(
+      policySeries,
+      eq(policy.policySeriesId, policySeries.policySeriesId),
+    )
     .leftJoin(client, eq(policy.clientId, client.clientId))
     .leftJoin(
       policyCarAdjustment,
@@ -297,7 +300,10 @@ async function sumPolicyListPremiums(
     })
     .from(policy)
     .innerJoin(policyCar, eq(policy.policyId, policyCar.policyId))
-    .innerJoin(policySeries, eq(policy.policySeriesId, policySeries.policySeriesId))
+    .innerJoin(
+      policySeries,
+      eq(policy.policySeriesId, policySeries.policySeriesId),
+    )
     .leftJoin(client, eq(policy.clientId, client.clientId))
     .leftJoin(
       policyCarAdjustment,
@@ -322,7 +328,10 @@ async function countWithFilters(
     .select({ count: sql<number>`count(*)::int` })
     .from(policy)
     .innerJoin(policyCar, eq(policy.policyId, policyCar.policyId))
-    .innerJoin(policySeries, eq(policy.policySeriesId, policySeries.policySeriesId))
+    .innerJoin(
+      policySeries,
+      eq(policy.policySeriesId, policySeries.policySeriesId),
+    )
     .leftJoin(client, eq(policy.clientId, client.clientId))
     .leftJoin(
       policyCarAdjustment,
@@ -399,7 +408,10 @@ async function selectPolicyListRows(
     })
     .from(policy)
     .innerJoin(policyCar, eq(policy.policyId, policyCar.policyId))
-    .innerJoin(policySeries, eq(policy.policySeriesId, policySeries.policySeriesId))
+    .innerJoin(
+      policySeries,
+      eq(policy.policySeriesId, policySeries.policySeriesId),
+    )
     .leftJoin(client, eq(policy.clientId, client.clientId))
     .leftJoin(
       policyCarAdjustment,
@@ -511,7 +523,10 @@ async function countDatePresets(
     .select(selectShape)
     .from(policy)
     .innerJoin(policyCar, eq(policy.policyId, policyCar.policyId))
-    .innerJoin(policySeries, eq(policy.policySeriesId, policySeries.policySeriesId))
+    .innerJoin(
+      policySeries,
+      eq(policy.policySeriesId, policySeries.policySeriesId),
+    )
     .leftJoin(client, eq(policy.clientId, client.clientId))
     .leftJoin(
       policyCarAdjustment,
@@ -544,7 +559,10 @@ export async function countPoliciesForClientIds(
     })
     .from(policy)
     .innerJoin(policyCar, eq(policy.policyId, policyCar.policyId))
-    .innerJoin(policySeries, eq(policy.policySeriesId, policySeries.policySeriesId))
+    .innerJoin(
+      policySeries,
+      eq(policy.policySeriesId, policySeries.policySeriesId),
+    )
     .leftJoin(client, eq(policy.clientId, client.clientId))
     .leftJoin(
       policyCarAdjustment,

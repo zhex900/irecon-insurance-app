@@ -147,7 +147,10 @@ export async function resolveRecentRouteLabel(path: string): Promise<string> {
         insuredName: policyCar.insuredName,
       })
       .from(policy)
-      .innerJoin(policySeries, eq(policy.policySeriesId, policySeries.policySeriesId))
+      .innerJoin(
+        policySeries,
+        eq(policy.policySeriesId, policySeries.policySeriesId),
+      )
       .leftJoin(policyCar, eq(policy.policyId, policyCar.policyId))
       .where(eq(policy.policyId, policyId))
       .limit(1);

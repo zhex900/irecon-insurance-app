@@ -27,7 +27,9 @@ export function PolicyPhaseProvider({
 }) {
   const { control } = useFormContext<CarPolicyFormValues>();
   const formStatusId = Number(useWatch({ control, name: "policyStatusId" }));
-  const formCategoryId = Number(useWatch({ control, name: "policyCategoryId" }));
+  const formCategoryId = Number(
+    useWatch({ control, name: "policyCategoryId" }),
+  );
   const [isNew, setIsNew] = useState(initialIsNew);
   const dismissNewPolicy = useCallback(() => setIsNew(false), []);
 

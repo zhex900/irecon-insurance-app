@@ -101,11 +101,7 @@ export function resolveSeriesNumberForSave(
   submitted: string | undefined,
   locked: boolean,
 ): string {
-  return resolvePolicyNumberForSave(
-    currentSeriesNumber,
-    submitted,
-    locked,
-  );
+  return resolvePolicyNumberForSave(currentSeriesNumber, submitted, locked);
 }
 
 /**

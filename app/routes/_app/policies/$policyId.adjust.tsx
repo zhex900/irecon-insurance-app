@@ -31,7 +31,9 @@ import { POLICY_STATUS } from "~/lib/zod/policy-car";
 import type { Route } from "./+types/$policyId.adjust";
 
 export function meta({ loaderData }: Route.MetaArgs) {
-  return [{ title: pageTitle(`Adjust ${policyDisplayNumber(loaderData.policy)}`) }];
+  return [
+    { title: pageTitle(`Adjust ${policyDisplayNumber(loaderData.policy)}`) },
+  ];
 }
 
 export async function loader({ params, request }: Route.LoaderArgs) {

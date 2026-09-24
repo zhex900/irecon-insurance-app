@@ -73,9 +73,7 @@ import {
 import type { Route } from "./+types/$policyId";
 
 export function meta({ loaderData }: Route.MetaArgs) {
-  return [
-    { title: pageTitle(`${policyDisplayNumber(loaderData.policy)}`) },
-  ];
+  return [{ title: pageTitle(`${policyDisplayNumber(loaderData.policy)}`) }];
 }
 
 export async function loader({ params, request }: Route.LoaderArgs) {

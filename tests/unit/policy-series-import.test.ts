@@ -20,7 +20,9 @@ describe("attachPolicySeriesFields", () => {
         seriesNumber: "ATCCWI0487",
       },
     ]);
-    const insertValues = vi.fn().mockReturnValue({ returning: insertReturning });
+    const insertValues = vi
+      .fn()
+      .mockReturnValue({ returning: insertReturning });
     const insert = vi.fn().mockReturnValue({ values: insertValues });
 
     const selectLimit = vi

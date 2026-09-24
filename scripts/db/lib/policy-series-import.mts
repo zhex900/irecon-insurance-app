@@ -120,9 +120,7 @@ export async function attachPolicySeriesFields<
   >();
 
   for (const [lower, items] of groups) {
-    items.sort(
-      (a, b) => a.createdWhen.getTime() - b.createdWhen.getTime(),
-    );
+    items.sort((a, b) => a.createdWhen.getTime() - b.createdWhen.getTime());
     const canonical = items[0]!;
 
     for (const item of items) {
@@ -183,7 +181,9 @@ export async function attachPolicySeriesFields<
     const lower = item.seriesNumber.toLowerCase();
     const series = seriesByLower.get(lower);
     if (!series) {
-      throw new Error(`Missing policy series assignment for ${item.seriesNumber}`);
+      throw new Error(
+        `Missing policy series assignment for ${item.seriesNumber}`,
+      );
     }
     output[item.index] = {
       ...policy,

@@ -116,10 +116,7 @@ export async function assertSeriesNumberAvailable(
   const validated = validateSeriesNumberInput(next.seriesNumber);
   if (!validated.ok) throw new PolicySaveError(validated.message);
   if (
-    await isSeriesNumberTaken(
-      validated.seriesNumber,
-      existing.policySeriesId,
-    )
+    await isSeriesNumberTaken(validated.seriesNumber, existing.policySeriesId)
   ) {
     throw new PolicySaveError(SERIES_NUMBER_TAKEN_MESSAGE);
   }

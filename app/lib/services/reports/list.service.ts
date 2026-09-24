@@ -133,7 +133,10 @@ export async function listReportPoliciesPage(
     .select({ count: sql<number>`count(*)::int` })
     .from(policy)
     .innerJoin(policyCar, eq(policy.policyId, policyCar.policyId))
-    .innerJoin(policySeries, eq(policy.policySeriesId, policySeries.policySeriesId))
+    .innerJoin(
+      policySeries,
+      eq(policy.policySeriesId, policySeries.policySeriesId),
+    )
     .leftJoin(client, eq(policy.clientId, client.clientId))
     .leftJoin(
       authorisedRepresentative,
@@ -161,7 +164,10 @@ export async function listReportPoliciesPage(
     })
     .from(policy)
     .innerJoin(policyCar, eq(policy.policyId, policyCar.policyId))
-    .innerJoin(policySeries, eq(policy.policySeriesId, policySeries.policySeriesId))
+    .innerJoin(
+      policySeries,
+      eq(policy.policySeriesId, policySeries.policySeriesId),
+    )
     .leftJoin(client, eq(policy.clientId, client.clientId))
     .leftJoin(
       authorisedRepresentative,
