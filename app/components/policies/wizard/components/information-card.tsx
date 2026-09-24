@@ -69,6 +69,7 @@ export const InformationCard = memo(function InformationCard({
     <PolicyInformationCard
       insurerName={insurerName}
       policyNumber={livePolicyNumber}
+      seriesTerm={policy.seriesTerm}
       policyNumberEditable={policyNumberEditable}
       onPolicyNumberChange={(next) => {
         form.clearErrors("policyNumber");

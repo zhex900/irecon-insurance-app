@@ -2,6 +2,7 @@ import { Trash2Icon } from "lucide-react";
 
 import { ClientPopover } from "~/components/clients/summary";
 import type { DeletablePolicyRef } from "~/components/policies/delete-policies-dialog";
+import { PolicySeriesLabel } from "~/components/policies/policy-series-label";
 import { Badge } from "~/components/reui/badge";
 import { SearchHighlight } from "~/components/search/highlight-cell";
 import { Button } from "~/components/ui/button";
@@ -13,6 +14,7 @@ import {
 import { StatusBadge } from "~/components/ui/status-badge";
 import { TableCell } from "~/components/ui/table";
 import type { ReferenceData } from "~/lib/db/types";
+import { formatPolicySeriesReference } from "~/lib/policies/policy-series-term";
 import { fieldMatches } from "~/lib/search/match";
 import type { PolicyListItem } from "~/lib/services/policies/list.service";
 import { formatCurrency, formatDate } from "~/lib/utils";
@@ -58,10 +60,14 @@ export function PolicyListTableRow({
     !searchQuery ||
     fieldMatches(policy.client.name, searchQuery) ||
     fieldMatches(policy.client.tradingName ?? "", searchQuery);
+  const policyReference = formatPolicySeriesReference(
+    policy.policyNumber,
+    policy.seriesTerm,
+  );
 
   return (
     <InteractiveTableRow
-      aria-label={`Open policy ${policy.policyNumber}`}
+      aria-label={`Open policy ${policyReference}`}
       onActivate={onActivate}
     >
       <InteractiveTableActionsCell>
@@ -71,33 +77,32 @@ export function PolicyListTableRow({
           onCheckedChange={(value) =>
             onToggleSelected(policy.policyId, value === true)
           }
-          aria-label={`Select ${policy.policyNumber}`}
+          aria-label={`Select ${policyReference}`}
         />
       </InteractiveTableActionsCell>
-      <TableCell className="w-0 align-top whitespace-normal">
-        <div className="inline-grid max-w-full grid-cols-[min-content]">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-medium whitespace-nowrap">
-              {searchQuery ? (
-                <SearchHighlight
-                  text={policy.policyNumber}
-                  query={searchQuery}
-                />
-              ) : (
-                policy.policyNumber
-              )}
-            </span>
-            {policy.adjusted ? (
-              <Badge variant="focus-light" size="sm">
-                Adjusted
-              </Badge>
-            ) : null}
-            {showDraftBadge && policy.isDraft ? (
-              <Badge variant="warning-light" size="sm">
-                Draft
-              </Badge>
-            ) : null}
-          </div>
+      <TableCell className="min-w-48 align-top whitespace-normal">
+        <div className="min-w-0">
+          <PolicySeriesLabel
+            seriesNumber={policy.policyNumber}
+            seriesTerm={policy.seriesTerm}
+            searchQuery={searchQuery}
+            seriesClassName="whitespace-nowrap"
+          />
+          {policy.adjusted ||
+          (showDraftBadge && policy.isDraft) ? (
+            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+              {policy.adjusted ? (
+                <Badge variant="focus-light" size="sm">
+                  Adjusted
+                </Badge>
+              ) : null}
+              {showDraftBadge && policy.isDraft ? (
+                <Badge variant="warning-light" size="sm">
+                  Draft
+                </Badge>
+              ) : null}
+            </div>
+          ) : null}
           {showInsured ? (
             <p className="mt-0.5 line-clamp-2 min-w-0 text-xs break-words text-muted-foreground">
               {searchQuery ? (

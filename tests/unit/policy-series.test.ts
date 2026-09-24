@@ -38,6 +38,7 @@ const basePolicy = {
   policyNumber: "ATCCWI0500",
   policySeriesId: "33333333-3333-3333-3333-333333333333",
   seriesNumber: "ATCCWI0487",
+  seriesTerm: 0,
   policyCategoryId: 1,
   policyStatusId: 1,
   postcode: "2000",

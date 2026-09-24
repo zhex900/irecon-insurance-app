@@ -8,6 +8,7 @@ import {
 } from "~/components/layout/app-breadcrumb";
 import { AppLink } from "~/components/navigation/app-link";
 import { PolicyNumberField } from "~/components/policies/policy-number-field";
+import { PolicySeriesLabel } from "~/components/policies/policy-series-label";
 import {
   PolicyStatusMenu,
   type TerminalStatusValidation,
@@ -28,6 +29,7 @@ import {
 import { Separator } from "~/components/ui/separator";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { listPolicyFieldSearchOptions } from "~/lib/policies/field-labels";
+import { policySeriesTermBadgeLabel } from "~/lib/policies/policy-series-term";
 import { cn } from "~/lib/utils";
 import { wizardSteps } from "~/lib/zod/policy-car";
 
@@ -129,6 +131,7 @@ function InfoRow({ label, children }: { label: string; children: ReactNode }) {
 export function PolicyInformationCard({
   insurerName,
   policyNumber,
+  seriesTerm = 0,
   policyNumberEditable = false,
   onPolicyNumberChange,
   onPolicyNumberBlur,
@@ -147,6 +150,7 @@ export function PolicyInformationCard({
 }: {
   insurerName: string;
   policyNumber: string;
+  seriesTerm?: number;
   /** When true, suffix after the fixed prefix is editable. */
   policyNumberEditable?: boolean;
   onPolicyNumberChange?: (fullPolicyNumber: string) => void;
@@ -178,14 +182,26 @@ export function PolicyInformationCard({
           <InfoRow label="Insurer">{insurerName || "—"}</InfoRow>
           <InfoRow label="Class">Construction All Risk</InfoRow>
           <InfoRow label="Policy Number">
-            <PolicyNumberField
-              compact
-              value={policyNumber}
-              disabled={!policyNumberEditable}
-              onChange={policyNumberEditable ? onPolicyNumberChange : undefined}
-              onBlur={policyNumberEditable ? onPolicyNumberBlur : undefined}
-              error={policyNumberError}
-            />
+            <div className="flex flex-wrap items-center gap-2">
+              <PolicyNumberField
+                compact
+                value={policyNumber}
+                disabled={!policyNumberEditable}
+                onChange={
+                  policyNumberEditable ? onPolicyNumberChange : undefined
+                }
+                onBlur={policyNumberEditable ? onPolicyNumberBlur : undefined}
+                error={policyNumberError}
+              />
+              {(() => {
+                const termBadge = policySeriesTermBadgeLabel(seriesTerm);
+                return termBadge ? (
+                  <Badge variant="orange-light" size="sm" radius="full">
+                    {termBadge}
+                  </Badge>
+                ) : null;
+              })()}
+            </div>
           </InfoRow>
           <Separator />
           <InfoRow label="Status">
@@ -492,6 +508,7 @@ export function PolicySectionNav({
 
 export function PolicyStickyHeader({
   policyNumber,
+  seriesTerm = 0,
   clientId,
   clientName,
   coverTypeName,
@@ -505,6 +522,7 @@ export function PolicyStickyHeader({
   breadcrumbs,
 }: {
   policyNumber: string;
+  seriesTerm?: number;
   clientId: string;
   clientName: string;
   /** Cover type label shown as a tag after the policy number. */
@@ -533,9 +551,13 @@ export function PolicyStickyHeader({
             <div className="flex min-w-0 flex-wrap items-center gap-2">
               <h2
                 aria-label={`Policy number`}
-                className="truncate text-lg font-semibold tracking-tight md:text-xl"
+                className="min-w-0 truncate text-lg font-semibold tracking-tight md:text-xl"
               >
-                {policyNumber}
+                <PolicySeriesLabel
+                  seriesNumber={policyNumber}
+                  seriesTerm={seriesTerm}
+                  seriesClassName="text-lg font-semibold tracking-tight md:text-xl"
+                />
               </h2>
               {coverTypeName ? (
                 <Badge variant="warning" size="default" radius="full">

@@ -24,6 +24,7 @@ import {
   policySeries,
 } from "~/lib/db/schema";
 import { type PageResult, toPageResult } from "~/lib/pagination";
+import { parsePolicySeriesSearch } from "~/lib/policies/policy-series-term";
 import {
   EXPIRY_PRESETS,
   type ExpiryPresetId,
@@ -48,6 +49,7 @@ export type PolicyListClientSummary = {
 export type PolicyListItem = {
   policyId: string;
   policyNumber: string;
+  seriesTerm: number;
   clientId: string;
   clientName: string;
   client: PolicyListClientSummary;
@@ -225,18 +227,26 @@ function buildPolicyListFilters(
 
   const q = input.search?.trim();
   if (q) {
-    const pattern = likePattern(q);
-    const textOr: SQL[] = [
-      ilike(policySeries.seriesNumber, pattern),
-      ilike(policy.policyNumber, pattern),
-      ilike(policyCar.insuredName, pattern),
-      ilike(client.name, pattern),
-      ilike(client.tradingName, pattern),
-    ];
-    if (q.toLowerCase() === "adjusted") {
-      textOr.push(isNotNull(policyCarAdjustment.policyId));
+    const parsed = parsePolicySeriesSearch(q);
+    if (parsed.kind === "series_term") {
+      filters.push(
+        sql`lower(${policySeries.seriesNumber}) = lower(${parsed.seriesNumber})`,
+      );
+      filters.push(eq(policy.seriesTerm, parsed.seriesTerm));
+    } else {
+      const pattern = likePattern(parsed.query);
+      const textOr: SQL[] = [
+        ilike(policySeries.seriesNumber, pattern),
+        ilike(policy.policyNumber, pattern),
+        ilike(policyCar.insuredName, pattern),
+        ilike(client.name, pattern),
+        ilike(client.tradingName, pattern),
+      ];
+      if (parsed.query.toLowerCase() === "adjusted") {
+        textOr.push(isNotNull(policyCarAdjustment.policyId));
+      }
+      filters.push(or(...textOr)!);
     }
-    filters.push(or(...textOr)!);
   }
 
   return filters;
@@ -349,6 +359,7 @@ function mapPolicyListRows(rows: PolicyListRow[]): PolicyListItem[] {
     return {
       policyId: row.policyId,
       policyNumber: row.policyNumber,
+      seriesTerm: row.seriesTerm ?? 0,
       clientId: row.clientId,
       clientName,
       client: {
@@ -388,6 +399,7 @@ async function selectPolicyListRows(
     .select({
       policyId: policy.policyId,
       policyNumber: policySeries.seriesNumber,
+      seriesTerm: policy.seriesTerm,
       clientId: policy.clientId,
       clientName: client.name,
       clientTradingName: client.tradingName,
