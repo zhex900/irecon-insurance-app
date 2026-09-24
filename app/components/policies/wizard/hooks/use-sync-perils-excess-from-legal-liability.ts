@@ -9,9 +9,15 @@ import {
 } from "~/lib/policies/excesses";
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
 
+type SyncPerilsOptions = {
+  /** Clone / renew: replace copied Major / Minor with catalogue defaults for liabilityLimitBand. */
+  syncOnMount?: boolean;
+};
+
 /** Major / Minor Perils follow Section 2 limit of liability ($10M / $20M / not insured). */
 export function useSyncPerilsExcessFromLegalLiability(
   defaultExcesses: ReferenceData["defaultExcesses"],
+  { syncOnMount = false }: SyncPerilsOptions = {},
 ) {
   const { control, setValue } = useFormContext<CarPolicyFormValues>();
   const liabilityLimitBand = useWatch({
@@ -19,7 +25,7 @@ export function useSyncPerilsExcessFromLegalLiability(
     name: "liabilityLimitBand",
   });
   const previousSyncKey = useRef<string | undefined>(undefined);
-  const skipInitialSync = useRef(true);
+  const skipInitialSync = useRef(!syncOnMount);
 
   useEffect(() => {
     const syncKey = perilsExcessSyncKey(liabilityLimitBand);
