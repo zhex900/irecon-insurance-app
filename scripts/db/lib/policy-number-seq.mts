@@ -1,6 +1,8 @@
 import type { sql as SqlTag } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 
+import { POLICY_NUMBER_SEQ_MAX_SUFFIX_SQL } from "../../../app/lib/policies/policy-number-sql.ts";
+
 type DbExecute = {
   execute: (query: ReturnType<typeof SqlTag>) => Promise<unknown>;
 };
@@ -12,19 +14,7 @@ export async function ensurePolicyNumberSeq(db: DbExecute): Promise<void> {
   `);
 }
 
-/**
- * Max numeric suffix for `policy_number_seq`, ignoring legacy `-YYYY` term suffixes
- * and non-canonical rows (avoids ATCCWI2746-2024-06-15 → 274620240615).
- */
-export const POLICY_NUMBER_SEQ_MAX_SUFFIX_SQL = sql`
-  (
-    SELECT MAX(
-      (regexp_replace(upper(split_part(p.policy_number, '-', 1)), '^ATCCWI', ''))::bigint
-    )
-    FROM public.policy p
-    WHERE upper(split_part(p.policy_number, '-', 1)) ~ '^ATCCWI[0-9]{1,4}$'
-  )
-`;
+export { POLICY_NUMBER_SEQ_MAX_SUFFIX_SQL };
 
 /** Set sequence to max(canonical ATCCWI#### suffix among policies, 1000). */
 export async function syncPolicyNumberSeqFromPolicies(

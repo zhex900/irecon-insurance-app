@@ -7,6 +7,27 @@ export const POLICY_NUMBER_PREFIX = "ATCCWI";
  */
 export const POLICY_NUMBER_SUFFIX_LENGTH = 4;
 
+/** Inclusive bounds for auto-allocated ATCCWI#### suffixes (matches policy_number_seq). */
+export const POLICY_NUMBER_SUFFIX_MIN = 1000;
+export const POLICY_NUMBER_SUFFIX_MAX =
+  10 ** POLICY_NUMBER_SUFFIX_LENGTH - 1;
+
+/**
+ * Smallest integer in [min, max] not present in used (gap-fill allocation).
+ * Returns null when the range is full.
+ */
+export function lowestFreePolicyNumberSuffix(
+  used: Iterable<number>,
+  min: number = POLICY_NUMBER_SUFFIX_MIN,
+  max: number = POLICY_NUMBER_SUFFIX_MAX,
+): number | null {
+  const taken = new Set(used);
+  for (let n = min; n <= max; n++) {
+    if (!taken.has(n)) return n;
+  }
+  return null;
+}
+
 /** User-facing message when a policy or series number is already allocated. */
 export const POLICY_NUMBER_TAKEN_MESSAGE =
   "This policy number is already in use";

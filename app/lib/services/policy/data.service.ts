@@ -38,6 +38,7 @@ import {
   formatPolicyNumberFromSeq,
   POLICY_NUMBER_TAKEN_MESSAGE,
 } from "~/lib/policies/policy-number";
+import { POLICY_NUMBER_LOWEST_FREE_SUFFIX_SQL } from "~/lib/policies/policy-number-sql";
 import { derivePolicyEndDate } from "~/lib/policies/policy-period";
 import { normalizeSubLimits } from "~/lib/policies/sub-limits";
 import { getClient, listClients } from "~/lib/services/clients/service";
@@ -88,21 +89,31 @@ export type SavePolicyOptions = {
   pdfService?: PdfWorkerBinding | null;
 };
 
+async function queryLowestFreePolicyNumberSuffix(): Promise<number | null> {
+  const db = getDb();
+  const [row] = await db.execute<{ suffix: number | string | null }>(
+    sql`SELECT ${POLICY_NUMBER_LOWEST_FREE_SUFFIX_SQL} AS "suffix"`,
+  );
+  const raw = row?.suffix;
+  if (raw === null || raw === undefined) return null;
+  return Number(raw);
+}
+
 /**
- * Next human-facing policy number from {@link policy_number_seq}, skipping values
- * already held by another policy (seq can lag after imports or manual inserts).
+ * Next internal policy number: smallest unused ATCCWI#### suffix among
+ * {@link policy.policyNumber} rows (gap-fill), with retries on races.
  */
 export async function allocatePolicyNumber(policyId: string): Promise<string> {
-  const db = getDb();
   for (
     let attempt = 0;
     attempt < POLICY_NUMBER_ALLOCATE_MAX_ATTEMPTS;
     attempt++
   ) {
-    const [seqRow] = await db.execute<{ seq: number | string }>(
-      sql`SELECT nextval('public.policy_number_seq') AS "seq"`,
-    );
-    const policyNumber = formatPolicyNumberFromSeq(Number(seqRow?.seq ?? 1000));
+    const suffix = await queryLowestFreePolicyNumberSuffix();
+    if (suffix === null) {
+      throw new Error("Policy number sequence exhausted");
+    }
+    const policyNumber = formatPolicyNumberFromSeq(suffix);
     if (!(await isPolicyNumberTaken(policyNumber, policyId))) {
       return policyNumber;
     }
