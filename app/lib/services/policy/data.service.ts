@@ -36,11 +36,12 @@ import {
 import { createInformationalNote } from "~/lib/policies/policy-notes";
 import {
   formatPolicyNumberFromSeq,
+  POLICY_NUMBER_SUFFIX_MAX,
   POLICY_NUMBER_SUFFIX_MIN,
   POLICY_NUMBER_TAKEN_MESSAGE,
   policyNumberSuffix,
 } from "~/lib/policies/policy-number";
-import { lowestFreePolicyNumberSuffixSubquery } from "~/lib/policies/policy-number-sql";
+import { lowestFreePolicyNumberSuffixQuery } from "~/lib/policies/policy-number-sql";
 import { derivePolicyEndDate } from "~/lib/policies/policy-period";
 import { normalizeSubLimits } from "~/lib/policies/sub-limits";
 import { getClient, listClients } from "~/lib/services/clients/service";
@@ -91,21 +92,34 @@ export type SavePolicyOptions = {
   pdfService?: PdfWorkerBinding | null;
 };
 
+function suffixFromAllocationRow(row: unknown): number | null {
+  if (!row || typeof row !== "object") return null;
+  const raw = (row as { suffix?: unknown }).suffix;
+  if (raw === null || raw === undefined) return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
 async function queryLowestFreePolicyNumberSuffix(
   reserveSeriesNumber: boolean,
   minSuffix: number,
 ): Promise<number | null> {
   const db = getDb();
-  const lowestFreeSql = lowestFreePolicyNumberSuffixSubquery(
-    reserveSeriesNumber,
-    minSuffix,
+  const rows = await db.execute(
+    lowestFreePolicyNumberSuffixQuery(reserveSeriesNumber, minSuffix),
   );
-  const [row] = await db.execute<{ suffix: number | string | null }>(
-    sql`SELECT ${lowestFreeSql} AS "suffix"`,
+  const list = Array.isArray(rows) ? rows : [];
+  return suffixFromAllocationRow(list[0]);
+}
+
+async function queryNextPolicyNumberSeqValue(): Promise<number> {
+  const db = getDb();
+  const rows = await db.execute<{ seq: number | string }>(
+    sql`SELECT nextval('public.policy_number_seq') AS "seq"`,
   );
-  const raw = row?.suffix;
-  if (raw === null || raw === undefined) return null;
-  return Number(raw);
+  const list = Array.isArray(rows) ? rows : [];
+  const raw = (list[0] as { seq?: number | string } | undefined)?.seq;
+  return Number(raw ?? POLICY_NUMBER_SUFFIX_MIN);
 }
 
 export type AllocatePolicyNumberOptions = {
@@ -133,12 +147,19 @@ export async function allocatePolicyNumber(
     attempt < POLICY_NUMBER_ALLOCATE_MAX_ATTEMPTS;
     attempt++
   ) {
-    const suffix = await queryLowestFreePolicyNumberSuffix(
+    let suffix = await queryLowestFreePolicyNumberSuffix(
       reserveSeriesNumber,
       minSuffix,
     );
     if (suffix === null) {
-      throw new Error("Policy number sequence exhausted");
+      suffix = await queryNextPolicyNumberSeqValue();
+      if (
+        suffix < minSuffix ||
+        suffix < POLICY_NUMBER_SUFFIX_MIN ||
+        suffix > POLICY_NUMBER_SUFFIX_MAX
+      ) {
+        throw new Error("Policy number sequence exhausted");
+      }
     }
     const policyNumber = formatPolicyNumberFromSeq(suffix);
     const policyTaken = await isPolicyNumberTaken(policyNumber, policyId);

@@ -7,7 +7,7 @@ import {
 
 /**
  * Canonical ATCCWI#### numeric suffix from a policy row (ignores legacy `-YYYY` tails
- * and non-canonical policy_number values). Shared by seq sync and gap-fill allocation.
+ * and non-canonical policy_number values). Used for policy_number_seq sync only.
  */
 export const policyNumberCanonicalSuffixExpr = sql`
   (regexp_replace(upper(split_part(p.policy_number, '-', 1)), '^ATCCWI', ''))::bigint
@@ -15,47 +15,6 @@ export const policyNumberCanonicalSuffixExpr = sql`
 
 export const policyNumberIsCanonicalExpr = sql`
   upper(split_part(p.policy_number, '-', 1)) ~ '^ATCCWI[0-9]{1,4}$'
-`;
-
-export const policySeriesCanonicalSuffixExpr = sql`
-  (regexp_replace(upper(split_part(ps.series_number, '-', 1)), '^ATCCWI', ''))::bigint
-`;
-
-export const policySeriesIsCanonicalExpr = sql`
-  upper(split_part(ps.series_number, '-', 1)) ~ '^ATCCWI[0-9]{1,4}$'
-`;
-
-/** Matches unique-index equality for allocated ATCCWI#### (see formatPolicyNumberFromSeq). */
-const policyExactAllocatedNumberMatch = sql`
-  lower(trim(p.policy_number)) = lower(concat('ATCCWI', lpad(s::text, 4, '0')))
-`;
-
-const seriesExactAllocatedNumberMatch = sql`
-  lower(trim(ps.series_number)) = lower(concat('ATCCWI', lpad(s::text, 4, '0')))
-`;
-
-const policySuffixTaken = sql`
-  EXISTS (
-    SELECT 1
-    FROM public.policy p
-    WHERE (
-      ${policyNumberIsCanonicalExpr}
-      AND ${policyNumberCanonicalSuffixExpr} = s
-    )
-    OR ${policyExactAllocatedNumberMatch}
-  )
-`;
-
-const seriesSuffixTaken = sql`
-  EXISTS (
-    SELECT 1
-    FROM public.policy_series ps
-    WHERE (
-      ${policySeriesIsCanonicalExpr}
-      AND ${policySeriesCanonicalSuffixExpr} = s
-    )
-    OR ${seriesExactAllocatedNumberMatch}
-  )
 `;
 
 /** Max numeric suffix among canonical policy numbers (for policy_number_seq sync). */
@@ -74,35 +33,46 @@ function clampAllocationMinSuffix(minSuffix: number): number {
   );
 }
 
+/** Same string shape as {@link formatPolicyNumberFromSeq} for index-aligned checks. */
+const allocatedNumberForSuffix = sql`
+  lower(concat('ATCCWI', lpad(s::text, 4, '0')))
+`;
+
+const policyAllocatedNumberTaken = sql`
+  EXISTS (
+    SELECT 1
+    FROM public.policy p
+    WHERE lower(trim(p.policy_number)) = ${allocatedNumberForSuffix}
+  )
+`;
+
+const seriesAllocatedNumberTaken = sql`
+  EXISTS (
+    SELECT 1
+    FROM public.policy_series ps
+    WHERE lower(trim(ps.series_number)) = ${allocatedNumberForSuffix}
+  )
+`;
+
 /**
- * Smallest free suffix >= minSuffix. `reserveSeries` includes policy_series rows.
- * Bounds are integer literals so generate_series overload is unambiguous.
+ * Lowest free ATCCWI#### suffix >= minSuffix (gap-fill).
+ * Matches `policy_policy_number_uidx` / `policy_series_number_uidx` equality rules.
  */
-export function lowestFreePolicyNumberSuffixSubquery(
+export function lowestFreePolicyNumberSuffixQuery(
   reserveSeries: boolean,
   minSuffix: number = POLICY_NUMBER_SUFFIX_MIN,
 ): SQL {
   const min = clampAllocationMinSuffix(minSuffix);
   const seriesClause = reserveSeries
-    ? sql`AND NOT (${seriesSuffixTaken})`
+    ? sql`AND NOT (${seriesAllocatedNumberTaken})`
     : sql``;
 
   return sql`
-    (
-      SELECT s AS suffix
-      FROM generate_series(${sql.raw(String(min))}, ${sql.raw(String(POLICY_NUMBER_SUFFIX_MAX))}) AS s
-      WHERE NOT (${policySuffixTaken})
-      ${seriesClause}
-      ORDER BY s
-      LIMIT 1
-    )
+    SELECT s AS "suffix"
+    FROM generate_series(${sql.raw(String(min))}, ${sql.raw(String(POLICY_NUMBER_SUFFIX_MAX))}) AS s
+    WHERE NOT (${policyAllocatedNumberTaken})
+    ${seriesClause}
+    ORDER BY s
+    LIMIT 1
   `;
 }
-
-/** @deprecated Use {@link lowestFreePolicyNumberSuffixSubquery} */
-export const POLICY_NUMBER_LOWEST_FREE_SUFFIX_SQL =
-  lowestFreePolicyNumberSuffixSubquery(false);
-
-/** @deprecated Use {@link lowestFreePolicyNumberSuffixSubquery} */
-export const POLICY_NUMBER_LOWEST_FREE_SUFFIX_RESERVE_SERIES_SQL =
-  lowestFreePolicyNumberSuffixSubquery(true);
