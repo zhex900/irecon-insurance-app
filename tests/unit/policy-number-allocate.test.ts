@@ -16,12 +16,10 @@ describe("lowestFreePolicyNumberSuffix (gap-fill)", () => {
   });
 
   it("fills the lowest gap before the high-water mark", () => {
-    expect(lowestFreePolicyNumberSuffix([10, 11, 20, 40, 41], 10, 99)).toBe(
-      12,
+    expect(lowestFreePolicyNumberSuffix([10, 11, 20, 40, 41], 10, 99)).toBe(12);
+    expect(lowestFreePolicyNumberSuffix([1000, 1001, 1020, 1040, 1041])).toBe(
+      1002,
     );
-    expect(
-      lowestFreePolicyNumberSuffix([1000, 1001, 1020, 1040, 1041]),
-    ).toBe(1002);
     expect(
       lowestFreePolicyNumberSuffix([1000, 1001, 1002, 1020, 1040, 1041]),
     ).toBe(1003);

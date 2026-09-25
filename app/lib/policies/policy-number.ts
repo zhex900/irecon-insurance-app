@@ -9,8 +9,7 @@ export const POLICY_NUMBER_SUFFIX_LENGTH = 4;
 
 /** Inclusive bounds for auto-allocated ATCCWI#### suffixes (matches policy_number_seq). */
 export const POLICY_NUMBER_SUFFIX_MIN = 1000;
-export const POLICY_NUMBER_SUFFIX_MAX =
-  10 ** POLICY_NUMBER_SUFFIX_LENGTH - 1;
+export const POLICY_NUMBER_SUFFIX_MAX = 10 ** POLICY_NUMBER_SUFFIX_LENGTH - 1;
 
 /**
  * Smallest integer in [min, max] not present in used (gap-fill allocation).
