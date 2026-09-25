@@ -100,7 +100,7 @@ export async function allocatePolicyNumber(policyId: string): Promise<string> {
     attempt++
   ) {
     const [seqRow] = await db.execute<{ seq: number | string }>(
-      sql`SELECT nextval('policy_number_seq') AS "seq"`,
+      sql`SELECT nextval('public.policy_number_seq') AS "seq"`,
     );
     const policyNumber = formatPolicyNumberFromSeq(Number(seqRow?.seq ?? 1000));
     if (!(await isPolicyNumberTaken(policyNumber, policyId))) {
