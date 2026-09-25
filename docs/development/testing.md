@@ -4,17 +4,17 @@ Unit, integration, and browser tests for Irecon Insurance (Phase 7).
 
 ## Commands
 
-| Command                    | What                                                                |
-| -------------------------- | ------------------------------------------------------------------- |
-| `npm run test`             | Vitest unit + integration                                           |
-| `npm run test:unit`        | Unit only                                                           |
-| `npm run test:integration` | Integration only (skips if Postgres unreachable)                    |
-| `pnpm run test:integration:policy-number-sql` | Gap-fill allocation SQL vs Postgres (required in CI)     |
-| `npm run test:e2e`         | Playwright critical paths (starts `npm run dev`)                    |
-| `npm run test:e2e:local`   | Same, against an already-running `localhost:5173` (skips webServer) |
-| `npm run test:e2e:ui`      | Same as `test:e2e:local` but opens Playwright's `--ui` mode         |
-| `npm run test:smoke`       | Playwright smoke subset (post-deploy)                               |
-| `npm run typecheck`        | React Router typegen + `tsc`                                        |
+| Command                                       | What                                                                |
+| --------------------------------------------- | ------------------------------------------------------------------- |
+| `npm run test`                                | Vitest unit + integration                                           |
+| `npm run test:unit`                           | Unit only                                                           |
+| `npm run test:integration`                    | Integration only (skips if Postgres unreachable)                    |
+| `pnpm run test:integration:policy-number-sql` | Gap-fill allocation SQL vs Postgres (required in CI)                |
+| `npm run test:e2e`                            | Playwright critical paths (starts `npm run dev`)                    |
+| `npm run test:e2e:local`                      | Same, against an already-running `localhost:5173` (skips webServer) |
+| `npm run test:e2e:ui`                         | Same as `test:e2e:local` but opens Playwright's `--ui` mode         |
+| `npm run test:smoke`                          | Playwright smoke subset (post-deploy)                               |
+| `npm run typecheck`                           | React Router typegen + `tsc`                                        |
 
 First-time Playwright: `npx playwright install chromium`
 
