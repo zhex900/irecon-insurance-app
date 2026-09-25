@@ -89,13 +89,6 @@ export function getPolicyFormNavItems(premiumPinned: boolean) {
   ];
 }
 
-/** @deprecated Prefer getPolicyFormNavItems(premiumPinned) */
-export const POLICY_FORM_NAV_ITEMS = getPolicyFormNavItems(false);
-
-export const POLICY_FORM_NAV_IDS = getPolicyFormNavItems(false).map(
-  (item) => item.id,
-);
-
 export function sectionIdForStep(stepIndex: number): PolicyFormSectionId {
   return POLICY_FORM_SECTIONS[stepIndex]?.id ?? POLICY_FORM_SECTIONS[0].id;
 }
@@ -287,7 +280,7 @@ export function PolicySectionNav({
   sectionIssueCounts = {},
   onNavigateToIssue,
   onNavigateToSectionFirstIssue,
-  items = POLICY_FORM_NAV_ITEMS,
+  items = getPolicyFormNavItems(false),
   className,
 }: {
   activeId: string;

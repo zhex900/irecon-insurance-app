@@ -1,0 +1,32 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "workers/pdf/index.ts",
+    "workers/excel/index.ts",
+    "tests/e2e/auth.setup.ts",
+    "scripts/db/seed/generate-car-wording-seed.mjs",
+    "scripts/test/capture-pdf-golden-references.mts",
+    "scripts/test/verify-pricing.mts"
+  ],
+  "project": [
+    "app/**/*.{ts,tsx,css}",
+    "workers/**/*.{ts,tsx}",
+    "tests/**/*.{ts,tsx}",
+    "scripts/**/*.{ts,tsx,mts,mjs}"
+  ],
+  "ignore": ["app/components/ui/**"],
+  "ignoreDependencies": [
+    "@sentry/cli",
+    "@module-federation/runtime",
+    "@module-federation/vite",
+    "pdfjs-dist",
+    "@typescript-eslint/parser",
+    "eslint-import-resolver-node",
+    "cloudflare"
+  ],
+  "ignoreExportsUsedInFile": true,
+  "rules": {
+    "exports": "off",
+    "types": "off"
+  }
+}

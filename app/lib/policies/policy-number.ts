@@ -1,12 +1,9 @@
 /** Fixed prefix for all CAR policy numbers (generation + UI). */
 export const POLICY_NUMBER_PREFIX = "ATCCWI";
 
-/** User-facing message when a policy number is already allocated. */
+/** User-facing message when a policy or series number is already allocated. */
 export const POLICY_NUMBER_TAKEN_MESSAGE =
   "This policy number is already in use";
-
-/** Same validation rules as policy numbers; series numbers share the ATCCWI format. */
-export const SERIES_NUMBER_TAKEN_MESSAGE = POLICY_NUMBER_TAKEN_MESSAGE;
 
 /** Keep digits only (suffix after the fixed prefix). */
 export function sanitizePolicyNumberSuffix(value: string): string {

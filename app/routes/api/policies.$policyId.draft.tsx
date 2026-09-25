@@ -3,7 +3,7 @@ import { publicErrorMessage } from "~/lib/http/public-error.server";
 import { parseUuid } from "~/lib/http/route-input";
 import {
   composePolicyNumber,
-  SERIES_NUMBER_TAKEN_MESSAGE,
+  POLICY_NUMBER_TAKEN_MESSAGE,
   validateSeriesNumberInput,
 } from "~/lib/policies/policy-number";
 import {
@@ -118,8 +118,8 @@ export async function action({ request, params }: Route.ActionArgs) {
     ) {
       return Response.json({
         ok: false,
-        errors: { policyNumber: [SERIES_NUMBER_TAKEN_MESSAGE] },
-        formError: SERIES_NUMBER_TAKEN_MESSAGE,
+        errors: { policyNumber: [POLICY_NUMBER_TAKEN_MESSAGE] },
+        formError: POLICY_NUMBER_TAKEN_MESSAGE,
       });
     }
     merged.seriesNumber = validated.seriesNumber;

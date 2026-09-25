@@ -278,7 +278,6 @@ describe("applyManualPremiumEdit — corrected vs legacy quirks", () => {
       value: 99,
     });
     expect(afterEsl.premium.contractWorksESL).toBe(99);
-    expect(afterEsl.manualTaxOverride).toBe(false);
 
     const afterBase = applyManualPremiumEdit({
       premium: afterEsl.premium,

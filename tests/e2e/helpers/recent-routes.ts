@@ -213,10 +213,14 @@ export async function getClientDirectoryLabel(
   return "Client";
 }
 
+const RECENT_ROUTES_API_TIMEOUT_MS = process.env.CI ? 45_000 : 15_000;
+
 export async function fetchRecentRoutesFromApi(
   page: Page,
 ): Promise<RecentRouteEntry[]> {
-  const response = await page.request.get("/api/recent-routes");
+  const response = await page.request.get("/api/recent-routes", {
+    timeout: RECENT_ROUTES_API_TIMEOUT_MS,
+  });
   expect(response.ok()).toBeTruthy();
   const payload = (await response.json()) as { routes?: RecentRouteEntry[] };
   return payload.routes ?? [];

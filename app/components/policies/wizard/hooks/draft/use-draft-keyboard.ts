@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-import { usePolicyPhase } from "../utils/use-mode";
+import { usePolicyPhase } from "../utils/use-policy-phase";
 
 /** Cmd/Ctrl+S — same draft save path as blur autosave. */
 export function usePolicyDraftKeyboardSave(saveDraftNow: () => void) {

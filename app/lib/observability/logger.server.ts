@@ -2,8 +2,7 @@
  * Structured JSON logger for Workers Logs / OTEL → Sentry correlation.
  * Never log passwords, tokens, cookies, or policy/client PII payloads.
  *
- * warn/error also bridge to Sentry.logger when the SDK is initialized
- * (`enableLogs: true` on the Worker SDK).
+ * warn/error also bridge to Sentry.logger when the Worker SDK is initialized.
  */
 import {
   getRequestContext,

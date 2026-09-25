@@ -38,8 +38,6 @@ export type ManualPremiumSessionRates = {
 
 export type ManualPremiumEditResult = {
   premium: PremiumBreakdown;
-  /** @deprecated Always false — tax lines no longer permanently freeze auto-recalc. */
-  manualTaxOverride: boolean;
   sessionRates: ManualPremiumSessionRates;
 };
 
@@ -87,8 +85,6 @@ export function applyManualPremiumEdit({
   rating: RatingSnapshot | undefined;
   key: keyof PremiumBreakdown;
   value: number;
-  /** Ignored — kept for call-site compat. Tax freeze (legacy Quirk 4) removed. */
-  manualTaxOverride?: boolean;
   sessionRates?: ManualPremiumSessionRates;
 }): ManualPremiumEditResult {
   const eslRate = asRate(rating?.eslRate);
@@ -139,7 +135,6 @@ export function applyManualPremiumEdit({
     }
     return {
       premium: rollupPremiumTotals(next),
-      manualTaxOverride: false,
       sessionRates: { terrorismRate: τ, plantEslRate },
     };
   }
@@ -216,7 +211,6 @@ export function applyManualPremiumEdit({
 
   return {
     premium: rollupPremiumTotals(next),
-    manualTaxOverride: false,
     sessionRates: { terrorismRate: τ, plantEslRate },
   };
 }

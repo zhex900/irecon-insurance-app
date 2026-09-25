@@ -5,7 +5,7 @@ import type { Policy } from "~/lib/db/types";
 
 import { consumeWizardLeave } from "../../wizard-step-memory";
 import type { PolicyWizardActionData } from "../composite/use-premium-calc";
-import { usePolicyPhase } from "../utils/use-mode";
+import { usePolicyPhase } from "../utils/use-policy-phase";
 import { destinationFromBlocker } from "./leave-helpers";
 
 export function useLeaveFetcherFailure(options: {

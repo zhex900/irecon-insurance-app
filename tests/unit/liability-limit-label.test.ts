@@ -163,8 +163,8 @@ describe("excess merge fields", () => {
 
     const upTo2m = policyToMergeInputs(policy);
     expect(upTo2m.ExcessPlantEquipment).toBe("$1,100.00");
-    expect(upTo2m.ExcessMinorPerils).toBe("$4,400.00");
-    expect(upTo2m.ExcessMajorPerils).toBe("$5,500.00");
+    expect(upTo2m.ExcessMinorPerils).toBe("$2,200.00");
+    expect(upTo2m.ExcessMajorPerils).toBe("$3,300.00");
     expect(upTo2m.ExcessWorkerToWorker).toBe("$6,600.00");
     expect(upTo2m.ExcessLimit10M).toBe("N/A");
     expect(upTo2m.ExcessLimit20M).toBe("$8,800.00");

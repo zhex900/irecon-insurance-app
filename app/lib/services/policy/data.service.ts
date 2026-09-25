@@ -36,7 +36,7 @@ import {
 import { createInformationalNote } from "~/lib/policies/policy-notes";
 import {
   formatPolicyNumberFromSeq,
-  SERIES_NUMBER_TAKEN_MESSAGE,
+  POLICY_NUMBER_TAKEN_MESSAGE,
 } from "~/lib/policies/policy-number";
 import { derivePolicyEndDate } from "~/lib/policies/policy-period";
 import { normalizeSubLimits } from "~/lib/policies/sub-limits";
@@ -158,7 +158,7 @@ export async function createPolicySeriesRow(
     return row;
   } catch (error) {
     if (isSeriesNumberConflict(error)) {
-      throw new ValidationError(SERIES_NUMBER_TAKEN_MESSAGE);
+      throw new ValidationError(POLICY_NUMBER_TAKEN_MESSAGE);
     }
     throw error;
   }
@@ -648,7 +648,7 @@ export async function savePolicy(
     });
   } catch (error) {
     if (isSeriesNumberConflict(error)) {
-      throw new ValidationError(SERIES_NUMBER_TAKEN_MESSAGE);
+      throw new ValidationError(POLICY_NUMBER_TAKEN_MESSAGE);
     }
     throw error;
   }

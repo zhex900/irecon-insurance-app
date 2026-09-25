@@ -29,7 +29,7 @@
 
 ### 1. Communication Contract
 
-- **Contract file**: `app/lib/documents/worker-contract.ts` created
+- **Contract file**: `app/lib/pdf/document-worker-contract.ts`
 - **Defines**: API interfaces, event types, request/response schemas
 - **Includes**: Health checks, error handling, type safety
 

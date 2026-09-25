@@ -40,10 +40,7 @@ export function sentryOptionsFromEnv(
     dsn,
     environment,
     release,
-    enableMetrics: true,
-    enableLogs: true,
     tracesSampleRate: environment === "prod" ? 0.1 : 1,
-    sendDefaultPii: false,
     beforeSend(event) {
       // Drop request bodies — may contain form PII / credentials.
       if (event.request) {

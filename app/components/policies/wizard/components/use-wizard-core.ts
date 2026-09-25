@@ -8,7 +8,7 @@ import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
 
 import type { PolicyWizardActionData } from "../hooks/composite/use-premium-calc";
 import type { PolicyLeaveApi } from "../hooks/draft/use-draft-types";
-import { usePolicyPhase } from "../hooks/utils/use-mode";
+import { usePolicyPhase } from "../hooks/utils/use-policy-phase";
 import { useDeferredFormValues } from "../hooks/wizard/use-deferred-form-values";
 import type { WizardProps } from "../shared/wizard-shared";
 

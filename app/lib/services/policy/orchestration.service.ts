@@ -17,7 +17,7 @@ import {
   normalizeCustomWordings,
 } from "~/lib/policies/custom-wordings";
 import {
-  SERIES_NUMBER_TAKEN_MESSAGE,
+  POLICY_NUMBER_TAKEN_MESSAGE,
   validateSeriesNumberInput,
 } from "~/lib/policies/policy-number";
 import { derivePolicyEndDate } from "~/lib/policies/policy-period";
@@ -118,7 +118,7 @@ export async function assertSeriesNumberAvailable(
   if (
     await isSeriesNumberTaken(validated.seriesNumber, existing.policySeriesId)
   ) {
-    throw new PolicySaveError(SERIES_NUMBER_TAKEN_MESSAGE);
+    throw new PolicySaveError(POLICY_NUMBER_TAKEN_MESSAGE);
   }
 }
 

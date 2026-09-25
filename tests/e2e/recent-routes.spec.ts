@@ -17,7 +17,11 @@ import {
 } from "./helpers/recent-routes";
 
 test.describe("recent routes", () => {
-  test.describe.configure({ mode: "serial" });
+  test.describe.configure({
+    mode: "serial",
+    // Preview Workers + Hyperdrive: policy wizard + delete can exceed the default 60s.
+    timeout: process.env.CI ? 180_000 : 60_000,
+  });
 
   test.beforeEach(async ({ page }) => {
     await prepareRecentsShell(page);
@@ -172,11 +176,18 @@ test.describe("recent routes", () => {
       .click();
 
     await expect(page).toHaveURL(/\/clients\//, { timeout: 15_000 });
-    expect(
-      (await fetchRecentRoutesFromApi(page)).some((route) =>
-        route.href.startsWith(`/policies/${policyId}`),
-      ),
-    ).toBe(false);
-    await expect.poll(() => getRecentRouteLabels(page)).toEqual(["Clients"]);
+
+    await expect
+      .poll(async () => {
+        const routes = await fetchRecentRoutesFromApi(page);
+        return routes.some((route) =>
+          route.href.startsWith(`/policies/${policyId}`),
+        );
+      })
+      .toBe(false);
+
+    await expect
+      .poll(() => getRecentRouteLabels(page), { timeout: 20_000 })
+      .toEqual(["Clients"]);
   });
 });

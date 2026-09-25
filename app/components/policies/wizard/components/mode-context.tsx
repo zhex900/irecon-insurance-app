@@ -69,6 +69,3 @@ export function PolicyPhaseProvider({
     </PolicyPhaseContext.Provider>
   );
 }
-
-/** @deprecated Use PolicyPhaseProvider */
-export const ModeProvider = PolicyPhaseProvider;
