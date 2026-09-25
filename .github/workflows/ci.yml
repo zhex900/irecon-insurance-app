@@ -44,5 +44,8 @@ jobs:
       - name: Knip
         run: pnpm run knip
 
+      - name: Policy number allocation SQL (integration)
+        run: pnpm run test:integration:policy-number-sql
+
       - name: Unit and integration tests
         run: pnpm run test

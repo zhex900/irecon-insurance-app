@@ -9,6 +9,7 @@ Unit, integration, and browser tests for Irecon Insurance (Phase 7).
 | `npm run test`             | Vitest unit + integration                                           |
 | `npm run test:unit`        | Unit only                                                           |
 | `npm run test:integration` | Integration only (skips if Postgres unreachable)                    |
+| `pnpm run test:integration:policy-number-sql` | Gap-fill allocation SQL vs Postgres (required in CI)     |
 | `npm run test:e2e`         | Playwright critical paths (starts `npm run dev`)                    |
 | `npm run test:e2e:local`   | Same, against an already-running `localhost:5173` (skips webServer) |
 | `npm run test:e2e:ui`      | Same as `test:e2e:local` but opens Playwright's `--ui` mode         |
@@ -29,7 +30,9 @@ Config: `vitest.config.ts`. Suites under `tests/unit/`:
 
 ## Integration
 
-`tests/integration/` talks to local Supabase via `DATABASE_URL` (loads `.env`). If the DB is down, those tests **skip** rather than fail.
+`tests/integration/` talks to local Supabase via `DATABASE_URL` (loads `.env`). If the DB is down, those tests **skip** locally; in **CI** they **fail** if Postgres is unreachable after `scripts/ci/supabase-setup.mjs`.
+
+Policy number gap-fill SQL: [`tests/integration/policy-number-allocation-sql.test.ts`](../../tests/integration/policy-number-allocation-sql.test.ts) — also run explicitly via `pnpm run test:integration:policy-number-sql` in GitHub Actions.
 
 ## CI database
 
