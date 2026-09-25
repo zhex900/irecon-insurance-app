@@ -37,10 +37,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Start Supabase and seed database
+        run: node scripts/ci/supabase-setup.mjs
+
       - name: Run quality checks
         run: |
           pnpm run typecheck
           pnpm run lint
+          pnpm run test:integration:policy-number-sql
           pnpm run test
 
   deploy:

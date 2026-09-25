@@ -2,7 +2,7 @@ import { requireAuth } from "~/lib/auth/session/server.server";
 import { publicErrorMessage } from "~/lib/http/public-error.server";
 import { parseUuid } from "~/lib/http/route-input";
 import {
-  composePolicyNumber,
+  canonicalPolicyNumber,
   POLICY_NUMBER_TAKEN_MESSAGE,
   validateSeriesNumberInput,
 } from "~/lib/policies/policy-number";
@@ -93,7 +93,8 @@ export async function action({ request, params }: Route.ActionArgs) {
     const submitted = parsed.data.policyNumber?.trim();
     if (
       submitted &&
-      composePolicyNumber(submitted) !== existing.seriesNumber.trim()
+      canonicalPolicyNumber(submitted) !==
+        canonicalPolicyNumber(existing.seriesNumber)
     ) {
       return Response.json({
         ok: false,

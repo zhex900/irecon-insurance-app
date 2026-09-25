@@ -27,6 +27,7 @@ import {
   legacyPolicyUuid,
 } from "../legacy/lib/legacy-id-map.mts";
 import { attachPolicySeriesFields } from "../lib/policy-series-import.mts";
+import { syncPolicyNumberSeqFromPolicies } from "../lib/policy-number-seq.mts";
 import { getSupabaseAdmin } from "../../../app/lib/supabase/admin.server";
 import { seedAuthorisedRepresentativesFromCsv } from "./seed-ar-from-csv.mts";
 import { seedPrices } from "./seed-prices";
@@ -208,22 +209,8 @@ async function main() {
       pg_get_serial_sequence('authorised_representative', 'authorised_representative_id'),
       (SELECT COALESCE(MAX(authorised_representative_id), 1) FROM authorised_representative)
     );
-    SELECT setval(
-      'policy_number_seq',
-      GREATEST(
-        1000,
-        COALESCE(
-          (
-            SELECT MAX(
-              NULLIF(regexp_replace(p.policy_number, '\\D', '', 'g'), '')::bigint
-            )
-            FROM policy p
-          ),
-          1000
-        )
-      )
-    );
   `);
+  await syncPolicyNumberSeqFromPolicies(db);
 
   console.log("Seed complete. Demo password for seeded users: password123");
   process.exit(0);

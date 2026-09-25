@@ -105,7 +105,7 @@ describe("validateSeriesNumberInput", () => {
     const result = validateSeriesNumberInput("487");
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.seriesNumber).toBe("ATCCWI487");
+      expect(result.seriesNumber).toBe("ATCCWI0487");
     }
   });
 });
@@ -126,7 +126,7 @@ describe("resolveSeriesNumberFromForm", () => {
         policyCategoryId: 1,
         terminalLocked: false,
       }),
-    ).toBe("ATCCWI999");
+    ).toBe("ATCCWI0999");
   });
 });
 
