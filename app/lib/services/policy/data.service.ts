@@ -38,7 +38,10 @@ import {
   formatPolicyNumberFromSeq,
   POLICY_NUMBER_TAKEN_MESSAGE,
 } from "~/lib/policies/policy-number";
-import { POLICY_NUMBER_LOWEST_FREE_SUFFIX_SQL } from "~/lib/policies/policy-number-sql";
+import {
+  POLICY_NUMBER_LOWEST_FREE_SUFFIX_RESERVE_SERIES_SQL,
+  POLICY_NUMBER_LOWEST_FREE_SUFFIX_SQL,
+} from "~/lib/policies/policy-number-sql";
 import { derivePolicyEndDate } from "~/lib/policies/policy-period";
 import { normalizeSubLimits } from "~/lib/policies/sub-limits";
 import { getClient, listClients } from "~/lib/services/clients/service";
@@ -89,34 +92,53 @@ export type SavePolicyOptions = {
   pdfService?: PdfWorkerBinding | null;
 };
 
-async function queryLowestFreePolicyNumberSuffix(): Promise<number | null> {
+async function queryLowestFreePolicyNumberSuffix(
+  reserveSeriesNumber: boolean,
+): Promise<number | null> {
   const db = getDb();
+  const lowestFreeSql = reserveSeriesNumber
+    ? POLICY_NUMBER_LOWEST_FREE_SUFFIX_RESERVE_SERIES_SQL
+    : POLICY_NUMBER_LOWEST_FREE_SUFFIX_SQL;
   const [row] = await db.execute<{ suffix: number | string | null }>(
-    sql`SELECT ${POLICY_NUMBER_LOWEST_FREE_SUFFIX_SQL} AS "suffix"`,
+    sql`SELECT ${lowestFreeSql} AS "suffix"`,
   );
   const raw = row?.suffix;
   if (raw === null || raw === undefined) return null;
   return Number(raw);
 }
 
+export type AllocatePolicyNumberOptions = {
+  /**
+   * When true, skip suffixes already on `policy_series.series_number` (new
+   * business sets series_number = policy_number).
+   */
+  reserveSeriesNumber?: boolean;
+};
+
 /**
- * Next internal policy number: smallest unused ATCCWI#### suffix among
- * {@link policy.policyNumber} rows (gap-fill), with retries on races.
+ * Next internal policy number: smallest unused ATCCWI#### suffix (gap-fill),
+ * with retries on races.
  */
-export async function allocatePolicyNumber(policyId: string): Promise<string> {
+export async function allocatePolicyNumber(
+  policyId: string,
+  options: AllocatePolicyNumberOptions = {},
+): Promise<string> {
+  const reserveSeriesNumber = options.reserveSeriesNumber ?? false;
   for (
     let attempt = 0;
     attempt < POLICY_NUMBER_ALLOCATE_MAX_ATTEMPTS;
     attempt++
   ) {
-    const suffix = await queryLowestFreePolicyNumberSuffix();
+    const suffix = await queryLowestFreePolicyNumberSuffix(reserveSeriesNumber);
     if (suffix === null) {
       throw new Error("Policy number sequence exhausted");
     }
     const policyNumber = formatPolicyNumberFromSeq(suffix);
-    if (!(await isPolicyNumberTaken(policyNumber, policyId))) {
-      return policyNumber;
+    if (await isPolicyNumberTaken(policyNumber, policyId)) continue;
+    if (reserveSeriesNumber && (await isSeriesNumberTaken(policyNumber))) {
+      continue;
     }
+    return policyNumber;
   }
   throw new Error("Could not allocate a unique policy number");
 }
@@ -684,7 +706,10 @@ export async function createPolicyDraft(
     try {
       const policyId = crypto.randomUUID();
       const policyNumber =
-        partial.policyNumber ?? (await allocatePolicyNumber(policyId));
+        partial.policyNumber ??
+        (await allocatePolicyNumber(policyId, {
+          reserveSeriesNumber: !partial.policySeriesId,
+        }));
 
       let policySeriesId = partial.policySeriesId;
       let seriesNumber = partial.seriesNumber?.trim() ?? "";
@@ -783,7 +808,9 @@ export async function createPolicyDraft(
       if (createdSeriesId) {
         await deletePolicySeriesIfOrphan(createdSeriesId);
       }
-      if (isPolicyNumberConflict(error)) continue;
+      if (isPolicyNumberConflict(error) || isSeriesNumberConflict(error)) {
+        continue;
+      }
       throw error;
     }
   }
