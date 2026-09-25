@@ -126,9 +126,9 @@ Follow the repository's decision rule: **"prefer simpler; don't rewrite working 
 
 **Proposed structure:**
 
-- `html-rich-text-parser.ts` (HTML tokenization and parsing)
-- `html-rich-text-wrapping.ts` (Line wrapping and measurements)
-- `html-rich-text-geometry.ts` (Endorsement geometry calculations)
+- `html-rich-text-geometry.ts` (Endorsement geometry calculations; in use)
+- `html-rich-text-lines.ts` / `html-rich-text-draw.ts` (line layout and PDF paint; in use)
+- Optional parser/wrapping split was attempted and removed — keep new modules wired before landing splits.
 
 **Key functions to extract:**
 

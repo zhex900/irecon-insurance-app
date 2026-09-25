@@ -9,7 +9,7 @@ import {
 } from "~/components/ui/dialog";
 import { LoadingButton } from "~/components/ui/loading-button";
 
-import { usePolicyPhase } from "./hooks/utils/use-mode";
+import { usePolicyPhase } from "./hooks/utils/use-policy-phase";
 
 export type SubmitConfirmDialogProps = {
   open: boolean;

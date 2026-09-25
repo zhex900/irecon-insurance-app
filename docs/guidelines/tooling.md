@@ -11,13 +11,15 @@ Local quality gate for Irecon Insurance (Phase 8). CI should re-run the same com
 | `pnpm run format`       | Prettier write (incl. Tailwind class sort)             |
 | `pnpm run format:check` | Prettier check                                         |
 | `pnpm run typecheck`    | React Router typegen + `tsc` (TypeScript **7** native) |
+| `pnpm run knip`         | Unused files, dependencies, and config (`knip.json`)   |
 | `pnpm run test:unit`    | Vitest unit                                            |
-| `pnpm run verify`       | lint + format:check + typecheck + test:unit            |
+| `pnpm run verify`       | lint + format:check + typecheck + knip + test:unit + bundle check |
 
 ## Config files
 
 - `eslint.config.js` — flat ESLint (`typescript-eslint` + `react-hooks` + Prettier disable)
 - `prettier.config.js` + `.prettierignore` — Prettier + `prettier-plugin-tailwindcss`
+- `knip.json` — dead-code scan (also runs in CI after format check)
 - `.editorconfig` — charset / LF / 2-space indent
 - `.husky/pre-commit` — runs `lint-staged`
 

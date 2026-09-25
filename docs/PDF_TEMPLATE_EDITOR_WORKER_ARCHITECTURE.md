@@ -163,7 +163,7 @@ Portal State ↔ Cross-Domain State Manager ↔ Documents State
 
 #### 1.3 Cross-Domain Communication Framework
 
-- **Contract**: `app/lib/documents/worker-contract.ts`
+- **Contract**: `app/lib/pdf/document-worker-contract.ts`
   - Type-safe API interfaces
   - Event schemas (TemplateSync, MergeFieldSync, etc.)
   - Request/response patterns

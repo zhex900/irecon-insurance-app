@@ -10,7 +10,7 @@ import { policyDisplayReference } from "~/lib/policies/policy-display";
 import { cn } from "~/lib/utils";
 
 import type { usePolicyWizardNavigation } from "../hooks/composite/use-navigation";
-import { usePolicyPhase } from "../hooks/utils/use-mode";
+import { usePolicyPhase } from "../hooks/utils/use-policy-phase";
 import { useWizardDisplayFields } from "../hooks/wizard/use-wizard-display-fields";
 import { policyPhaseHeaderClass } from "../shared/policy-phase";
 import type {

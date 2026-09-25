@@ -31,7 +31,7 @@ import type {
   PricesPayload,
   PricesSeedCounts,
   TerrorPostcode,
-} from "./prices-payload";
+} from "../mssql/prices-payload";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 

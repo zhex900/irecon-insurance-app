@@ -3,7 +3,7 @@ import { memo } from "react";
 import { PolicyCollapsibleSection } from "~/components/policies/policy-form-layout";
 import type { CarWording, RatingSnapshot, ReferenceData } from "~/lib/db/types";
 
-import { usePolicyPhase } from "../hooks/utils/use-mode";
+import { usePolicyPhase } from "../hooks/utils/use-policy-phase";
 import { ClaimsWording } from "../sections/claims-wording";
 import { Excesses } from "../sections/excesses";
 import { Limits } from "../sections/limits";

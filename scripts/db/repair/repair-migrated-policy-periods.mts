@@ -21,7 +21,7 @@ import {
   missingMigrateEnvHelp,
   parseMigrateTargetEnv,
 } from "../lib/migrate-target-env.mts";
-import { defaultConstructionPeriodMonths } from "./lib/legacy-policy-mapper.mts";
+import { defaultConstructionPeriodMonths } from "../legacy/lib/legacy-policy-mapper.mts";
 
 function readFlag(name: string): boolean {
   return process.argv.includes(name);

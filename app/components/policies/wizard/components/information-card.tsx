@@ -6,7 +6,7 @@ import type { Policy, PremiumBreakdown, ReferenceData } from "~/lib/db/types";
 import { getTakenStatusIssues } from "~/lib/policies/taken-status";
 import { type CarPolicyFormValues, POLICY_STATUS } from "~/lib/zod/policy-car";
 
-import { usePolicyPhase } from "../hooks/utils/use-mode";
+import { usePolicyPhase } from "../hooks/utils/use-policy-phase";
 import { useWizardDisplayFields } from "../hooks/wizard/use-wizard-display-fields";
 import { SECTION_IDS } from "../shared/constants";
 

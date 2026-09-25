@@ -20,7 +20,7 @@ import type { CarPolicyWizardState } from "../components/use-wizard-state";
 import { useWizardState } from "../components/use-wizard-state";
 import { WizardContainer } from "../components/wizard-container";
 import { useDismissNewPolicyOnDraftSave } from "../hooks/utils/use-dismiss-new-on-draft-save";
-import { usePolicyPhase } from "../hooks/utils/use-mode";
+import { usePolicyPhase } from "../hooks/utils/use-policy-phase";
 
 export function WizardDefault(props: WizardStateProps) {
   const core = useWizardCore();

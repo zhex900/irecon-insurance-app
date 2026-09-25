@@ -10,7 +10,7 @@ import {
   readStoredStep,
   rememberWizardStep,
 } from "../../wizard-step-memory";
-import { usePolicyPhase } from "../utils/use-mode";
+import { usePolicyPhase } from "../utils/use-policy-phase";
 import { calculateMaxStep } from "./use-wizard-navigation-utils";
 
 export function useWizardStepManagement({

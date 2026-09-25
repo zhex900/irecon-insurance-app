@@ -41,5 +41,8 @@ jobs:
       - name: Prettier
         run: pnpm run format:check
 
+      - name: Knip
+        run: pnpm run knip
+
       - name: Unit and integration tests
         run: pnpm run test

@@ -5,7 +5,7 @@ import type { PolicySaveStatus } from "~/components/forms/field-save-highlight";
 import type { PremiumBreakdown } from "~/lib/db/types";
 import type { CarPolicyFormValues } from "~/lib/zod/policy-car";
 
-import { usePolicyPhase } from "../utils/use-mode";
+import { usePolicyPhase } from "../utils/use-policy-phase";
 import { SaveEpochTracker } from "./use-draft-utils";
 
 export function useDraftStateManagement({

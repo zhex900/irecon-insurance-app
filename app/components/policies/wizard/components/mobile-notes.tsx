@@ -6,7 +6,7 @@ import type { NoteAuthor } from "~/lib/services/users/service";
 
 import { usePolicyNotes } from "../hooks/composite/use-notes";
 import type { PolicyWizardActionData } from "../hooks/composite/use-premium-calc";
-import { usePolicyPhase } from "../hooks/utils/use-mode";
+import { usePolicyPhase } from "../hooks/utils/use-policy-phase";
 import { policyPhaseCardBorderClass } from "../shared/policy-phase";
 
 type MobileNotesProps = {

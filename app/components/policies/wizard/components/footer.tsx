@@ -5,7 +5,7 @@ import { Button } from "~/components/ui/button";
 import { LoadingButton } from "~/components/ui/loading-button";
 
 import type { PolicyWizardActionData } from "../hooks/composite/use-premium-calc";
-import { usePolicyPhase } from "../hooks/utils/use-mode";
+import { usePolicyPhase } from "../hooks/utils/use-policy-phase";
 
 type FooterProps = {
   submitDisabled: boolean;

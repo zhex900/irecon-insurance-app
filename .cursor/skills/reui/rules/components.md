@@ -115,23 +115,6 @@ const [value, setValue] = useState<DateSelectorValue | undefined>()
 
 **Gotcha:** the value is a structured `DateSelectorValue` (period / operator / start+end dates), NOT a `Date` - never pass a raw `Date`. Use `allowRange={false}` to lock single-date picking. Read `get_component("date-selector")` for the value shape.
 
-## tree
-
-**Required:** `tree` (a `@headless-tree/core` instance you construct)
-**Shape:**
-
-```tsx
-<Tree tree={tree}>
-  {tree.getItems().map((item) => (
-    <TreeItem key={item.getId()} item={item}>
-      <TreeItemLabel />
-    </TreeItem>
-  ))}
-</Tree>
-```
-
-**Gotcha:** `Tree` is a styled shell - it takes a headless-tree instance via `tree`, NOT `data`/`items` props. Build the instance with `@headless-tree/react`. External API: https://headless-tree.lukasbach.com/
-
 ## stepper
 
 **Required:** `StepperItem step` (number), `StepperContent value` (number)

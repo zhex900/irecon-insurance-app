@@ -15,7 +15,7 @@ type SyncPerilsOptions = {
 };
 
 /** Major / Minor Perils follow Section 1 contract works (≤ $2M vs over $2M). */
-export function useSyncPerilsExcessFromLegalLiability(
+export function useSyncPerilsExcessFromContractWorks(
   defaultExcesses: ReferenceData["defaultExcesses"],
   { syncOnMount = false }: SyncPerilsOptions = {},
 ) {

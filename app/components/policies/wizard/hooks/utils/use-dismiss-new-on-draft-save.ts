@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 
-import { usePolicyPhase } from "./use-mode";
+import { usePolicyPhase } from "./use-policy-phase";
 
 /** Session-new policies stop behaving as new after the first successful draft save. */
 export function useDismissNewPolicyOnDraftSave(draftSavedAt: string | null) {
