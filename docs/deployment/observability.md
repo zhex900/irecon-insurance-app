@@ -46,7 +46,7 @@ Builds use Vite `build.sourcemap: "hidden"` (maps on disk, no public `sourceMapp
 
 3. **Session Replay** — enabled in `[app/entry.client.tsx](../app/entry.client.tsx)` with **strict masking** (`maskAllText`, `blockAllMedia`, `maskAllInputs`).
 4. **User interactions** — `reactRouterTracingIntegration()` records navigations and click-driven spans; they appear on the Replay timeline when tracing is linked.
-5. **Metrics** — `enableMetrics: true` on client + Worker. Product counters live in `[metrics.server.ts](../app/lib/observability/metrics.server.ts)` / `[metrics.client.ts](../app/lib/observability/metrics.client.ts)`.
+5. **Metrics** — product counters via `Sentry.metrics` in `[metrics.server.ts](../app/lib/observability/metrics.server.ts)` / `[metrics.client.ts](../app/lib/observability/metrics.client.ts)` (no separate init flag in Sentry v11).
 
 ### Product metrics (usage)
 
