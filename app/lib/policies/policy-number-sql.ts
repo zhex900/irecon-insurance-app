@@ -1,10 +1,5 @@
 import { sql } from "drizzle-orm";
 
-import {
-  POLICY_NUMBER_SUFFIX_MAX,
-  POLICY_NUMBER_SUFFIX_MIN,
-} from "~/lib/policies/policy-number";
-
 /**
  * Canonical ATCCWI#### numeric suffix from a policy row (ignores legacy `-YYYY` tails
  * and non-canonical policy_number values). Shared by seq sync and gap-fill allocation.
@@ -26,14 +21,11 @@ export const POLICY_NUMBER_SEQ_MAX_SUFFIX_SQL = sql`
   )
 `;
 
-/** Smallest unused canonical suffix in the legacy allocation range. */
+/** Smallest unused canonical suffix in [POLICY_NUMBER_SUFFIX_MIN, POLICY_NUMBER_SUFFIX_MAX]. */
 export const POLICY_NUMBER_LOWEST_FREE_SUFFIX_SQL = sql`
   (
     SELECT s AS suffix
-    FROM generate_series(
-      ${POLICY_NUMBER_SUFFIX_MIN}::integer,
-      ${POLICY_NUMBER_SUFFIX_MAX}::integer
-    ) AS s
+    FROM generate_series(1000, 9999) AS s
     WHERE NOT EXISTS (
       SELECT 1
       FROM public.policy p

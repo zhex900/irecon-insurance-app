@@ -54,8 +54,24 @@ export async function openFirstClientAndStartPolicy(page: Page): Promise<void> {
   const newPolicyButton = page.getByRole("button", { name: /new policy/i });
   await expect(newPolicyButton.first()).toBeVisible();
   await newPolicyButton.first().click();
-  await newPolicyPromise;
+  const newPolicyResponse = await newPolicyPromise;
+  if (!newPolicyResponse.ok()) {
+    throw new Error(
+      `Create policy failed (${newPolicyResponse.status()}): ${await newPolicyResponse.text()}`,
+    );
+  }
   await expect(page).toHaveURL(/\/policies\/[^/]+$/);
+  const policyId = policyIdFromUrl(page);
+  await page.waitForResponse(
+    (response) =>
+      response.request().method() === "GET" &&
+      response.url().includes(`policies/${policyId}`) &&
+      response.ok(),
+    { timeout: 30_000 },
+  );
+  await expect(page.getByLabel("Policy wizard header")).toBeVisible({
+    timeout: 30_000,
+  });
   await expectPolicyPhase(page, "new");
 }
 
