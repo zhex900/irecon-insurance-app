@@ -18,6 +18,7 @@ This file is **behavior only**. Engineering rules live in `docs/`.
 | Interim schema / JSONB normalization        | [docs/architecture/interim-data-patterns.md](docs/architecture/interim-data-patterns.md)                             |
 | Testing                                     | [docs/development/testing.md](docs/development/testing.md)                                                           |
 | Lint / format                               | [docs/guidelines/tooling.md](docs/guidelines/tooling.md)                                                             |
+| Policy series vs policy numbers             | [docs/domains/policy-series-and-numbers.md](docs/domains/policy-series-and-numbers.md)                               |
 | CAR premium / terrorism formulas            | [docs/domains/pricing/car-premium-formulas.md](docs/domains/pricing/car-premium-formulas.md)                         |
 | Legacy vs rebuild manual premium quirks     | [docs/domains/pricing/legacy-vs-rebuild-premium-manual.md](docs/domains/pricing/legacy-vs-rebuild-premium-manual.md) |
 | Observability (CF + Sentry)                 | [docs/deployment/observability.md](docs/deployment/observability.md)                                                 |

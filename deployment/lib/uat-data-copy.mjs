@@ -319,20 +319,25 @@ export async function syncMigrationHistoryFromUat({
   );
 }
 
-/** Match supabase/migrations/20260806120000_client_policy_uuid_ids.sql setval logic. */
+/** Match supabase/migrations/20260806120000_client_policy_uuid_ids.sql */
 const SYNC_POLICY_NUMBER_SEQ_SQL = `
+CREATE SEQUENCE IF NOT EXISTS public.policy_number_seq START WITH 1000;
 SELECT setval(
   'public.policy_number_seq',
   greatest(
     1000,
-    coalesce(
-      (
-        select max(
-          nullif(regexp_replace(p.policy_number, '\\D', '', 'g'), '')::bigint
-        )
-        from public.policy p
-      ),
-      1000
+    least(
+      9999,
+      coalesce(
+        (
+          select max(
+            (regexp_replace(upper(split_part(p.policy_number, '-', 1)), '^ATCCWI', ''))::bigint
+          )
+          from public.policy p
+          where upper(split_part(p.policy_number, '-', 1)) ~ '^ATCCWI[0-9]{1,4}$'
+        ),
+        1000
+      )
     )
   )
 );

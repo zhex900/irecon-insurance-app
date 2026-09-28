@@ -10,8 +10,10 @@ import {
   InputGroupText,
 } from "~/components/ui/input-group";
 import {
+  canonicalPolicyNumber,
   composePolicyNumber,
   POLICY_NUMBER_PREFIX,
+  POLICY_NUMBER_SUFFIX_LENGTH,
   policyNumberSuffix,
 } from "~/lib/policies/policy-number";
 import { cn } from "~/lib/utils";
@@ -61,6 +63,7 @@ export function PolicyNumberField({
           type="text"
           inputMode="numeric"
           pattern="[0-9]*"
+          maxLength={POLICY_NUMBER_SUFFIX_LENGTH}
           value={suffix}
           aria-invalid={error ? true : undefined}
           aria-label="Policy number"
@@ -70,7 +73,12 @@ export function PolicyNumberField({
           onChange={(event) => {
             onChange?.(composePolicyNumber(event.target.value));
           }}
-          onBlur={onBlur}
+          onBlur={() => {
+            if (onChange && value?.trim()) {
+              onChange(canonicalPolicyNumber(value));
+            }
+            onBlur?.();
+          }}
         />
       </InputGroup>
       <FieldSavedTick name="policyNumber" />

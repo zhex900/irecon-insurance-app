@@ -36,8 +36,12 @@ import {
 import { createInformationalNote } from "~/lib/policies/policy-notes";
 import {
   formatPolicyNumberFromSeq,
+  POLICY_NUMBER_SUFFIX_MAX,
+  POLICY_NUMBER_SUFFIX_MIN,
   POLICY_NUMBER_TAKEN_MESSAGE,
+  policyNumberSuffix,
 } from "~/lib/policies/policy-number";
+import { lowestFreePolicyNumberSuffixQuery } from "~/lib/policies/policy-number-sql";
 import { derivePolicyEndDate } from "~/lib/policies/policy-period";
 import { normalizeSubLimits } from "~/lib/policies/sub-limits";
 import { getClient, listClients } from "~/lib/services/clients/service";
@@ -88,24 +92,84 @@ export type SavePolicyOptions = {
   pdfService?: PdfWorkerBinding | null;
 };
 
-/**
- * Next human-facing policy number from {@link policy_number_seq}, skipping values
- * already held by another policy (seq can lag after imports or manual inserts).
- */
-export async function allocatePolicyNumber(policyId: string): Promise<string> {
+function suffixFromAllocationRow(row: unknown): number | null {
+  if (!row || typeof row !== "object") return null;
+  const raw = (row as { suffix?: unknown }).suffix;
+  if (raw === null || raw === undefined) return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
+async function queryLowestFreePolicyNumberSuffix(
+  reserveSeriesNumber: boolean,
+  minSuffix: number,
+): Promise<number | null> {
   const db = getDb();
+  const rows = await db.execute(
+    lowestFreePolicyNumberSuffixQuery(reserveSeriesNumber, minSuffix),
+  );
+  const list = Array.isArray(rows) ? rows : [];
+  return suffixFromAllocationRow(list[0]);
+}
+
+async function queryNextPolicyNumberSeqValue(): Promise<number> {
+  const db = getDb();
+  const rows = await db.execute<{ seq: number | string }>(
+    sql`SELECT nextval('public.policy_number_seq') AS "seq"`,
+  );
+  const list = Array.isArray(rows) ? rows : [];
+  const raw = (list[0] as { seq?: number | string } | undefined)?.seq;
+  return Number(raw ?? POLICY_NUMBER_SUFFIX_MIN);
+}
+
+export type AllocatePolicyNumberOptions = {
+  /**
+   * When true, skip suffixes already on `policy_series.series_number` (new
+   * business sets series_number = policy_number).
+   */
+  reserveSeriesNumber?: boolean;
+  /** Search for a free suffix at or above this value (gap-fill cursor). */
+  minSuffix?: number;
+};
+
+/**
+ * Next internal policy number: smallest unused ATCCWI#### suffix (gap-fill),
+ * with retries on races.
+ */
+export async function allocatePolicyNumber(
+  policyId: string,
+  options: AllocatePolicyNumberOptions = {},
+): Promise<string> {
+  const reserveSeriesNumber = options.reserveSeriesNumber ?? false;
+  let minSuffix = options.minSuffix ?? POLICY_NUMBER_SUFFIX_MIN;
   for (
     let attempt = 0;
     attempt < POLICY_NUMBER_ALLOCATE_MAX_ATTEMPTS;
     attempt++
   ) {
-    const [seqRow] = await db.execute<{ seq: number | string }>(
-      sql`SELECT nextval('policy_number_seq') AS "seq"`,
+    let suffix = await queryLowestFreePolicyNumberSuffix(
+      reserveSeriesNumber,
+      minSuffix,
     );
-    const policyNumber = formatPolicyNumberFromSeq(Number(seqRow?.seq ?? 1000));
-    if (!(await isPolicyNumberTaken(policyNumber, policyId))) {
-      return policyNumber;
+    if (suffix === null) {
+      suffix = await queryNextPolicyNumberSeqValue();
+      if (
+        suffix < minSuffix ||
+        suffix < POLICY_NUMBER_SUFFIX_MIN ||
+        suffix > POLICY_NUMBER_SUFFIX_MAX
+      ) {
+        throw new Error("Policy number sequence exhausted");
+      }
     }
+    const policyNumber = formatPolicyNumberFromSeq(suffix);
+    const policyTaken = await isPolicyNumberTaken(policyNumber, policyId);
+    const seriesTaken =
+      reserveSeriesNumber && (await isSeriesNumberTaken(policyNumber));
+    if (policyTaken || seriesTaken) {
+      minSuffix = suffix + 1;
+      continue;
+    }
+    return policyNumber;
   }
   throw new Error("Could not allocate a unique policy number");
 }
@@ -668,12 +732,19 @@ export async function createPolicyDraft(
   const existingClient = await getClient(clientId);
   if (!existingClient) throw new Error("Client not found");
 
+  let allocateMinSuffix = POLICY_NUMBER_SUFFIX_MIN;
   for (let attempt = 0; attempt < CREATE_DRAFT_MAX_ATTEMPTS; attempt++) {
     let createdSeriesId: string | null = null;
+    let attemptedPolicyNumber = "";
     try {
       const policyId = crypto.randomUUID();
       const policyNumber =
-        partial.policyNumber ?? (await allocatePolicyNumber(policyId));
+        partial.policyNumber ??
+        (await allocatePolicyNumber(policyId, {
+          reserveSeriesNumber: !partial.policySeriesId,
+          minSuffix: allocateMinSuffix,
+        }));
+      attemptedPolicyNumber = policyNumber;
 
       let policySeriesId = partial.policySeriesId;
       let seriesNumber = partial.seriesNumber?.trim() ?? "";
@@ -772,7 +843,13 @@ export async function createPolicyDraft(
       if (createdSeriesId) {
         await deletePolicySeriesIfOrphan(createdSeriesId);
       }
-      if (isPolicyNumberConflict(error)) continue;
+      if (isPolicyNumberConflict(error) || isSeriesNumberConflict(error)) {
+        if (attemptedPolicyNumber) {
+          const n = Number(policyNumberSuffix(attemptedPolicyNumber));
+          if (Number.isFinite(n)) allocateMinSuffix = n + 1;
+        }
+        continue;
+      }
       throw error;
     }
   }

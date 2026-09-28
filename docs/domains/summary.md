@@ -4,11 +4,12 @@ Domain-specific docs live under `docs/domains/`.
 
 ## Active areas
 
-| Domain           | Location                                                                             | Notes                                               |
-| ---------------- | ------------------------------------------------------------------------------------ | --------------------------------------------------- |
-| Legacy migration | [migration/legacy-policy-field-mapping.md](migration/legacy-policy-field-mapping.md) | Field-level mapping reference for migrated policies |
-| Pricing          | [pricing/](pricing/)                                                                 | CAR premium formulas, legacy vs rebuild quirks      |
-| Security         | [security/](security/)                                                               | Worker security plans and review checklists         |
+| Domain           | Location                                                                             | Notes                                                |
+| ---------------- | ------------------------------------------------------------------------------------ | ---------------------------------------------------- |
+| Policy numbers   | [policy-series-and-numbers.md](policy-series-and-numbers.md)                         | Series vs term `policy_number`, renewals, allocation |
+| Legacy migration | [migration/legacy-policy-field-mapping.md](migration/legacy-policy-field-mapping.md) | Field-level mapping reference for migrated policies  |
+| Pricing          | [pricing/](pricing/)                                                                 | CAR premium formulas, legacy vs rebuild quirks       |
+| Security         | [security/](security/)                                                               | Worker security plans and review checklists          |
 
 ## Related (outside `domains/`)
 

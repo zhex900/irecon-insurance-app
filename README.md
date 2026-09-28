@@ -19,6 +19,7 @@ Clients, policies, prices, and users persist in **Supabase Postgres** via Drizzl
 | [docs/guidelines/tooling.md](docs/guidelines/tooling.md)                                   | ESLint, Prettier, husky, verify             |
 | [docs/architecture/refactor-to-production.md](docs/architecture/refactor-to-production.md) | Production hardening plan                   |
 | [docs/domain.md](docs/domain.md)                                                           | Hostnames, environments, DNS                |
+| [docs/domains/policy-series-and-numbers.md](docs/domains/policy-series-and-numbers.md)     | Series vs term policy numbers, renewals     |
 | [docs/deployment/preview-environments.md](docs/deployment/preview-environments.md)         | Per-PR Cloudflare + Supabase preview        |
 
 ## Stack

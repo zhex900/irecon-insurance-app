@@ -1,9 +1,37 @@
 /** Fixed prefix for all CAR policy numbers (generation + UI). */
 export const POLICY_NUMBER_PREFIX = "ATCCWI";
 
+/**
+ * Numeric suffix width (legacy MSSQL `ATCCW{0:D4}` / `_archive` export: ATCCWI####).
+ * Total displayed length is always {@link POLICY_NUMBER_PREFIX}.length + this value (10).
+ */
+export const POLICY_NUMBER_SUFFIX_LENGTH = 4;
+
+/** Inclusive bounds for auto-allocated ATCCWI#### suffixes (matches policy_number_seq). */
+export const POLICY_NUMBER_SUFFIX_MIN = 1000;
+export const POLICY_NUMBER_SUFFIX_MAX = 10 ** POLICY_NUMBER_SUFFIX_LENGTH - 1;
+
+/**
+ * Smallest integer in [min, max] not present in used (gap-fill allocation).
+ * Returns null when the range is full.
+ */
+export function lowestFreePolicyNumberSuffix(
+  used: Iterable<number>,
+  min: number = POLICY_NUMBER_SUFFIX_MIN,
+  max: number = POLICY_NUMBER_SUFFIX_MAX,
+): number | null {
+  const taken = new Set(used);
+  for (let n = min; n <= max; n++) {
+    if (!taken.has(n)) return n;
+  }
+  return null;
+}
+
 /** User-facing message when a policy or series number is already allocated. */
 export const POLICY_NUMBER_TAKEN_MESSAGE =
   "This policy number is already in use";
+
+const POLICY_NUMBER_SUFFIX_TOO_LONG_MESSAGE = `Policy number must be ${POLICY_NUMBER_SUFFIX_LENGTH} digits after the prefix`;
 
 /** Keep digits only (suffix after the fixed prefix). */
 export function sanitizePolicyNumberSuffix(value: string): string {
@@ -32,18 +60,30 @@ export function composePolicyNumber(suffix: string): string {
   return `${POLICY_NUMBER_PREFIX}${clean}`;
 }
 
-/** Increment the numeric policy suffix while preserving its width. */
+/** Canonical ATCCWI#### for persistence, allocation, and display after save. */
+export function canonicalPolicyNumber(value: string): string {
+  const suffix = policyNumberSuffix(value);
+  if (!suffix) return composePolicyNumber("");
+  return composePolicyNumber(suffix.padStart(POLICY_NUMBER_SUFFIX_LENGTH, "0"));
+}
+
+/** Increment the numeric policy suffix while preserving fixed legacy width. */
 export function incrementPolicyNumber(policyNumber: string): string {
   const suffix = policyNumberSuffix(policyNumber);
-  if (!suffix) return composePolicyNumber("1");
-  return composePolicyNumber(
-    String(Number(suffix) + 1).padStart(suffix.length, "0"),
-  );
+  if (!suffix) return canonicalPolicyNumber("1");
+  const next = Number(suffix) + 1;
+  if (next > 10 ** POLICY_NUMBER_SUFFIX_LENGTH - 1) {
+    throw new Error("Policy number sequence exhausted");
+  }
+  return canonicalPolicyNumber(String(next));
 }
 
 /** Auto-allocate from `policy_number_seq` (not the UUID primary key). */
 export function formatPolicyNumberFromSeq(seq: number): string {
-  return composePolicyNumber(String(seq).padStart(4, "0"));
+  if (seq < 0 || seq > 10 ** POLICY_NUMBER_SUFFIX_LENGTH - 1) {
+    throw new Error("Policy number sequence out of range");
+  }
+  return canonicalPolicyNumber(String(seq));
 }
 
 /**
@@ -58,7 +98,7 @@ export function resolvePolicyNumberForSave(
   if (locked) return currentPolicyNumber;
   const trimmed = submitted?.trim();
   if (!trimmed) return currentPolicyNumber;
-  return composePolicyNumber(trimmed);
+  return canonicalPolicyNumber(trimmed);
 }
 
 /**
@@ -72,14 +112,17 @@ export function validatePolicyNumberInput(
   if (!trimmed) {
     return { ok: false, message: "Policy number is required" };
   }
-  const policyNumber = composePolicyNumber(trimmed);
-  const suffix = policyNumberSuffix(policyNumber);
+  const suffix = policyNumberSuffix(trimmed);
   if (suffix.length === 0) {
     return { ok: false, message: "Enter the policy number after the prefix" };
   }
   if (!/^\d+$/.test(suffix)) {
     return { ok: false, message: "Policy number must be digits only" };
   }
+  if (suffix.length > POLICY_NUMBER_SUFFIX_LENGTH) {
+    return { ok: false, message: POLICY_NUMBER_SUFFIX_TOO_LONG_MESSAGE };
+  }
+  const policyNumber = canonicalPolicyNumber(trimmed);
   return { ok: true, policyNumber };
 }
 
@@ -118,5 +161,5 @@ export function normalizeLegacySeriesBase(policyNumber: string): string {
     trimmed = trimmed.replace(/-(?:19|20)\d{2}(?:-\d{2}){0,2}$/, "");
     break;
   }
-  return composePolicyNumber(trimmed);
+  return canonicalPolicyNumber(trimmed);
 }
