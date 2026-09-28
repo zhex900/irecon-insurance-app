@@ -30,7 +30,7 @@ Builds use Vite `build.sourcemap: "hidden"` (maps on disk, no public `sourceMapp
 2. **OTLP → Sentry** (required for CF export):
 
 - Follow [Export to Sentry](https://developers.cloudflare.com/workers/observability/exporting-opentelemetry-data/sentry/)
-- In the Cloudflare dashboard create destinations named exactly **`sentry-logs`** and **`sentry-traces`**
+- In the Cloudflare dashboard create destinations named exactly **`sentry-logs-irecon-insurance-app`** and **`sentry-traces-irecon-insurance-app`**
 - Wrangler already references those names under `observability.logs.destinations` / `observability.traces.destinations`
 - Redeploy after creating the destinations (export fails silently if names are missing)
 

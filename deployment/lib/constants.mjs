@@ -185,12 +185,12 @@ export const observability = {
   logs: {
     enabled: true,
     head_sampling_rate: 1,
-    destinations: ["sentry-logs"],
+    destinations: ["sentry-logs-irecon-insurance-app"],
   },
   traces: {
     enabled: true,
     head_sampling_rate: 1,
-    destinations: ["sentry-traces"],
+    destinations: ["sentry-traces-irecon-insurance-app"],
   },
 };
 
