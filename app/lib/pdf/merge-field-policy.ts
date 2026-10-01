@@ -4,6 +4,7 @@ import {
   normalizeMultiVariableTextSchema,
 } from "~/lib/pdf/merge-field-schemas";
 import {
+  collectCustomEndorsementWordings,
   collectEndorsementWordings,
   coverLabel,
   ENDORSEMENTS_TABLE_FIELD,
@@ -197,8 +198,7 @@ function alignExcessSchemaNames(
 
 /**
  * Map a policy snapshot to pdfme merge-field names (label-based, readable).
- * Prefer precomputed `car.endorsementWordings` (form snapshot); otherwise
- * resolve ticked IDs against `wordingCatalogue` from Postgres `car_wording`.
+ * Resolve ticked catalogue rows + custom additional wording for PDF output.
  */
 export function policyToMergeInputs(
   policy: Policy,
@@ -219,10 +219,9 @@ export function policyToMergeInputs(
   const original = adjustment?.breakdown.original;
   const adjusted = adjustment?.breakdown.adjustment;
   const delta = adjustment?.breakdown.delta;
-  const endorsementWordings =
-    car.endorsementWordings && car.endorsementWordings.length > 0
-      ? car.endorsementWordings
-      : collectEndorsementWordings(car, options?.wordingCatalogue ?? []);
+  const wordingCatalogue = options?.wordingCatalogue ?? [];
+  const endorsementWordings = collectEndorsementWordings(car, wordingCatalogue);
+  const customEndorsementWordings = collectCustomEndorsementWordings(car);
 
   const inputs: Record<string, string> = {
     PolicyNumber: policy.seriesNumber?.trim() || policy.policyNumber,
@@ -298,8 +297,8 @@ export function policyToMergeInputs(
     // Scalars kept for older templates that still use fixed subject/content slots.
     EndorsementSubject: endorsementWordings[0]?.subject ?? "",
     EndorsementContent: endorsementWordings[0]?.content ?? "",
-    EndorsementSubject2: endorsementWordings[1]?.subject ?? "",
-    EndorsementContent2: endorsementWordings[1]?.content ?? "",
+    customEndorsementSubject: customEndorsementWordings[0]?.subject ?? "",
+    customEndorsementContent: customEndorsementWordings[0]?.content ?? "",
     Notes: (policy.notes ?? [])
       .map((note) => note.description)
       .filter(Boolean)

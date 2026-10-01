@@ -60,6 +60,9 @@ const SAMPLE_BY_FIELD: Record<string, string> = {
   EndorsementSubject: "<p><strong>Endorsement — sample wording</strong></p>",
   EndorsementContent:
     "<p>It is hereby noted and agreed that this policy is <em>endorsed</em> as follows:</p><ul><li>Sample bullet one</li><li><u>Underlined</u> bullet two</li></ul>",
+  customEndorsementSubject: "<p><strong>Custom additional wording</strong></p>",
+  customEndorsementContent:
+    "<p>Wizard custom wording body — title above, content below.</p>",
   DutyOfDisclosureConfirmation: "Confirmed",
   ReferralReasons: SAMPLE_REFERRAL_REASONS,
   // Legacy alias — same value as ReferralReasons for old templates.
@@ -186,7 +189,7 @@ export const KNOWN_MERGE_FIELD_NAMES = Object.keys(SAMPLE_BY_FIELD).sort(
 
 /**
  * Designer left-palette names — prefer EndorsementSubject + EndorsementContent
- * (repeating pair). Legacy Endorsements table still generates if present.
+ * (repeating pair). `Endorsements` merge JSON feeds expand when prototypes exist.
  * ReferralName is a legacy alias of ReferralReasons (hidden from palette).
  */
 const PALETTE_EXCLUDED = new Set(["Endorsements", "ReferralName"]);
@@ -298,7 +301,7 @@ export function buildSampleMergeInputs(
   }
 
   // Subject+Content pair expands from the Endorsements JSON list — ensure it
-  // exists even when the legacy table field is not on the template.
+  // exists for expand even though `Endorsements` is not a designer palette field.
   const hasEndorsementPair = template.schemas.some((page) =>
     page.some((schema) => {
       const base = String(schema.name ?? "").replace(/__\d+$/, "");

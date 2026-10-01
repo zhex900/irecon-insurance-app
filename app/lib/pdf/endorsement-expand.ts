@@ -14,6 +14,7 @@ import { isBlankPdf, type Template } from "@pdfme/common";
 import { estimateTextHeightMm } from "~/lib/pdf/flow-push-down";
 import type { EndorsementRichDrawOp } from "~/lib/pdf/html-rich-text-draw";
 import {
+  countLinesFittingInBandMm,
   endorsementReserveHeightForLinesMm,
   estimateWordingHtmlHeightMm,
   minEndorsementPaintBandMm,
@@ -30,6 +31,9 @@ import {
 
 export const ENDORSEMENT_SUBJECT_FIELD = "EndorsementSubject";
 export const ENDORSEMENT_CONTENT_FIELD = "EndorsementContent";
+/** Fixed template slots for wizard custom additional wording (first block). */
+export const CUSTOM_ENDORSEMENT_SUBJECT_FIELD = "customEndorsementSubject";
+export const CUSTOM_ENDORSEMENT_CONTENT_FIELD = "customEndorsementContent";
 /** Schema meta: mm between endorsement N and N+1 (editable in designer). */
 export const ENDORSEMENT_BLOCK_GAP_KEY = "endorsementBlockGapMm";
 export const DEFAULT_ENDORSEMENT_BLOCK_GAP_MM = 4;
@@ -60,6 +64,32 @@ function canonicalName(name: string): string {
     .trim();
 }
 
+function isFixedCustomEndorsementField(name: string): boolean {
+  const canon = canonicalName(name);
+  return (
+    canon === CUSTOM_ENDORSEMENT_SUBJECT_FIELD ||
+    canon === CUSTOM_ENDORSEMENT_CONTENT_FIELD
+  );
+}
+
+function stripFixedCustomEndorsementFields(pages: SchemaLike[][]): void {
+  for (let pageIndex = 0; pageIndex < pages.length; pageIndex++) {
+    pages[pageIndex] = pages[pageIndex]!.filter(
+      (s) => !isFixedCustomEndorsementField(String(s.name ?? "")),
+    );
+  }
+}
+
+function clearFixedCustomEndorsementInputs(
+  inputs: Record<string, string>,
+): void {
+  for (const key of Object.keys(inputs)) {
+    if (isFixedCustomEndorsementField(key)) {
+      delete inputs[key];
+    }
+  }
+}
+
 function schemaName(base: string, index: number): string {
   return index === 0 ? base : `${base}__${index + 1}`;
 }
@@ -70,7 +100,7 @@ function readBlockGapMm(schema: SchemaLike | undefined): number {
   return DEFAULT_ENDORSEMENT_BLOCK_GAP_MM;
 }
 
-/** Parse endorsement rows from the Endorsements table JSON input. */
+/** Parse endorsement rows from the `Endorsements` merge JSON input. */
 export function parseEndorsementPairsFromInputs(
   inputs: Record<string, string>,
 ): EndorsementPair[] {
@@ -296,6 +326,11 @@ export function expandEndorsementPairSchemas(
     return template;
   }
 
+  // Expand paints catalogue + custom in one stacked stream; drop fixed
+  // customEndorsementSubject/Content so title/body are not duplicated or split.
+  stripFixedCustomEndorsementFields(pages);
+  clearFixedCustomEndorsementInputs(inputs);
+
   const subjectY = Number(subjectProto.position?.y ?? 0);
   const subjectH = Number(subjectProto.height ?? 5);
   const contentY = Number(contentProto.position?.y ?? subjectY + subjectH + 2);
@@ -387,36 +422,54 @@ export function expandEndorsementPairSchemas(
         subjectLh,
       ),
     );
-    // New page only when the subject (+ gap + a first line) will not fit —
-    // never bounce a whole block because its body is tall (body continues).
-    const headroomMm = subH + subjectToContentGap + Math.min(8, contentH);
-    if (
-      i > 0 &&
-      (currentY > bottomLimit - 0.5 || currentY + headroomMm > bottomLimit)
-    ) {
+    const bodyLineCount = wordingHtmlLineCount(bodyHtml, widthMm, bodyFont);
+    const subjectLineCount = wordingHtmlLineCount(
+      subjectHtml,
+      subjectWidthMm,
+      subjectFont,
+    );
+    const subjectPlain = plainTextFromWordingHtml(pair.subject);
+    const plainBody = plainTextFromWordingHtml(pair.content);
+
+    const bumpToFreshPage = () => {
       pageIndex += 1;
       pages.splice(pageIndex, 0, []);
       currentY = contTopMm;
+    };
+
+    let contentYPos = 0;
+    let roomOnPage = 0;
+    let lineChunks: number[] = [];
+
+    for (let layoutPass = 0; layoutPass < 2; layoutPass++) {
+      const blockNeedsPage =
+        currentY > bottomLimit - 0.5 ||
+        currentY + subH + subjectToContentGap + minBodyPaintH > bottomLimit;
+      contentYPos = currentY + subH + subjectToContentGap;
+      roomOnPage = Math.max(4, bottomLimit - contentYPos);
+      const firstLineCapacity = countLinesFittingInBandMm(
+        roomOnPage,
+        bodyFont,
+        bodyLh,
+      );
+      const needsPageForBody = bodyLineCount > 0 && firstLineCapacity < 1;
+      if (layoutPass === 0 && (blockNeedsPage || needsPageForBody)) {
+        bumpToFreshPage();
+        continue;
+      }
+
+      lineChunks = splitLineCountsIntoPages(
+        bodyLineCount,
+        roomOnPage,
+        usablePageH,
+        bodyFont,
+        bodyLh,
+      );
+      break;
     }
 
     const subjectName = schemaName(ENDORSEMENT_SUBJECT_FIELD, i);
     const contentName = schemaName(ENDORSEMENT_CONTENT_FIELD, i);
-    const subjectPlain = plainTextFromWordingHtml(pair.subject);
-    const plainBody = plainTextFromWordingHtml(pair.content);
-    const contentYPos = currentY + subH + subjectToContentGap;
-    // Remaining space only (do not floor to designer prototype height).
-    const roomOnPage = Math.max(4, bottomLimit - contentYPos);
-
-    // Pack by how many wrap-lines fit in the band — not by mm remainders that
-    // used to force a one-line orphan page while the previous page had space.
-    const bodyLineCount = wordingHtmlLineCount(bodyHtml, widthMm, bodyFont);
-    const lineChunks = splitLineCountsIntoPages(
-      bodyLineCount,
-      roomOnPage,
-      usablePageH,
-      bodyFont,
-      bodyLh,
-    );
     const minChunkH = contentIsHtml ? minBodyPaintH : contentH;
     const chunkHeights = lineChunks.map((n, idx) => {
       const maxH = idx === 0 ? roomOnPage : usablePageH;
@@ -505,6 +558,8 @@ export function expandEndorsementPairSchemas(
           continuationTopMm: contTopMm,
           continuationHeightMm: usablePageH,
           pageBottomMarginMm,
+          pageLineBudgets:
+            subjectLineCount > 0 ? [subjectLineCount] : undefined,
         }),
       );
     }

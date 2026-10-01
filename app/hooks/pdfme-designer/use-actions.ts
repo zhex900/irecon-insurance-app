@@ -4,7 +4,6 @@ import { type Ref, useImperativeHandle } from "react";
 
 import type { PdfmeDesignerHandle } from "~/components/documents/pdf/designer";
 import {
-  createEndorsementsTableSchema,
   createTextMergeSchema,
   type DesignerInstance,
   nextFieldY,
@@ -23,7 +22,6 @@ import {
   readEndorsementBlockGapMm,
   setEndorsementBlockGapMm,
 } from "~/lib/pdf/endorsement-expand";
-import { ENDORSEMENTS_TABLE_FIELD } from "~/lib/pdf/merge-fields";
 import {
   applyFontWeightToSchemas,
   applyHeightToSchemas,
@@ -110,27 +108,38 @@ export function usePdfmeDesignerActions({
       fieldName === ENDORSEMENT_SUBJECT_FIELD ||
       fieldName === ENDORSEMENT_CONTENT_FIELD;
     if (isEndorsementPair) {
-      const hasSubject = [...usedFieldNames].some(
-        (n) => n === ENDORSEMENT_SUBJECT_FIELD,
-      );
-      const hasContent = [...usedFieldNames].some(
-        (n) => n === ENDORSEMENT_CONTENT_FIELD,
-      );
+      const hasSubject = usedFieldNames.has(ENDORSEMENT_SUBJECT_FIELD);
+      const hasContent = usedFieldNames.has(ENDORSEMENT_CONTENT_FIELD);
       if (hasSubject && hasContent) return;
+
+      const contentOnPage = page.find(
+        (schema) =>
+          String(schema.name ?? "").replace(/__\d+$/, "") ===
+          ENDORSEMENT_CONTENT_FIELD,
+      );
+      const subjectOnPage = page.find(
+        (schema) =>
+          String(schema.name ?? "").replace(/__\d+$/, "") ===
+          ENDORSEMENT_SUBJECT_FIELD,
+      );
 
       const toAdd: SchemaLike[] = [];
       if (!hasSubject) {
+        const contentY = Number(contentOnPage?.position?.y ?? y);
+        const subjectY =
+          contentOnPage && !subjectOnPage ? Math.max(15, contentY - 8) : y;
         toAdd.push(
           createTextMergeSchema(
             uniqueSchemaName(ENDORSEMENT_SUBJECT_FIELD, usedOnPage),
-            y,
+            Number(subjectY.toFixed(2)),
           ),
         );
       }
       if (!hasContent) {
-        const contentY = toAdd[0]
-          ? Number(toAdd[0].position?.y ?? y) + Number(toAdd[0].height ?? 6) + 2
-          : y;
+        const subjectSchema = subjectOnPage ?? toAdd[0];
+        const subjectY = Number(subjectSchema?.position?.y ?? y);
+        const subjectBoxH = Number(subjectSchema?.height ?? 6);
+        const contentY = subjectY + subjectBoxH + 2;
         toAdd.push(
           createTextMergeSchema(
             uniqueSchemaName(ENDORSEMENT_CONTENT_FIELD, usedOnPage),
@@ -164,10 +173,7 @@ export function usePdfmeDesignerActions({
     }
 
     const name = uniqueSchemaName(fieldName, usedOnPage);
-    const schema =
-      fieldName === ENDORSEMENTS_TABLE_FIELD
-        ? createEndorsementsTableSchema(name, y)
-        : createTextMergeSchema(name, y);
+    const schema = createTextMergeSchema(name, y);
 
     const schemas = current.schemas.map((pageSchemas, index) =>
       index === pageIndex

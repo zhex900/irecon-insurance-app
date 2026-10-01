@@ -160,7 +160,7 @@ curl http://localhost:8788/info
 
 ```bash
 # Start PDF + Excel workers locally
-npm run dev:both-workers
+npm run dev:all-workers
 
 # Validate bundle impact
 npm run check:bundle

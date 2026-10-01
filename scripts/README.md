@@ -36,7 +36,7 @@ scripts/
 | `db:repair:*`        | `scripts/db/repair/*.mts`                        |
 | `ci:db`              | `scripts/ci/supabase-setup.mjs`                  |
 | `check:bundle`       | `scripts/bundle/simple-bundle-check.js`          |
-| `dev:both-workers`   | `scripts/dev/start-both-workers.sh`              |
+| `dev:all-workers`    | `scripts/dev/start-all-workers.sh`               |
 | `check:organization` | `scripts/quality/check-organization.sh`          |
 
 See [docs/legacy-db-migration/README.md](../docs/legacy-db-migration/README.md) for legacy migration workflow.

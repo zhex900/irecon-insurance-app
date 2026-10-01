@@ -9,8 +9,8 @@ import {
 } from "~/lib/pdf/endorsement-expand";
 import { resolvePdfmeFontName } from "~/lib/pdf/font-config";
 import {
-  endorsementsTableContent,
   estimateTableHeightMm,
+  stripEndorsementsTableSchemas,
 } from "~/lib/pdf/merge-fields";
 import type { BulkSchemaRef } from "~/lib/pdf/pdf-bulk-format";
 import { withBlankPageBackground } from "~/lib/pdf/templates";
@@ -62,7 +62,7 @@ function withPreviewContent(template: Template): Template {
   };
 }
 
-/** Ensure table schemas (esp. Endorsements) are tall enough for their body text. */
+/** Ensure table schemas are tall enough for their JSON body. */
 export function growTableHeightsFromContent(template: Template): Template {
   let changed = false;
   const schemas = template.schemas.map((page) =>
@@ -84,7 +84,15 @@ export function growTableHeightsFromContent(template: Template): Template {
 
 export function prepareDesignerTemplate(template: Template): Template {
   return growTableHeightsFromContent(
-    withPreviewContent(withBlankPageBackground(template)),
+    withPreviewContent(
+      withBlankPageBackground(
+        stripEndorsementsTableSchemas(
+          template as unknown as {
+            schemas: Array<Array<Record<string, unknown>>>;
+          },
+        ) as Template,
+      ),
+    ),
   );
 }
 
@@ -188,69 +196,6 @@ export function parseTableBodyRows(content: unknown): string[][] {
   } catch {
     return [[""]];
   }
-}
-
-export function createEndorsementsTableSchema(
-  name: string,
-  y: number,
-): SchemaLike {
-  const content = endorsementsTableContent([
-    {
-      subject: "Sample endorsement",
-      content:
-        "It is hereby noted and agreed that this policy is endorsed as follows. Long wording wraps and the row height grows with the content.",
-    },
-  ]);
-  const schema = {
-    name,
-    type: "table",
-    position: { x: 12, y },
-    width: 185,
-    height: 28,
-    content,
-    showHead: true,
-    repeatHead: true,
-    head: ["Subject", "Content"],
-    headWidthPercentages: [30, 70],
-    tableStyles: { borderWidth: 0.1, borderColor: "#d1d5db" },
-    headStyles: {
-      fontSize: 9.5,
-      fontColor: "#111827",
-      backgroundColor: "#f3f4f6",
-      borderColor: "#d1d5db",
-      borderWidth: { top: 0.1, right: 0.1, bottom: 0.1, left: 0.1 },
-      padding: { top: 2, right: 2, bottom: 2, left: 2 },
-      alignment: "left",
-      verticalAlignment: "middle",
-      lineHeight: 1.2,
-      characterSpacing: 0,
-      fontName: "Roboto",
-    },
-    bodyStyles: {
-      fontSize: 9,
-      fontColor: "#111827",
-      backgroundColor: "#ffffff",
-      alternateBackgroundColor: "#ffffff",
-      borderColor: "#d1d5db",
-      borderWidth: { top: 0.1, right: 0.1, bottom: 0.1, left: 0.1 },
-      padding: { top: 2, right: 2, bottom: 2, left: 2 },
-      alignment: "left",
-      verticalAlignment: "top",
-      lineHeight: 1.25,
-      characterSpacing: 0,
-      fontName: "Roboto",
-    },
-    columnStyles: {
-      0: { alignment: "left" },
-      1: { alignment: "left" },
-    },
-    required: false,
-    readOnly: false,
-  };
-  return {
-    ...schema,
-    height: estimateTableHeightMm(schema, content),
-  };
 }
 
 /**

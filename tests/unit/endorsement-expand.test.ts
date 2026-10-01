@@ -109,6 +109,47 @@ describe("expandEndorsementPairSchemas", () => {
     expect(drawOps).toEqual([]);
   });
 
+  it("removes fixed customEndorsementSubject/Content when expand runs", () => {
+    const customSubject = {
+      name: "customEndorsementSubject",
+      type: "text",
+      position: { x: 12, y: 200 },
+      width: 185,
+      height: 6,
+      fontSize: 11,
+    };
+    const customContent = {
+      name: "customEndorsementContent",
+      type: "text",
+      position: { x: 12, y: 210 },
+      width: 185,
+      height: 20,
+      fontSize: 9.5,
+    };
+    const template = blankTemplate([
+      [subject, content, customSubject, customContent],
+    ]);
+    const inputs = {
+      Endorsements: endorsementsTableContent([
+        { subject: "Cat", content: "Catalogue body" },
+        {
+          subject: "<p><strong>Custom</strong></p>",
+          content: "<p>Custom body</p>",
+        },
+      ]),
+      customEndorsementSubject: "<p><strong>Custom</strong></p>",
+      customEndorsementContent: "<p>Custom body</p>",
+    };
+    const next = expandEndorsementPairSchemas(template, inputs);
+    const names = next.schemas.flat().map((s) => s.name);
+    expect(names).not.toContain("customEndorsementSubject");
+    expect(names).not.toContain("customEndorsementContent");
+    expect(inputs.customEndorsementSubject).toBeUndefined();
+    expect(inputs.customEndorsementContent).toBeUndefined();
+    expect(names).toContain(`${ENDORSEMENT_SUBJECT_FIELD}__2`);
+    expect(names).toContain(`${ENDORSEMENT_CONTENT_FIELD}__2`);
+  });
+
   it("collects draw ops for HTML wording without pdfme double-paint", () => {
     const template = blankTemplate([[subject, content]]);
     const inputs = {
@@ -206,6 +247,38 @@ describe("expandEndorsementPairSchemas", () => {
       Number(oneContent!.position!.y) + Number(oneContent!.height) + 5,
       1,
     );
+  });
+
+  it("keeps subject and first content lines on the same page when the prototype sits low", () => {
+    const lowSubject = { ...subject, position: { x: 12, y: 275 } };
+    const lowContent = { ...content, position: { x: 12, y: 283 } };
+    const template = blankTemplate([[lowSubject, lowContent]]);
+    const inputs = {
+      Endorsements: endorsementsTableContent([
+        {
+          subject: "<p><strong>Low on page</strong></p>",
+          content: "<p>Body starts under the subject on the same page.</p>",
+        },
+      ]),
+    };
+    const drawOps: Array<{ pageIndex: number; yMm: number; html: string }> = [];
+    const next = expandEndorsementPairSchemas(template, inputs, drawOps);
+    const sub = next.schemas
+      .flatMap((page, pageIndex) => page.map((s) => ({ pageIndex, schema: s })))
+      .find((row) => row.schema.name === ENDORSEMENT_SUBJECT_FIELD);
+    const body = next.schemas
+      .flatMap((page, pageIndex) => page.map((s) => ({ pageIndex, schema: s })))
+      .find((row) => row.schema.name === ENDORSEMENT_CONTENT_FIELD);
+    expect(sub).toBeTruthy();
+    expect(body).toBeTruthy();
+    expect(sub!.pageIndex).toBe(body!.pageIndex);
+    expect(Number(body!.schema.position?.y)).toBeGreaterThan(
+      Number(sub!.schema.position?.y),
+    );
+    const subjectOp = drawOps.find((op) => op.html.includes("Low on page"));
+    const bodyOp = drawOps.find((op) => op.html.includes("Body starts under"));
+    expect(subjectOp?.pageIndex).toBe(bodyOp?.pageIndex);
+    expect(bodyOp!.yMm).toBeGreaterThan(subjectOp!.yMm);
   });
 
   it("starts a new page only when the next subject cannot fit above the bottom margin", () => {
