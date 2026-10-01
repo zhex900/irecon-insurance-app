@@ -26,10 +26,12 @@ export type GlobalSearchClientHit = {
 export type GlobalSearchPolicyHit = {
   policyId: string;
   policyNumber: string;
+  seriesTerm: number;
   insuredName: string;
   clientName: string;
   clientTradingName: string;
   clientId: string;
+  policyStatusId: number;
   statusName: string;
 };
 
@@ -125,10 +127,12 @@ export async function searchGlobal(q: string, limit = 8) {
     policies: policiesPage.rows.map((p) => ({
       policyId: p.policyId,
       policyNumber: p.policyNumber,
+      seriesTerm: p.seriesTerm ?? 0,
       insuredName: p.insuredName,
       clientName: p.clientName,
       clientTradingName: p.client.tradingName,
       clientId: p.clientId,
+      policyStatusId: p.policyStatusId,
       statusName: statuses.get(p.policyStatusId) ?? "—",
     })),
     clientTotal,
