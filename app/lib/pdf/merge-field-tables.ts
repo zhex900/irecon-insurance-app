@@ -95,52 +95,61 @@ export function excessLimitMergeFields(
 /** pdfme table field used by Owner Builder ROA premium section. */
 export const PREMIUM_CALCULATION_TABLE_FIELD = "PremiumCalculation";
 
-/**
- * JSON `string[][]` of `[subject, content]` rows — data source for:
- * - Preferred: EndorsementSubject + EndorsementContent text pair (loops)
- * - Legacy: Table named `Endorsements`
- */
+/** Merge input: JSON `string[][]` of `[subject, content]` rows for endorsement expand. */
 export const ENDORSEMENTS_TABLE_FIELD = "Endorsements";
 
-type EndorsementPair = { subject: string; content: string };
+export type EndorsementPair = { subject: string; content: string };
 
-/**
- * Endorsements rows = ticked Additional Wording (DB `car_wording` catalogue)
- * + free-form custom wordings. Shape is always `{ subject, content }`.
- */
-export function collectEndorsementWordings(
-  car: {
-    selectedWordingIds?: number[] | null;
-    customWordings?: Array<{
-      id?: string;
-      subject?: string | null;
-      content?: string | null;
-    }> | null;
-    customWordingSubject?: string | null;
-    customWordingContent?: string | null;
-    customWordingSubject2?: string | null;
-    customWordingContent2?: string | null;
-  },
+export type CarEndorsementSource = {
+  selectedWordingIds?: number[] | null;
+  customWordings?: Array<{
+    id?: string;
+    subject?: string | null;
+    content?: string | null;
+  }> | null;
+  customWordingSubject?: string | null;
+  customWordingContent?: string | null;
+  customWordingSubject2?: string | null;
+  customWordingContent2?: string | null;
+};
+
+function pushEndorsementPair(
+  rows: EndorsementPair[],
+  subject: string,
+  content: string,
+) {
+  if (isWordingHtmlEmpty(subject) && isWordingHtmlEmpty(content)) return;
+  rows.push({ subject, content });
+}
+
+/** Ticked catalogue wordings in wizard checkbox order (then catalogue fallback). */
+export function collectCatalogueEndorsementWordings(
+  car: Pick<CarEndorsementSource, "selectedWordingIds">,
   wordingCatalogue: CarWording[] = [],
 ): EndorsementPair[] {
-  const selected = new Set(
-    (car.selectedWordingIds ?? [])
-      .map((id) => Number(id))
-      .filter((id) => Number.isFinite(id)),
+  const byId = new Map(
+    wordingCatalogue.map((item) => [Number(item.carWordingId), item] as const),
   );
-
   const rows: EndorsementPair[] = [];
+  const seen = new Set<number>();
 
-  // 1) Ticked fixed Additional Wording from catalogue
-  for (const item of wordingCatalogue) {
-    if (!selected.has(Number(item.carWordingId))) continue;
-    const subject = item.subject ?? "";
-    const content = item.content ?? "";
-    if (isWordingHtmlEmpty(subject) && isWordingHtmlEmpty(content)) continue;
-    rows.push({ subject, content });
+  for (const rawId of car.selectedWordingIds ?? []) {
+    const id = Number(rawId);
+    if (!Number.isFinite(id) || seen.has(id)) continue;
+    seen.add(id);
+    const item = byId.get(id);
+    if (!item) continue;
+    pushEndorsementPair(rows, item.subject ?? "", item.content ?? "");
   }
 
-  // 2) Free-form custom wording ({ subject, content })
+  return rows;
+}
+
+/** Free-form additional wording from the policy wizard (after catalogue rows). */
+export function collectCustomEndorsementWordings(
+  car: CarEndorsementSource,
+): EndorsementPair[] {
+  const rows: EndorsementPair[] = [];
   const custom = normalizeCustomWordings(
     (car.customWordings ?? []).map((item) => ({
       id: typeof item.id === "string" ? item.id : "",
@@ -155,16 +164,26 @@ export function collectEndorsementWordings(
     },
   );
   for (const item of custom) {
-    const subject = item.subject ?? "";
-    const content = item.content ?? "";
-    if (isWordingHtmlEmpty(subject) && isWordingHtmlEmpty(content)) continue;
-    rows.push({ subject, content });
+    pushEndorsementPair(rows, item.subject ?? "", item.content ?? "");
   }
-
   return rows;
 }
 
-/** Build the Endorsements table body from policy additional wording. */
+/**
+ * Endorsements rows = ticked Additional Wording (DB `car_wording` catalogue)
+ * + free-form custom wordings. Shape is always `{ subject, content }`.
+ */
+export function collectEndorsementWordings(
+  car: CarEndorsementSource,
+  wordingCatalogue: CarWording[] = [],
+): EndorsementPair[] {
+  return [
+    ...collectCatalogueEndorsementWordings(car, wordingCatalogue),
+    ...collectCustomEndorsementWordings(car),
+  ];
+}
+
+/** Build the `Endorsements` merge JSON from policy additional wording. */
 export function endorsementsTableContent(
   wordings:
     | Array<{ subject?: string | null; content?: string | null }>
@@ -182,8 +201,6 @@ export function endorsementsTableContent(
 }
 
 const PT_TO_MM = 25.4 / 72;
-/** A4 content area minus padding — pdfme cannot split a single table row across pages. */
-const MAX_TABLE_ROW_HEIGHT_MM = 230;
 
 type TableStyleLike = {
   fontSize?: number;
@@ -234,115 +251,7 @@ function parseTableBody(raw: string): string[][] {
 }
 
 /**
- * Split a long text into chunks that each fit within `maxHeightMm` when wrapped
- * in a cell of `widthMm`. Keeps paragraph breaks where possible.
- */
-function splitTextToFitCellHeight(
-  text: string,
-  widthMm: number,
-  styles: TableStyleLike | undefined,
-  maxHeightMm: number,
-): string[] {
-  const value = String(text ?? "");
-  if (!value.trim()) return [value];
-  if (estimateCellHeightMm(value, widthMm, styles) <= maxHeightMm) {
-    return [value];
-  }
-
-  const paragraphs = value.split("\n");
-  const chunks: string[] = [];
-  let current = "";
-
-  const flush = () => {
-    if (current.length > 0) chunks.push(current);
-    current = "";
-  };
-
-  for (const para of paragraphs) {
-    const candidate = current.length > 0 ? `${current}\n${para}` : para;
-    if (estimateCellHeightMm(candidate, widthMm, styles) <= maxHeightMm) {
-      current = candidate;
-      continue;
-    }
-    flush();
-    if (estimateCellHeightMm(para, widthMm, styles) <= maxHeightMm) {
-      current = para;
-      continue;
-    }
-    // Hard-split an oversized paragraph by characters.
-    const charWidthMm = Math.max(
-      Number(styles?.fontSize ?? 9) * 0.62 * PT_TO_MM,
-      1.45,
-    );
-    const padLeft = Number(styles?.padding?.left ?? 2);
-    const padRight = Number(styles?.padding?.right ?? 2);
-    const cols = Math.max(
-      1,
-      Math.floor(
-        Math.max(widthMm - padLeft - padRight, charWidthMm) / charWidthMm,
-      ),
-    );
-    const lineMm =
-      Number(styles?.fontSize ?? 9) *
-      Number(styles?.lineHeight ?? 1.25) *
-      PT_TO_MM;
-    const padV =
-      Number(styles?.padding?.top ?? 2) + Number(styles?.padding?.bottom ?? 2);
-    // Leave room for the same EXTRA_LINES slack used in estimateCellHeightMm.
-    const maxLines = Math.max(1, Math.floor((maxHeightMm - padV) / lineMm) - 3);
-    const chunkChars = Math.max(cols, maxLines * cols);
-    for (let i = 0; i < para.length; i += chunkChars) {
-      chunks.push(para.slice(i, i + chunkChars));
-    }
-    current = "";
-  }
-  flush();
-  return chunks.length > 0 ? chunks : [value];
-}
-
-/**
- * pdfme cannot split one table row across pages. Long endorsement bodies are
- * broken into continuation rows (empty subject) so content is never clipped.
- */
-export function splitEndorsementsTableBody(
-  contentJson: string,
-  schema: {
-    width?: number;
-    headWidthPercentages?: number[];
-    bodyStyles?: TableStyleLike;
-  },
-  maxRowHeightMm = MAX_TABLE_ROW_HEIGHT_MM,
-): string {
-  const width = Math.max(Number(schema.width ?? 185), 20);
-  const percentages =
-    Array.isArray(schema.headWidthPercentages) &&
-    schema.headWidthPercentages.length >= 2
-      ? schema.headWidthPercentages
-      : [30, 70];
-  const contentWidth = (width * Number(percentages[1] ?? 70)) / 100;
-  const body = parseTableBody(contentJson);
-  const next: string[][] = [];
-
-  for (const row of body) {
-    const subject = String(row[0] ?? "");
-    const content = String(row[1] ?? "");
-    const chunks = splitTextToFitCellHeight(
-      content,
-      contentWidth,
-      schema.bodyStyles,
-      maxRowHeightMm,
-    );
-    chunks.forEach((chunk, index) => {
-      next.push([index === 0 ? subject : "", chunk]);
-    });
-  }
-
-  return JSON.stringify(next.length > 0 ? next : [["", ""]]);
-}
-
-/**
  * Grow a table schema's height to fit its JSON body (header + wrapped rows).
- * Used so Endorsements cells aren't clipped to the authored placeholder height.
  */
 export function estimateTableHeightMm(
   schema: {
@@ -401,30 +310,26 @@ export function estimateTableHeightMm(
   return Number(Math.max(total, Number(schema.height ?? 0), 12).toFixed(2));
 }
 
-/** Extra bottom padding (mm) so painted endorsement text isn’t clipped. */
-const ENDORSEMENTS_EXTRA_BOTTOM_PADDING_MM = 6;
-
-function withEndorsementsBodyPadding(
-  schema: Record<string, unknown>,
-): Record<string, unknown> {
-  const bodyStyles = {
-    ...((schema.bodyStyles as Record<string, unknown> | undefined) ?? {}),
+/** Drop deprecated pdfme `table` schemas named `Endorsements` (use text pair expand). */
+export function stripEndorsementsTableSchemas<
+  T extends { schemas: Array<Array<Record<string, unknown>>> },
+>(template: T): T {
+  return {
+    ...template,
+    schemas: template.schemas.map((page) =>
+      page.filter((schema) => {
+        if (schema.type !== "table" || typeof schema.name !== "string") {
+          return true;
+        }
+        return (
+          canonicalMergeFieldName(schema.name) !== ENDORSEMENTS_TABLE_FIELD
+        );
+      }),
+    ),
   };
-  const padding = {
-    top: 2,
-    right: 2,
-    bottom: 2,
-    left: 2,
-    ...((bodyStyles.padding as Record<string, unknown> | undefined) ?? {}),
-  };
-  const bottom = Number(padding.bottom ?? 2);
-  padding.bottom = bottom + ENDORSEMENTS_EXTRA_BOTTOM_PADDING_MM;
-  bodyStyles.padding = padding;
-  bodyStyles.verticalAlignment = "top";
-  return { ...schema, bodyStyles };
 }
 
-/** Sync table `content` + grow `height` from merge inputs (Endorsements, etc.). */
+/** Sync table `content` + grow `height` from merge inputs (e.g. PremiumCalculation). */
 export function syncTableSchemasToInputs<
   T extends { schemas: Array<Array<Record<string, unknown>>> },
 >(template: T, inputs: Record<string, string>): T {
@@ -435,32 +340,17 @@ export function syncTableSchemasToInputs<
         if (schema.type !== "table" || typeof schema.name !== "string") {
           return schema;
         }
-        const canonical = canonicalMergeFieldName(schema.name);
-        const isEndorsements = canonical === ENDORSEMENTS_TABLE_FIELD;
-        const baseSchema = isEndorsements
-          ? withEndorsementsBodyPadding(schema)
-          : schema;
-
-        let resolved = resolveTableMergeInput(
+        const resolved = resolveTableMergeInput(
           schema.name,
           typeof schema.content === "string" ? schema.content : "[]",
           inputs,
         );
-        if (isEndorsements) {
-          resolved = splitEndorsementsTableBody(
-            resolved,
-            baseSchema as Parameters<typeof splitEndorsementsTableBody>[1],
-          );
-        }
         inputs[schema.name] = resolved;
-        if (isEndorsements) {
-          inputs[ENDORSEMENTS_TABLE_FIELD] = resolved;
-        }
         const height = estimateTableHeightMm(
-          baseSchema as Parameters<typeof estimateTableHeightMm>[0],
+          schema as Parameters<typeof estimateTableHeightMm>[0],
           resolved,
         );
-        return { ...baseSchema, content: resolved, height };
+        return { ...schema, content: resolved, height };
       }),
     ),
   };

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Start both Workers with one command
+# Start all Workers with one command
 # Documents Worker: http://localhost:8787
 # Excel Worker: http://localhost:8788
 

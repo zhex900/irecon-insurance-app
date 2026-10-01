@@ -48,8 +48,9 @@ export function normalizeCustomWordings(
 }
 
 /**
- * First two items → legacy scalar PDF slots (EndorsementSubject/Content…).
- * Prefer EndorsementSubject + EndorsementContent pair (loops all wordings).
+ * First two items → legacy flat fields on `policy.car` (not separate PDF slots).
+ * PDFs use EndorsementSubject + EndorsementContent expand for catalogue + custom;
+ * customEndorsementSubject/Content are the fixed pair when expand is absent.
  */
 export function flatCustomWordings(items: CustomWordingItem[]) {
   return {

@@ -12,6 +12,7 @@ import {
   normalizePdfmeTemplateSchemas,
   policyToMergeInputs,
   resolveMultiVariableTextInput,
+  stripEndorsementsTableSchemas,
   syncTableSchemasToInputs,
 } from "~/lib/pdf/merge-fields";
 import { pdfmePlugins } from "~/lib/pdf/pdf-plugins";
@@ -199,8 +200,9 @@ export async function generatePolicyPdf(
     }
   }
 
-  // Grow table schemas (e.g. legacy Endorsements table) to fit resolved rows.
-  const withTables = syncTableSchemasToInputs(normalizedTemplate, inputs);
+  const withoutEndorsementsTable =
+    stripEndorsementsTableSchemas(normalizedTemplate);
+  const withTables = syncTableSchemasToInputs(withoutEndorsementsTable, inputs);
 
   // Subject+Content prototypes → one styled pair per wording (hide if empty).
   // Rich HTML is drawn with pdf-lib after pdfme (drawOps).
@@ -211,34 +213,15 @@ export async function generatePolicyPdf(
     drawOps,
   );
 
-  // Legacy Endorsements table / scalar fields: pdfme cannot render HTML tags.
-  for (const [key, value] of Object.entries(inputs)) {
-    if (!value || !looksLikeHtml(value)) continue;
-    if (
-      key === "Endorsements" ||
-      key.startsWith("EndorsementSubject") ||
-      key.startsWith("EndorsementContent")
-    ) {
-      if (key === "Endorsements") {
-        try {
-          const rows = JSON.parse(value) as unknown;
-          if (Array.isArray(rows)) {
-            inputs[key] = JSON.stringify(
-              rows.map((row) =>
-                Array.isArray(row)
-                  ? row.map((cell) =>
-                      looksLikeHtml(String(cell ?? ""))
-                        ? plainTextFromWordingHtml(String(cell ?? ""))
-                        : String(cell ?? ""),
-                    )
-                  : row,
-              ),
-            );
-          }
-        } catch {
-          inputs[key] = plainTextFromWordingHtml(value);
-        }
-      } else if (drawOps.length === 0) {
+  // Endorsement text fields: pdfme cannot render HTML tags (rich text uses drawOps).
+  if (drawOps.length === 0) {
+    for (const [key, value] of Object.entries(inputs)) {
+      if (!value || !looksLikeHtml(value)) continue;
+      if (
+        key.startsWith("EndorsementSubject") ||
+        key.startsWith("EndorsementContent") ||
+        key.startsWith("customEndorsement")
+      ) {
         inputs[key] = plainTextFromWordingHtml(value);
       }
     }

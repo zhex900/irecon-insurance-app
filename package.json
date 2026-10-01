@@ -66,7 +66,7 @@
     "deploy:pdf:uat": "wrangler deploy --env-file=.env.uat --config wrangler.pdf.jsonc",
     "deploy:excel:uat": "wrangler deploy --env-file=.env.uat --config wrangler.excel.jsonc",
     "dev:excel-worker": "wrangler dev --config wrangler.excel.jsonc",
-    "dev:both-workers": "bash scripts/dev/start-both-workers.sh",
+    "dev:all-workers": "bash scripts/dev/start-all-workers.sh",
     "deploy:secret": "node --env-file=.env.uat deployment/deploy.mjs --secret-only",
     "start": "react-router-serve ./build/server/index.js",
     "typecheck": "react-router typegen && tsc",

@@ -7,7 +7,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "~/components/ui/tooltip";
-import { ENDORSEMENTS_TABLE_FIELD } from "~/lib/pdf/merge-fields";
 import { cn } from "~/lib/utils";
 
 type PdfmeDesignerMergePanelProps = {
@@ -95,7 +94,6 @@ export function MergePanel({
               <ul className="flex flex-col gap-0.5">
                 {filteredFields.map((name) => {
                   const used = usedFieldNames.has(name);
-                  const isTable = name === ENDORSEMENTS_TABLE_FIELD;
                   return (
                     <li key={name}>
                       <button
@@ -115,9 +113,9 @@ export function MergePanel({
                         )}
                       >
                         <span className="truncate font-mono">{name}</span>
-                        {isTable || used ? (
+                        {used ? (
                           <span className="ml-2 shrink-0 text-[10px] tracking-wide text-muted-foreground uppercase">
-                            {isTable ? "table" : "on page"}
+                            on page
                           </span>
                         ) : null}
                       </button>

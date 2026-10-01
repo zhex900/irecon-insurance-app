@@ -7,6 +7,7 @@ import type { FlowPushDown } from "~/lib/pdf/flow-push-down";
 import { applyFlowPushDown } from "~/lib/pdf/flow-push-down";
 import {
   normalizePdfmeTemplateSchemas,
+  stripEndorsementsTableSchemas,
   syncTableSchemasToInputs,
 } from "~/lib/pdf/merge-fields";
 import { buildSampleMergeInputs } from "~/lib/pdf/pdf-sample-merge-inputs";
@@ -70,16 +71,16 @@ export function useDocumentTemplatePreview(docTemplate: PreviewDocTemplate) {
         );
         const drawOps: import("~/lib/pdf/html-rich-text-draw").EndorsementRichDrawOp[] =
           [];
+        const normalized = stripEndorsementsTableSchemas(
+          normalizePdfmeTemplateSchemas(
+            template as unknown as {
+              schemas: Array<Array<Record<string, unknown>>>;
+            },
+          ),
+        );
         const prepared = applyFlowPushDown(
           expandEndorsementPairSchemas(
-            syncTableSchemasToInputs(
-              normalizePdfmeTemplateSchemas(
-                template as unknown as {
-                  schemas: Array<Array<Record<string, unknown>>>;
-                },
-              ),
-              inputs,
-            ) as Template,
+            syncTableSchemasToInputs(normalized, inputs) as Template,
             inputs,
             drawOps,
           ),

@@ -21,4 +21,4 @@ Domain-specific docs live under `docs/domains/`.
 | PDF worker architecture             | [../PDF_TEMPLATE_EDITOR_WORKER_ARCHITECTURE.md](../PDF_TEMPLATE_EDITOR_WORKER_ARCHITECTURE.md) |
 | Excel worker notes                  | [excel-worker-implementation-summary.md](excel-worker-implementation-summary.md)               |
 
-Workers (PDF, Excel) deploy via `wrangler` and `npm run dev:both-workers`; see [scripts/dev/start-both-workers.sh](../../scripts/dev/start-both-workers.sh).
+Workers (PDF, Excel) deploy via `wrangler` and `npm run dev:all-workers`; see [scripts/dev/start-all-workers.sh](../../scripts/dev/start-all-workers.sh).
