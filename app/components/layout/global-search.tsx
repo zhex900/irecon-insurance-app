@@ -2,11 +2,13 @@ import { FileTextIcon, SearchIcon, UsersIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 
-import { Badge } from "~/components/reui/badge";
+import { PolicySeriesLabel } from "~/components/policies/policy-series-label";
 import { ClientSearchResultDetails } from "~/components/search/client-result";
 import { HighlightText } from "~/components/search/highlight";
 import { SearchResultsStatus } from "~/components/search/search-results-status";
+import { StatusBadge } from "~/components/ui/status-badge";
 import { useApiSearch } from "~/hooks/search";
+import { formatPolicySeriesReference } from "~/lib/policies/policy-series-term";
 import {
   GLOBAL_SEARCH_PARAMS,
   type GlobalSearchApiResponse,
@@ -27,8 +29,13 @@ type ResultRow =
   | { kind: "policy"; policy: GlobalSearchPolicy };
 
 function policyHasVisibleMatch(policy: GlobalSearchPolicy, query: string) {
+  const policyReference = formatPolicySeriesReference(
+    policy.policyNumber,
+    policy.seriesTerm,
+  );
   return (
     fieldMatches(policy.policyNumber, query) ||
+    fieldMatches(policyReference, query) ||
     fieldMatches(policy.insuredName, query) ||
     fieldMatches(policy.clientName, query) ||
     fieldMatches(policy.clientTradingName, query) ||
@@ -353,11 +360,14 @@ function PolicyResult({
   active?: boolean;
   onSelect: () => void;
 }) {
-  const statusMatches = fieldMatches(policy.statusName, query);
   const tradingMatches =
     Boolean(policy.clientTradingName) &&
     fieldMatches(policy.clientTradingName, query) &&
     !fieldMatches(policy.clientName, query);
+  const policyReference = formatPolicySeriesReference(
+    policy.policyNumber,
+    policy.seriesTerm,
+  );
 
   return (
     <button
@@ -375,16 +385,18 @@ function PolicyResult({
       <FileTextIcon className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-2">
-          <span className="truncate font-medium">
-            <HighlightText text={policy.policyNumber} query={query} />
-          </span>
-          <Badge
-            variant={statusMatches ? "warning-light" : "secondary"}
-            size="sm"
-            radius="full"
-          >
-            <HighlightText text={policy.statusName} query={query} />
-          </Badge>
+          <PolicySeriesLabel
+            seriesNumber={policy.policyNumber}
+            seriesTerm={policy.seriesTerm}
+            searchQuery={query}
+            className="min-w-0 truncate"
+            seriesClassName="truncate"
+          />
+          <StatusBadge
+            statusId={policy.policyStatusId}
+            name={policy.statusName}
+            className="shrink-0 text-xs"
+          />
         </span>
         <span className="block truncate text-xs text-muted-foreground">
           {policy.insuredName ? (
@@ -402,7 +414,8 @@ function PolicyResult({
           ) : null}
         </span>
         {fieldMatches(String(policy.policyId), query) &&
-        !fieldMatches(policy.policyNumber, query) ? (
+        !fieldMatches(policy.policyNumber, query) &&
+        !fieldMatches(policyReference, query) ? (
           <span className="mt-0.5 block truncate text-xs text-muted-foreground">
             Policy ID:{" "}
             <HighlightText text={String(policy.policyId)} query={query} />
