@@ -36,8 +36,8 @@ export const referenceData = {
     { policyStatusId: 3, name: "Not taken" },
   ],
   liabilityLimitBands: [
-    { id: 1, name: "$10 Million" },
-    { id: 2, name: "$20 Million" },
+    { id: 1, name: "$10,000,000" },
+    { id: 2, name: "$20,000,000" },
     { id: 3, name: "Not Insured" },
   ],
   insurers: [{ code: "ATC", name: "ATC" }],

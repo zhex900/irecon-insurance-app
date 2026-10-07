@@ -18,13 +18,12 @@ describe("buildReferralReasons anyClaimsExceed20k", () => {
         existingStructure: 0,
         claimsCountLast3Years: 0,
         anyClaimsExceed20k: true,
-        hasExistingContractWorksCover: true,
         plantEquipment: 0,
         liabilityLimitBand: 1,
         dateStart: "2020-01-01",
       },
       ratingOk,
-      "$10 Million",
+      "$10,000,000",
     );
     expect(reasons).toContain(
       "Any claims exceeded $20,000 in value is stated as yes",
@@ -41,13 +40,12 @@ describe("buildReferralReasons anyClaimsExceed20k", () => {
         existingStructure: 0,
         claimsCountLast3Years: 0,
         anyClaimsExceed20k: false,
-        hasExistingContractWorksCover: true,
         plantEquipment: 0,
         liabilityLimitBand: 1,
         dateStart: "2020-01-01",
       },
       ratingOk,
-      "$10 Million",
+      "$10,000,000",
     );
     expect(reasons).not.toContain(
       "Any claims exceeded $20,000 in value is stated as no",
@@ -61,13 +59,12 @@ describe("buildReferralReasons anyClaimsExceed20k", () => {
         existingStructure: 0,
         claimsCountLast3Years: 0,
         anyClaimsExceed20k: "false",
-        hasExistingContractWorksCover: "true",
         plantEquipment: 0,
         liabilityLimitBand: 1,
         dateStart: "2020-01-01",
       },
       ratingOk,
-      "$10 Million",
+      "$10,000,000",
     );
     expect(reasons).not.toContain(
       "Any claims exceeded $20,000 in value is stated as yes",
@@ -84,13 +81,12 @@ describe("buildReferralReasons anyClaimsExceed20k", () => {
         existingStructure: 0,
         claimsCountLast3Years: 0,
         anyClaimsExceed20k: "",
-        hasExistingContractWorksCover: true,
         plantEquipment: 0,
         liabilityLimitBand: 1,
         dateStart: "2020-01-01",
       },
       ratingOk,
-      "$10 Million",
+      "$10,000,000",
     );
     expect(reasons.some((r) => r.includes("Any claims exceeded $20,000"))).toBe(
       false,

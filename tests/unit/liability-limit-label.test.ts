@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { policyToFormValues } from "~/components/policies/wizard/shared/policy-to-values";
 import type { Policy } from "~/lib/db/types";
-import { money } from "~/lib/pdf/merge-field-tables";
+import { money, moneyInText } from "~/lib/pdf/merge-field-tables";
 import {
   normalizePdfmeTemplateSchemas,
   policyToMergeInputs,
@@ -98,11 +98,11 @@ describe("LegalLiabilityLimit merge field", () => {
     expect(
       policyToMergeInputs(basePolicy({ liabilityLimitBand: 1 }))
         .LegalLiabilityLimit,
-    ).toBe("$10 Million");
+    ).toBe("$10,000,000");
     expect(
       policyToMergeInputs(basePolicy({ liabilityLimitBand: "2" }))
         .LegalLiabilityLimit,
-    ).toBe("$20 Million");
+    ).toBe("$20,000,000");
     expect(
       policyToMergeInputs(basePolicy({ liabilityLimitBand: 3 }))
         .LegalLiabilityLimit,
@@ -138,7 +138,15 @@ describe("excess merge fields", () => {
     expect(money("   ")).toBe("N/A");
     expect(money("n/a")).toBe("N/A");
     expect(money("Not Insured")).toBe("Not Insured");
-    expect(money(2500)).toBe("$2,500.00");
+    expect(money(2500)).toBe("$2,500");
+    expect(money(2500.4)).toBe("$2,500");
+    expect(money(2500.5)).toBe("$2,501");
+    expect(money("$1,234.49")).toBe("$1,234");
+    expect(moneyInText("Display Homes has a value of $10.40")).toBe(
+      "Display Homes has a value of $10",
+    );
+    expect(moneyInText("$50,000.50 any one loss")).toBe("$50,001 any one loss");
+    expect(moneyInText("10% of Contract Value")).toBe("10% of Contract Value");
   });
 
   it("maps ROA and schedule excess values to the selected contract band", () => {
@@ -162,24 +170,24 @@ describe("excess merge fields", () => {
     };
 
     const upTo2m = policyToMergeInputs(policy);
-    expect(upTo2m.ExcessPlantEquipment).toBe("$1,100.00");
-    expect(upTo2m.ExcessMinorPerils).toBe("$2,200.00");
-    expect(upTo2m.ExcessMajorPerils).toBe("$3,300.00");
-    expect(upTo2m.ExcessWorkerToWorker).toBe("$6,600.00");
+    expect(upTo2m.ExcessPlantEquipment).toBe("$1,100");
+    expect(upTo2m.ExcessMinorPerils).toBe("$2,200");
+    expect(upTo2m.ExcessMajorPerils).toBe("$3,300");
+    expect(upTo2m.ExcessWorkerToWorker).toBe("$6,600");
     expect(upTo2m.ExcessLimit10M).toBe("N/A");
-    expect(upTo2m.ExcessLimit20M).toBe("$8,800.00");
+    expect(upTo2m.ExcessLimit20M).toBe("$8,800");
     expect(upTo2m.ExcessLimitLabel).toBe("$20,000,000 Limit of Liability");
-    expect(upTo2m.ExcessLimit).toBe("$8,800.00");
+    expect(upTo2m.ExcessLimit).toBe("$8,800");
 
     policy.car.estimatedTurnover = 3_000_000;
     policy.car.contractWorksSumInsured = 3_000_000;
     const over2m = policyToMergeInputs(policy);
-    expect(over2m.ExcessMinorPerils).toBe("$4,400.00");
-    expect(over2m.ExcessMajorPerils).toBe("$5,500.00");
+    expect(over2m.ExcessMinorPerils).toBe("$4,400");
+    expect(over2m.ExcessMajorPerils).toBe("$5,500");
     expect(over2m.ExcessLimit10M).toBe("N/A");
-    expect(over2m.ExcessLimit20M).toBe("$10,100.00");
+    expect(over2m.ExcessLimit20M).toBe("$10,100");
     expect(over2m.ExcessLimitLabel).toBe("$20,000,000 Limit of Liability");
-    expect(over2m.ExcessLimit).toBe("$10,100.00");
+    expect(over2m.ExcessLimit).toBe("$10,100");
   });
 
   it("maps ExcessLimitLabel and ExcessLimit for $10M limit of liability", () => {
@@ -202,8 +210,8 @@ describe("excess merge fields", () => {
 
     const inputs = policyToMergeInputs(policy);
     expect(inputs.ExcessLimitLabel).toBe("$10,000,000 Limit of Liability");
-    expect(inputs.ExcessLimit).toBe("$5,500.00");
-    expect(inputs.ExcessLimit10M).toBe("$5,500.00");
+    expect(inputs.ExcessLimit).toBe("$5,500");
+    expect(inputs.ExcessLimit10M).toBe("$5,500");
     expect(inputs.ExcessLimit20M).toBe("N/A");
   });
 

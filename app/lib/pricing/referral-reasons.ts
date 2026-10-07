@@ -21,9 +21,9 @@ export type ReferralRatingInput = {
 export function liabilityLimitLabel(band: number): string {
   switch (band) {
     case 1:
-      return "$10 Million";
+      return "$10,000,000";
     case 2:
-      return "$20 Million";
+      return "$20,000,000";
     default:
       return "Not Insured";
   }

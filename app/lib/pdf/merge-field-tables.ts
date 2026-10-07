@@ -8,7 +8,6 @@ import type { ActiveBandExcessAmounts } from "~/lib/policies/excesses";
 import { resolveLiabilityLimitMillions } from "~/lib/policies/excesses";
 import { isWordingHtmlEmpty } from "~/lib/policies/wording/html";
 import { referenceData as reference } from "~/lib/reference-data";
-import { formatCurrency } from "~/lib/utils";
 
 const STATE_BY_ID = new Map(
   reference.states.map((s) => [s.stateId, s.code] as const),
@@ -22,6 +21,32 @@ const LIABILITY_BY_ID = new Map(
   reference.liabilityLimitBands.map((b) => [b.id, b.name] as const),
 );
 
+/** Whole dollars on PDF documents. Half rounds away from zero. */
+const pdfAmountFormat = new Intl.NumberFormat("en-AU", {
+  style: "currency",
+  currency: "AUD",
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+});
+
+function formatPdfAmount(value: number) {
+  const sign = value < 0 ? -1 : 1;
+  return pdfAmountFormat.format(sign * Math.round(Math.abs(value)));
+}
+
+const CURRENCY_TOKEN = /-?\$[\d,]+(?:\.\d+)?/g;
+
+/** Rewrite `$1,234.56` tokens inside free text to whole dollars. */
+export function moneyInText(value: string | null | undefined) {
+  if (!value) return value ?? "";
+  return value.replace(CURRENCY_TOKEN, (token) => {
+    const negative = token.startsWith("-");
+    const amount = Number(token.replace(/[$,-]/g, ""));
+    if (!Number.isFinite(amount)) return token;
+    return formatPdfAmount(negative ? -amount : amount);
+  });
+}
+
 export function money(value: number | string | null | undefined) {
   if (value == null || value === "") return "N/A";
   if (typeof value === "string") {
@@ -33,10 +58,10 @@ export function money(value: number | string | null | undefined) {
     if (!/^-?\d+(\.\d+)?$/.test(bare)) return trimmed;
     const parsed = Number(bare);
     if (Number.isNaN(parsed)) return trimmed;
-    return formatCurrency(parsed);
+    return formatPdfAmount(parsed);
   }
   if (Number.isNaN(value)) return "N/A";
-  return formatCurrency(value);
+  return formatPdfAmount(value);
 }
 
 export function yesNo(value: boolean | string | null | undefined) {

@@ -85,7 +85,7 @@ type FillPolicyOptionsCommon = {
   existingStructures: number;
   policyCategory: "New" | "Renewal";
   plantEquipment: number;
-  limitOfLiability?: "$10 Million" | "$20 Million" | "Not Insured";
+  limitOfLiability?: "$10,000,000" | "$20,000,000" | "Not Insured";
   state?: "NSW" | "VIC" | "QLD" | "SA" | "TAS" | "NT";
   postcode?: string;
 };
@@ -149,7 +149,7 @@ export async function fillRequiredPolicyForm(
     existingStructures,
     plantEquipment,
     policyCategory = "New",
-    limitOfLiability = "$10 Million",
+    limitOfLiability = "$10,000,000",
   } = options;
 
   await page.getByRole("textbox", { name: "Insured Name" }).fill(insuredName);

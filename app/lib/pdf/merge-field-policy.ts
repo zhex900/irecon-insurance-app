@@ -12,6 +12,7 @@ import {
   excessLimitMergeFields,
   liabilityLabel,
   money,
+  moneyInText,
   stateCode,
   yesNo,
 } from "~/lib/pdf/merge-field-tables";
@@ -253,19 +254,19 @@ export function policyToMergeInputs(
     ExistingStructures: money(car.existingStructure),
     ConstructionPlantEquipment: money(car.plantEquipment),
     SiteAddress: car.siteAddress,
-    RemovalOfDebris: String(sub.removalOfDebris ?? ""),
-    ExpeditingExpenses: String(sub.expeditingExpenses ?? ""),
-    ProfessionalFees: String(sub.professionalFees ?? ""),
-    MitigationExpenses: String(sub.mitigationExpenses ?? ""),
-    SearchAndLocateCosts: String(sub.searchAndLocateCosts ?? ""),
-    PlantHireCharges: String(sub.plantHireCharges ?? ""),
-    ClaimsPreparationCosts: String(sub.claimsPreparationCosts ?? ""),
-    GovernmentCosts: String(sub.governmentCosts ?? ""),
-    InflationProtection: String(sub.inflationProtection ?? ""),
-    EmployeesProperty: String(sub.employeesProperty ?? ""),
-    MaterialsInOffSiteStorage: String(sub.materialsInOffSiteStorage ?? ""),
-    Transit: String(sub.transit ?? ""),
-    AdditionalCostOfWorking: String(sub.additionalCostOfWorking ?? ""),
+    RemovalOfDebris: moneyInText(sub.removalOfDebris),
+    ExpeditingExpenses: moneyInText(sub.expeditingExpenses),
+    ProfessionalFees: moneyInText(sub.professionalFees),
+    MitigationExpenses: moneyInText(sub.mitigationExpenses),
+    SearchAndLocateCosts: moneyInText(sub.searchAndLocateCosts),
+    PlantHireCharges: moneyInText(sub.plantHireCharges),
+    ClaimsPreparationCosts: moneyInText(sub.claimsPreparationCosts),
+    GovernmentCosts: moneyInText(sub.governmentCosts),
+    InflationProtection: moneyInText(sub.inflationProtection),
+    EmployeesProperty: moneyInText(sub.employeesProperty),
+    MaterialsInOffSiteStorage: moneyInText(sub.materialsInOffSiteStorage),
+    Transit: moneyInText(sub.transit),
+    AdditionalCostOfWorking: moneyInText(sub.additionalCostOfWorking),
     LegalLiabilityLimit: liabilityLabel(car.liabilityLimitBand),
     ExcessMinorPerils: money(activeExcess.minorPerils),
     ExcessMajorPerils: money(activeExcess.majorPerils),
@@ -304,9 +305,9 @@ export function policyToMergeInputs(
       .filter(Boolean)
       .join("\n\n"),
     // Same lines as Premium Summary “Referral reasons” (newline-separated).
-    ReferralReasons: (car.referralReasons ?? []).join("\n"),
+    ReferralReasons: (car.referralReasons ?? []).map(moneyInText).join("\n"),
     // Legacy palette/template name — same value as ReferralReasons.
-    ReferralName: (car.referralReasons ?? []).join("\n"),
+    ReferralName: (car.referralReasons ?? []).map(moneyInText).join("\n"),
   };
 
   if (premium) {

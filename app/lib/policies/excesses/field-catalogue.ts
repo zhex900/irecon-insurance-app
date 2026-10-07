@@ -81,7 +81,7 @@ export const EXCESS_FIELDS: ExcessFieldConfig[] = [
   {
     key: "excessUpTo2MLimit10M",
     group: "legalLiability",
-    label: "$10M Limit of Liability",
+    label: "$10,000,000 Limit of Liability",
     description: "each and every occurrence",
     band: "upTo2m",
     liabilityLimitMillions: 10,
@@ -89,7 +89,7 @@ export const EXCESS_FIELDS: ExcessFieldConfig[] = [
   {
     key: "excessUpTo2MLimit20M",
     group: "legalLiability",
-    label: "$20M Limit of Liability",
+    label: "$20,000,000 Limit of Liability",
     description: "each and every occurrence",
     band: "upTo2m",
     liabilityLimitMillions: 20,
@@ -97,7 +97,7 @@ export const EXCESS_FIELDS: ExcessFieldConfig[] = [
   {
     key: "excessOver2MLimit10M",
     group: "legalLiability",
-    label: "$10M Limit of Liability",
+    label: "$10,000,000 Limit of Liability",
     description: "each and every occurrence",
     band: "from2mTo5m",
     liabilityLimitMillions: 10,
@@ -105,7 +105,7 @@ export const EXCESS_FIELDS: ExcessFieldConfig[] = [
   {
     key: "excessOver2MLimit20M",
     group: "legalLiability",
-    label: "$20M Limit of Liability",
+    label: "$20,000,000 Limit of Liability",
     description: "each and every occurrence",
     band: "from2mTo5m",
     liabilityLimitMillions: 20,
