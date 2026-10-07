@@ -5,8 +5,8 @@ export function coverTypeLabel(coverTypeId: number): string {
 }
 
 export function liabilityBandLabel(band: number): string {
-  if (band === 1) return "$10 Million";
-  if (band === 2) return "$20 Million";
+  if (band === 1) return "$10,000,000";
+  if (band === 2) return "$20,000,000";
   if (band === 3) return "Not Insured";
   return String(band);
 }
