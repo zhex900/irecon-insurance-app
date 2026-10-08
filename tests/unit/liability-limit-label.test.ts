@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { policyToFormValues } from "~/components/policies/wizard/shared/policy-to-values";
 import type { Policy } from "~/lib/db/types";
-import { money, moneyInText } from "~/lib/pdf/merge-field-tables";
+import { money, moneyInText, premiumMoney } from "~/lib/pdf/merge-field-tables";
 import {
   normalizePdfmeTemplateSchemas,
   policyToMergeInputs,
@@ -142,6 +142,10 @@ describe("excess merge fields", () => {
     expect(money(2500.4)).toBe("$2,500");
     expect(money(2500.5)).toBe("$2,501");
     expect(money("$1,234.49")).toBe("$1,234");
+    expect(premiumMoney(1932)).toBe("$1,932.00");
+    expect(premiumMoney(1932.456)).toBe("$1,932.46");
+    expect(premiumMoney(12.345)).toBe("$12.35");
+    expect(premiumMoney(-0.005)).toBe("-$0.01");
     expect(moneyInText("Display Homes has a value of $10.40")).toBe(
       "Display Homes has a value of $10",
     );

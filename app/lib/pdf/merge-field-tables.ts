@@ -21,17 +21,31 @@ const LIABILITY_BY_ID = new Map(
   reference.liabilityLimitBands.map((b) => [b.id, b.name] as const),
 );
 
-/** Whole dollars on PDF documents. Half rounds away from zero. */
-const pdfAmountFormat = new Intl.NumberFormat("en-AU", {
+/** Whole dollars on PDF documents (limits, excesses). Half rounds away from zero. */
+const pdfWholeDollarFormat = new Intl.NumberFormat("en-AU", {
   style: "currency",
   currency: "AUD",
   minimumFractionDigits: 0,
   maximumFractionDigits: 0,
 });
 
-function formatPdfAmount(value: number) {
+/** ROA premium calculation lines. Half rounds away from zero. */
+const pdfPremiumFormat = new Intl.NumberFormat("en-AU", {
+  style: "currency",
+  currency: "AUD",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+function roundHalfAwayFromZero(value: number, fractionDigits: 0 | 2) {
   const sign = value < 0 ? -1 : 1;
-  return pdfAmountFormat.format(sign * Math.round(Math.abs(value)));
+  const factor = fractionDigits === 0 ? 1 : 100;
+  return (sign * Math.round(Math.abs(value) * factor)) / factor;
+}
+
+function formatPdfAmount(value: number, fractionDigits: 0 | 2 = 0) {
+  const format = fractionDigits === 2 ? pdfPremiumFormat : pdfWholeDollarFormat;
+  return format.format(roundHalfAwayFromZero(value, fractionDigits));
 }
 
 const CURRENCY_TOKEN = /-?\$[\d,]+(?:\.\d+)?/g;
@@ -47,7 +61,10 @@ export function moneyInText(value: string | null | undefined) {
   });
 }
 
-export function money(value: number | string | null | undefined) {
+function formatMoneyValue(
+  value: number | string | null | undefined,
+  fractionDigits: 0 | 2,
+) {
   if (value == null || value === "") return "N/A";
   if (typeof value === "string") {
     const trimmed = value.trim();
@@ -58,10 +75,20 @@ export function money(value: number | string | null | undefined) {
     if (!/^-?\d+(\.\d+)?$/.test(bare)) return trimmed;
     const parsed = Number(bare);
     if (Number.isNaN(parsed)) return trimmed;
-    return formatPdfAmount(parsed);
+    return formatPdfAmount(parsed, fractionDigits);
   }
   if (Number.isNaN(value)) return "N/A";
-  return formatPdfAmount(value);
+  return formatPdfAmount(value, fractionDigits);
+}
+
+/** Limits, excesses, and other non-premium amounts — whole dollars. */
+export function money(value: number | string | null | undefined) {
+  return formatMoneyValue(value, 0);
+}
+
+/** ROA premium calculation amounts — always two decimal places. */
+export function premiumMoney(value: number | string | null | undefined) {
+  return formatMoneyValue(value, 2);
 }
 
 export function yesNo(value: boolean | string | null | undefined) {
