@@ -96,9 +96,9 @@ function policyWithPremium(): Policy {
 describe("brokerFeeMergeFields", () => {
   it("maps schedule lines to legacy rating fee fields (ex GST + GST total)", () => {
     expect(brokerFeeMergeFields(FEE_LINES)).toEqual({
-      InsurerAdminFee: "$200",
-      IAAAdminFee: "$80",
-      BrokerFeeGst: "$28",
+      InsurerAdminFee: "$200.00",
+      IAAAdminFee: "$80.00",
+      BrokerFeeGst: "$28.00",
     });
   });
 });
@@ -106,7 +106,7 @@ describe("brokerFeeMergeFields", () => {
 describe("policyToMergeInputs broker fees", () => {
   it("does not invent GST as 10% of combined broker fee", () => {
     const inputs = policyToMergeInputs(policyWithPremium());
-    expect(inputs.BrokerFee).toBe("$308");
+    expect(inputs.BrokerFee).toBe("$308.00");
     expect(inputs.BrokerFeeGst).toBeUndefined();
     expect(inputs.InsurerAdminFee).toBeUndefined();
   });
@@ -115,10 +115,10 @@ describe("policyToMergeInputs broker fees", () => {
     const inputs = policyToMergeInputs(policyWithPremium(), {
       brokerFeeLines: FEE_LINES,
     });
-    expect(inputs.BrokerFee).toBe("$308");
-    expect(inputs.InsurerAdminFee).toBe("$200");
-    expect(inputs.IAAAdminFee).toBe("$80");
-    expect(inputs.BrokerFeeGst).toBe("$28");
+    expect(inputs.BrokerFee).toBe("$308.00");
+    expect(inputs.InsurerAdminFee).toBe("$200.00");
+    expect(inputs.IAAAdminFee).toBe("$80.00");
+    expect(inputs.BrokerFeeGst).toBe("$28.00");
   });
 });
 

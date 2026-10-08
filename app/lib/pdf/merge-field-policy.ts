@@ -13,6 +13,7 @@ import {
   liabilityLabel,
   money,
   moneyInText,
+  premiumMoney,
   stateCode,
   yesNo,
 } from "~/lib/pdf/merge-field-tables";
@@ -50,9 +51,9 @@ export function brokerFeeMergeFields(
   const iaa = find("iaa admin");
   const feeGstTotal = lines.reduce((sum, line) => sum + (line.feeGst || 0), 0);
   return {
-    InsurerAdminFee: money(insurer?.fee),
-    IAAAdminFee: money(iaa?.fee),
-    BrokerFeeGst: money(feeGstTotal),
+    InsurerAdminFee: premiumMoney(insurer?.fee),
+    IAAAdminFee: premiumMoney(iaa?.fee),
+    BrokerFeeGst: premiumMoney(feeGstTotal),
   };
 }
 
@@ -332,41 +333,45 @@ export function policyToMergeInputs(
 
     Object.assign(inputs, {
       // Premium Breakdown — always from live premium (includes manual overrides).
-      ContractWorksBasePremium: money(
+      ContractWorksBasePremium: premiumMoney(
         premium.contractWorksCalculatedBasePremium,
       ),
-      LegalLiabilityBasePremium: money(premium.liabilityCalculatedBasePremium),
-      ContractWorksTrueBasePremium: money(s1TrueBase),
-      LegalLiabilityTrueBasePremium: money(s2TrueBase),
-      CombinedTrueBasePremium: money(combinedTrueBasePremium(premium)),
-      TerrorismLevy: money(terror),
+      LegalLiabilityBasePremium: premiumMoney(
+        premium.liabilityCalculatedBasePremium,
+      ),
+      ContractWorksTrueBasePremium: premiumMoney(s1TrueBase),
+      LegalLiabilityTrueBasePremium: premiumMoney(s2TrueBase),
+      CombinedTrueBasePremium: premiumMoney(combinedTrueBasePremium(premium)),
+      TerrorismLevy: premiumMoney(terror),
       // Premium section lines (distinct from Liability* sum-insured fields).
-      PremiumDisplayHomes: money(dhPremium),
-      PremiumExistingStructure: money(esPremium),
-      PremiumPlantAndEquipment: money(plantPremium),
-      PremiumPlantAndEquipmentTerrorismLevy: money(plantTerror),
-      PremiumPlantAndEquipmentEsl: money(plantEsl),
+      PremiumDisplayHomes: premiumMoney(dhPremium),
+      PremiumExistingStructure: premiumMoney(esPremium),
+      PremiumPlantAndEquipment: premiumMoney(plantPremium),
+      PremiumPlantAndEquipmentTerrorismLevy: premiumMoney(plantTerror),
+      PremiumPlantAndEquipmentEsl: premiumMoney(plantEsl),
       // Legacy aliases.
-      DisplayHomesPremium: money(dhPremium),
-      ExistingStructurePremium: money(esPremium),
-      PlantEquipmentPremium: money(plantPremium),
-      PlantEquipmentTerrorismLevy: money(plantTerror),
-      PlantEquipmentEsl: money(plantEsl),
-      ContractWorksEsl: money(s1Esl),
-      LegalLiabilityEsl: money(s2Esl),
-      CombinedEsl: money(s1Esl + s2Esl + plantEsl),
-      ContractWorksGst: money(premium.contractWorksGST),
-      LegalLiabilityGst: money(premium.liabilityGST),
-      CombinedGst: money(
+      DisplayHomesPremium: premiumMoney(dhPremium),
+      ExistingStructurePremium: premiumMoney(esPremium),
+      PlantEquipmentPremium: premiumMoney(plantPremium),
+      PlantEquipmentTerrorismLevy: premiumMoney(plantTerror),
+      PlantEquipmentEsl: premiumMoney(plantEsl),
+      ContractWorksEsl: premiumMoney(s1Esl),
+      LegalLiabilityEsl: premiumMoney(s2Esl),
+      CombinedEsl: premiumMoney(s1Esl + s2Esl + plantEsl),
+      ContractWorksGst: premiumMoney(premium.contractWorksGST),
+      LegalLiabilityGst: premiumMoney(premium.liabilityGST),
+      CombinedGst: premiumMoney(
         (premium.contractWorksGST ?? 0) + (premium.liabilityGST ?? 0),
       ),
-      ContractWorksStampDuty: money(s1Sd),
-      LegalLiabilityStampDuty: money(s2Sd),
-      CombinedStampDuty: money(s1Sd + s2Sd),
-      ContractWorksTotalPremium: money(premium.contractWorksTotalPremium),
-      LegalLiabilityTotalPremium: money(premium.liabilityTotalPremium),
-      CombinedTotalPremium: money(premium.originalTotalPremium),
-      BrokerFee: money(premium.combinedBrokerFee),
+      ContractWorksStampDuty: premiumMoney(s1Sd),
+      LegalLiabilityStampDuty: premiumMoney(s2Sd),
+      CombinedStampDuty: premiumMoney(s1Sd + s2Sd),
+      ContractWorksTotalPremium: premiumMoney(
+        premium.contractWorksTotalPremium,
+      ),
+      LegalLiabilityTotalPremium: premiumMoney(premium.liabilityTotalPremium),
+      CombinedTotalPremium: premiumMoney(premium.originalTotalPremium),
+      BrokerFee: premiumMoney(premium.combinedBrokerFee),
       ...brokerFeeMergeFields(options?.brokerFeeLines ?? []),
     });
   }
