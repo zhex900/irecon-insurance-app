@@ -71,12 +71,13 @@ Checkpoint file (default): `_archive/data/legacy-documents-sync-state.json`
 
 ## Restart / clear
 
-| Goal                            | Command                                                                                                               |
-| ------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| Resume after interrupt          | Re-run `npm run db:migrate:legacy:documents:*` (default)                                                              |
-| Ignore checkpoint               | `npm run db:migrate:legacy -- --env=local --only documents --no-resume --file _archive/data/legacy-export.json`       |
-| Wipe migrated docs + checkpoint | `npm run db:clear:legacy:documents:local -- --confirm`                                                                |
-| Wipe then re-migrate            | `npm run db:migrate:legacy -- --env=local --only documents --clear-documents --file _archive/data/legacy-export.json` |
+| Goal                                              | Command                                                                                                                       |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Resume after interrupt                            | Re-run `npm run db:migrate:legacy:documents:*` (default)                                                                      |
+| Ignore checkpoint                                 | `npm run db:migrate:legacy -- --env=local --only documents --no-resume --file _archive/data/legacy-export.json`               |
+| Wipe migrated docs + checkpoint                   | `npm run db:clear:legacy:documents:local -- --confirm`                                                                        |
+| Wipe **all** `policies/` objects in env R2 bucket | UAT: `npm run db:clear:r2:policies:uat -- --confirm` · Prod: `npm run db:clear:r2:policies:prod -- --confirm` (dry-run first) |
+| Wipe then re-migrate                              | `npm run db:migrate:legacy -- --env=local --only documents --clear-documents --file _archive/data/legacy-export.json`         |
 
 Clear removes legacy rows from Postgres (`generationKey` starts with `legacy:`), deletes expected R2 keys from the export snapshot, and deletes the checkpoint file.
 
