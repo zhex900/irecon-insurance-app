@@ -63,7 +63,7 @@ erDiagram
 | `series_term`      | `0` = first term; `1`, `2`, … = renewals (UI badge `#1`, `#2`, …)           |
 | `policy_number`    | Internal unique term reference (`ATCCWI####`); not the primary broker label |
 
-Legacy imports may have had duplicate MSSQL policy numbers on renewals; Postgres deduped those into suffixed `policy_number` values while backfilling `policy_series`. See [legacy-db-migration/README.md § Duplicate policy numbers](../legacy-db-migration/README.md#duplicate-policy-numbers-renewals).
+Legacy imports reuse MSSQL policy numbers across renewals; migration sets `policy_series.series_number` to the shared base, `series_term` for each term, and allocates distinct `ATCCWI####` `policy_number` values for renewals. See [legacy-db-migration/README.md § Duplicate policy numbers](../legacy-db-migration/README.md#duplicate-policy-numbers-renewals).
 
 ## What brokers see
 

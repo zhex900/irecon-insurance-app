@@ -51,6 +51,8 @@
     "db:repair:policy-periods": "tsx scripts/db/repair/repair-migrated-policy-periods.mts",
     "db:repair:migrated-policies": "tsx scripts/db/repair/repair-migrated-policies.mts",
     "db:repair:policy-document-r2": "tsx scripts/db/repair/repair-policy-document-r2.mts",
+    "db:repair:legacy-documents-from-r2": "tsx --env-file=.env scripts/db/repair/repair-legacy-documents-from-r2.mts",
+    "db:repair:legacy-documents-from-r2:uat": "tsx --env-file=.env --env-file=.env.uat scripts/db/repair/repair-legacy-documents-from-r2.mts --env=uat",
     "db:repair:policy-number-seq": "tsx --env-file=.env scripts/db/repair/ensure-policy-number-seq.mts",
     "db:reset": "supabase db reset --yes && pnpm run db:seed",
     "db:copy:uat": "node --env-file=.env --env-file=.env.uat deployment/copy-uat-to-local.mjs",

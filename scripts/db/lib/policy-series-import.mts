@@ -108,28 +108,21 @@ export async function attachPolicySeriesFields<
 
   const groups = new Map<string, Pending[]>();
   for (const item of pending) {
-    const key = item.seriesNumber.toLowerCase();
+    const key = `${item.clientId}:${item.seriesNumber.toLowerCase()}`;
     const list = groups.get(key) ?? [];
     list.push(item);
     groups.set(key, list);
   }
 
-  const seriesByLower = new Map<
+  const seriesByGroupKey = new Map<
     string,
     { policySeriesId: string; seriesNumber: string }
   >();
 
-  for (const [lower, items] of groups) {
+  for (const [groupKey, items] of groups) {
     items.sort((a, b) => a.createdWhen.getTime() - b.createdWhen.getTime());
     const canonical = items[0]!;
-
-    for (const item of items) {
-      if (item.clientId !== canonical.clientId) {
-        throw new Error(
-          `Policy series ${canonical.seriesNumber} is shared across clients in this import batch`,
-        );
-      }
-    }
+    const lower = canonical.seriesNumber.toLowerCase();
 
     const [existing] = await db
       .select({
@@ -138,20 +131,29 @@ export async function attachPolicySeriesFields<
         clientId: policySeries.clientId,
       })
       .from(policySeries)
-      .where(sql`lower(${policySeries.seriesNumber}) = ${lower}`)
+      .where(
+        sql`lower(${policySeries.seriesNumber}) = ${lower} AND ${policySeries.clientId} = ${canonical.clientId}`,
+      )
       .limit(1);
 
     if (existing) {
-      if (String(existing.clientId) !== canonical.clientId) {
-        throw new Error(
-          `Policy series ${canonical.seriesNumber} already exists for another client`,
-        );
-      }
-      seriesByLower.set(lower, {
+      seriesByGroupKey.set(groupKey, {
         policySeriesId: existing.policySeriesId,
         seriesNumber: existing.seriesNumber,
       });
       continue;
+    }
+
+    const [existingOtherClient] = await db
+      .select({ policySeriesId: policySeries.policySeriesId })
+      .from(policySeries)
+      .where(sql`lower(${policySeries.seriesNumber}) = ${lower}`)
+      .limit(1);
+
+    if (existingOtherClient) {
+      throw new Error(
+        `Policy series ${canonical.seriesNumber} is already owned by another client in Postgres`,
+      );
     }
 
     const [inserted] = await db
@@ -173,13 +175,13 @@ export async function attachPolicySeriesFields<
       );
     }
 
-    seriesByLower.set(lower, inserted);
+    seriesByGroupKey.set(groupKey, inserted);
   }
 
   for (const item of pending) {
     const policy = policies[item.index]!;
-    const lower = item.seriesNumber.toLowerCase();
-    const series = seriesByLower.get(lower);
+    const groupKey = `${item.clientId}:${item.seriesNumber.toLowerCase()}`;
+    const series = seriesByGroupKey.get(groupKey);
     if (!series) {
       throw new Error(
         `Missing policy series assignment for ${item.seriesNumber}`,

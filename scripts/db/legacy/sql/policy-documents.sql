@@ -9,7 +9,8 @@ SELECT
   COALESCE(pd.ArchivedDate, pd.OrganiseITDate) AS generatedWhen
 FROM dbo.PolicyDocument pd
 INNER JOIN dbo.Policy p ON p.PolicyId = pd.PolicyId
+INNER JOIN dbo.PolicyCAR pc ON pc.PolicyId = p.PolicyId
 WHERE p.ClassCode = 'CAR'
-  AND p.InceptionDate >= '2025-06-01'
+  AND pc.Status IN (1, 2)
   AND pd.DocumentName NOT LIKE 'ERROR%'
 ORDER BY pd.PolicyDocumentId;

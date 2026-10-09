@@ -8,7 +8,7 @@ Migrate domain data from the legacy **vs434253_1** MSSQL database into Supabase 
 
 ### Target scope
 
-Only **CAR policies with `InceptionDate >= 2025-06-01`** are exported. Clients without an in-scope policy are excluded. Documents, notes, and wordings follow the same policy set (no full-database R2 copy). Filter lives in `scripts/db/legacy/sql/_target-scope.sql`.
+Only **CAR policies in Pending or Taken status** (`PolicyCAR.Status` 1 or 2) are exported. **Clients** that own at least one such policy are included. Documents, notes, and wordings follow the same policy set (no full-database R2 copy). Filter lives in `scripts/db/legacy/sql/_target-scope.sql`.
 
 ---
 
@@ -108,14 +108,14 @@ npm run db:clear:legacy:local -- --confirm
 npm run db:migrate:legacy:local
 ```
 
-Expected counts (approximate):
+Row counts depend on the restored MSSQL snapshot. Use `--dry-run` to preview before load:
 
-| Slice            | Rows  |
-| ---------------- | ----- |
-| Account managers | 7     |
-| AR               | 689   |
-| Clients          | 2,732 |
-| Policies         | 5,101 |
+| Slice            | Rows (example) |
+| ---------------- | -------------- |
+| Account managers | 7              |
+| AR               | 689            |
+| Clients          | (dry-run)      |
+| Policies         | (dry-run)      |
 
 ### 6. Repair known field gaps (if needed)
 
@@ -219,14 +219,19 @@ Mapper code: `scripts/db/legacy/lib/legacy-policy-mapper.mts`
 
 ### Duplicate policy numbers (renewals)
 
-Legacy reuses `PolicyNumber` across renewals. Postgres requires uniqueness. The earliest row keeps the base number; later rows suffix from **inception date** (`InceptionDate`), in order:
+Legacy MSSQL reuses `PolicyNumber` across renewals. Postgres requires unique `policy.policy_number` per term while brokers see one **series** ([policy series and numbers](../../domains/policy-series-and-numbers.md)).
 
-1. `ATCCWI0487-2024` (year)
-2. `ATCCWI0487-2024-06` (year + month) — if year taken
-3. `ATCCWI0487-2024-06-15` (full date) — if year-month taken
-4. `ATCCWI0487-a1b2c3d4` (UUID hash) — if all date suffixes taken
+`dedupeLegacyPolicyNumbers()` (`scripts/db/legacy/lib/legacy-policy-mapper.mts`) groups renewals by **client + legacy policy number base** (not number alone). If two clients share the same legacy number, the second client’s series gets a gap-filled `ATCCWI####` (Postgres requires globally unique `series_number` / `policy_number`).
 
-Implemented in `dedupeLegacyPolicyNumbers()` (`scripts/db/legacy/lib/legacy-policy-mapper.mts`).
+| Term        | `series_number` | `series_term` | `policy_number`                                                     |
+| ----------- | --------------- | ------------- | ------------------------------------------------------------------- |
+| Original    | `ATCCWI0077`    | `0`           | `ATCCWI0077`                                                        |
+| 1st renewal | `ATCCWI0077`    | `1`           | gap-filled `ATCCWI####` (same numeric space as `policy_number_seq`) |
+| 2nd renewal | `ATCCWI0077`    | `2`           | next free `ATCCWI####`                                              |
+
+UI reference: **ATCCWI0077**, **ATCCWI0077#1**, **ATCCWI0077#2** — not year/month suffixes on `policy_number`.
+
+After a full policy import, run `pnpm run db:repair:policy-number-seq` so the DB sequence matches allocated numbers.
 
 ---
 

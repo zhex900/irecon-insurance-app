@@ -1,4 +1,4 @@
--- Target migration: CAR policies with InceptionDate >= 2025-06-01.
+-- Target migration: CAR policies in Pending or Taken status.
 -- See scripts/db/legacy/sql/_target-scope.sql
 SELECT
   p.PolicyId AS policyId,
@@ -130,5 +130,5 @@ INNER JOIN dbo.PolicyCAR pc ON pc.PolicyId = p.PolicyId
 LEFT JOIN dbo.PolicyCARSubLimitWording sl ON sl.PolicyId = p.PolicyId
 LEFT JOIN dbo.PolicyCARExcess ex ON ex.PolicyId = p.PolicyId
 WHERE p.ClassCode = 'CAR'
-  AND p.InceptionDate >= '2025-06-01'
+  AND pc.Status IN (1, 2)
 ORDER BY p.PolicyId;

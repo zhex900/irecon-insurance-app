@@ -1,7 +1,7 @@
 import type { LegacyDomainPayload } from "./legacy-payload.ts";
 
-/** Inception date filter — keep in sync with scripts/db/legacy/sql/_target-scope.sql */
-export const LEGACY_TARGET_INCEPTION_FROM = "2025-06-01";
+/** Keep in sync with scripts/db/legacy/sql/_target-scope.sql */
+export const LEGACY_TARGET_POLICY_STATUS_IDS = [1, 2] as const;
 
 export function logMigrationScopeCounts(payload: LegacyDomainPayload): void {
   const policyClientIds = new Set(payload.policies.map((p) => p.clientId));
@@ -15,7 +15,7 @@ export function logMigrationScopeCounts(payload: LegacyDomainPayload): void {
   console.log("");
   console.log("Target migration scope");
   console.log(
-    `  filter: CAR policies with InceptionDate >= ${LEGACY_TARGET_INCEPTION_FROM}`,
+    `  filter: CAR policies with Status in (${LEGACY_TARGET_POLICY_STATUS_IDS.join(", ")}) — Pending, Taken`,
   );
   console.log(`  policies:         ${payload.policies.length}`);
   console.log(`  clients:          ${payload.clients.length}`);

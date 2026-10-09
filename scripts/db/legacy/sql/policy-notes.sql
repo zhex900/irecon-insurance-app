@@ -8,6 +8,7 @@ SELECT
   n.ChangedBy AS createdBy
 FROM dbo.PolicyNote n
 INNER JOIN dbo.Policy p ON p.PolicyId = n.PolicyId
+INNER JOIN dbo.PolicyCAR pc ON pc.PolicyId = p.PolicyId
 WHERE p.ClassCode = 'CAR'
-  AND p.InceptionDate >= '2025-06-01'
+  AND pc.Status IN (1, 2)
 ORDER BY n.PolicyId, n.DateCreated, n.PolicyNoteId;

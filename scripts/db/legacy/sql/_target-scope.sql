@@ -2,4 +2,4 @@
 -- Used by policies.sql, clients.sql, policy-documents.sql, policy-notes.sql, policy-wordings.sql.
 --
 --   p.ClassCode = 'CAR'
---   AND p.InceptionDate >= '2025-06-01'
+--   AND pc.Status IN (1, 2)   -- Pending, Taken (PolicyCAR.Status)

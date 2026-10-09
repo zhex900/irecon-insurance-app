@@ -82,9 +82,53 @@ Clear removes legacy rows from Postgres (`generationKey` starts with `legacy:`),
 
 ---
 
+## Link Postgres to objects already in R2 (no local PDFs)
+
+When PDFs are **already in the target R2 bucket** but `policy_document` rows are missing or out of date (e.g. Postgres was cleared, or an earlier run marked docs “missing” in the checkpoint), link metadata only — **no upload, no `POLICY_DOCUMENT_PATHS`**.
+
+```bash
+npm run db:repair:legacy-documents-from-r2:uat -- --dry-run
+npm run db:repair:legacy-documents-from-r2:uat -- --confirm
+```
+
+Uses the same export snapshot and key layout as document migrate. Only rows classified as **`already_in_r2`** get upserted.
+
+**Limit:** If the PDF was never uploaded to R2, this cannot create a link. Those export rows stay **`missing_local`** until bytes are recovered (legacy file server, backup, or another bucket) and uploaded via normal document migrate.
+
+Document migrate also upserts metadata for `already_in_r2` on each run; the repair command is a fast full pass when you only need R2 → Postgres sync.
+
+---
+
+## Incremental backfill (existing R2)
+
+Document migrate **lists objects already in the target R2 bucket** (`policies/` prefix) and **skips upload** when the deterministic key exists:
+
+`policies/{policyUuid}/{legacyPolicyDocumentId}-{filename}`
+
+Dry-run and live runs classify each export row:
+
+| Status            | Meaning                                                                                               |
+| ----------------- | ----------------------------------------------------------------------------------------------------- |
+| `already_in_r2`   | Object present — no upload                                                                            |
+| `ready_to_upload` | PDF found under `POLICY_DOCUMENT_PATHS` (exact name, or merge-doc pattern match) — upload on live run |
+| `missing_local`   | In export but no matching file locally                                                                |
+
+Merge PDFs (`CARSCHED`, `CARRATING`, `CARADJUST`) match the legacy pattern  
+`{Prefix}_{policyNumber}_{amendment}_{yyyyMMdd HHmmss}.pdf` — policy-number hyphens (`ATCCW-79318` vs `ATCCW79318`) are ignored when locating local files.
+
+**Documents-only migrate** (`--only documents`) further **scopes to policies already in target Postgres** (one row per policy number after dedupe). Older MSSQL renewal terms are skipped — they are not “missing” on UAT if that term was never loaded.
+
+```bash
+npm run db:migrate:legacy -- --env=uat --dry-run --only documents --file _archive/data/legacy-export.json
+```
+
+Requires `POLICY_DOCUMENT_PATHS`, R2 credentials in `.env`, and `DATABASE_URL` in `.env.uat` (dry-run still loads target env for bucket name).
+
 ## Missing files
 
-Missing = MSSQL row exists but PDF not on disk. Written to:
+**Missing** = export row is in scope, object **not** in target R2, and **no** matching PDF under `POLICY_DOCUMENT_PATHS` (`missing_local` in the plan). Rows that are **`ready_to_upload`** (on disk, not yet in R2) are **not** written to the CSV — upload those with a live document migrate.
+
+Written to:
 
 `_archive/data/legacy-documents-missing.csv`
 

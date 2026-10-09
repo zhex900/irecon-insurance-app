@@ -6,6 +6,7 @@ SELECT
   w.Content AS content
 FROM dbo.PolicyCARWording w
 INNER JOIN dbo.Policy p ON p.PolicyId = w.PolicyId
+INNER JOIN dbo.PolicyCAR pc ON pc.PolicyId = p.PolicyId
 WHERE p.ClassCode = 'CAR'
-  AND p.InceptionDate >= '2025-06-01'
+  AND pc.Status IN (1, 2)
 ORDER BY w.PolicyId, w.PolicyCARWordingID;
