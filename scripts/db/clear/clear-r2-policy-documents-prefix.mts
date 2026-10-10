@@ -6,6 +6,8 @@
  *   npm run db:clear:r2:policies:uat -- --confirm
  *   npm run db:clear:r2:policies:prod -- --dry-run
  *   npm run db:clear:r2:policies:prod -- --confirm
+ *   npm run db:clear:r2:policies:pr -- --dry-run
+ *   npm run db:clear:r2:policies:pr -- --confirm
  *
  * Pair with Postgres + checkpoint reset:
  *   npm run db:clear:legacy:documents:uat -- --confirm

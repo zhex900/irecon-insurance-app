@@ -714,7 +714,7 @@ export async function loadLegacyDomain(options: LoadLegacyDomainOptions) {
       }
 
       if (uploadToR2) {
-        uploadPolicyDocumentToR2({ localPath, r2Key: entry.r2Key! });
+        await uploadPolicyDocumentToR2({ localPath, r2Key: entry.r2Key! });
         stats.documentsUploaded += 1;
         stats.documentsToUpload += 1;
       }

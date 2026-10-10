@@ -48,6 +48,7 @@
     "db:clear:legacy:documents:uat": "tsx --env-file=.env --env-file=.env.uat scripts/db/clear/clear-legacy-documents.mts --env=uat",
     "db:clear:r2:policies:uat": "tsx --env-file=.env --env-file=.env.uat scripts/db/clear/clear-r2-policy-documents-prefix.mts --env=uat",
     "db:clear:r2:policies:prod": "tsx --env-file=.env --env-file=.env.production scripts/db/clear/clear-r2-policy-documents-prefix.mts --env=prod",
+    "db:clear:r2:policies:pr": "tsx --env-file=.env --env-file=.env.pr scripts/db/clear/clear-r2-policy-documents-prefix.mts --env=pr",
     "db:clear:legacy:documents:prod": "tsx --env-file=.env --env-file=.env.production scripts/db/clear/clear-legacy-documents.mts --env=prod",
     "db:clear:legacy:documents:pr": "tsx --env-file=.env --env-file=.env.pr scripts/db/clear/clear-legacy-documents.mts --env=pr",
     "db:repair:policy-periods": "tsx scripts/db/repair/repair-migrated-policy-periods.mts",

@@ -1,6 +1,7 @@
 /**
  * Target Postgres env for migration scripts (--env=local|uat|pr|prod).
  */
+import { PR_LIBRARY_BUCKET } from "../../../deployment/lib/constants.mjs";
 import { assertProductionDatabaseUrl } from "../../../deployment/lib/production-env.mjs";
 import { PRODUCTION_LIBRARY_BUCKET } from "../../../deployment/lib/production-env.mjs";
 import {
@@ -117,6 +118,10 @@ export function applyPolicyDocumentsBucket(target: MigrateTargetEnv) {
   }
   if (target === "prod") {
     process.env.R2_POLICY_DOCUMENTS_BUCKET = PRODUCTION_LIBRARY_BUCKET;
+    return;
+  }
+  if (target === "pr") {
+    process.env.R2_POLICY_DOCUMENTS_BUCKET = PR_LIBRARY_BUCKET;
     return;
   }
   const label = parseEnvName(process.argv.slice(2));

@@ -179,7 +179,7 @@ async function main() {
           { wordingCatalogue, brokerFeeLines, font },
         );
 
-        uploadPolicyDocumentBytesToR2({ bytes: pdf, r2Key });
+        await uploadPolicyDocumentBytesToR2({ bytes: pdf, r2Key });
 
         await db
           .update(policyDocument)
