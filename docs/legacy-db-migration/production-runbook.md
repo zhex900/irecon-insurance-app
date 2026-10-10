@@ -183,7 +183,7 @@ Requires AWS CLI + R2 creds. Regenerates PDFs from published templates + live po
 Push published content UAT already uses:
 
 ```bash
-npm run db:push:templates:uat      # adjust script if prod push exists; or copy via admin UI
+npm run db:push:templates:prod -- --confirm   # UAT → prod (published pdfme layouts)
 npm run db:push:email-templates:uat
 npm run db:push:additional-wording:uat
 ```

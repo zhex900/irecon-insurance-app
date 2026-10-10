@@ -20,6 +20,7 @@
     "db:status": "supabase status",
     "db:push": "drizzle-kit push",
     "db:push:templates:uat": "tsx --env-file=.env scripts/db/push-uat/push-document-templates-to-uat.mts",
+    "db:push:templates:prod": "tsx --env-file=.env --env-file=.env.uat --env-file=.env.production scripts/db/push-uat/push-document-templates-to-prod.mts",
     "db:push:email-templates:uat": "tsx --env-file=.env scripts/db/push-uat/push-email-templates-to-uat.mts",
     "db:push:additional-wording:uat": "tsx --env-file=.env scripts/db/push-uat/push-car-wording-to-uat.mts",
     "db:seed": "tsx --env-file=.env scripts/db/seed/seed-db.mts",
