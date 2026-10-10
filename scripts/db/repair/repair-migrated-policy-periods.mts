@@ -36,8 +36,9 @@ async function main() {
   const dryRun = readFlag("--dry-run");
   const confirm = readFlag("--confirm");
 
-  await loadMigrateTargetEnv(target);
-  logMigrateTarget(target, dryRun ? "dry-run repair" : "repair policy periods");
+  const databaseUrl = await loadMigrateTargetEnv(target);
+  logMigrateTarget(target, databaseUrl);
+  if (dryRun) console.log("Mode: dry-run (no writes)");
   assertMigrateConfirmed(target, confirm);
 
   const db = getDb();

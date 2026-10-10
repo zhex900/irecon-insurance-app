@@ -2,7 +2,7 @@
 
 Step-by-step guide for loading **production** Supabase from legacy MSSQL (or from a validated UAT copy).
 
-**Scope:** CAR policies with `InceptionDate >= 2025-06-01` (~5k policies, ~28k documents). See [README.md](./README.md) for slice details.
+**Scope:** CAR policies in Pending or Taken status; clients with at least one such policy. See [README.md](./README.md) for slice details. Run `--dry-run` for row counts before prod load.
 
 ---
 
@@ -129,14 +129,14 @@ Account managers → AR → clients → policies. **Does not upload PDFs.**
 npm run db:migrate:legacy:prod
 ```
 
-Expected approximate counts:
+Expected approximate counts (use `--dry-run` on your MSSQL snapshot):
 
-| Slice            | Rows  |
-| ---------------- | ----- |
-| Account managers | 7     |
-| AR               | 689   |
-| Clients          | 2,732 |
-| Policies         | 5,101 |
+| Slice            | Rows      |
+| ---------------- | --------- |
+| Account managers | 7         |
+| AR               | 689       |
+| Clients          | (dry-run) |
+| Policies         | (dry-run) |
 
 ### Phase 5 — Repairs
 

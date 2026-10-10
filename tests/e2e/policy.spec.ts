@@ -56,9 +56,9 @@ test.describe("policy status transitions", () => {
       await expect(
         page.getByRole("heading", { name: /policies/i }).first(),
       ).toBeVisible();
-      await expect(
-        page.getByRole("table").or(page.getByText(/no policies|empty/i)),
-      ).toBeVisible();
+      // Empty results render inside the table ("No policies found"), so the
+      // table alone covers both populated and empty filter results.
+      await expect(page.getByRole("table")).toBeVisible();
     }
   });
 });

@@ -3,7 +3,7 @@
  */
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { sql, eq } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 
 import { getDb } from "../../../../app/lib/db/client";
 import { policyToRows } from "../../../../app/lib/db/policy-mapper";
@@ -21,9 +21,16 @@ import {
 import type { PolicyDocument } from "../../../../app/lib/db/types";
 import { accountManagerIdForCode } from "./legacy-account-manager-map.mts";
 import {
-  resolveLegacyDocumentFile,
-  resolvePolicyDocumentRoots,
-} from "./legacy-document-path.mts";
+  planLegacyPolicyDocuments,
+  buildLegacyPolicyDocumentEntryFromRow,
+  type LegacyDocumentPlanRow,
+} from "./legacy-document-plan.mts";
+import { resolvePolicyDocumentRoots } from "./legacy-document-path.mts";
+import {
+  filterPolicyDocumentsForTarget,
+  loadPostgresLegacyDocumentR2Tails,
+  loadTargetPolicyUuidSet,
+} from "./legacy-document-target.mts";
 import { clearLegacyDocuments } from "./clear-legacy-documents.mts";
 import {
   assertSyncStateCompatible,
@@ -36,24 +43,22 @@ import {
   syncStateSets,
   type LegacyDocumentSyncState,
 } from "./legacy-document-sync-state.mts";
+import { upsertLegacyPolicyDocumentInPostgres } from "./legacy-document-postgres.mts";
 import {
   hasR2Credentials,
   policyDocumentsBucket,
   uploadPolicyDocumentToR2,
 } from "./legacy-document-upload.mts";
-import {
-  legacyClientUuid,
-  legacyPolicyDocumentUuid,
-  legacyPolicyUuid,
-  policyDocumentR2Key,
-} from "./legacy-id-map.mts";
+import { legacyClientUuid, legacyPolicyUuid } from "./legacy-id-map.mts";
 import {
   dedupeLegacyPolicyNumbers,
   legacyPolicyRowToPolicy,
 } from "./legacy-policy-mapper.mts";
 import { attachPolicySeriesFields } from "../../lib/policy-series-import.mts";
+import { syncPolicyNumberSeqFromPolicies } from "../../lib/policy-number-seq.mts";
 import {
   missingPolicyDocumentRow,
+  planRowToMissingCsvRow,
   writeMissingPolicyDocumentsCsv,
   type MissingPolicyDocumentRow,
 } from "./legacy-missing-documents-csv.mts";
@@ -140,23 +145,73 @@ function buildLegacyPolicyDocumentEntry(
   doc: LegacyPolicyDocumentRow,
   createdBy: string,
 ): PolicyDocument {
-  const policyUuid = legacyPolicyUuid(doc.policyId);
-  const r2Key = policyDocumentR2Key(
-    policyUuid,
-    doc.policyDocumentId,
-    doc.filename,
+  return buildLegacyPolicyDocumentEntryFromRow(doc, createdBy);
+}
+
+function logLegacyDocumentPlanSummary(
+  stats: {
+    alreadyInR2: number;
+    readyToUpload: number;
+    missingLocal: number;
+    total: number;
+  },
+  uploadToR2: boolean,
+) {
+  console.log("");
+  console.log("Document plan (export vs local folder vs R2)");
+  console.log(`  total in export:     ${stats.total}`);
+  if (uploadToR2) {
+    console.log(`  already in R2:       ${stats.alreadyInR2} (skip upload)`);
+    console.log(
+      `  ready to upload:     ${stats.readyToUpload} (local file, not in R2 yet)`,
+    );
+  } else {
+    console.log(
+      `  local file found:    ${stats.readyToUpload + stats.alreadyInR2}`,
+    );
+  }
+  console.log(`  missing local file:  ${stats.missingLocal}`);
+  console.log("");
+}
+
+function writeDocumentPlanCsv(
+  path: string,
+  planRows: LegacyDocumentPlanRow[],
+  roots: string[],
+): number {
+  const missing = planRows.filter((row) => row.status === "missing_local");
+  writeMissingPolicyDocumentsCsv(
+    path,
+    missing.map((row) => planRowToMissingCsvRow(row, roots)),
   );
+  return missing.length;
+}
+
+async function scopeLegacyPolicyDocumentsForTarget(
+  documents: LegacyPolicyDocumentRow[],
+  documentsOnly: boolean,
+) {
+  if (!documentsOnly) {
+    return { documents, skippedNotOnTarget: 0, postgresR2TailKeys: null };
+  }
+  const [targetPolicyUuids, postgresR2TailKeys] = await Promise.all([
+    loadTargetPolicyUuidSet(),
+    loadPostgresLegacyDocumentR2Tails(),
+  ]);
+  const { documents: scoped, skipped } = filterPolicyDocumentsForTarget(
+    documents,
+    targetPolicyUuids,
+  );
+  if (skipped > 0) {
+    console.log(
+      `  scoped to ${scoped.length} document row(s) for policies on target` +
+        ` (${skipped} skipped — legacy policy term not loaded in Postgres)`,
+    );
+  }
   return {
-    documentId: legacyPolicyDocumentUuid(doc.policyDocumentId),
-    policyId: policyUuid,
-    name: doc.documentName,
-    filename: doc.filename,
-    generationKey: `legacy:${doc.policyDocumentId}`,
-    content: "",
-    generatedWhen: doc.generatedWhen ?? new Date().toISOString(),
-    generatedBy: createdBy,
-    documentTypeCode: doc.documentTypeCode,
-    r2Key,
+    documents: scoped,
+    skippedNotOnTarget: skipped,
+    postgresR2TailKeys,
   };
 }
 
@@ -170,49 +225,6 @@ function addDocumentToPolicyMap(
   map.set(doc.policyId, list);
 }
 
-async function upsertPolicyDocumentInPostgres(entry: PolicyDocument) {
-  const db = getDb();
-  const [existing] = await db
-    .select({ policyId: policyCar.policyId })
-    .from(policyCar)
-    .where(eq(policyCar.policyId, entry.policyId))
-    .limit(1);
-  if (!existing) return false;
-
-  await db
-    .insert(policyDocument)
-    .values({
-      documentId: entry.documentId!,
-      policyId: entry.policyId,
-      name: entry.name,
-      filename: entry.filename,
-      generationKey: entry.generationKey,
-      content: entry.templateKey ? "" : entry.content,
-      templateKey: entry.templateKey ?? null,
-      libraryDocumentId: entry.libraryDocumentId ?? null,
-      generatedWhen: new Date(entry.generatedWhen),
-      generatedBy: entry.generatedBy,
-      documentTypeCode: entry.documentTypeCode ?? null,
-      r2Key: entry.r2Key ?? null,
-    })
-    .onConflictDoUpdate({
-      target: policyDocument.documentId,
-      set: {
-        name: entry.name,
-        filename: entry.filename,
-        generationKey: entry.generationKey,
-        content: entry.templateKey ? "" : entry.content,
-        templateKey: entry.templateKey ?? null,
-        libraryDocumentId: entry.libraryDocumentId ?? null,
-        generatedWhen: new Date(entry.generatedWhen),
-        generatedBy: entry.generatedBy,
-        documentTypeCode: entry.documentTypeCode ?? null,
-        r2Key: entry.r2Key ?? null,
-      },
-    });
-  return true;
-}
-
 async function persistDocumentMetadataOnly(
   entry: PolicyDocument,
   documentsOnly: boolean,
@@ -220,7 +232,7 @@ async function persistDocumentMetadataOnly(
   syncState: LegacyDocumentSyncState | null,
 ): Promise<boolean> {
   if (!documentsOnly || dryRun) return false;
-  const updated = await upsertPolicyDocumentInPostgres(entry);
+  const updated = await upsertLegacyPolicyDocumentInPostgres(entry);
   if (updated && syncState) syncState.stats.postgresUpdated += 1;
   return updated;
 }
@@ -254,6 +266,8 @@ export async function loadLegacyDomain(options: LoadLegacyDomainOptions) {
     documentsUploaded: 0,
     documentsCopied: 0,
     documentsMissing: 0,
+    documentsAlreadyInR2: 0,
+    documentsToUpload: 0,
     documentsSkipped: 0,
     missingDocumentsCsv: undefined as string | undefined,
   };
@@ -273,24 +287,37 @@ export async function loadLegacyDomain(options: LoadLegacyDomainOptions) {
       stats.policies = options.data.policies.length;
     }
     if (shouldRun("documents", slices)) {
+      const roots = resolvePolicyDocumentRoots(options.documentRoot);
+      const uploadToR2 = !options.skipR2;
+      const bucket =
+        uploadToR2 && hasR2Credentials() ? policyDocumentsBucket() : null;
+      const documentsOnly = !shouldRun("policies", slices);
+      const scoped = await scopeLegacyPolicyDocumentsForTarget(
+        options.data.policyDocuments,
+        documentsOnly,
+      );
+      const plan = await planLegacyPolicyDocuments({
+        documents: scoped.documents,
+        roots,
+        bucket,
+        skipR2: options.skipR2 ?? false,
+        postgresR2TailKeys: scoped.postgresR2TailKeys,
+      });
+      logLegacyDocumentPlanSummary(plan.stats, uploadToR2 && Boolean(bucket));
+      stats.documentsAlreadyInR2 = plan.stats.alreadyInR2;
+      stats.documentsToUpload = plan.stats.readyToUpload;
+      stats.documentsMissing = plan.stats.missingLocal;
+      stats.documentsCopied = plan.stats.readyToUpload + plan.stats.alreadyInR2;
       if (options.missingDocumentsCsv) {
-        const roots = resolvePolicyDocumentRoots(options.documentRoot);
-        const missing: MissingPolicyDocumentRow[] = [];
-        for (const doc of options.data.policyDocuments) {
-          if (!resolveLegacyDocumentFile(roots, doc.filename)) {
-            missing.push(missingPolicyDocumentRow(roots, doc));
-          }
-        }
-        writeMissingPolicyDocumentsCsv(options.missingDocumentsCsv, missing);
-        stats.documentsMissing = missing.length;
-        stats.documentsCopied =
-          options.data.policyDocuments.length - missing.length;
+        const missingCount = writeDocumentPlanCsv(
+          options.missingDocumentsCsv,
+          plan.rows,
+          roots,
+        );
         stats.missingDocumentsCsv = options.missingDocumentsCsv;
         console.log(
-          `  wrote ${missing.length} missing document(s) to ${options.missingDocumentsCsv}`,
+          `  wrote ${missingCount} missing row(s) to ${options.missingDocumentsCsv} (not in R2 and not on disk)`,
         );
-      } else {
-        stats.documentsSkipped = options.data.policyDocuments.length;
       }
     }
     return stats;
@@ -482,12 +509,32 @@ export async function loadLegacyDomain(options: LoadLegacyDomainOptions) {
       );
     }
     const roots = resolvePolicyDocumentRoots(options.documentRoot);
+    const bucket = uploadToR2 ? policyDocumentsBucket() : null;
+    const scoped = await scopeLegacyPolicyDocumentsForTarget(
+      options.data.policyDocuments,
+      documentsOnly,
+    );
     console.log(
-      `Processing ${options.data.policyDocuments.length} policy documents from ${roots.join(", ")}…`,
+      `Processing ${scoped.documents.length} policy documents from ${roots.join(", ")}…`,
     );
     if (uploadToR2) {
-      console.log(`  R2 bucket: ${policyDocumentsBucket()}`);
+      console.log(`  R2 bucket: ${bucket}`);
     }
+
+    const documentPlan = await planLegacyPolicyDocuments({
+      documents: scoped.documents,
+      roots,
+      bucket,
+      skipR2: options.skipR2 ?? false,
+      postgresR2TailKeys: scoped.postgresR2TailKeys,
+    });
+    logLegacyDocumentPlanSummary(
+      documentPlan.stats,
+      uploadToR2 && Boolean(bucket),
+    );
+    const planByDocumentId = new Map(
+      documentPlan.rows.map((row) => [row.policyDocumentId, row]),
+    );
 
     if (resumeDocuments && options.targetEnv && !options.clearDocuments) {
       syncState = loadSyncState(syncStatePath);
@@ -513,13 +560,13 @@ export async function loadLegacyDomain(options: LoadLegacyDomainOptions) {
       });
     }
 
-    const totalDocuments = options.data.policyDocuments.length;
+    const totalDocuments = scoped.documents.length;
     const progressEvery = documentProgressInterval(totalDocuments);
     let processed = 0;
     let processedSinceSave = 0;
     const missingDocuments: MissingPolicyDocumentRow[] = [];
 
-    for (const doc of options.data.policyDocuments) {
+    for (const doc of scoped.documents) {
       processed += 1;
 
       if (completedIds.has(doc.policyDocumentId)) {
@@ -554,7 +601,42 @@ export async function loadLegacyDomain(options: LoadLegacyDomainOptions) {
         continue;
       }
 
+      const planned = planByDocumentId.get(doc.policyDocumentId);
+
       if (missingIds.has(doc.policyDocumentId)) {
+        if (planned?.status === "already_in_r2") {
+          stats.documentsAlreadyInR2 += 1;
+          stats.documentsSkipped += 1;
+          const entry = buildLegacyPolicyDocumentEntry(doc, createdBy);
+          addDocumentToPolicyMap(policyDocumentsByLegacyId, doc, entry);
+          await persistDocumentMetadataOnly(
+            entry,
+            documentsOnly,
+            options.dryRun,
+            syncState,
+          );
+          completedIds.add(doc.policyDocumentId);
+          if (syncState) {
+            markDocumentCompleted(syncState, doc.policyDocumentId);
+            missingIds.delete(doc.policyDocumentId);
+            processedSinceSave += 1;
+          }
+          if (
+            processed === 1 ||
+            processed === totalDocuments ||
+            processed % progressEvery === 0
+          ) {
+            logDocumentProgress(
+              processed,
+              totalDocuments,
+              stats.documentsCopied,
+              stats.documentsMissing,
+              uploadToR2,
+            );
+          }
+          continue;
+        }
+
         stats.documentsMissing += 1;
         missingDocuments.push(missingPolicyDocumentRow(roots, doc));
         if (
@@ -573,7 +655,40 @@ export async function loadLegacyDomain(options: LoadLegacyDomainOptions) {
         continue;
       }
 
-      const localPath = resolveLegacyDocumentFile(roots, doc.filename);
+      const entry = buildLegacyPolicyDocumentEntry(doc, createdBy);
+
+      if (planned?.status === "already_in_r2") {
+        stats.documentsAlreadyInR2 += 1;
+        stats.documentsSkipped += 1;
+        addDocumentToPolicyMap(policyDocumentsByLegacyId, doc, entry);
+        await persistDocumentMetadataOnly(
+          entry,
+          documentsOnly,
+          options.dryRun,
+          syncState,
+        );
+        completedIds.add(doc.policyDocumentId);
+        if (syncState) {
+          markDocumentCompleted(syncState, doc.policyDocumentId);
+          processedSinceSave += 1;
+        }
+        if (
+          processed === 1 ||
+          processed === totalDocuments ||
+          processed % progressEvery === 0
+        ) {
+          logDocumentProgress(
+            processed,
+            totalDocuments,
+            stats.documentsCopied,
+            stats.documentsMissing,
+            uploadToR2,
+          );
+        }
+        continue;
+      }
+
+      const localPath = planned?.localPath || null;
       if (!localPath) {
         stats.documentsMissing += 1;
         missingDocuments.push(missingPolicyDocumentRow(roots, doc));
@@ -598,10 +713,10 @@ export async function loadLegacyDomain(options: LoadLegacyDomainOptions) {
         continue;
       }
 
-      const entry = buildLegacyPolicyDocumentEntry(doc, createdBy);
       if (uploadToR2) {
-        uploadPolicyDocumentToR2({ localPath, r2Key: entry.r2Key! });
+        await uploadPolicyDocumentToR2({ localPath, r2Key: entry.r2Key! });
         stats.documentsUploaded += 1;
+        stats.documentsToUpload += 1;
       }
       stats.documentsCopied += 1;
       addDocumentToPolicyMap(policyDocumentsByLegacyId, doc, entry);
@@ -660,13 +775,14 @@ export async function loadLegacyDomain(options: LoadLegacyDomainOptions) {
     }
 
     if (options.missingDocumentsCsv) {
-      writeMissingPolicyDocumentsCsv(
+      const missingCount = writeDocumentPlanCsv(
         options.missingDocumentsCsv,
-        missingDocuments,
+        documentPlan.rows,
+        roots,
       );
       stats.missingDocumentsCsv = options.missingDocumentsCsv;
       console.log(
-        `  wrote ${missingDocuments.length} missing document(s) to ${options.missingDocumentsCsv}`,
+        `  wrote ${missingCount} missing row(s) to ${options.missingDocumentsCsv} (not in R2 and not on disk)`,
       );
     }
   }
@@ -677,7 +793,7 @@ export async function loadLegacyDomain(options: LoadLegacyDomainOptions) {
     console.log(`Loading ${policyRows.length} policies…`);
     if (policyNumbersSuffixed > 0) {
       console.log(
-        `  suffixed ${policyNumbersSuffixed} duplicate policy number(s) for Postgres uniqueness`,
+        `  allocated ${policyNumbersSuffixed} renewal policy number(s) (series term #1, #2, …)`,
       );
     }
     if (options.replace) {
@@ -706,9 +822,10 @@ export async function loadLegacyDomain(options: LoadLegacyDomainOptions) {
         return { row, policyDoc };
       });
       const enrichedPolicies = await attachPolicySeriesFields(
-        chunkPolicyDocs.map(({ policyDoc }) => ({
+        chunkPolicyDocs.map(({ row, policyDoc }) => ({
           clientId: policyDoc.clientId,
           policyNumber: policyDoc.policyNumber,
+          seriesNumber: row.seriesNumber,
           createdBy: policyDoc.createdBy,
           createdWhen: policyDoc.createdWhen,
         })),
@@ -720,6 +837,7 @@ export async function loadLegacyDomain(options: LoadLegacyDomainOptions) {
           ...policyDoc,
           policySeriesId: series.policySeriesId,
           seriesNumber: series.seriesNumber,
+          seriesTerm: row.seriesTerm ?? 0,
         };
         const {
           policyValues,
@@ -762,6 +880,10 @@ export async function loadLegacyDomain(options: LoadLegacyDomainOptions) {
       }
     }
     stats.policies = policyRows.length;
+    if (!options.dryRun) {
+      await syncPolicyNumberSeqFromPolicies(db);
+      console.log("  synced policy_number_seq from policy rows");
+    }
   }
 
   return stats;

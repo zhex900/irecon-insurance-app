@@ -30,29 +30,33 @@ function readFlag(name: string): boolean {
   return process.argv.includes(name);
 }
 
-function countValidationFailures(
+async function countValidationFailures(
   policies: (typeof policy.$inferSelect)[],
   db: ReturnType<typeof getDb>,
+  label: string,
 ): Promise<number> {
-  return (async () => {
-    let fail = 0;
-    for (const p of policies) {
-      const [car] = await db
-        .select()
-        .from(policyCar)
-        .where(eq(policyCar.policyId, p.policyId));
-      if (!car) continue;
-      const doc = rowsToPolicy(p, car, null);
-      const values = policyToFormValues(doc);
-      const parsed = carPolicySchema.safeParse({
-        ...values,
-        clientId: p.clientId,
-        policyStatusId: p.policyStatusId,
-      });
-      if (!parsed.success) fail += 1;
+  let fail = 0;
+  const total = policies.length;
+  for (let i = 0; i < total; i++) {
+    const p = policies[i]!;
+    if (i > 0 && i % 250 === 0) {
+      console.log(`  ${label}: ${i}/${total}…`);
     }
-    return fail;
-  })();
+    const [car] = await db
+      .select()
+      .from(policyCar)
+      .where(eq(policyCar.policyId, p.policyId));
+    if (!car) continue;
+    const doc = rowsToPolicy(p, car, null);
+    const values = policyToFormValues(doc);
+    const parsed = carPolicySchema.safeParse({
+      ...values,
+      clientId: p.clientId,
+      policyStatusId: p.policyStatusId,
+    });
+    if (!parsed.success) fail += 1;
+  }
+  return fail;
 }
 
 async function main() {
@@ -64,11 +68,9 @@ async function main() {
   const dryRun = readFlag("--dry-run");
   const confirm = readFlag("--confirm");
 
-  await loadMigrateTargetEnv(target);
-  logMigrateTarget(
-    target,
-    dryRun ? "dry-run repair migrated policies" : "repair migrated policies",
-  );
+  const databaseUrl = await loadMigrateTargetEnv(target);
+  logMigrateTarget(target, databaseUrl);
+  if (dryRun) console.log("Mode: dry-run (no writes)");
   assertMigrateConfirmed(target, confirm);
 
   const db = getDb();
@@ -77,11 +79,23 @@ async function main() {
     .from(policy)
     .where(eq(policy.createdBy, "migrate:mssql"));
 
-  const failBefore = await countValidationFailures(policies, db);
+  console.log(
+    `Checking ${policies.length} migrated policies (validation pass 1)…`,
+  );
+  const failBefore = await countValidationFailures(
+    policies,
+    db,
+    "validation pass 1",
+  );
   let updated = 0;
   const samples: string[] = [];
 
-  for (const p of policies) {
+  console.log("Applying repair patches…");
+  for (let i = 0; i < policies.length; i++) {
+    const p = policies[i]!;
+    if (i > 0 && i % 250 === 0) {
+      console.log(`  repair: ${i}/${policies.length}…`);
+    }
     const [car] = await db
       .select()
       .from(policyCar)
@@ -152,9 +166,15 @@ async function main() {
     void adjustment;
   }
 
-  const failAfter = dryRun
-    ? failBefore
-    : await countValidationFailures(policies, db);
+  let failAfter = failBefore;
+  if (!dryRun) {
+    console.log("Re-checking validation after updates…");
+    failAfter = await countValidationFailures(
+      policies,
+      db,
+      "validation pass 2",
+    );
+  }
 
   console.log(
     dryRun

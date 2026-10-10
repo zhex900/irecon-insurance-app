@@ -45,6 +45,10 @@ export type LegacyPolicyRow = {
   policyId: number;
   clientId: number;
   policyNumber: string;
+  /** Client-facing series base; set during legacy policy-number dedupe. */
+  seriesNumber?: string;
+  /** Term in series (0 = original); set during legacy policy-number dedupe. */
+  seriesTerm?: number;
   policyAction: string;
   policyStatusId: number;
   postcode: string;

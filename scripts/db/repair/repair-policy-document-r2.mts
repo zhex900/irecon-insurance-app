@@ -81,13 +81,9 @@ async function main() {
   const confirm = readFlag("--confirm");
   const limit = readLimit();
 
-  await loadMigrateTargetEnv(target);
-  logMigrateTarget(
-    target,
-    dryRun
-      ? "dry-run repair policy document R2 keys"
-      : "repair policy document R2 keys",
-  );
+  const databaseUrl = await loadMigrateTargetEnv(target);
+  logMigrateTarget(target, databaseUrl);
+  if (dryRun) console.log("Mode: dry-run (no writes)");
   assertMigrateConfirmed(target, confirm);
 
   if (!dryRun && !hasR2Credentials()) {
@@ -183,7 +179,7 @@ async function main() {
           { wordingCatalogue, brokerFeeLines, font },
         );
 
-        uploadPolicyDocumentBytesToR2({ bytes: pdf, r2Key });
+        await uploadPolicyDocumentBytesToR2({ bytes: pdf, r2Key });
 
         await db
           .update(policyDocument)

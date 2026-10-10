@@ -27,6 +27,8 @@ Each environment has **dedicated R2 buckets** — nothing is shared between UAT,
 npm run deployment:bootstrap:r2              # uat + local
 npm run deployment:bootstrap:r2 -- --only uat
 npm run deployment:bootstrap:r2 -- --from uat --only pr
+npm run db:clear:r2:policies:pr -- --dry-run   # wipe policies/ only (all PR previews)
+npm run db:clear:r2:policies:pr -- --confirm
 ```
 
 Requires R2 S3 credentials and Cloudflare auth. Run once after upgrading; then deploy UAT so Worker bindings point at the `-uat` buckets.

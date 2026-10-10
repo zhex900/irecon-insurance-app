@@ -1,7 +1,7 @@
 /**
  * Migrate legacy MSSQL domain data → Postgres (documents/R2 are separate).
  *
- * Target scope: CAR policies with InceptionDate >= 2025-06-01 (see scripts/db/legacy/sql/_target-scope.sql).
+ * Target scope: CAR policies in Pending or Taken status (see scripts/db/legacy/sql/_target-scope.sql).
  * Clients, documents, notes, and wordings are limited to that policy set.
  *
  * Default load: account-managers, AR, clients, policies (no R2).
@@ -20,7 +20,7 @@
  *   --only <slices>           Comma-separated: account-managers,ar,clients,policies,documents
  *   --replace                 Truncate target tables before load (per slice)
  *   --skip-r2                 Skip R2 upload (metadata only)
- *   --missing-csv [path]      Write missing PDF paths to CSV (default: _archive/data/legacy-documents-missing.csv)
+ *   --missing-csv [path]      Write docs missing from R2 and local disk to CSV (default: _archive/data/legacy-documents-missing.csv)
  *   --no-missing-csv          Do not write missing-documents CSV
  *   --clear-documents         Remove migrated documents (Postgres + R2 + checkpoint) before upload
  *   --no-resume               Ignore checkpoint and re-process every document row
@@ -211,7 +211,7 @@ async function main() {
       throw new Error(
         `Export file not found: ${args.readJson}\n` +
           "Create it first: npm run db:export:legacy\n" +
-          "  (requires local MSSQL + MSSQL_* in .env; writes scoped CAR policies InceptionDate >= 2025-06-01)",
+          "  (requires local MSSQL + MSSQL_* in .env; writes scoped CAR policies Pending/Taken only)",
       );
     }
     payload = JSON.parse(

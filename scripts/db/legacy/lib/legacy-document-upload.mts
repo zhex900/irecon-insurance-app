@@ -1,7 +1,8 @@
 /**
  * Upload legacy policy PDFs to R2 via the S3-compatible API (AWS CLI).
  */
-import { execFileSync } from "node:child_process";
+import { execFile, execFileSync } from "node:child_process";
+import { promisify } from "node:util";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -11,6 +12,24 @@ import {
   r2BucketExists,
 } from "../../../../deployment/lib/r2-s3-sync.mjs";
 import { LEGACY_LIBRARY_BUCKET } from "../../../../deployment/lib/preview-env.mjs";
+
+const execFileAsync = promisify(execFile);
+
+const R2_PUT_MAX_ATTEMPTS = 6;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isR2RateLimitError(message: string): boolean {
+  const lower = message.toLowerCase();
+  return (
+    lower.includes("serviceunavailable") ||
+    lower.includes("reduce your concurrent request rate") ||
+    lower.includes("slow down") ||
+    lower.includes("request limit")
+  );
+}
 
 function ensureAwsCli() {
   try {
@@ -87,9 +106,19 @@ async function deletePolicyDocumentsFromBucket(
   return removed;
 }
 
-export function uploadPolicyDocumentToR2(
+function awsPutObjectEnv(accessKeyId: string, secretAccessKey: string) {
+  return {
+    ...process.env,
+    AWS_ACCESS_KEY_ID: accessKeyId,
+    AWS_SECRET_ACCESS_KEY: secretAccessKey,
+    AWS_REGION: "auto",
+    AWS_EC2_METADATA_DISABLED: "true",
+  };
+}
+
+export async function uploadPolicyDocumentToR2(
   options: UploadPolicyDocumentOptions,
-): void {
+): Promise<void> {
   const bucket = options.bucket ?? policyDocumentsBucket();
   const { endpoint, accessKeyId, secretAccessKey } = r2S3Config();
   ensureAwsCli();
@@ -99,45 +128,59 @@ export function uploadPolicyDocumentToR2(
     throw new Error(`Empty file: ${options.localPath}`);
   }
 
-  execFileSync(
-    "aws",
-    [
-      "s3api",
-      "put-object",
-      "--bucket",
-      bucket,
-      "--key",
-      options.r2Key,
-      "--body",
-      options.localPath,
-      "--content-type",
-      "application/pdf",
-      "--endpoint-url",
-      endpoint,
-    ],
-    {
-      stdio: "pipe",
-      env: {
-        ...process.env,
-        AWS_ACCESS_KEY_ID: accessKeyId,
-        AWS_SECRET_ACCESS_KEY: secretAccessKey,
-        AWS_REGION: "auto",
-        AWS_EC2_METADATA_DISABLED: "true",
-      },
-    },
-  );
+  const args = [
+    "s3api",
+    "put-object",
+    "--bucket",
+    bucket,
+    "--key",
+    options.r2Key,
+    "--body",
+    options.localPath,
+    "--content-type",
+    "application/pdf",
+    "--endpoint-url",
+    endpoint,
+  ];
+  const execOptions = {
+    env: awsPutObjectEnv(accessKeyId, secretAccessKey),
+    maxBuffer: 10 * 1024 * 1024,
+  };
+
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= R2_PUT_MAX_ATTEMPTS; attempt++) {
+    try {
+      await execFileAsync("aws", args, execOptions);
+      return;
+    } catch (error) {
+      lastError = error;
+      const stderr =
+        error && typeof error === "object" && "stderr" in error
+          ? String((error as { stderr?: Buffer }).stderr ?? "")
+          : String(error);
+      if (!isR2RateLimitError(stderr) || attempt === R2_PUT_MAX_ATTEMPTS) {
+        throw error;
+      }
+      const delayMs = Math.min(30_000, 1000 * 2 ** (attempt - 1));
+      console.warn(
+        `  R2 rate limit on put-object (attempt ${attempt}/${R2_PUT_MAX_ATTEMPTS}), retry in ${delayMs}ms…`,
+      );
+      await sleep(delayMs);
+    }
+  }
+  throw lastError;
 }
 
-export function uploadPolicyDocumentBytesToR2(
+export async function uploadPolicyDocumentBytesToR2(
   options: Omit<UploadPolicyDocumentOptions, "localPath"> & {
     bytes: Uint8Array;
   },
-): void {
+): Promise<void> {
   const dir = mkdtempSync(join(tmpdir(), "irecon-policy-doc-"));
   const localPath = join(dir, "upload.pdf");
   try {
     writeFileSync(localPath, options.bytes);
-    uploadPolicyDocumentToR2({
+    await uploadPolicyDocumentToR2({
       localPath,
       r2Key: options.r2Key,
       bucket: options.bucket,

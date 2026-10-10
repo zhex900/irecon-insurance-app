@@ -8,6 +8,11 @@ import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { isAbsolute, join } from "node:path";
 
+import {
+  buildLocalMergeDocumentIndex,
+  mergeDocumentLocalMatchKey,
+} from "./legacy-merge-document-filename.mts";
+
 function normalizePolicyDocumentPath(configured: string): string {
   let path = configured.trim();
   if (!path) return "";
@@ -85,9 +90,25 @@ export function expectedLegacyDocumentPaths(
     .join(";");
 }
 
+export type LegacyDocumentLookupContext = {
+  roots: string[];
+  mergeIndex: Map<string, string>;
+};
+
+export function createLegacyDocumentLookupContext(
+  roots: string[],
+): LegacyDocumentLookupContext {
+  return {
+    roots,
+    mergeIndex: buildLocalMergeDocumentIndex(roots),
+  };
+}
+
 export function resolveLegacyDocumentFile(
   roots: string | string[],
   filename: string,
+  documentTypeCode?: string,
+  lookup?: LegacyDocumentLookupContext,
 ): string | null {
   const safe = filename.replace(/[/\\]/g, "_").trim();
   if (!safe) return null;
@@ -97,5 +118,26 @@ export function resolveLegacyDocumentFile(
     const full = expectedLegacyDocumentPath(root, filename);
     if (existsSync(full)) return full;
   }
+
+  if (documentTypeCode && lookup) {
+    const key = mergeDocumentLocalMatchKey(documentTypeCode, safe);
+    if (key) {
+      const fromIndex = lookup.mergeIndex.get(key);
+      if (fromIndex) return fromIndex;
+    }
+  }
+
   return null;
+}
+
+export function resolveLegacyPolicyDocumentFile(
+  lookup: LegacyDocumentLookupContext,
+  doc: { filename: string; documentTypeCode: string },
+): string | null {
+  return resolveLegacyDocumentFile(
+    lookup.roots,
+    doc.filename,
+    doc.documentTypeCode,
+    lookup,
+  );
 }
